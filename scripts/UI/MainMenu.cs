@@ -50,6 +50,9 @@ public sealed partial class MainMenu : Node3D
     private Label _charBlurb = null!;
     private Label _charStats = null!;
     private Label _charLock = null!;
+    private Label _skinLabel = null!;
+    private CharacterDef? _shownCharacter;
+    private int _skinIndex;
     private readonly List<Button> _charButtons = new();
 
     // settings page
@@ -194,7 +197,7 @@ public sealed partial class MainMenu : Node3D
     }
 
     private void TintHero(CharacterDef def)
-        => _hero.MaterialOverride = Game.Arena.Flat(def.Tint, emission: 0.8f);
+        => _hero.MaterialOverride = Game.Arena.Flat(def.SelectedSkin.Tint, emission: 0.8f);
 
     public override void _Process(double delta)
     {
@@ -317,7 +320,58 @@ public sealed partial class MainMenu : Node3D
         _charLock = MakeLabel("", 16, Gold);
         _charLock.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         foreach (Label l in new[] { _charName, _charLook, _charBlurb, _charStats, _charLock }) box.AddChild(l);
+
+        // Skin picker: the arrow buttons and the left/right keys both cycle it.
+        // The buttons take no focus so the up/down character list keeps it.
+        var skinRow = new HBoxContainer();
+        skinRow.AddThemeConstantOverride("separation", 10);
+        Button prev = SkinArrow("<", -1);
+        Button next = SkinArrow(">", +1);
+        _skinLabel = MakeLabel("", 18, Ink);
+        _skinLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _skinLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        skinRow.AddChild(prev);
+        skinRow.AddChild(_skinLabel);
+        skinRow.AddChild(next);
+        box.AddChild(skinRow);
         return page;
+    }
+
+    private Button SkinArrow(string text, int step)
+    {
+        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(44f, 36f) };
+        b.AddThemeFontSizeOverride("font_size", 20);
+        b.Pressed += () => CycleSkin(step);
+        return b;
+    }
+
+    private void CycleSkin(int step)
+    {
+        if (_shownCharacter is not { } c) return;
+        int n = c.Skins.Count;
+        _skinIndex = ((_skinIndex + step) % n + n) % n;
+        ShowSkin();
+    }
+
+    private void ShowSkin()
+    {
+        if (_shownCharacter is not { } c) return;
+        SkinDef skin = c.Skins[_skinIndex];
+        int n = c.Skins.Count;
+        if (skin.IsAvailable)
+        {
+            _skinLabel.Text = $"skin: {skin.Name}   ({_skinIndex + 1}/{n})";
+            _skinLabel.AddThemeColorOverride("font_color", Ink);
+        }
+        else
+        {
+            UnlockDef? source = Unlocks.ById(Unlocks.SourceOf(skin.Id));
+            string how = source is null ? "" : source.Secret && !Profile.IsUnlocked(source.Id) ? $" — {source.Hint}" : $" — {source.Description}";
+            _skinLabel.Text = $"skin: {skin.Name}  ·  locked{how}   ({_skinIndex + 1}/{n})";
+            _skinLabel.AddThemeColorOverride("font_color", Locked);
+        }
+        _skinLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _hero.MaterialOverride = Game.Arena.Flat(skin.Tint, emission: 0.8f);
     }
 
     private void ShowCharacter(CharacterDef c)
@@ -335,12 +389,25 @@ public sealed partial class MainMenu : Node3D
             : hidden ? $"Secret — {source!.Hint}"
             : $"Locked — {source?.Description}";
         if (open) TintHero(c);
+
+        if (_shownCharacter != c)
+        {
+            _shownCharacter = c;
+            SkinDef chosen = c.SelectedSkin;
+            _skinIndex = 0;
+            for (int i = 0; i < c.Skins.Count; i++) if (c.Skins[i].Id == chosen.Id) _skinIndex = i;
+        }
+        ShowSkin();
     }
 
     private void StartRun(CharacterDef c)
     {
         if (!c.IsAvailable) return;
         Profile.SelectedCharacter = c.Id;
+        // Only a skin the player owns is remembered; picking a locked one
+        // previews it but runs in the last owned choice.
+        if (_shownCharacter == c && c.Skins[_skinIndex] is { IsAvailable: true } skin)
+            Profile.SelectSkin(c.Id, skin.Id);
         Profile.Save();
         GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile, RunScene);
     }
@@ -474,6 +541,12 @@ public sealed partial class MainMenu : Node3D
     public override void _UnhandledInput(InputEvent @event)
     {
         if (_root is null) return;
+        if (_page == "play" && (@event.IsActionPressed("ui_left") || @event.IsActionPressed("ui_right")))
+        {
+            CycleSkin(@event.IsActionPressed("ui_left") ? -1 : 1);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (@event.IsActionPressed("ui_cancel") && _page != "main")
         {
             GetViewport().SetInputAsHandled();

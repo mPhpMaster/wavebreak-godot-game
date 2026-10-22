@@ -316,9 +316,12 @@ public partial class PlayerCamera : Node3D
         {
             // Right/down on the mouse turns right/looks down, so both axes subtract:
             // Godot's +Y yaw turns left, and negative pitch aims the camera downward.
-            _yaw = Mathf.Wrap(_yaw - motion.Relative.X * MouseSensitivity, -Mathf.Pi, Mathf.Pi);
+            // The user's setting scales the camera's own default, read every
+            // event so a change in the pause menu takes effect at once.
+            float sensitivity = MouseSensitivity * Meta.GameSettings.Sensitivity;
+            _yaw = Mathf.Wrap(_yaw - motion.Relative.X * sensitivity, -Mathf.Pi, Mathf.Pi);
             _pitch = Mathf.Clamp(
-                _pitch - motion.Relative.Y * MouseSensitivity,
+                _pitch - motion.Relative.Y * sensitivity,
                 Mathf.DegToRad(MinPitchDegrees),
                 Mathf.DegToRad(MaxPitchDegrees));
             return;

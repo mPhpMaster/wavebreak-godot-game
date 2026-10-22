@@ -43,10 +43,11 @@ public static class RunMeta
         GameSettings.Load();
 
         Character.ApplyTo(main.Player.Stats);
+        SkinDef skin = Launch.Automated ? Character.Skins[0] : Character.SelectedSkin;
+        main.Player.ApplySkin(skin.Tint, skin.LookId);
 
-        // The camera owns the default; settings scale it.
-        foreach (Actors.PlayerCamera cam in main.GetChildren().OfType<Actors.PlayerCamera>())
-            cam.MouseSensitivity *= GameSettings.Sensitivity;
+        // Mouse sensitivity is read live by PlayerCamera from GameSettings, so a
+        // change made in the pause menu applies immediately; nothing to do here.
 
         var tracker = new UnlockTracker();
         tracker.Bind(main);

@@ -34,7 +34,7 @@ public enum Metric
     SecretsAll,         // 1 once every kind in SecretSpawner.Kinds has been found
 }
 
-public enum RewardKind { Character, Weapon, Item }
+public enum RewardKind { Character, Weapon, Item, Skin }
 
 public sealed class UnlockDef
 {
@@ -80,12 +80,14 @@ public static class Unlocks
                 Metric = Metric.TotalKills, Threshold = 5000, Reward = RewardKind.Item, RewardId = "wreckers_lantern" },
         new() { Id = "regular", Name = "Regular", Description = "Finish 5 runs, however they end.",
                 Metric = Metric.TotalRuns, Threshold = 5, Reward = RewardKind.Item, RewardId = "salvagers_hook" },
+        new() { Id = "third_tide", Name = "Third Tide", Description = "Finish 3 runs, however they end.",
+                Metric = Metric.TotalRuns, Threshold = 3, Reward = RewardKind.Skin, RewardId = "drifter.tidecaller" },
         new() { Id = "keyholder", Name = "Keyholder", Description = "Open 5 chests in total.",
                 Metric = Metric.TotalChests, Threshold = 5, Reward = RewardKind.Item, RewardId = "salt_rusted_keyring" },
 
         // ---- single-run feats
         new() { Id = "hold_5", Name = "Holding the Line", Description = "Survive 5 minutes in a single run.",
-                Metric = Metric.RunSeconds, Threshold = 300, Reward = RewardKind.Character, RewardId = "kiln_sister" },
+                Metric = Metric.RunSeconds, Threshold = 300, Reward = RewardKind.Skin, RewardId = "kiln_sister.forgeborn" },
         new() { Id = "hold_10", Name = "Deep Water", Description = "Survive 10 minutes in a single run.",
                 Metric = Metric.RunSeconds, Threshold = 600, Reward = RewardKind.Weapon, RewardId = "quarry_bell" },
         new() { Id = "breakwater", Name = "Breakwater", Description = "Win a run: survive until the tide turns.",
@@ -102,8 +104,10 @@ public static class Unlocks
                 Metric = Metric.RunLevel, Threshold = 20, Reward = RewardKind.Item, RewardId = "resonant_fork" },
         new() { Id = "gold_300", Name = "Deep Pockets", Description = "Hold 300 gold at once.",
                 Metric = Metric.RunGoldHeld, Threshold = 300, Reward = RewardKind.Item, RewardId = "gilded_tooth" },
-        new() { Id = "speed_limit", Name = "Slipstream", Description = "Hit the speed limit: move at 33 m/s.",
-                Metric = Metric.PeakSpeed, Threshold = 33, Reward = RewardKind.Character, RewardId = "gale_courier" },
+        // 28, not the 34 cap: a dash alone peaks at 26, so this asks for one
+        // more trick on top (slide downhill, slide-hop) rather than a near-limit.
+        new() { Id = "speed_limit", Name = "Slipstream", Description = "Move at 28 m/s.",
+                Metric = Metric.PeakSpeed, Threshold = 28, Reward = RewardKind.Skin, RewardId = "gale_courier.stormchaser" },
 
         // ---- secrets: hidden in the codex until found
         new() { Id = "untouched", Name = "Untouched", Description = "Defeat a boss without being hit during the fight.",
@@ -119,7 +123,7 @@ public static class Unlocks
                 Metric = Metric.SecretsAny, Threshold = 1, Reward = RewardKind.Item, RewardId = "moonwell_drop",
                 Secret = true, Hint = "Not everything at the edge of the world is a wall." },
         new() { Id = "all_shrines", Name = "The Augur's Path", Description = "Find every kind of hidden shrine.",
-                Metric = Metric.SecretsAll, Threshold = 1, Reward = RewardKind.Character, RewardId = "gilded_augur",
+                Metric = Metric.SecretsAll, Threshold = 1, Reward = RewardKind.Skin, RewardId = "gilded_augur.eclipse",
                 Secret = true, Hint = "Three lights hide where the arena thins. Greet them all." },
     };
 
@@ -127,6 +131,15 @@ public static class Unlocks
     {
         foreach (UnlockDef u in All) if (u.Id == id) return u;
         return null;
+    }
+
+    /// <summary>"Skin: Forgeborn (Kiln Sister)".</summary>
+    public static string DescribeSkin(string skinId)
+    {
+        foreach (CharacterDef c in Characters.All)
+            foreach (SkinDef k in c.Skins)
+                if (k.Id == skinId) return $"Skin: {k.Name} ({c.DisplayName})";
+        return $"Skin: {skinId}";
     }
 
     /// <summary>The unlock that grants this reward id, or null if no unlock
@@ -148,6 +161,7 @@ public static class Unlocks
     public static string DescribeReward(UnlockDef u) => u.Reward switch
     {
         RewardKind.Character => $"Character: {Characters.ById(u.RewardId)?.DisplayName ?? u.RewardId}",
+        RewardKind.Skin => DescribeSkin(u.RewardId),
         RewardKind.Weapon => $"Weapon: {MetaContent.NameOf(u.RewardId)}",
         _ => $"Item: {MetaContent.NameOf(u.RewardId)}",
     };

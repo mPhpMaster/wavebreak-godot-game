@@ -10,6 +10,24 @@ namespace Wavebreak.Meta;
 public readonly record struct CharacterStat(Stat Stat, ModifierOp Op, float Value);
 
 /// <summary>
+/// One look for a character. Every character has a free base skin (first in
+/// its list) and more that achievements unlock; a skin is cosmetic only, so it
+/// can be the reward for anything without touching balance.
+/// <see cref="Id"/> is "characterId.skin" so the unlock table can name it.
+/// </summary>
+public sealed class SkinDef
+{
+    public required string Id { get; init; }
+    public required string Name { get; init; }
+    /// <summary>Model look id for the visuals library.</summary>
+    public required string LookId { get; init; }
+    /// <summary>Body colour, also used wherever a model is not available yet.</summary>
+    public required Color Tint { get; init; }
+
+    public bool IsAvailable => Unlocks.IsContentUnlocked(Id);
+}
+
+/// <summary>
 /// A playable character, as data: a name, a starting weapon, and a handful of
 /// stat modifiers applied through the normal <see cref="StatSheet"/> pipeline
 /// with the definition itself as the source tag. Nothing about a character is
@@ -33,6 +51,32 @@ public sealed class CharacterDef
     public string LookId { get; init; } = "default";
 
     public Color Tint { get; init; } = new(0.6f, 0.85f, 1f);
+
+    /// <summary>Base skin first. Built from <see cref="LookId"/>/<see cref="Tint"/>
+    /// plus <see cref="ExtraSkins"/>, so a character that defines none still has one.</summary>
+    public IReadOnlyList<SkinDef> Skins => _skins ??= BuildSkins();
+    private IReadOnlyList<SkinDef>? _skins;
+
+    public IReadOnlyList<SkinDef> ExtraSkins { get; init; } = System.Array.Empty<SkinDef>();
+
+    private IReadOnlyList<SkinDef> BuildSkins()
+    {
+        var list = new List<SkinDef> { new() { Id = Id + ".base", Name = "Original", LookId = LookId, Tint = Tint } };
+        list.AddRange(ExtraSkins);
+        return list;
+    }
+
+    /// <summary>The skin this character will wear: the saved choice if it is
+    /// still unlocked, else the base skin.</summary>
+    public SkinDef SelectedSkin
+    {
+        get
+        {
+            string? id = Profile.SelectedSkin(Id);
+            foreach (SkinDef s in Skins) if (s.Id == id && s.IsAvailable) return s;
+            return Skins[0];
+        }
+    }
 
     /// <summary>The unlock that grants this character, or null if it is free.</summary>
     public string? UnlockedBy => Unlocks.SourceOf(Id);
@@ -69,6 +113,10 @@ public static class Characters
             StartingWeapon = "splinter_rail",
             LookId = "default",
             Tint = new Color(0.62f, 0.86f, 1.00f),
+            ExtraSkins = new SkinDef[]
+            {
+                new() { Id = "drifter.tidecaller", Name = "Tidecaller", LookId = "default_tidecaller", Tint = new Color(0.25f, 0.55f, 0.95f) },
+            },
         },
         // Slow and hard to kill: trades the movement layer for the health layer,
         // and starts with the weapon that rewards standing your ground.
@@ -80,6 +128,10 @@ public static class Characters
             StartingWeapon = "ember_halo",
             LookId = "ember",
             Tint = new Color(1.00f, 0.56f, 0.30f),
+            ExtraSkins = new SkinDef[]
+            {
+                new() { Id = "kiln_sister.forgeborn", Name = "Forgeborn", LookId = "ember_forgeborn", Tint = new Color(0.85f, 0.22f, 0.15f) },
+            },
             Stats = new[]
             {
                 new CharacterStat(Stat.MaxHealth, ModifierOp.Flat, 25f),
@@ -97,6 +149,10 @@ public static class Characters
             StartingWeapon = "sparkfan",
             LookId = "gale",
             Tint = new Color(0.70f, 1.00f, 0.80f),
+            ExtraSkins = new SkinDef[]
+            {
+                new() { Id = "gale_courier.stormchaser", Name = "Stormchaser", LookId = "gale_stormchaser", Tint = new Color(0.55f, 0.50f, 1.00f) },
+            },
             Stats = new[]
             {
                 new CharacterStat(Stat.MoveSpeed, ModifierOp.Additive, 0.15f),
@@ -114,6 +170,10 @@ public static class Characters
             StartingWeapon = "wisp_seeker",
             LookId = "augur",
             Tint = new Color(1.00f, 0.86f, 0.42f),
+            ExtraSkins = new SkinDef[]
+            {
+                new() { Id = "gilded_augur.eclipse", Name = "Eclipse", LookId = "augur_eclipse", Tint = new Color(0.35f, 0.30f, 0.45f) },
+            },
             Stats = new[]
             {
                 new CharacterStat(Stat.Luck, ModifierOp.Flat, 1f),

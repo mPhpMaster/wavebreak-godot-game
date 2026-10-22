@@ -32,6 +32,14 @@ public static class Profile
 
     private static readonly Dictionary<string, long> Stats = new();
     private static readonly HashSet<string> UnlockSet = new();
+
+    // character id -> chosen skin id. Absent means the character's base skin.
+    private static readonly Dictionary<string, string> SkinChoice = new();
+
+    public static string? SelectedSkin(string characterId)
+        => SkinChoice.TryGetValue(characterId, out string? id) ? id : null;
+
+    public static void SelectSkin(string characterId, string skinId) => SkinChoice[characterId] = skinId;
     private static readonly HashSet<string> SecretSet = new();
 
     private static bool _loaded;
@@ -97,6 +105,12 @@ public static class Profile
         ReadSet(cfg, "unlocks", UnlockSet);
         ReadSet(cfg, "secrets", SecretSet);
 
+        foreach (string key in SafeKeys(cfg, "skins"))
+        {
+            Variant v = cfg.GetValue("skins", key, "");
+            if (v.VariantType == Variant.Type.String && v.AsString().Length > 0) SkinChoice[key] = v.AsString();
+        }
+
         Variant sel = cfg.GetValue("profile", "character", Characters.DefaultId);
         if (sel.VariantType == Variant.Type.String) SelectedCharacter = sel.AsString();
 
@@ -135,6 +149,7 @@ public static class Profile
         foreach (var (key, value) in Stats) cfg.SetValue("stats", key, value);
         foreach (string id in UnlockSet) cfg.SetValue("unlocks", id, true);
         foreach (string id in SecretSet) cfg.SetValue("secrets", id, true);
+        foreach (var (character, skin) in SkinChoice) cfg.SetValue("skins", character, skin);
 
         string temp = Path + ".tmp";
         Error err = cfg.Save(temp);

@@ -121,7 +121,24 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
     // ---------------------------------------------------------------- palette
 
-    private static readonly Color BodyColor = new(0.28f, 0.76f, 1.00f);
+    private Color _bodyColor = new(0.28f, 0.76f, 1.00f);
+
+    /// <summary>The look id of the chosen character skin, for the visuals
+    /// library to resolve into a model.</summary>
+    public string LookId { get; private set; } = "default";
+
+    /// <summary>Applies a character skin: body colour now, model look by id.
+    /// Safe before or after <see cref="_Ready"/>.</summary>
+    public void ApplySkin(Color tint, string lookId)
+    {
+        _bodyColor = tint;
+        LookId = lookId;
+        if (_torsoMaterial is not null)
+        {
+            _torsoMaterial.AlbedoColor = tint;
+            _torsoMaterial.Emission = tint;
+        }
+    }
     private static readonly Color NoseColor = new(1.00f, 0.84f, 0.25f);
     private static readonly Color DashColor = new(0.55f, 0.90f, 1.00f);
     private static readonly Color SlamColor = new(1.00f, 0.72f, 0.30f);
@@ -305,11 +322,11 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
         _torsoMaterial = new StandardMaterial3D
         {
-            AlbedoColor = BodyColor,
+            AlbedoColor = _bodyColor,
             Metallic = 0.15f,
             Roughness = 0.4f,
             EmissionEnabled = true,
-            Emission = BodyColor,
+            Emission = _bodyColor,
             EmissionEnergyMultiplier = 0.35f,
         };
 
@@ -943,7 +960,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
             ? 0.5f + 0.5f * Mathf.Sin(_time * 26f)
             : 0f;
 
-        Color tint = _dashTime > 0f ? DashColor : _slamming ? SlamColor : BodyColor;
+        Color tint = _dashTime > 0f ? DashColor : _slamming ? SlamColor : _bodyColor;
         _torsoMaterial.AlbedoColor = tint.Lerp(Colors.White, Mathf.Min(1f, _flash));
         _torsoMaterial.Emission = tint;
         _torsoMaterial.EmissionEnergyMultiplier = 0.35f + _flash * 4.5f + iframes * 0.9f
