@@ -173,7 +173,14 @@ public sealed partial class ResultsScreen : Control
         panel.AddChild(_restart);
         _restart.Pressed += Restart;
 
-        Label hint = MakeLabel("enter  ·  R", 14, InkDim, HorizontalAlignment.Center);
+        // Back to the title (Meta: profile/unlocks). Same no-focus rule as Restart.
+        var menu = new Button { Text = "MAIN MENU", FocusMode = FocusModeEnum.None };
+        menu.AddThemeFontSizeOverride("font_size", 18);
+        Inset(menu, PanelWidth * 0.5f + 150f, PanelHeight - 70f, 180f, 38f);
+        panel.AddChild(menu);
+        menu.Pressed += ToMainMenu;
+
+        Label hint = MakeLabel("enter  ·  R   restart        esc   main menu", 14, InkDim, HorizontalAlignment.Center);
         Inset(hint, 0f, PanelHeight - 24f, PanelWidth, 20f);
         panel.AddChild(hint);
     }
@@ -299,6 +306,13 @@ public sealed partial class ResultsScreen : Control
         if (!Visible) return;
         if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
 
+        if (key.Keycode == Key.Escape)
+        {
+            GetViewport().SetInputAsHandled();
+            ToMainMenu();
+            return;
+        }
+
         // Not Space: it is the jump key, and a death usually lands mid-jump.
         if (key.Keycode is not (Key.Enter or Key.KpEnter or Key.R)) return;
 
@@ -333,6 +347,15 @@ public sealed partial class ResultsScreen : Control
         // freeing the scene that owns the node currently emitting is exactly the
         // situation deferred calls exist for.
         GetTree().CallDeferred(SceneTree.MethodName.ReloadCurrentScene);
+    }
+
+    /// <summary>Leave the run for the title screen. Same arming and unpause
+    /// rules as <see cref="Restart"/>, for the same reasons.</summary>
+    private void ToMainMenu()
+    {
+        if (!Armed) return;
+        GetTree().Paused = false;
+        GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile, MainMenu.TitleScene);
     }
 
     // -------------------------------------------------------------- helpers

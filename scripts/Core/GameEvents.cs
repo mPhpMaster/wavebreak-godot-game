@@ -133,3 +133,35 @@ public readonly struct PlayerMoved
         Verb = verb; Position = position; Strength = strength;
     }
 }
+
+// ---------------------------------------------------------------- meta
+// Appended for the profile / unlocks / secrets layer (scripts/Meta). Nothing in
+// the run depends on these; they exist so the meta layer can listen instead of
+// being called, and so other systems can feed it without referencing it.
+
+/// <summary>A chest was opened. Published by the chest system; the unlock
+/// tracker counts it. If the chest system ships its own event of the same
+/// meaning, keep one and point the other side at it.</summary>
+public readonly struct ChestOpened
+{
+    public readonly Vector3 Position;
+    public ChestOpened(Vector3 position) { Position = position; }
+}
+
+/// <summary>A hidden in-run secret was found. <see cref="Kind"/> is the secret
+/// definition's id, so "found every kind" can be counted without a list of the
+/// placed instances.</summary>
+public readonly struct SecretDiscovered
+{
+    public readonly string Kind;
+    public readonly Vector3 Position;
+    public SecretDiscovered(string kind, Vector3 position) { Kind = kind; Position = position; }
+}
+
+/// <summary>A persistent unlock was earned this run. Published once, at the
+/// moment its condition was met; the toast listens.</summary>
+public readonly struct UnlockEarned
+{
+    public readonly string Id;
+    public UnlockEarned(string id) { Id = id; }
+}
