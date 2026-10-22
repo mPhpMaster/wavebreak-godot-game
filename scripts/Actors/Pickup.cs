@@ -134,6 +134,13 @@ public sealed partial class Pickup : Node3D, IPooled
     /// <summary>Orbs on the floor right now. For debug overlays and tests.</summary>
     public static int ActiveCount => Live.Count;
 
+    /// <summary>
+    /// Orbs on the floor right now, read-only. For the autopilot, which needs to
+    /// know where the experience is. May briefly hold an orb that was released
+    /// since the last <see cref="UpdateAll"/> — callers skip <see cref="IsPooled"/>.
+    /// </summary>
+    public static IReadOnlyList<Pickup> Active => Live;
+
     // ------------------------------------------------------------------ state
 
     private MeshInstance3D _mesh = null!;

@@ -25,12 +25,12 @@ namespace Wavebreak.UI;
 /// none of them can be refactored into breaking it, and a headless run can
 /// publish the same events to assert on the same numbers.
 ///
-/// Two values are read directly each frame instead, because they are continuous
-/// and deliberately have no event: health — which regeneration and shield
-/// recharge move every frame, and which <see cref="PlayerHealth"/> batches
-/// notifications for on purpose — and the run clock. Sampling two floats is the
-/// honest implementation; a "health changed" event sixty times a second would
-/// not be.
+/// Three values are read directly each frame instead, because they are
+/// continuous and deliberately have no event: health — which regeneration and
+/// shield recharge move every frame, and which <see cref="PlayerHealth"/>
+/// batches notifications for on purpose — the run clock, and the dash cooldown.
+/// Sampling a few floats is the honest implementation; a "health changed" event
+/// sixty times a second would not be.
 /// </summary>
 public sealed partial class Hud : Control
 {
@@ -44,6 +44,9 @@ public sealed partial class Hud : Control
     private const float HealthBarHeight = 26f;
     private const float ShieldBarHeight = 8f;
     private const float RowHeight = 22f;
+    private const float DashBarWidth = 180f;
+    private const float DashBarHeight = 10f;
+    private const float DashBarBottom = 44f;
 
     // -------------------------------------------------------------- palette
 
@@ -57,6 +60,12 @@ public sealed partial class Hud : Control
     private static readonly Color GoldTint = new(1.00f, 0.82f, 0.32f);
     private static readonly Color KillTint = new(1.00f, 0.62f, 0.56f);
     private static readonly Color LevelTint = new(0.80f, 0.72f, 1.00f);
+
+    // Charging is a dim slate so the meter recedes while there is nothing to do
+    // with it; ready is the brightest cool tone on the HUD, because "you can
+    // dash now" is the one state the player needs to catch in peripheral vision.
+    private static readonly Color DashCharging = new(0.40f, 0.48f, 0.60f);
+    private static readonly Color DashReady = new(0.62f, 0.98f, 1.00f);
 
     /// <summary>Health fraction below which the bar starts pulsing. Set at a
     /// third rather than the more usual quarter because a single late-game hit
@@ -87,6 +96,9 @@ public sealed partial class Hud : Control
     private ColorRect _shieldTrough = null!;
     private ColorRect _shieldFill = null!;
     private VBoxContainer _weaponList = null!;
+    private ColorRect _dashHalo = null!;
+    private ColorRect _dashFill = null!;
+    private Label _dashLabel = null!;
 
     // ------------------------------------------------------------- runtime
 
@@ -103,6 +115,15 @@ public sealed partial class Hud : Control
     private float _hurtFlash;
     private float _time;
     private int _lastClockSecond = -1;
+
+    /// <summary>1 the frame the dash comes back, decaying to 0. Drives the halo
+    /// and the white flash on the meter.</summary>
+    private float _dashFlash;
+    private bool _dashWasReady = true;
+
+    /// <summary>Last countdown shown, in tenths of a second, so the label is only
+    /// re-shaped when the digits change — same reasoning as the clock.</summary>
+    private int _lastDashTenths = -1;
     private bool _subscribed;
 
     // ------------------------------------------------------------ lifecycle
@@ -121,6 +142,7 @@ public sealed partial class Hud : Control
         BuildClock();
         BuildTopRight();
         BuildWeaponList();
+        BuildDashMeter();
 
         Subscribe();
         RefreshXpBar();
@@ -251,6 +273,38 @@ public sealed partial class Hud : Control
         AddChild(_weaponList);
     }
 
+    private void BuildDashMeter()
+    {
+        // Bottom-centre, under the character, rather than beside the health bar.
+        // A cooldown is checked at the moment of deciding to act, and at that
+        // moment the eyes are on the player model in the middle of the screen —
+        // a meter in the corner means looking away exactly when it matters.
+        float top = -(DashBarBottom + DashBarHeight);
+
+        // The halo sits behind the trough and only shows during the ready flash:
+        // a bar that briefly grows a glow reads as "something happened" even out
+        // of the corner of the eye, where a colour change alone is easy to miss.
+        _dashHalo = new ColorRect { Color = DashReady with { A = 0f }, MouseFilter = MouseFilterEnum.Ignore };
+        PlaceBottomCentre(_dashHalo, top - 4f, DashBarWidth + 8f, DashBarHeight + 8f);
+        AddChild(_dashHalo);
+
+        var trough = new ColorRect { Color = Trough, MouseFilter = MouseFilterEnum.Ignore };
+        PlaceBottomCentre(trough, top, DashBarWidth, DashBarHeight);
+        AddChild(trough);
+
+        _dashFill = new ColorRect { Color = DashReady, MouseFilter = MouseFilterEnum.Ignore };
+        _dashFill.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        _dashFill.AnchorRight = 1f;
+        trough.AddChild(_dashFill);
+
+        // The key is named on the meter itself. Dash is the verb new players
+        // forget they have, and a meter that does not say which key it belongs
+        // to teaches nothing.
+        _dashLabel = Text("DASH  [SHIFT]  READY", 15, DashReady, HorizontalAlignment.Center);
+        PlaceBottomCentre(_dashLabel, top - 24f, DashBarWidth + 120f, 22f);
+        AddChild(_dashLabel);
+    }
+
     // --------------------------------------------------------------- events
 
     /// <summary>
@@ -363,6 +417,7 @@ public sealed partial class Hud : Control
 
         UpdateClock();
         UpdateHealth(dt);
+        UpdateDash(dt);
 
         // The bar eases toward the target rather than snapping — exponential
         // smoothing, so the rate is frame-rate independent; a fixed lerp per frame
@@ -440,6 +495,43 @@ public sealed partial class Hud : Control
             : $"{Mathf.CeilToInt(current)} / {Mathf.RoundToInt(max)}";
     }
 
+    /// <summary>
+    /// Sampled each frame, like health: the cooldown is a continuous countdown
+    /// with no event, and adding one would mean the controller publishing sixty
+    /// times a second so that one bar can read a float.
+    /// </summary>
+    private void UpdateDash(float dt)
+    {
+        Player? player = Player.Instance;
+        if (player is null || !IsInstanceValid(player)) return;
+
+        float total = Mathf.Max(0.05f, player.DashCooldownTotal);
+        float remaining = Mathf.Max(0f, player.DashCooldownRemaining);
+        bool ready = remaining <= 0f;
+
+        if (ready && !_dashWasReady) _dashFlash = 1f;
+        _dashWasReady = ready;
+        if (_dashFlash > 0f) _dashFlash = Mathf.Max(0f, _dashFlash - dt * 2.5f);
+
+        // Fills as it recharges — an emptying bar would read as "dash is
+        // draining", which is the opposite of what is happening.
+        _dashFill.AnchorRight = ready ? 1f : Mathf.Clamp(1f - remaining / total, 0f, 1f);
+
+        Color colour = ready ? DashReady : DashCharging;
+        if (player.IsDashing) colour = DashReady.Lerp(Colors.White, 0.5f);
+        _dashFill.Color = colour.Lerp(Colors.White, _dashFlash * 0.7f);
+        _dashHalo.Color = DashReady with { A = _dashFlash * 0.55f };
+
+        // Countdown in tenths: whole seconds are too coarse for a cooldown that
+        // is itself only a few seconds long, and hundredths are noise.
+        int tenths = ready ? 0 : Mathf.CeilToInt(remaining * 10f);
+        if (tenths == _lastDashTenths) return;
+
+        _lastDashTenths = tenths;
+        _dashLabel.Text = ready ? "DASH  [SHIFT]  READY" : $"DASH  [SHIFT]  {tenths / 10f:0.0}s";
+        _dashLabel.AddThemeColorOverride("font_color", ready ? DashReady : DashCharging.Lerp(Ink, 0.4f));
+    }
+
     // -------------------------------------------------------------- helpers
 
     /// <summary>A label with the HUD's outline treatment. The outline is not
@@ -485,6 +577,20 @@ public sealed partial class Hud : Control
         control.AnchorBottom = 0f;
         control.OffsetLeft = -(right + width);
         control.OffsetRight = -right;
+        control.OffsetTop = top;
+        control.OffsetBottom = top + height;
+    }
+
+    /// <summary>Centre a control horizontally against the bottom edge;
+    /// <paramref name="top"/> is negative, measured up from the bottom.</summary>
+    private static void PlaceBottomCentre(Control control, float top, float width, float height)
+    {
+        control.AnchorLeft = 0.5f;
+        control.AnchorRight = 0.5f;
+        control.AnchorTop = 1f;
+        control.AnchorBottom = 1f;
+        control.OffsetLeft = -width * 0.5f;
+        control.OffsetRight = width * 0.5f;
         control.OffsetTop = top;
         control.OffsetBottom = top + height;
     }
