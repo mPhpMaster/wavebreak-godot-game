@@ -482,11 +482,52 @@ public sealed partial class Arena : Node3D
     }
 
     /// <summary>Clamp a position inside the arena, used by spawning and knockback.</summary>
-    public static Vector3 Clamp(Vector3 p, float margin = 2f)
+    public static Vector3 Clamp(Vector3 p, float margin = 2f) => ClampInside(p, margin, out _);
+
+    /// <summary>
+    /// How far <paramref name="p"/> is past the inner face of the nearest wall,
+    /// in metres: negative inside, positive outside. Exact for every map shape,
+    /// because it is measured against each edge of the current polygon rather
+    /// than against a circle — on a hexagon a circle is either too small (the
+    /// corners become unreachable) or too big (the corners leak).
+    /// </summary>
+    public static float EdgeExcess(Vector3 p)
     {
-        var flat = new Vector2(p.X, p.Z);
-        float max = Radius - margin;
-        if (flat.Length() > max) flat = flat.Normalized() * max;
-        return new Vector3(flat.X, p.Y, flat.Y);
+        int sides = Mathf.Max(3, Current.Sides);
+        float worst = float.MinValue;
+        for (int k = 0; k < sides; k++)
+        {
+            float a = Mathf.Tau * k / sides;
+            worst = Mathf.Max(worst, p.X * Mathf.Cos(a) + p.Z * Mathf.Sin(a));
+        }
+        return worst - Current.InRadius;
+    }
+
+    /// <summary>
+    /// Push <paramref name="p"/> back inside the current map's polygon, keeping
+    /// <paramref name="margin"/> metres from every wall. <paramref name="normal"/>
+    /// is the outward direction it was pushed back from (zero when it was
+    /// already inside), so a caller can cancel only the outward part of a
+    /// velocity and still slide along the wall — or into a corner.
+    /// </summary>
+    public static Vector3 ClampInside(Vector3 p, float margin, out Vector3 normal)
+    {
+        int sides = Mathf.Max(3, Current.Sides);
+        float limit = Current.InRadius - margin;
+        normal = Vector3.Zero;
+        // Two passes: in a corner, correcting against one edge can leave the
+        // point just past its neighbour. A convex polygon settles in two.
+        for (int pass = 0; pass < 2; pass++)
+            for (int k = 0; k < sides; k++)
+            {
+                float a = Mathf.Tau * k / sides;
+                var n = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                float over = p.X * n.X + p.Z * n.Z - limit;
+                if (over <= 0f) continue;
+                p -= n * over;
+                normal += n;
+            }
+        if (normal != Vector3.Zero) normal = normal.Normalized();
+        return p;
     }
 }

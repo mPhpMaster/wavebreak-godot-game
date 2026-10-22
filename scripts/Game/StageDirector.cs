@@ -135,6 +135,53 @@ public sealed class StageDirector
         // both at once would put two bosses on the field at 4:00.
         _enemies.TimedBosses = false;
         EnterPhase(Mathf.Clamp(_startPhase - 1, 0, _stages.Count - 1));
+
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-boundary") >= 0)
+            _ = CheckBoundary();
+    }
+
+    /// <summary>
+    /// --check-boundary: on every map in turn, run the player at the wall --
+    /// at the middle of an edge and straight into a corner -- jumping, double
+    /// jumping and dashing, and record how far past the wall's inner face it
+    /// ever got. Prints a BOUNDARY line per map and BOUNDARY PASS/FAIL, then
+    /// quits. Corners matter: on a hexagon they are where a circular clamp
+    /// leaks, and where a player pinned by a crowd actually ends up.
+    /// </summary>
+    private async System.Threading.Tasks.Task CheckBoundary()
+    {
+        SceneTree tree = _root.GetTree();
+        bool all = true;
+        float limit = -(Player.BodyRadius + 0.6f);
+        for (int i = 0; i < _stages.Count; i++)
+        {
+            if (i != _index) EnterPhase(i);
+            // No enemies: this measures the wall, not whether the player
+            // survives standing next to one.
+            _enemies.ClearField(9999f);
+            StageDef stage = Stage;
+            float worst = float.MinValue;
+            int sides = Mathf.Max(3, stage.Sides);
+            foreach (float angle in new[] { 0f, Mathf.Pi / sides, 2.2f })
+            {
+                var dir = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                _player.Teleport(dir * (stage.InRadius - 10f) + Vector3.Up * 0.5f);
+                _player.MoveOverride = () => dir;
+                for (int frame = 0; frame < 240; frame++)
+                {
+                    if (frame % 24 == 0) _player.RequestJump();
+                    if (frame % 70 == 10) _player.RequestDash();
+                    await _root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
+                    worst = Mathf.Max(worst, Arena.EdgeExcess(_player.GlobalPosition));
+                }
+            }
+            bool pass = worst <= limit + 0.05f;
+            all &= pass;
+            GD.Print($"BOUNDARY map={stage.Id} sides={sides} inradius={stage.InRadius:0.0} " +
+                     $"worst={worst:0.00} limit={limit:0.00} {(pass ? "PASS" : "FAIL")}");
+        }
+        GD.Print(all ? "BOUNDARY PASS" : "BOUNDARY FAIL");
+        tree.Quit();
     }
 
     public void Tick(float dt)
