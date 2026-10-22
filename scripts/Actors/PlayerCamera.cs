@@ -277,6 +277,21 @@ public partial class PlayerCamera : Node3D
         _yaw = Mathf.Atan2(-flat.X, -flat.Y);
     }
 
+    public override void _Notification(int what)
+    {
+        // Alt-Tab or clicking another monitor does not release a captured mouse
+        // on its own, so it stays trapped inside the game window. Free it the
+        // moment focus leaves. Deliberately no automatic re-capture on return:
+        // grabbing the cursor while someone is still reaching for another window
+        // is the same trap in reverse. A click on the game re-captures it
+        // (RecaptureOnClick).
+        if (what == NotificationApplicationFocusOut || what == NotificationWMWindowFocusOut)
+        {
+            if (Input.MouseMode is Input.MouseModeEnum.Captured or Input.MouseModeEnum.Confined)
+                Input.MouseMode = Input.MouseModeEnum.Visible;
+        }
+    }
+
     public override void _UnhandledInput(InputEvent @event)
     {
         bool captured = Input.MouseMode == Input.MouseModeEnum.Captured;

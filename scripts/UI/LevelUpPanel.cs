@@ -314,6 +314,14 @@ public sealed partial class LevelUpPanel : Control
             ? $"Choose one   ({_queue.Count} more to come)"
             : "Choose one";
 
+        // The camera keeps the mouse captured for steering, which hides the
+        // cursor -- so a mouse player could see the cards but not click them.
+        // Free it while the panel is up and hand it back on close, but only if
+        // it was captured to begin with: a player who had pressed Escape to get
+        // the cursor back should not have it grabbed away by a level-up.
+        if (!IsOpen) _mouseWasCaptured = Input.MouseMode == Input.MouseModeEnum.Captured;
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+
         IsOpen = true;
         Visible = true;
         _autoPickLeft = AutoPickSeconds;
@@ -326,6 +334,8 @@ public sealed partial class LevelUpPanel : Control
         _cards[0].Button.GrabFocus();
         Paint(_cards[0], true);
     }
+
+    private bool _mouseWasCaptured;
 
     private void Close()
     {
@@ -343,6 +353,9 @@ public sealed partial class LevelUpPanel : Control
         _callback = null;
 
         for (int i = 0; i < _cards.Count; i++) _cards[i].Root.Visible = false;
+
+        if (_mouseWasCaptured) Input.MouseMode = Input.MouseModeEnum.Captured;
+        _mouseWasCaptured = false;
 
         if (IsInsideTree()) GetTree().Paused = false;
     }

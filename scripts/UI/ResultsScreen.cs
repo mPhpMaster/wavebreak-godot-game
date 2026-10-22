@@ -207,6 +207,10 @@ public sealed partial class ResultsScreen : Control
 
         Visible = true;
         GetTree().Paused = true;
+
+        // Release the camera's mouse capture so Restart can be clicked. The
+        // reloaded scene's camera captures it again on its own.
+        Input.MouseMode = Input.MouseModeEnum.Visible;
         _restart.GrabFocus();
     }
 
