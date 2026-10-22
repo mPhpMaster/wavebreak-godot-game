@@ -1,6 +1,7 @@
 using System.Linq;
 using Godot;
 using Wavebreak.Actors;
+using Wavebreak.Stats;
 
 namespace Wavebreak.Game;
 
@@ -35,6 +36,12 @@ public sealed class Autopilot
     private int _hopCount;
     private float _nextDash = 2.1f;
 
+    // Orb seeking. The weight is relative to the unit flee vector: above 1 the
+    // bot will walk toward an orb with an enemy still in view, which it has to
+    // or it never collects anything in a crowded arena.
+    private const float SeekRange = 20f;
+    private const float SeekWeight = 1.6f;
+
     public Autopilot(Player player) => _player = player;
 
     public Vector3 Think()
@@ -65,6 +72,11 @@ public sealed class Autopilot
 
         Vector3 wish = considered > 0 ? away.Normalized() : Vector3.Zero;
 
+        // Walk toward the experience when nothing is on top of us. Pure kiting
+        // runs away from exactly where kills drop their orbs, so a fleeing bot
+        // ends a 30s run at level 1 and never reaches the level-up path at all.
+        wish += SeekPickup(me, nearest);
+
         // Bias back toward the middle. Without this the bot backs itself into
         // the arena wall and dies there every time, which measures the wall
         // rather than the balance.
@@ -81,6 +93,39 @@ public sealed class Autopilot
         wish = wish.LengthSquared() > 0.0001f ? wish.Normalized() : Vector3.Zero;
         UseVerbs(nearest);
         return wish;
+    }
+
+    /// <summary>
+    /// A pull toward the nearest orb that is not already flying in, scaled down
+    /// to nothing as an enemy closes. Fleeing always wins at touching distance —
+    /// the bot trades health for xp only when the trade is free, which is what a
+    /// cautious human does and no more. It does not path, rank orbs by value, or
+    /// look at what stands between it and the orb; that is the crude part.
+    /// </summary>
+    private Vector3 SeekPickup(Vector3 me, float nearestEnemy)
+    {
+        // Orbs inside pickup range are already chasing the player, so steering
+        // toward them wastes the frame; look past them to the next one.
+        float magnet = _player.Stats.Get(Stat.PickupRange) * 0.9f;
+        Vector3 best = Vector3.Zero;
+        float bestDist = SeekRange;
+
+        foreach (Pickup p in Pickup.Active)
+        {
+            if (p.IsPooled || !GodotObject.IsInstanceValid(p)) continue;
+            Vector3 d = p.GlobalPosition - me;
+            d.Y = 0f;
+            float dist = d.Length();
+            if (dist <= magnet || dist >= bestDist) continue;
+            best = d;
+            bestDist = dist;
+        }
+
+        if (best == Vector3.Zero) return Vector3.Zero;
+
+        // 0 with an enemy at 1.5m, full weight from 4m out.
+        float safety = Mathf.Clamp((nearestEnemy - 1.5f) / 2.5f, 0f, 1f);
+        return best / bestDist * SeekWeight * safety;
     }
 
     private void UseVerbs(float nearest)
