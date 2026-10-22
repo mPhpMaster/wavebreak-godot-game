@@ -31,6 +31,7 @@ public sealed partial class Main : Node3D
     private UI.Hud _hud = null!;
     private UI.LevelUpPanel _levelUp = null!;
     private UI.ResultsScreen _results = null!;
+    private Audio.AudioDirector _audio = null!;
 
     public Actors.Player Player => _player;
     public Combat.WeaponSystem Weapons => _weapons;
@@ -57,6 +58,11 @@ public sealed partial class Main : Node3D
 
     private void BuildWorld()
     {
+        // First, so it is subscribed before anything can publish. It only
+        // listens to the bus; nothing below needs a reference to it.
+        _audio = new Audio.AudioDirector();
+        AddChild(_audio);
+
         _player = new Actors.Player();
         AddChild(_player);
         // PlayerHealth self-seeds its RNG if nobody supplies one, which would make
@@ -161,6 +167,14 @@ public sealed partial class Main : Node3D
         await ToSignal(timer, SceneTreeTimer.SignalName.Timeout);
         await Screenshot.Capture(GetTree(), this, Screenshot.Path!);
         GD.Print(Summary());
+
+        // Autopilot runs end the run for real before quitting, after SUMMARY is
+        // printed so its numbers are untouched. A 30-second capture never reaches
+        // the timer and rarely dies, so without this the run-end path — results
+        // screen, the RunEnded listeners, the closing sting — would never execute
+        // in any automated run.
+        if (Screenshot.Auto && !Run.Over) Run.Finish(survived: _player.IsAlive);
+        GD.Print(_audio.Report());
         GetTree().Quit();
     }
 

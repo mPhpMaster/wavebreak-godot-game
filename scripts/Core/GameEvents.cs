@@ -100,3 +100,36 @@ public readonly struct PopupRequested
         Position = position; Text = text; Color = color; Scale = scale;
     }
 }
+
+/// <summary>A weapon went off. Published once per volley, not per projectile, so
+/// a twelve-shot fan is one event; listeners that care about rate (audio) still
+/// need their own throttling, because several weapons fire every second.</summary>
+public readonly struct WeaponFired
+{
+    public readonly Vector3 Position;
+    public readonly Data.AttackShape Shape;
+    public WeaponFired(Vector3 position, Data.AttackShape shape) { Position = position; Shape = shape; }
+}
+
+/// <summary>Which movement verb a <see cref="PlayerMoved"/> reports.</summary>
+public enum MoveVerb { Jump, AirJump, Dash, Slide, SlamStart, SlamImpact, Land }
+
+/// <summary>
+/// The player used a movement verb. One struct for all of them rather than one
+/// per verb: every listener so far wants "what happened, how hard, where", and
+/// seven near-identical structs would be seven subscriptions to keep in sync.
+///
+/// <see cref="Strength"/> is 0..1 and verb-specific: impact for
+/// <see cref="MoveVerb.Land"/>, crowd size for <see cref="MoveVerb.SlamImpact"/>,
+/// 1 otherwise.
+/// </summary>
+public readonly struct PlayerMoved
+{
+    public readonly MoveVerb Verb;
+    public readonly Vector3 Position;
+    public readonly float Strength;
+    public PlayerMoved(MoveVerb verb, Vector3 position, float strength = 1f)
+    {
+        Verb = verb; Position = position; Strength = strength;
+    }
+}

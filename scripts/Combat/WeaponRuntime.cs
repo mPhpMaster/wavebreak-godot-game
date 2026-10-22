@@ -120,6 +120,10 @@ public sealed class WeaponRuntime
                 FireProjectiles(system, stats);
                 break;
         }
+
+        // Announced after the shot resolves, so a listener sees the same muzzle
+        // position the shot used. Combat holds no reference to audio.
+        Core.EventBus.Publish(new Core.WeaponFired(system.MuzzlePosition, Def.Shape));
     }
 
     /// <summary>Shots per volley: the weapon's own count plus the player's bonus,
