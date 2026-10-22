@@ -44,6 +44,11 @@ public static class RunMeta
         Keybinds.Load();
 
         Character.ApplyTo(main.Player.Stats);
+
+        // Every shrine kind ever found leaves a small lasting boon.
+        foreach (SecretKindDef kind in SecretSpawner.Kinds)
+            if (Profile.HasFoundSecret(kind.Id))
+                foreach (CharacterStat b in kind.LastingBoons) main.Player.Stats.Add(b.Stat, b.Op, b.Value, kind);
         SkinDef skin = Launch.Automated ? Character.Skins[0] : Character.SelectedSkin;
         main.Player.ApplySkin(skin.Tint, skin.LookId);
 

@@ -129,10 +129,22 @@ public sealed class StatSheet
             }
         }
 
-        float value = Shape(stat, (BaseValue(stat) + flat) * (1f + additive) * multiplicative);
+        float raw = IsBonusStat(stat)
+            // A bonus stat is read as the multiplier 1 + value, with base 0. Run
+            // through the general formula, (0 + flat) * (1 + additive) is still 0,
+            // so every "+10% Damage" and "x1.2 Damage" did nothing at all. For these
+            // stats percentages add onto the bonus and multipliers scale the whole
+            // multiplier: two +10% items give x1.20, and x1.2 on top gives x1.44.
+            ? (1f + BaseValue(stat) + flat + additive) * multiplicative - 1f
+            : (BaseValue(stat) + flat) * (1f + additive) * multiplicative;
+        float value = Shape(stat, raw);
         _cache[stat] = value;
         return value;
     }
+
+    /// <summary>Stats stored as a bonus over x1 and read through
+    /// <see cref="GetMultiplier"/>.</summary>
+    public static bool IsBonusStat(Stat stat) => stat is Stat.Damage or Stat.XpGain or Stat.GoldGain;
 
     /// <summary>Damage multiplier form of a "bonus" stat: 0 reads as x1.</summary>
     public float GetMultiplier(Stat stat) => 1f + Get(stat);

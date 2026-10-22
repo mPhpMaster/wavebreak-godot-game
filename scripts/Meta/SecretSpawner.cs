@@ -3,6 +3,7 @@ using Godot;
 using Wavebreak.Core;
 using Wavebreak.Data;
 using Wavebreak.Game;
+using Wavebreak.Stats;
 
 namespace Wavebreak.Meta;
 
@@ -17,6 +18,24 @@ public sealed class SecretKindDef
     public required string RewardText { get; init; }
     public required ShrineGift Gift { get; init; }
     public required Color Glow { get; init; }
+
+    /// <summary>Stat boosts for the rest of the run, granted on activation on
+    /// top of the gift. A secret that only heals is forgotten a minute later;
+    /// one that makes you stronger is worth the detour.</summary>
+    public IReadOnlyList<CharacterStat> RunBoons { get; init; } = System.Array.Empty<CharacterStat>();
+
+    /// <summary>A smaller boost applied at the start of every later run once this
+    /// kind has ever been found -- the lasting reason to go looking.</summary>
+    public IReadOnlyList<CharacterStat> LastingBoons { get; init; } = System.Array.Empty<CharacterStat>();
+
+    /// <summary>"+12% Damage, +5% Crit Chance" for popups and the codex.</summary>
+    public static string Describe(IReadOnlyList<CharacterStat> boons)
+    {
+        var parts = new List<string>();
+        foreach (CharacterStat b in boons)
+            parts.Add(Catalog.DescribeEffect(new ItemEffect { Stat = b.Stat, Op = b.Op, PerStack = b.Value }));
+        return string.Join(", ", parts);
+    }
 }
 
 /// <summary>
@@ -38,12 +57,41 @@ public static class SecretSpawner
 {
     public static readonly IReadOnlyList<SecretKindDef> Kinds = new List<SecretKindDef>
     {
-        new() { Id = "tidestone", DisplayName = "Tidestone", Gift = ShrineGift.Restore,
-                RewardText = "Fully healed, +100 gold", Glow = new Color(0.45f, 0.80f, 1.00f) },
-        new() { Id = "hollow_idol", DisplayName = "Hollow Idol", Gift = ShrineGift.Offering,
-                RewardText = "A gift from the hollow", Glow = new Color(1.00f, 0.72f, 0.30f) },
-        new() { Id = "gloam_brazier", DisplayName = "Gloam Brazier", Gift = ShrineGift.Insight,
-                RewardText = "Sudden insight", Glow = new Color(0.78f, 0.52f, 1.00f) },
+        new()
+        {
+            Id = "tidestone", DisplayName = "Tidestone", Gift = ShrineGift.Restore,
+            RewardText = "Fully healed, +100 gold", Glow = new Color(0.45f, 0.80f, 1.00f),
+            RunBoons = new[]
+            {
+                new CharacterStat(Stat.MaxHealth, ModifierOp.Flat, 25f),
+                new CharacterStat(Stat.HealthRegen, ModifierOp.Flat, 6f),
+                new CharacterStat(Stat.Armor, ModifierOp.Flat, 4f),
+            },
+            LastingBoons = new[] { new CharacterStat(Stat.MaxHealth, ModifierOp.Flat, 8f) },
+        },
+        new()
+        {
+            Id = "hollow_idol", DisplayName = "Hollow Idol", Gift = ShrineGift.Offering,
+            RewardText = "A gift from the hollow", Glow = new Color(1.00f, 0.72f, 0.30f),
+            RunBoons = new[]
+            {
+                new CharacterStat(Stat.Damage, ModifierOp.Additive, 0.15f),
+                new CharacterStat(Stat.CritChance, ModifierOp.Flat, 0.05f),
+            },
+            LastingBoons = new[] { new CharacterStat(Stat.Damage, ModifierOp.Additive, 0.04f) },
+        },
+        new()
+        {
+            Id = "gloam_brazier", DisplayName = "Gloam Brazier", Gift = ShrineGift.Insight,
+            RewardText = "Sudden insight", Glow = new Color(0.78f, 0.52f, 1.00f),
+            RunBoons = new[]
+            {
+                new CharacterStat(Stat.MoveSpeed, ModifierOp.Additive, 0.10f),
+                new CharacterStat(Stat.XpGain, ModifierOp.Additive, 0.20f),
+                new CharacterStat(Stat.PickupRange, ModifierOp.Flat, 1.5f),
+            },
+            LastingBoons = new[] { new CharacterStat(Stat.XpGain, ModifierOp.Additive, 0.05f) },
+        },
     };
 
     private static readonly List<Shrine> Live = new();
@@ -249,6 +297,12 @@ public sealed partial class Shrine : Node3D
         Main? main = Main.Instance;
         if (main is not null && IsInstanceValid(main))
         {
+            // Boons first, so a full heal heals to the raised maximum.
+            StatSheet s = main.Player.Stats;
+            string before = $"hp={s.Get(Stat.MaxHealth):0} dmg=x{s.GetMultiplier(Stat.Damage):0.00} speed={s.Get(Stat.MoveSpeed):0.00}";
+            foreach (CharacterStat b in Kind.RunBoons) s.Add(b.Stat, b.Op, b.Value, Kind);
+            GD.Print($"META boon {Kind.Id}: {SecretKindDef.Describe(Kind.RunBoons)} | {before} -> " +
+                     $"hp={s.Get(Stat.MaxHealth):0} dmg=x{s.GetMultiplier(Stat.Damage):0.00} speed={s.Get(Stat.MoveSpeed):0.00}");
             switch (Kind.Gift)
             {
                 case ShrineGift.Restore:
@@ -268,6 +322,9 @@ public sealed partial class Shrine : Node3D
 
         EventBus.Publish(new PopupRequested(GlobalPosition + new Vector3(0f, 3.4f, 0f),
                                             Kind.RewardText, Kind.Glow.Lightened(0.3f), 1.4f));
+        if (Kind.RunBoons.Count > 0)
+            EventBus.Publish(new PopupRequested(GlobalPosition + new Vector3(0f, 2.6f, 0f),
+                                                SecretKindDef.Describe(Kind.RunBoons), Kind.Glow, 1.1f));
         GD.Print($"META secret {Kind.Id} found t={main?.Run?.Seconds ?? 0f:0}");
         EventBus.Publish(new SecretDiscovered(Kind.Id, GlobalPosition));
     }
