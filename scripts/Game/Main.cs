@@ -172,6 +172,8 @@ public sealed partial class Main : Node3D
         // run, and the first level-up should be a choice rather than a rescue.
         _weapons.Add(Meta.RunMeta.StartingWeapon());
 
+        ChestSpawner.Attach(this, Run.Seed).Populate(GetNodeOrNull<Node3D>("Arena") ?? this, Arena.Radius);
+
         if (Screenshot.Auto)
         {
             var bot = new Autopilot(_player);
@@ -231,7 +233,7 @@ public sealed partial class Main : Node3D
         $"hp={_player.Health.Current:0}/{_player.Health.Max:0} seed={Run.Seed} " +
         $"jumps={_player.Jumps} airjumps={_player.AirJumpsUsed} dashes={_player.Dashes} " +
         $"slides={_player.Slides} slams={_player.Slams} slamhits={_player.SlamHits} " +
-        $"peakspeed={_player.PeakSpeed:0.0}";
+        $"peakspeed={_player.PeakSpeed:0.0} {ChestSpawner.Instance?.SummaryFields}";
 
     private async System.Threading.Tasks.Task RunScreenshot()
     {

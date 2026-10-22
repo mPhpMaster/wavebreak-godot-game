@@ -134,19 +134,57 @@ public readonly struct PlayerMoved
     }
 }
 
+/// <summary>A chest's tier. Standard chests stand in the world for gold; gilded
+/// ones cost more and roll higher. Whether a chest is free is a separate flag,
+/// because a free chest is still one tier or the other underneath.</summary>
+public enum ChestTier { Standard, Gilded }
+
+/// <summary>A chest appeared: placed when a map is populated, topped up during
+/// the run, or dropped by an elite or boss (<see cref="Free"/>).</summary>
+public readonly struct ChestSpawned
+{
+    public readonly Vector3 Position;
+    public readonly ChestTier Tier;
+    public readonly bool Free;
+    public ChestSpawned(Vector3 position, ChestTier tier, bool free) { Position = position; Tier = tier; Free = free; }
+}
+
+/// <summary>
+/// A chest was opened and paid out. <see cref="Cost"/> is the gold actually
+/// spent (0 for a free chest); <see cref="Reward"/> is the display name of what
+/// it gave, in <see cref="RewardRarity"/> — carried here so a listener can
+/// announce it without knowing how rewards are rolled.
+/// </summary>
+public readonly struct ChestOpened
+{
+    public readonly Vector3 Position;
+    public readonly ChestTier Tier;
+    public readonly bool Free;
+    public readonly int Cost;
+    public readonly string Reward;
+    public readonly Data.Rarity RewardRarity;
+
+    public ChestOpened(Vector3 position, ChestTier tier, bool free, int cost, string reward, Data.Rarity rewardRarity)
+    {
+        Position = position; Tier = tier; Free = free; Cost = cost; Reward = reward; RewardRarity = rewardRarity;
+    }
+}
+
+/// <summary>The player tried to open a chest they cannot afford. Its own event
+/// rather than a flag on <see cref="ChestOpened"/>: nothing happened to the
+/// chest, and a listener that counts openings must not have to filter.</summary>
+public readonly struct ChestDenied
+{
+    public readonly Vector3 Position;
+    public readonly int Cost;
+    public readonly int Gold;
+    public ChestDenied(Vector3 position, int cost, int gold) { Position = position; Cost = cost; Gold = gold; }
+}
+
 // ---------------------------------------------------------------- meta
 // Appended for the profile / unlocks / secrets layer (scripts/Meta). Nothing in
 // the run depends on these; they exist so the meta layer can listen instead of
 // being called, and so other systems can feed it without referencing it.
-
-/// <summary>A chest was opened. Published by the chest system; the unlock
-/// tracker counts it. If the chest system ships its own event of the same
-/// meaning, keep one and point the other side at it.</summary>
-public readonly struct ChestOpened
-{
-    public readonly Vector3 Position;
-    public ChestOpened(Vector3 position) { Position = position; }
-}
 
 /// <summary>A hidden in-run secret was found. <see cref="Kind"/> is the secret
 /// definition's id, so "found every kind" can be counted without a list of the
