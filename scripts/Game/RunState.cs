@@ -27,20 +27,31 @@ public sealed class RunState
     /// short enough to retry after a bad start.</summary>
     public const float TargetSeconds = 15f * 60f;
 
+    /// <summary>Mirrored off the bus so the results screen and the RunEnded
+    /// payload carry a real level instead of a zero.</summary>
+    public int Level { get; private set; } = 1;
+
     public RunState(ulong seed)
     {
         Seed = seed;
         Rng = new Rng(seed);
         EventBus.Subscribe<EnemyKilled>(OnKill);
+        EventBus.Subscribe<LevelGained>(OnLevel);
     }
 
-    public void Dispose() => EventBus.Unsubscribe<EnemyKilled>(OnKill);
+    public void Dispose()
+    {
+        EventBus.Unsubscribe<EnemyKilled>(OnKill);
+        EventBus.Unsubscribe<LevelGained>(OnLevel);
+    }
 
     private void OnKill(EnemyKilled e)
     {
         Kills++;
         if (e.WasElite) Elites++;
     }
+
+    private void OnLevel(LevelGained e) => Level = e.Level;
 
     public void Tick(float dt)
     {
@@ -49,7 +60,27 @@ public sealed class RunState
         if (Seconds >= TargetSeconds) Finish(survived: true);
     }
 
+    /// <summary>
+    /// End the run and tell everyone. Used by the survival timer.
+    ///
+    /// Publishing here matters: death is announced by PlayerHealth, but nothing
+    /// announced a *win*, so reaching the 15-minute mark set the flags and left
+    /// the player standing in a world that had stopped mattering, with no
+    /// results screen. Over is set before publishing so a handler that calls
+    /// back in re-enters exactly once and stops.
+    /// </summary>
     public void Finish(bool survived)
+    {
+        if (Over) return;
+        Over = true;
+        Survived = survived;
+        EventBus.Publish(new RunEnded(survived, Seconds, Level, Kills));
+    }
+
+    /// <summary>Record an ending that something else already announced — death,
+    /// published by PlayerHealth. Deliberately silent: publishing again from
+    /// inside a RunEnded handler would show the results screen twice.</summary>
+    public void MarkOver(bool survived)
     {
         if (Over) return;
         Over = true;

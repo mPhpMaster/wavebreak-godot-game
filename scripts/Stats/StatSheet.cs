@@ -62,7 +62,7 @@ public sealed class StatSheet
 
         Stat.MoveSpeed       => 6f,     // metres/second
         Stat.JumpHeight      => 6f,
-        Stat.DashCooldown    => 4f,
+        Stat.DashCooldown    => 2.5f,   // seconds
 
         Stat.PickupRange     => 4f,
         Stat.XpGain          => 0f,

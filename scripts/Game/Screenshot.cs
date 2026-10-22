@@ -23,6 +23,12 @@ public static class Screenshot
     public static ulong Seed { get; private set; } = 1;
     public static bool Requested => Path is not null;
 
+    /// <summary>--auto: drive the player with the autopilot and take level-up
+    /// choices automatically. Without it a headless run stops dead at the first
+    /// level-up, because the panel pauses the tree waiting for a click that is
+    /// never coming — so every check past level 2 silently never runs.</summary>
+    public static bool Auto { get; private set; }
+
     public static void ParseArgs()
     {
         foreach (string arg in OS.GetCmdlineUserArgs())
@@ -33,6 +39,8 @@ public static class Screenshot
                 AfterSeconds = arg["--shot-after=".Length..].ToFloat();
             else if (arg.StartsWith("--seed="))
                 Seed = (ulong)arg["--seed=".Length..].ToInt();
+            else if (arg == "--auto")
+                Auto = true;
         }
     }
 
