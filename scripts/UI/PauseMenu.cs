@@ -103,17 +103,35 @@ public sealed partial class PauseMenu : Node
         {
             foreach (Node c in n.GetChildren()) { yield return c; foreach (Node d in Walk(c)) yield return d; }
         }
-        Button? firstKey = null;
+        var rowKeys = new List<Button>();
         foreach (Node n in Walk(_keys))
-            if (n is Button b && b.GetParent() is HBoxContainer && b.Text.Length <= 12 && b.Text != "BACK") { firstKey = b; break; }
-        Expect("key-binding page has rows", firstKey is not null);
-        firstKey?.EmitSignal(BaseButton.SignalName.Pressed);
-        await Wait(0.1);
-        Input.ParseInputEvent(new InputEventKey { Keycode = Key.K, PhysicalKeycode = Key.K, Pressed = true });
-        Input.ParseInputEvent(new InputEventKey { Keycode = Key.K, PhysicalKeycode = Key.K, Pressed = false });
-        await Wait(0.2);
-        string bound = Keybinds.Describe(Keybinds.Primary(Keybinds.Actions[0].Action));
-        Expect($"rebinding '{Keybinds.Actions[0].Label}' to K works (now: {bound})", bound == "K");
+            if (n is Button b && b.GetParent() is HBoxContainer row && row.GetChildCount() == 3) rowKeys.Add(b);
+        Expect("key-binding page has two keys per action", rowKeys.Count >= 4);
+        string first = Keybinds.Actions[0].Action;
+        void Press(Key k)
+        {
+            Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = true });
+            Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = false });
+        }
+        async System.Threading.Tasks.Task Bind(Button b, Key k)
+        {
+            b.EmitSignal(BaseButton.SignalName.Pressed);
+            await Wait(0.1);
+            Press(k);
+            await Wait(0.2);
+        }
+        if (rowKeys.Count >= 2)
+        {
+            await Bind(rowKeys[0], Key.K);
+            Expect($"primary rebinds to K (now {Keybinds.Describe(Keybinds.Get(first, 0))})", Keybinds.Describe(Keybinds.Get(first, 0)) == "K");
+            await Bind(rowKeys[1], Key.J);
+            Expect($"secondary rebinds to J (now {Keybinds.Describe(Keybinds.Get(first, 1))})", Keybinds.Describe(Keybinds.Get(first, 1)) == "J");
+            await Bind(rowKeys[0], Key.Space);
+            Expect($"taking Jump's Space swaps: jump primary is now {Keybinds.Describe(Keybinds.Get("jump", 0))}",
+                   Keybinds.Describe(Keybinds.Get(first, 0)) == "Space" && Keybinds.Describe(Keybinds.Get("jump", 0)) == "K");
+            await Bind(rowKeys[1], Key.Backspace);
+            Expect("Backspace clears the secondary", Keybinds.Get(first, 1) is null);
+        }
         await Screenshot.Capture(tree, this, System.IO.Path.Combine(dir, "pause-keys.png"));
         Keybinds.ResetAll();
         ShowKeys(false);

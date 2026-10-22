@@ -4,6 +4,7 @@ using Wavebreak.Actors;
 using Wavebreak.Audio;
 using Wavebreak.Combat;
 using Wavebreak.Data;
+using Wavebreak.Meta;
 using Wavebreak.Game;
 using Wavebreak.Progression;
 using Wavebreak.Stats;
@@ -246,25 +247,34 @@ public sealed partial class StatsPanel : Control
         _settings.AddChild(Text(AudioSettings.Describe(VolumeChannel.Music), 13, Ink));
 
         Section(_settings, "CONTROLS");
-        foreach ((string key, string what) in Controls) Row(_settings, key, what, Dim);
+        // Read from the live bindings, so a rebound key shows its new name here.
+        Row(_settings, "Mouse", "look", Dim);
+        foreach ((string action, string label) in ControlRows)
+        {
+            if (!InputMap.HasAction(action)) continue;
+            string a = Keybinds.Describe(Keybinds.Get(action, 0));
+            InputEvent? second = Keybinds.Get(action, 1);
+            Row(_settings, second is null ? a : $"{a}, {Keybinds.Describe(second)}", label, Dim);
+        }
+        Row(_settings, "Esc", "pause menu", Dim);
 
         Section(_settings, "RUN");
         Row(_settings, "Seed", _run.Seed.ToString(), Dim);
     }
 
-    private static readonly (string, string)[] Controls =
+    private static readonly (string Action, string Label)[] ControlRows =
     {
-        ("WASD", "move"),
-        ("Mouse", "look"),
-        ("Space", "jump / double"),
-        ("Shift, RMB", "dash"),
-        ("Ctrl, C", "slide / slam"),
-        ("Tab", "this sheet"),
-        ("- / =", "volume"),
-        ("9 / 0", "effects"),
-        ("[ / ]", "music"),
-        ("M", "mute"),
-        ("Esc, P", "pause menu"),
+        ("move_forward", "forward"),
+        ("move_back", "back"),
+        ("move_left", "left"),
+        ("move_right", "right"),
+        ("jump", "jump / double"),
+        ("dash", "dash"),
+        ("slide", "slide / slam"),
+        ("interact", "interact"),
+        ("stats", "this sheet"),
+        ("pause", "pause"),
+        ("mute", "mute"),
     };
 
     /// <summary>One stat: name, value in its natural unit, and the change from

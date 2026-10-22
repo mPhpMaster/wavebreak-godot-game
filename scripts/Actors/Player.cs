@@ -362,12 +362,29 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
     // ------------------------------------------------------------------ loop
 
+    private float _animProbeAt = -1f;
+
+    /// <summary>--check-walk: print the rig's clip state a few times while the
+    /// autopilot moves, proving locomotion clips keep cycling.</summary>
+    private void ProbeAnimation()
+    {
+        if (_animProbeAt < 0f)
+        {
+            _animProbeAt = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-walk") >= 0 ? 2f : float.MaxValue;
+            return;
+        }
+        if (_time < _animProbeAt || _rig is null) return;
+        _animProbeAt += 0.7f;
+        GD.Print($"WALK t={_time:0.0} v={_moveVelocity.Length():0.0} {_rig.DebugClip}");
+    }
+
     public override void _PhysicsProcess(double delta)
     {
         float dt = (float)delta;
         _time += dt;
 
         UpdateAim();
+        ProbeAnimation();
 
         bool alive = Health is null || Health.IsAlive;
         bool grounded = IsOnFloor();

@@ -231,7 +231,6 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     private const float MaxKnockbackSpeed = 22f;
     private const float FlashDuration = 0.11f;
     private const float TurnSpeed = 9f;             // radians/second
-    private const float AssumedPlayerRadius = 0.55f;
 
     // ---------------------------------------------------------- identity
 
@@ -246,6 +245,22 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     private float _contactDamage;
     private float _speed;
     private float _attackRange = 1.6f;
+    private float _bodyRadius = 0.5f;
+
+    /// <summary>
+    /// Gap between the two bodies at which a melee swing lands, metres.
+    ///
+    /// Reach is measured from the enemy's edge to the player's edge, not centre to
+    /// centre. The old centre-based test (AttackRange + 0.55) let a small enemy
+    /// hit from well over a metre away — with real models that read as being
+    /// damaged by something that had not reached you yet. A big enemy still hits
+    /// from further off, because its own radius is part of the distance.
+    /// </summary>
+    private float ContactDistance => _bodyRadius + Player.BodyRadius + MeleeReach;
+
+    /// <summary>Edge-to-edge melee reach: AttackRange beyond the old baseline of
+    /// 1.3 lengthens it slightly (long-armed brutes), but never past 0.8 m.</summary>
+    private float MeleeReach => Mathf.Clamp(0.3f + (_attackRange - 1.3f) * 0.25f, 0.2f, 0.8f);
     private float _attackCooldown = 1f;
     private float _knockbackResist;
 
@@ -345,6 +360,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         _def = def;
 
         float radius = MathF.Max(0.12f, def.Radius);
+        _bodyRadius = radius;
         float height = MathF.Max(radius * 2f + 0.02f, def.Height);
         _halfHeight = height * 0.5f;
 
@@ -425,7 +441,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         // produce a jittering pile instead of a ring.
         bool hasTarget = player is not null;
         float seek = !hasTarget ? 0f
-                   : distance > _attackRange * 0.9f ? 1f
+                   : distance > ContactDistance * 0.95f ? 1f
                    : 0.2f;
 
         Vector3 desired = heading * seek + separation * SeparationWeight;
@@ -466,7 +482,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         if (player is not null
             && _attackTimer <= 0f
             && player.IsAlive
-            && distance <= _attackRange + AssumedPlayerRadius)
+            && distance <= ContactDistance)
         {
             Strike(player, heading);
         }

@@ -82,6 +82,13 @@ public sealed partial class CharacterRig : Node3D
 
     // Imported-scene mode.
     private AnimationPlayer? _player;
+
+    /// <summary>Playing clip, its position and whether it is still advancing —
+    /// for verification (a frozen walk is invisible in a single screenshot).</summary>
+    public string DebugClip => _player is null ? "-" :
+        $"{_player.CurrentAnimation} t={_player.CurrentAnimationPosition:0.00}/{_player.CurrentAnimationLength:0.00} " +
+        $"loop={(_player.HasAnimation(_player.CurrentAnimation) ? _player.GetAnimation(_player.CurrentAnimation).LoopMode : Animation.LoopModeEnum.None)} " +
+        $"playing={_player.IsPlaying()} speed={_speed:0.0}";
     private string _clip = "";
 
     // -------------------------------------------------------------- state
@@ -271,6 +278,7 @@ public sealed partial class CharacterRig : Node3D
             // Advanced by hand: lets far crowds animate at a fraction of the rate
             // (see AnimateImported), which is most of an imported crowd's cost.
             _player.CallbackModeProcess = AnimationMixer.AnimationCallbackModeProcess.Manual;
+            LoopLocomotion(_player, spec);
             PlayClip(AnimSlot.Idle, 0f);
             // Desynchronise identical enemies so a wave does not march in step.
             _player.Advance((GetInstanceId() % 97) * 0.013f);
@@ -365,6 +373,25 @@ public sealed partial class CharacterRig : Node3D
         }
         foreach (Node child in root.GetChildren()) Walk(child, Transform3D.Identity);
         return box;
+    }
+
+    /// <summary>
+    /// Godot imports glTF clips as play-once unless the file says otherwise, and
+    /// neither the Kenney nor the Quaternius exports do. A one-shot walk plays a
+    /// single stride and then holds its last frame -- the body glides with its
+    /// legs frozen. Locomotion clips must loop; attacks, hits and deaths must not.
+    /// The Animation resources are shared by every instance of a model, so this
+    /// is idempotent and effectively runs once per model.
+    /// </summary>
+    private static void LoopLocomotion(AnimationPlayer player, ModelSpec spec)
+    {
+        foreach (AnimSlot slot in new[] { AnimSlot.Idle, AnimSlot.Walk, AnimSlot.Run, AnimSlot.Dash,
+                                          AnimSlot.Slide, AnimSlot.Fall })
+        {
+            if (!spec.Clips.TryGetValue(slot, out string? name) || !player.HasAnimation(name)) continue;
+            Animation anim = player.GetAnimation(name);
+            if (anim.LoopMode == Animation.LoopModeEnum.None) anim.LoopMode = Animation.LoopModeEnum.Linear;
+        }
     }
 
     private static AnimationPlayer? FindPlayer(Node n)
