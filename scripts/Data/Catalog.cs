@@ -896,11 +896,13 @@ public static class Catalog
         // ---- Brute, cost 9. The mid-game wall: high health, high knockback
         // resist, slow. Nothing about it is a surprise; it simply has to be
         // killed, and it is the honest test of whether damage has kept up.
+        // 165 -> 115: at 165 a 13-minute bot run killed 2 of 52 — a wall that is
+        // never broken stops being a test and becomes scenery.
         new EnemyDef
         {
             Id = "pale_sentinel",
             DisplayName = "Pale Sentinel",
-            Health = 165f, Damage = 23f, MoveSpeed = 2.6f,
+            Health = 115f, Damage = 23f, MoveSpeed = 2.6f,
             AttackRange = 2.2f, AttackCooldown = 1.5f,
             Radius = 0.72f, Height = 2.25f, KnockbackResist = 0.7f,
             XpValue = 12, GoldValue = 7,
@@ -910,12 +912,13 @@ public static class Catalog
 
         // ---- Brute, cost 13. Top of the ordinary ladder; the target threat only
         // reaches 13 at about minute thirteen, so this is what the last two
-        // minutes are mostly made of.
+        // minutes are mostly made of. 275 -> 185 for the same reason as the
+        // Sentinel (4 kills of 40 at 275).
         new EnemyDef
         {
             Id = "rift_maw",
             DisplayName = "Rift Maw",
-            Health = 275f, Damage = 31f, MoveSpeed = 3.4f,
+            Health = 185f, Damage = 31f, MoveSpeed = 3.4f,
             AttackRange = 2.4f, AttackCooldown = 1.3f,
             Radius = 0.82f, Height = 2.5f, KnockbackResist = 0.55f,
             XpValue = 20, GoldValue = 12,
@@ -955,11 +958,12 @@ public static class Catalog
             Tint = new Color(0.42f, 0.80f, 1.00f),
         },
 
-        // ---- Boss. Spawned on its own timer at 4, 8 and 12 minutes, on top of
-        // the player rather than at the ring, and announced. Base health is
-        // modest because the difficulty curve does the work: 1800 becomes roughly
-        // 5,700 at its first appearance and 22,000 at its third, which keeps one
-        // definition meaningful across all three fights.
+        // ---- Boss. Spawned on its own timer at 4, 8 and 12 minutes (never on top
+        // of a living boss), and announced. Health scales on the boss curve —
+        // EnemyManager.DifficultyBossHp, linear in minutes — not the crowd's:
+        // 1100 is about 2,100 at four minutes and 3,000 at eight, which the bot's
+        // build kills in one to two minutes. At the old 1800 on the crowd curve
+        // (5,700 / 12,000+) a level-24 build left three of them alive at 78-98%.
         //
         // Reach 3.2m and a 1.6s swing: readable, avoidable, and lethal if
         // ignored. The gold value alone is worth more than the preceding minute.
@@ -967,12 +971,23 @@ public static class Catalog
         {
             Id = "thresher_prime",
             DisplayName = "Thresher Prime",
-            Health = 1800f, Damage = 46f, MoveSpeed = 2.95f,
+            Health = 1100f, Damage = 46f, MoveSpeed = 2.95f,
             AttackRange = 3.2f, AttackCooldown = 1.6f,
             Radius = 1.5f, Height = 4.2f, KnockbackResist = 0.95f,
             XpValue = 400, GoldValue = 260,
             Cost = 30, UnlockAtSeconds = 230f, IsBoss = true,
             Tint = new Color(0.92f, 0.18f, 0.24f),
+            BossTier = 1,
+            // The first boss teaches the vocabulary, one verb per move: leave
+            // the disc and jump the ring (Slam), sidestep the lane (Charge),
+            // find the gap (Burst). Phase two adds nothing new to read, only
+            // something new to manage: Bloat Polyps that walk in and burst.
+            AbilityCooldown = 2.4f,
+            BossMoves = Moves(
+                new BossAttack { Move = BossMove.Slam, Weight = 1.2f, WindUp = 1.1f, Radius = 4.5f, Count = 1, Speed = 10f, DamageScale = 1.0f, MaxRange = 9f },
+                new BossAttack { Move = BossMove.Charge, Weight = 1.0f, WindUp = 0.9f, Radius = 16f, Speed = 20f, DamageScale = 1.1f, MinRange = 4f, MaxRange = 18f },
+                new BossAttack { Move = BossMove.RadialBurst, Weight = 0.9f, WindUp = 0.8f, Count = 14, Speed = 7f, DamageScale = 0.4f },
+                new BossAttack { Move = BossMove.Summon, Weight = 0.8f, WindUp = 0.8f, Count = 4, SummonId = "bloat_polyp", MinPhase = 2 }),
         },
 
         // ============================================== second wave of enemies
@@ -1041,12 +1056,14 @@ public static class Catalog
         // the staple — it is the thing that turns up in the last five minutes
         // often enough to matter and rarely enough to be an event. Nearly
         // unshovable and very slow: the late-game test of raw damage that the
-        // Pale Sentinel is for minute five.
+        // Pale Sentinel is for minute five. 420 -> 150 and 2.2 -> 2.9 speed: at
+        // 420 (about 3,800 after scaling) a full late build killed none of the
+        // 21 it met, and at 2.2 m/s most of them never reached it to be fought.
         new EnemyDef
         {
             Id = "tidewall_colossus",
             DisplayName = "Tidewall Colossus",
-            Health = 420f, Damage = 38f, MoveSpeed = 2.2f,
+            Health = 150f, Damage = 38f, MoveSpeed = 2.9f,
             AttackRange = 2.6f, AttackCooldown = 1.6f,
             Radius = 0.98f, Height = 3.0f, KnockbackResist = 0.9f,
             XpValue = 30, GoldValue = 18,
@@ -1058,7 +1075,8 @@ public static class Catalog
         // the Herald (16) on the elite ladder, so the mid-game elite waves are a
         // mix rather than a hand-off. Faster and frailer than the Warden: an
         // elite that chases, so an elite wave stops being something a player can
-        // simply walk away from.
+        // simply walk away from — and, since behaviours, one that closes the last
+        // few metres with a telegraphed charge instead of an invisible lunge.
         new EnemyDef
         {
             Id = "gale_revenant",
@@ -1069,6 +1087,9 @@ public static class Catalog
             XpValue = 45, GoldValue = 28,
             Cost = 11, UnlockAtSeconds = 190f, IsElite = true,
             Tint = new Color(0.75f, 0.95f, 0.88f),
+            Behavior = EnemyBehavior.Charger,
+            AbilityRange = 12f, AbilityCooldown = 3.6f, WindUp = 0.75f,
+            AbilitySpeed = 20f, AbilityDamage = 1.4f, AbilityRadius = 0.9f,
         },
 
         // ---- Boss, cost 40, at 470s. Never the first boss — Thresher Prime is
@@ -1081,12 +1102,213 @@ public static class Catalog
         {
             Id = "breaker_matriarch",
             DisplayName = "Breaker Matriarch",
-            Health = 2400f, Damage = 50f, MoveSpeed = 3.5f,
+            Health = 1500f, Damage = 50f, MoveSpeed = 3.5f,
             AttackRange = 3.6f, AttackCooldown = 1.3f,
             Radius = 1.65f, Height = 4.8f, KnockbackResist = 0.97f,
             XpValue = 550, GoldValue = 360,
             Cost = 40, UnlockAtSeconds = 470f, IsBoss = true,
             Tint = new Color(0.20f, 0.62f, 0.86f),
+            BossTier = 2,
+            // A charger first: two of every five moves are lanes, and phase
+            // two chains them. MeteorRain arrives at half health so the
+            // second half cannot be survived by sidestepping alone.
+            AbilityCooldown = 2.1f,
+            BossMoves = Moves(
+                new BossAttack { Move = BossMove.Charge, Weight = 2.0f, WindUp = 0.8f, Radius = 20f, Speed = 24f, DamageScale = 1.0f, MinRange = 4f, MaxRange = 22f },
+                new BossAttack { Move = BossMove.Slam, Weight = 1.0f, WindUp = 1.0f, Radius = 5f, Count = 1, Speed = 11f, DamageScale = 1.0f, MaxRange = 10f },
+                new BossAttack { Move = BossMove.Barrage, Weight = 1.0f, WindUp = 0.6f, Count = 3, Speed = 9f, DamageScale = 0.4f },
+                new BossAttack { Move = BossMove.MeteorRain, Weight = 1.0f, WindUp = 0.5f, Count = 4, Radius = 2.6f, Speed = 1.3f, DamageScale = 0.8f, MinPhase = 2 }),
+        },
+
+        // ============================================= third wave: behaviours
+        //
+        // Monsters that fight differently rather than harder. Every one of
+        // them unlocks after 120s, so the opening two minutes — the part tuned
+        // against the starter weapon alone, where the bot currently dies
+        // between 1:00 and 1:35 — contain exactly the roster they did before.
+        //
+        // Costs sit on rungs the ladder already has (2, 3, 4, 5, 6, 10), each
+        // next to an older enemy of similar threat, so a minute's budget buys
+        // a *mix* of chasers and specialists instead of the specialist
+        // displacing the chaser. Ability damage is written as a multiple of
+        // contact damage so the director's damage curve scales both together.
+
+        // ---- Shooter, cost 3, at 125s. The first ranged enemy: one slow shot
+        // (7.5 m/s against a 6 m/s player — dodged by walking sideways) after
+        // a 0.7s glow, from 10m. Fragile, so it teaches "go and kill the
+        // thing at the back" without punishing a player who ignores it.
+        new EnemyDef
+        {
+            Id = "brinespitter",
+            DisplayName = "Brinespitter",
+            Health = 20f, Damage = 6f, MoveSpeed = 2.9f,
+            AttackRange = 1.5f, AttackCooldown = 1.2f,
+            Radius = 0.4f, Height = 1.5f, KnockbackResist = 0f,
+            XpValue = 3, GoldValue = 2,
+            Cost = 3, UnlockAtSeconds = 125f,
+            Tint = new Color(0.86f, 0.46f, 0.74f),
+            Behavior = EnemyBehavior.Shooter,
+            AbilityRange = 10f, AbilityCooldown = 3.2f, WindUp = 0.7f,
+            AbilityDamage = 1f, AbilitySpeed = 7.5f, AbilityCount = 1,
+        },
+
+        // ---- Exploder, cost 2, at 140s. Fast and frail; lights a 0.9s fuse
+        // at 2.2m and bursts for 2.6x its contact damage over a 2.6m disc.
+        // Killing it during the swell cancels the blast, and letting it go off
+        // pays no xp — the right answer is always to shoot it first.
+        new EnemyDef
+        {
+            Id = "bloat_polyp",
+            DisplayName = "Bloat Polyp",
+            Health = 16f, Damage = 5f, MoveSpeed = 4.4f,
+            AttackRange = 1.3f, AttackCooldown = 1.0f,
+            Radius = 0.45f, Height = 0.9f, KnockbackResist = 0f,
+            XpValue = 2, GoldValue = 1,
+            Cost = 2, UnlockAtSeconds = 140f,
+            Tint = new Color(0.80f, 0.86f, 0.34f),
+            Behavior = EnemyBehavior.Exploder,
+            AbilityRange = 2.2f, WindUp = 0.9f,
+            AbilityRadius = 2.6f, AbilityDamage = 2.6f,
+        },
+
+        // ---- Charger, cost 4, at 165s. Slow on foot; from 11m it plants,
+        // paints its lane for 0.85s (locking direction at the halfway point)
+        // and runs it at 17 m/s. Sidestep or dash through: the dash's
+        // i-frames are exactly what the lane is asking for.
+        new EnemyDef
+        {
+            Id = "reefhorn",
+            DisplayName = "Reefhorn",
+            Health = 50f, Damage = 10f, MoveSpeed = 2.7f,
+            AttackRange = 1.7f, AttackCooldown = 1.3f,
+            Radius = 0.55f, Height = 1.4f, KnockbackResist = 0.3f,
+            XpValue = 5, GoldValue = 3,
+            Cost = 4, UnlockAtSeconds = 165f,
+            Tint = new Color(0.88f, 0.40f, 0.32f),
+            Behavior = EnemyBehavior.Charger,
+            AbilityRange = 11f, AbilityCooldown = 4.5f, WindUp = 0.85f,
+            AbilitySpeed = 17f, AbilityDamage = 1.6f, AbilityRadius = 0.8f,
+        },
+
+        // ---- Leaper, cost 5, at 215s. Marks the ground under the player,
+        // crouches for 0.55s and lands there with a 2.4m blast. The marker
+        // fills across crouch and flight together, so its edge closing is the
+        // countdown — and anyone who moved on the mark is already safe.
+        new EnemyDef
+        {
+            Id = "surge_leaper",
+            DisplayName = "Surge Leaper",
+            Health = 60f, Damage = 12f, MoveSpeed = 3.3f,
+            AttackRange = 1.6f, AttackCooldown = 1.2f,
+            Radius = 0.5f, Height = 1.3f, KnockbackResist = 0.25f,
+            XpValue = 6, GoldValue = 4,
+            Cost = 5, UnlockAtSeconds = 215f,
+            Tint = new Color(0.36f, 0.62f, 0.96f),
+            Behavior = EnemyBehavior.Leaper,
+            AbilityRange = 12f, AbilityCooldown = 4.0f, WindUp = 0.55f,
+            AbilityRadius = 2.4f, AbilityDamage = 1.5f,
+        },
+
+        // ---- Splitter, cost 6, at 270s. A plain chaser that bursts into four
+        // Shoal Fry when it dies. The cost buys the brood too, which is why it
+        // is priced a rung above its own threat: killing it is the start of
+        // the fight, not the end, and it is most dangerous killed at your feet.
+        new EnemyDef
+        {
+            Id = "shoalmother",
+            DisplayName = "Shoalmother",
+            Health = 90f, Damage = 14f, MoveSpeed = 2.4f,
+            AttackRange = 1.9f, AttackCooldown = 1.3f,
+            Radius = 0.7f, Height = 1.6f, KnockbackResist = 0.4f,
+            XpValue = 6, GoldValue = 4,
+            Cost = 6, UnlockAtSeconds = 270f,
+            Tint = new Color(0.52f, 0.76f, 0.86f),
+            SplitInto = "shoal_fry", SplitCount = 4,
+        },
+
+        // ---- Summon only: the Shoalmother's brood and the Knell Leviathan's
+        // adds. Never bought by the director, so it has no place on the cost
+        // ladder; fast and very frail, a swarm that punishes standing still.
+        new EnemyDef
+        {
+            Id = "shoal_fry",
+            DisplayName = "Shoal Fry",
+            Health = 10f, Damage = 5f, MoveSpeed = 5.3f,
+            AttackRange = 1.2f, AttackCooldown = 0.8f,
+            Radius = 0.26f, Height = 0.6f, KnockbackResist = 0f,
+            XpValue = 1, GoldValue = 0,
+            Cost = 1, UnlockAtSeconds = 0f,
+            Tint = new Color(0.72f, 0.90f, 0.96f),
+            DirectorSpawns = false,
+        },
+
+        // ---- Shooter, cost 10, at 420s. The late ranged threat: a three-shot
+        // fan from 9m behind the brutes it arrives with, so the fan has to be
+        // read and walked through the gaps. First tuned at 13m and 120 health,
+        // where it sat beyond most weapons' reach and was killed 2 times in 92.
+        new EnemyDef
+        {
+            Id = "deepcaller",
+            DisplayName = "Deepcaller",
+            Health = 85f, Damage = 18f, MoveSpeed = 2.6f,
+            AttackRange = 1.8f, AttackCooldown = 1.3f,
+            Radius = 0.6f, Height = 2.1f, KnockbackResist = 0.3f,
+            XpValue = 14, GoldValue = 8,
+            Cost = 10, UnlockAtSeconds = 420f,
+            Tint = new Color(0.56f, 0.36f, 0.86f),
+            Behavior = EnemyBehavior.Shooter,
+            AbilityRange = 9f, AbilityCooldown = 3.6f, WindUp = 0.8f,
+            AbilityDamage = 0.8f, AbilitySpeed = 8.5f, AbilityCount = 3, AbilitySpread = 30f,
+        },
+
+        // ---- Boss, tier 2, cost 38, at 470s. The ranged boss: it fights from
+        // mid range, filling the floor with blast circles and the air with rings
+        // while Brinespitters crowd the gaps. Below half it learns to slam with
+        // a double ring, so closing in stops being free. Every move has a
+        // MaxRange: with none it cast from across the arena, never walked into
+        // reach, and outlived a seven-minute fight at half health.
+        new EnemyDef
+        {
+            Id = "undertow_oracle",
+            DisplayName = "Undertow Oracle",
+            Health = 1300f, Damage = 40f, MoveSpeed = 2.4f,
+            AttackRange = 3.0f, AttackCooldown = 1.5f,
+            Radius = 1.4f, Height = 4.4f, KnockbackResist = 0.95f,
+            XpValue = 500, GoldValue = 320,
+            Cost = 38, UnlockAtSeconds = 470f, IsBoss = true,
+            Tint = new Color(0.28f, 0.84f, 0.74f),
+            BossTier = 2,
+            AbilityCooldown = 2.2f,
+            BossMoves = Moves(
+                new BossAttack { Move = BossMove.RadialBurst, Weight = 1.1f, WindUp = 0.9f, Count = 18, Speed = 6.5f, DamageScale = 0.35f, MaxRange = 13f },
+                new BossAttack { Move = BossMove.Barrage, Weight = 0.9f, WindUp = 0.6f, Count = 3, Speed = 9.5f, DamageScale = 0.35f, MaxRange = 14f },
+                new BossAttack { Move = BossMove.MeteorRain, Weight = 1.2f, WindUp = 0.5f, Count = 5, Radius = 2.4f, Speed = 1.4f, DamageScale = 0.8f, MaxRange = 18f },
+                new BossAttack { Move = BossMove.Summon, Weight = 0.6f, WindUp = 0.8f, Count = 3, SummonId = "brinespitter", MaxRange = 14f },
+                new BossAttack { Move = BossMove.Slam, Weight = 1.0f, WindUp = 1.0f, Radius = 4f, Count = 2, Speed = 9f, DamageScale = 0.9f, MaxRange = 9f, MinPhase = 2 }),
+        },
+
+        // ---- Boss, tier 3, cost 55, at 650s. The last boss and the only one
+        // that uses everything: a double-ring slam, a 22m charge, meteor
+        // rain, Shoal Fry swarms, and from half health a 24-shot ring. Highest
+        // cost, so once it unlocks the twelve-minute boss is usually this.
+        new EnemyDef
+        {
+            Id = "knell_leviathan",
+            DisplayName = "Knell Leviathan",
+            Health = 1900f, Damage = 55f, MoveSpeed = 3.2f,
+            AttackRange = 3.8f, AttackCooldown = 1.4f,
+            Radius = 1.85f, Height = 5.0f, KnockbackResist = 0.98f,
+            XpValue = 700, GoldValue = 450,
+            Cost = 55, UnlockAtSeconds = 650f, IsBoss = true,
+            Tint = new Color(0.32f, 0.32f, 0.95f),
+            BossTier = 3,
+            AbilityCooldown = 2.0f,
+            BossMoves = Moves(
+                new BossAttack { Move = BossMove.Slam, Weight = 1.2f, WindUp = 1.2f, Radius = 5.5f, Count = 2, Speed = 12f, DamageScale = 1.0f, MaxRange = 11f },
+                new BossAttack { Move = BossMove.Charge, Weight = 1.0f, WindUp = 0.9f, Radius = 22f, Speed = 26f, DamageScale = 1.1f, MinRange = 5f, MaxRange = 24f },
+                new BossAttack { Move = BossMove.MeteorRain, Weight = 1.0f, WindUp = 0.5f, Count = 6, Radius = 2.8f, Speed = 1.2f, DamageScale = 0.8f },
+                new BossAttack { Move = BossMove.Summon, Weight = 0.7f, WindUp = 0.8f, Count = 6, SummonId = "shoal_fry" },
+                new BossAttack { Move = BossMove.RadialBurst, Weight = 1.0f, WindUp = 0.7f, Count = 24, Speed = 8f, DamageScale = 0.35f, MinPhase = 2 }),
         },
     };
 
@@ -1580,6 +1802,9 @@ public static class Catalog
     // Two small helpers so that an item reads as one statement. Forty-odd
     // items written as object initialisers with nested Godot arrays is a page of
     // punctuation, and the balance numbers stop being visible in it.
+
+    private static Godot.Collections.Array<BossAttack> Moves(params BossAttack[] moves)
+        => new(moves);
 
     private static ItemEffect Effect(Stat stat, ModifierOp op, float perStack)
         => new() { Stat = stat, Op = op, PerStack = perStack };

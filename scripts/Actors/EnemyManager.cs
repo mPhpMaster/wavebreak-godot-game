@@ -102,6 +102,8 @@ public sealed partial class EnemyManager : Node3D
     private float _nextBossAt = float.MaxValue;
     private float _eliteWaveUntil = -1f;
     private Action<Enemy>? _despawnHandler;
+    private bool _bossBarInstalled;
+    private readonly HashSet<EnemyDef> _bossesMet = new();
 
     // Neighbour grid: cell -> index of the first enemy in it, then a linked list
     // through _cellNext. Rebuilt once per physics step and allocation-free after
@@ -134,6 +136,40 @@ public sealed partial class EnemyManager : Node3D
 
     /// <summary>Contact-damage multiplier the director is currently applying.</summary>
     public float DifficultyDamage { get; private set; } = 1f;
+
+    /// <summary>
+    /// Health multiplier for bosses. Linear only, without the exponential the
+    /// rank and file get: a boss is a duel against the build's *single-target*
+    /// damage, which grows far slower than its crowd-clearing, so scaling a boss
+    /// like a crowd made every boss after the first an unkillable wall (measured:
+    /// three Threshers alive at 78-98% after a level-24 build had nine minutes
+    /// to work on them).
+    /// </summary>
+    public float DifficultyBossHp { get; private set; } = 1f;
+
+    /// <summary>First living boss, or null. For the boss bar and anything that
+    /// wants to know whether a boss fight is on.</summary>
+    public Enemy? ActiveBoss
+    {
+        get
+        {
+            for (int i = 0; i < _alive.Count; i++)
+                if (_alive[i].IsAlive && _alive[i].IsBoss) return _alive[i];
+            return null;
+        }
+    }
+
+    /// <summary>Living bosses right now.</summary>
+    public int BossCount
+    {
+        get
+        {
+            int n = 0;
+            for (int i = 0; i < _alive.Count; i++)
+                if (_alive[i].IsAlive && _alive[i].IsBoss) n++;
+            return n;
+        }
+    }
 
     /// <summary>Credits banked but not yet spent. Useful for a debug overlay.</summary>
     public float Credits => _credits;
@@ -178,18 +214,34 @@ public sealed partial class EnemyManager : Node3D
             return NearestInGrid(p, maxRange);
 
         Enemy? best = null;
-        float bestSq = maxRange > 0f ? maxRange * maxRange : float.MaxValue;
+        float limitSq = maxRange > 0f ? maxRange * maxRange : float.MaxValue;
+        float bestSq = limitSq;
         for (int i = 0; i < _alive.Count; i++)
         {
             Enemy e = _alive[i];
             if (!e.IsAlive) continue;
             float sq = (e.AimPoint - p).LengthSquared();
+            if (sq >= limitSq) continue;
+            sq *= PriorityFactor(e);
             if (sq >= bestSq) continue;
             bestSq = sq;
             best = e;
         }
         return best;
     }
+
+    /// <summary>
+    /// Squared-distance discount for targeting. Weapons aim at the "nearest"
+    /// enemy, and with pure distance a boss is never nearest: the trash it
+    /// walks in with always is, so auto-aim spent whole fights on fodder while
+    /// the boss sat at full health. A boss counts as 0.45 of its distance: the
+    /// boss at 10m beats trash further than 4.5m, so the weapons work on it
+    /// whenever the player has room, and go back to the crowd when it closes.
+    /// (At 0.25 the crowd was starved: kills per run halved and the arena sat
+    /// at the live cap for whole fights.) Elites are left on plain distance —
+    /// an elite wave is a crowd, and the crowd is the threat.
+    /// </summary>
+    private static float PriorityFactor(Enemy e) => e.IsBoss ? 0.45f * 0.45f : 1f;
 
     /// <summary>
     /// Install the enemy roster and the run's random source. Safe to call again
@@ -219,7 +271,7 @@ public sealed partial class EnemyManager : Node3D
         for (int i = 0; i < _defs.Count; i++)
         {
             EnemyDef def = _defs[i];
-            int capacity = def.IsBoss ? 4 : def.IsElite ? 32 : PoolCapacity;
+            int capacity = def.IsBoss ? 4 : def.IsElite ? 32 : def.DirectorSpawns ? PoolCapacity : 64;
             _pools.Add(new Pool<Enemy>(this, NewEnemy, capacity));
         }
 
@@ -232,6 +284,8 @@ public sealed partial class EnemyManager : Node3D
             int warm = def.IsBoss ? 1 : def.IsElite ? 4 : def.UnlockAtSeconds <= 0f ? 24 : 8;
             PrewarmPool(i, warm);
         }
+
+        EnemyAttacks.Initialize(this);
 
         _nextEliteAt = FirstEliteAtSeconds;
         _nextBossAt = FirstBossAtSeconds;
@@ -249,6 +303,8 @@ public sealed partial class EnemyManager : Node3D
         Instance ??= this;
         _runSeconds = runSeconds;
         if (_defs.Count == 0 || dt <= 0f) return;
+
+        if (!_bossBarInstalled) _bossBarInstalled = UI.BossBar.Install(this);
 
         Sweep();
         UpdateDifficulty(runSeconds);
@@ -305,6 +361,8 @@ public sealed partial class EnemyManager : Node3D
         _alive.Clear();
         _pendingRelease.Clear();
         _cellHead.Clear();
+        _bossesMet.Clear();
+        EnemyAttacks.Clear();
         _gridValid = false;
 
         _living = 0;
@@ -323,6 +381,7 @@ public sealed partial class EnemyManager : Node3D
         DifficultyHp = 1f;
         DifficultySpeed = 1f;
         DifficultyDamage = 1f;
+        DifficultyBossHp = 1f;
         PlayerRef.Forget();
     }
 
@@ -364,6 +423,9 @@ public sealed partial class EnemyManager : Node3D
             Vector3 separation = SeparationFor(i, e.GlobalPosition);
             e.Step(dt, playerPosition, hasPlayer ? playerHit : null, separation);
         }
+
+        // After the enemies, so a shot fired this step moves this step.
+        EnemyAttacks.Tick(dt, playerPosition, hasPlayer ? playerHit : null);
     }
 
     // ------------------------------------------------------------- director
@@ -405,6 +467,7 @@ public sealed partial class EnemyManager : Node3D
         DifficultyHp = (1f + minutes * 0.34f) * MathF.Pow(1.075f, minutes) * scaling;
         DifficultyDamage = (1f + minutes * 0.16f) * scaling;
         DifficultySpeed = MathF.Min(1f + minutes * 0.022f, 1.45f);
+        DifficultyBossHp = (1f + minutes * 0.22f) * scaling;
     }
 
     private void UpdateWaves(float runSeconds)
@@ -423,14 +486,24 @@ public sealed partial class EnemyManager : Node3D
         }
 
         if (runSeconds < _nextBossAt) return;
+
+        // One boss at a time. A timer that fires regardless stacks a second boss
+        // on an unfinished fight, which is not a harder fight but an unreadable
+        // one; the next boss waits until this one is down.
+        if (BossCount > 0)
+        {
+            _nextBossAt = runSeconds + 5f;
+            return;
+        }
         _nextBossAt = runSeconds + BossWaveInterval;
 
         int boss = PickBoss(runSeconds);
         if (boss < 0) return;
         if (!PlayerRef.TryGet(out Node3D player, out _)) return;
-        if (SpawnOne(boss, player.GlobalPosition) is not null)
-            Announce(_defs[boss].DisplayName is { Length: > 0 } name ? name.ToUpperInvariant() : "BOSS",
-                     new Color(1f, 0.25f, 0.25f), 1.7f);
+        if (SpawnOne(boss, player.GlobalPosition) is null) return;
+        _bossesMet.Add(_defs[boss]);
+        Announce(_defs[boss].DisplayName is { Length: > 0 } name ? name.ToUpperInvariant() : "BOSS",
+                 new Color(1f, 0.25f, 0.25f), 1.7f);
     }
 
     private static void Announce(string text, Color color, float scale)
@@ -444,7 +517,7 @@ public sealed partial class EnemyManager : Node3D
         for (int i = 0; i < _defs.Count; i++)
         {
             EnemyDef def = _defs[i];
-            if (def.IsBoss || def.IsElite != elite) continue;
+            if (def.IsBoss || !def.DirectorSpawns || def.IsElite != elite) continue;
             if (runSeconds < def.UnlockAtSeconds) continue;
             return true;
         }
@@ -459,8 +532,12 @@ public sealed partial class EnemyManager : Node3D
         {
             EnemyDef def = _defs[i];
             bool ok = def.IsBoss && runSeconds >= def.UnlockAtSeconds;
-            // Later bosses are the interesting ones, so weight by cost.
-            _weights.Add(ok ? MathF.Max(1f, def.Cost) : 0f);
+            // Later bosses are the interesting ones, so weight by cost; one
+            // already fought this run is a fifth as likely, so three boss
+            // timers usually mean three different fights.
+            float w = ok ? MathF.Max(1f, def.Cost) : 0f;
+            if (_bossesMet.Contains(def)) w *= 0.2f;
+            _weights.Add(w);
             any |= ok;
         }
         return any ? _rng.PickWeighted(_weights) : -1;
@@ -490,7 +567,7 @@ public sealed partial class EnemyManager : Node3D
             EnemyDef def = _defs[i];
             float cost = MathF.Max(1f, def.Cost);
 
-            if (def.IsBoss || runSeconds < def.UnlockAtSeconds || cost > _credits)
+            if (def.IsBoss || !def.DirectorSpawns || runSeconds < def.UnlockAtSeconds || cost > _credits)
             {
                 _weights.Add(0f);
                 continue;
@@ -532,19 +609,52 @@ public sealed partial class EnemyManager : Node3D
             return null;
         }
 
+        Activate(defIndex, enemy, point);
+        return enemy;
+    }
+
+    /// <summary>
+    /// Put one <paramref name="def"/> at an exact point, outside the director's
+    /// budget: a split, a boss's summon, a scripted encounter. Still pooled,
+    /// still counted, still capped by <see cref="MaxAlive"/>. Returns null when
+    /// the def is not installed or there is no room.
+    /// </summary>
+    public Enemy? SpawnAt(EnemyDef def, Vector3 position)
+    {
+        int index = _defs.IndexOf(def);
+        if (index < 0 || _living >= MaxAlive) return null;
+
+        Enemy? enemy = _pools[index].Get();
+        if (enemy is null) return null;
+
+        Activate(index, enemy, position);
+        return enemy;
+    }
+
+    private void Activate(int defIndex, Enemy enemy, Vector3 point)
+    {
         EnemyDef def = _defs[defIndex];
         enemy.PoolIndex = defIndex;
         enemy.Despawned ??= _despawnHandler;
+        enemy.Random = _rng;
 
         // Per-instance speed jitter, from the run's seeded source so replays hold.
         // Identical speeds make a group move as one rigid blob, which is the
         // single biggest tell that a crowd is not really a crowd.
         float jitter = _rng.Range(0.9f, 1.12f);
-        enemy.Configure(def, DifficultyHp, DifficultyDamage, DifficultySpeed * jitter);
+        enemy.Configure(def, def.IsBoss ? DifficultyBossHp : DifficultyHp, DifficultyDamage, DifficultySpeed * jitter);
         enemy.Spawn(point);
 
         Register(enemy);
-        return enemy;
+    }
+
+    /// <summary>Despawn every live enemy below <paramref name="y"/>. The content
+    /// audit stages fights far under the arena; this is how it cleans up the
+    /// adds and splits those fights leave behind.</summary>
+    internal void DespawnBelow(float y)
+    {
+        for (int i = 0; i < _alive.Count; i++)
+            if (_alive[i].IsAlive && _alive[i].GlobalPosition.Y < y) _alive[i].Despawn();
     }
 
     // ---------------------------------------------------------- placement
@@ -872,7 +982,8 @@ public sealed partial class EnemyManager : Node3D
         int span = Math.Max(1, (int)MathF.Ceiling(maxRange / CellSize));
 
         Enemy? best = null;
-        float bestSq = maxRange * maxRange;
+        float limitSq = maxRange * maxRange;
+        float bestSq = limitSq;
 
         for (int ox = -span; ox <= span; ox++)
         for (int oz = -span; oz <= span; oz++)
@@ -886,6 +997,8 @@ public sealed partial class EnemyManager : Node3D
                 if (!e.IsAlive) continue;
 
                 float sq = (e.AimPoint - p).LengthSquared();
+                if (sq >= limitSq) continue;
+                sq *= PriorityFactor(e);
                 if (sq >= bestSq) continue;
                 bestSq = sq;
                 best = e;

@@ -232,6 +232,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     private const float FlashDuration = 0.11f;
     private const float TurnSpeed = 9f;             // radians/second
     private const float AssumedPlayerRadius = 0.55f;
+    private const float DashAcceleration = 220f;    // a charge is at speed within a few frames
 
     // ---------------------------------------------------------- identity
 
@@ -354,6 +355,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         _attackRange = MathF.Max(0.2f, def.AttackRange);
         _attackCooldown = MathF.Max(0.15f, def.AttackCooldown);
         _knockbackResist = Mathf.Clamp(def.KnockbackResist, 0f, 1f);
+        _abilityDamage = _contactDamage * MathF.Max(0f, def.AbilityDamage);
 
         BuildBody(def, radius, height);
         ApplyFlash(0f);
@@ -375,6 +377,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         // Stagger the first swing so a wave that spawns together does not land a
         // synchronised volley the instant it reaches the player.
         _attackTimer = _attackCooldown * 0.5f;
+        ResetBehaviour();
 
         CollisionLayer = EnemyLayer;
         CollisionMask = WorldLayer;
@@ -411,6 +414,14 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         if (_dead) return;
 
         UpdateFlash(dt);
+        _aliveSeconds += dt;
+
+        // Mid-leap the body is on a scripted arc, not under steering or physics.
+        if (_act == Act.Leap)
+        {
+            StepLeap(dt);
+            return;
+        }
 
         Vector3 position = GlobalPosition;
         Vector3 toPlayer = playerPosition - position;
@@ -423,18 +434,32 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         // driving forward at full speed shove each other through the player and
         // produce a jittering pile instead of a ring.
         bool hasTarget = player is not null;
-        float seek = !hasTarget ? 0f
-                   : distance > _attackRange * 0.9f ? 1f
-                   : 0.2f;
 
-        Vector3 desired = heading * seek + separation * SeparationWeight;
-        if (desired.LengthSquared() > 1f) desired = desired.Normalized();
-        desired *= _speed;
+        // Behaviours replace the throttle, never the physics below it: a
+        // charging or winding-up enemy is still shoved, still falls, still
+        // slides along walls.
+        Vector3 desired;
+        float acceleration = Acceleration;
+        if (_act == Act.Dash)
+        {
+            desired = _actDir * _dashSpeed;
+            acceleration = DashAcceleration;
+        }
+        else if (_act != Act.None)
+        {
+            // Planted while telegraphing: a wind-up that drifts toward the
+            // player makes the telegraph lie about where the attack will be.
+            desired = separation * (SeparationWeight * 0.25f * _speed);
+        }
+        else
+        {
+            desired = Locomotion(heading, distance, hasTarget, separation) * (_speed * _speedScale);
+        }
 
         Vector3 velocity = Velocity;
         Vector3 horizontal = new(velocity.X, 0f, velocity.Z);
         horizontal -= _knockback;                       // steer the self-driven part only
-        horizontal = horizontal.MoveToward(desired, Acceleration * dt);
+        horizontal = horizontal.MoveToward(desired, acceleration * dt);
 
         _knockback = _knockback.MoveToward(Vector3.Zero, KnockbackDamping * dt);
 
@@ -455,14 +480,21 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             Velocity = new Vector3(Velocity.X, 0f, Velocity.Z);
         }
 
-        if (distance > 0.05f)
+        // Face the committed direction during an action, so the body points
+        // down the lane it is about to run rather than at where the player went.
+        Vector3 face = _act == Act.None ? heading : _actDir;
+        if (distance > 0.05f || _act != Act.None)
         {
-            float target = MathF.Atan2(heading.X, heading.Z);
+            float target = MathF.Atan2(face.X, face.Z);
             Rotation = new Vector3(0f, Mathf.LerpAngle(Rotation.Y, target, MathF.Min(1f, TurnSpeed * dt)), 0f);
         }
 
+        StepBehaviour(dt, playerPosition, player, distance, heading);
+        if (_dead) return;                              // an exploder can end itself above
+
         _attackTimer -= dt;
         if (player is not null
+            && _act == Act.None
             && _attackTimer <= 0f
             && player.IsAlive
             && distance <= _attackRange + AssumedPlayerRadius)
@@ -570,9 +602,10 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         _health -= amount;
         _flashTimer = FlashDuration;
 
-        if (info.Knockback > 0f) AddKnockback(info.Direction, info.Knockback);
+        if (info.Knockback > 0f && _act != Act.Dash) AddKnockback(info.Direction, info.Knockback);
 
         if (_health <= 0f) Die();
+        else CheckPhase();
     }
 
     private void AddKnockback(Vector3 direction, float strength)
@@ -598,6 +631,8 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         int xp = _def?.XpValue ?? 0;
         int gold = _def?.GoldValue ?? 0;
         Data.ContentAudit.NoteKill(_def);
+        if (IsBoss) Data.ContentAudit.NoteBossDeath(_def, _aliveSeconds);
+        Split();
 
         // Slightly above the feet: drops read better when they are not embedded
         // in the floor, and the pickup layer spawns from this point.
@@ -614,6 +649,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     /// respawns inside one frame.</summary>
     private void Deactivate()
     {
+        EndBehaviour();
         CollisionLayer = 0;
         CollisionMask = 0;
         Velocity = Vector3.Zero;
@@ -630,41 +666,43 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         ApplyFlash(_flashTimer <= 0f ? 0f : _flashTimer / FlashDuration);
     }
 
+    /// <summary>
+    /// Writes body colour from two inputs: the hit flash (white, brief) and the
+    /// wind-up glow (hot, held for the whole telegraph). Combined in one place
+    /// so neither can leave the other's colour behind when it ends.
+    /// </summary>
     private void ApplyFlash(float amount)
     {
         if (_bodyMaterial is null) return;
 
         float t = Mathf.Clamp(amount, 0f, 1f);
-        if (t <= 0f)
-        {
-            _bodyMaterial.AlbedoColor = _baseColor;
-            _bodyMaterial.Emission = _baseColor;
-            _bodyMaterial.EmissionEnergyMultiplier = EmissionFor(_builtSilhouette);
-            if (_accentMaterial is not null)
-            {
-                _accentMaterial.AlbedoColor = _accentColor;
-                _accentMaterial.Emission = _accentColor;
-                _accentMaterial.EmissionEnergyMultiplier = EmissionFor(_builtSilhouette) * 1.8f;
-            }
-            return;
-        }
+        float g = Mathf.Clamp(_glow, 0f, 1f);
+        float baseEnergy = EmissionFor(_builtSilhouette) + (_phase >= 2 ? 0.7f : 0f);
 
-        Color flashed = _baseColor.Lerp(Colors.White, t);
-        _bodyMaterial.AlbedoColor = flashed;
-        _bodyMaterial.Emission = flashed;
-        _bodyMaterial.EmissionEnergyMultiplier = EmissionFor(_builtSilhouette) + t * 2.2f;
+        Color body = _baseColor.Lerp(GlowColor, g * 0.6f).Lerp(Colors.White, t);
+        _bodyMaterial.AlbedoColor = body;
+        _bodyMaterial.Emission = body;
+        _bodyMaterial.EmissionEnergyMultiplier = baseEnergy + t * 2.2f + g * 2.6f;
+
         if (_accentMaterial is not null)
         {
-            _accentMaterial.AlbedoColor = _accentColor.Lerp(Colors.White, t);
-            _accentMaterial.Emission = _accentMaterial.AlbedoColor;
-            _accentMaterial.EmissionEnergyMultiplier = EmissionFor(_builtSilhouette) * 1.8f + t * 2.2f;
+            Color accent = _accentColor.Lerp(GlowColor, g * 0.6f).Lerp(Colors.White, t);
+            _accentMaterial.AlbedoColor = accent;
+            _accentMaterial.Emission = accent;
+            _accentMaterial.EmissionEnergyMultiplier = baseEnergy * 1.8f + t * 2.2f + g * 3f;
         }
     }
+
+    /// <summary>Wind-up colour. Warm and bright on every enemy, so "about to
+    /// do something" reads the same across the whole roster.</summary>
+    private static readonly Color GlowColor = new(1.00f, 0.86f, 0.55f);
 
     private static float EmissionFor(Silhouette s) => s switch
     {
         Silhouette.Boss => 0.85f,
         Silhouette.Elite => 0.55f,
+        Silhouette.Caster => 0.45f,
+        Silhouette.Bloat => 0.4f,
         _ => 0.22f,
     };
 
@@ -674,13 +712,24 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     /// Chosen from stats rather than authored per definition, so silhouette and
     /// behaviour cannot drift apart: if a designer makes something fast, it
     /// becomes a low sphere and the player learns to read speed off the shape.
+    /// Behaviour outranks stats for the same reason: what an enemy *does* is the
+    /// first thing the player needs to read off it. A tapered tower with an orb
+    /// shoots, a ball swells and bursts, a horned block charges, a squat one
+    /// jumps.
     /// </summary>
-    private enum Silhouette { None, Grunt, Runner, Brute, Elite, Boss }
+    private enum Silhouette { None, Grunt, Runner, Brute, Elite, Boss, Caster, Bloat, Horned, Hopper }
 
     private static Silhouette Classify(EnemyDef def)
     {
         if (def.IsBoss) return Silhouette.Boss;
         if (def.IsElite) return Silhouette.Elite;
+        switch (def.Behavior)
+        {
+            case EnemyBehavior.Shooter: return Silhouette.Caster;
+            case EnemyBehavior.Exploder: return Silhouette.Bloat;
+            case EnemyBehavior.Charger: return Silhouette.Horned;
+            case EnemyBehavior.Leaper: return Silhouette.Hopper;
+        }
         if (def.MoveSpeed >= 5f) return Silhouette.Runner;
         if (def.Health >= 60f || def.KnockbackResist >= 0.5f) return Silhouette.Brute;
         return Silhouette.Grunt;
@@ -718,7 +767,8 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         _bodyMesh!.MaterialOverride = _bodyMaterial;
         _bodyMesh.Mesh = MeshLibrary.Body(wanted, radius, height);
         _bodyMesh.Position = new Vector3(0f, height * 0.5f, 0f);
-        _bodyMesh.Scale = BodyScale(wanted);
+        _bodyScale = BodyScale(wanted);
+        _bodyMesh.Scale = _bodyScale;
         _bodyMesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
 
         Mesh? accent = MeshLibrary.Accent(wanted, radius, height);
@@ -733,7 +783,13 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             _accentMesh!.Visible = true;
             _accentMesh.MaterialOverride = _accentMaterial;
             _accentMesh.Mesh = accent;
-            _accentMesh.Position = new Vector3(0f, height + radius * 0.45f, 0f);
+            // The horn sits on the front face and points along it (+Z is the
+            // way the body turns to face); everything else crowns the head.
+            bool horn = wanted == Silhouette.Horned;
+            _accentMesh.Position = horn
+                ? new Vector3(0f, height * 0.62f, radius * 1.15f)
+                : new Vector3(0f, height + radius * 0.45f, 0f);
+            _accentMesh.RotationDegrees = horn ? new Vector3(90f, 0f, 0f) : Vector3.Zero;
             _accentMesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         }
 
@@ -763,6 +819,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         // even standing still.
         Silhouette.Runner => new Vector3(1f, 0.78f, 1.3f),
         Silhouette.Boss => new Vector3(1.05f, 1f, 1.05f),
+        Silhouette.Hopper => new Vector3(1.18f, 0.74f, 1.18f),
         _ => Vector3.One,
     };
 
@@ -830,6 +887,22 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             {
                 Silhouette.Brute => new BoxMesh { Size = new Vector3(radius * 1.9f, height, radius * 1.9f) },
                 Silhouette.Boss => new BoxMesh { Size = new Vector3(radius * 2.1f, height * 0.8f, radius * 2.1f) },
+                Silhouette.Horned => new BoxMesh { Size = new Vector3(radius * 1.7f, height * 0.8f, radius * 2.2f) },
+                Silhouette.Caster => new CylinderMesh
+                {
+                    TopRadius = radius * 0.4f,
+                    BottomRadius = radius,
+                    Height = height,
+                    RadialSegments = 8,
+                    Rings = 1,
+                },
+                Silhouette.Bloat => new SphereMesh
+                {
+                    Radius = radius,
+                    Height = radius * 2f,
+                    RadialSegments = 12,
+                    Rings = 6,
+                },
                 Silhouette.Runner => new SphereMesh
                 {
                     Radius = radius,
@@ -854,25 +927,40 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         /// bosses, nothing for the rank and file.</summary>
         public static Mesh? Accent(Silhouette s, float radius, float height)
         {
-            if (s is not (Silhouette.Elite or Silhouette.Boss)) return null;
+            if (s is not (Silhouette.Elite or Silhouette.Boss or Silhouette.Caster or Silhouette.Horned)) return null;
 
             string key = $"a{(int)s}:{radius:0.###}:{height:0.###}";
             if (Cache.TryGetValue(key, out Mesh? cached) && GodotObject.IsInstanceValid(cached))
                 return cached;
 
-            Mesh mesh = s == Silhouette.Boss
-                ? new SphereMesh
+            Mesh mesh = s switch
+            {
+                Silhouette.Boss => new SphereMesh
                 {
                     Radius = radius * 0.85f,
                     Height = radius * 1.7f,
                     RadialSegments = 10,
                     Rings = 5,
-                }
-                : new PrismMesh
+                },
+                // The orb a caster fires from; it is what glows on the wind-up.
+                Silhouette.Caster => new SphereMesh
+                {
+                    Radius = radius * 0.55f,
+                    Height = radius * 1.1f,
+                    RadialSegments = 10,
+                    Rings = 5,
+                },
+                Silhouette.Horned => new PrismMesh
+                {
+                    Size = new Vector3(radius * 0.8f, radius * 1.3f, radius * 0.8f),
+                    LeftToRight = 0.5f,
+                },
+                _ => new PrismMesh
                 {
                     Size = new Vector3(radius * 1.6f, radius * 1.6f, radius * 1.6f),
                     LeftToRight = 0.5f,
-                };
+                },
+            };
 
             Cache[key] = mesh;
             return mesh;
