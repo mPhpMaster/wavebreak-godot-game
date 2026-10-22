@@ -74,6 +74,7 @@ public sealed partial class MainMenu : Node3D
 
         Profile.EnsureLoaded();
         GameSettings.Load();
+        Keybinds.Load();
         GameSettings.ApplyWindow();
         AudioSettings.Load();
         AudioSettings.Apply();
@@ -280,6 +281,7 @@ public sealed partial class MainMenu : Node3D
         _pages["play"] = BuildCharacterPage();
         _pages["codex"] = BuildCodexPage();
         _pages["settings"] = BuildSettingsPage();
+        _pages["keys"] = BuildKeysPage();
         foreach (Control p in _pages.Values) _root.AddChild(p);
     }
 
@@ -504,8 +506,21 @@ public sealed partial class MainMenu : Node3D
 
         Label keys = MakeLabel("In a run:  - / =  volume   ·   9 / 0  effects   ·   [ / ]  music   ·   M  mute", 14, InkDim);
         page.AddChild(keys);
+        page.AddChild(MenuButton("KEY BINDINGS", () => ShowPage("keys")));
         page.AddChild(MenuButton("BACK", () => ShowPage("main")));
         return page;
+    }
+
+    private Control BuildKeysPage()
+    {
+        // Wider than the left vignette, so it carries its own backing.
+        var frame = new PanelContainer();
+        var style = new StyleBoxFlat { BgColor = PanelBack, ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 12, ContentMarginBottom = 12 };
+        style.SetCornerRadiusAll(6);
+        frame.AddThemeStyleboxOverride("panel", style);
+        Place(frame, 44f, 180f, 640f, 530f);
+        frame.AddChild(new KeybindPanel(() => ShowPage("settings")));
+        return frame;
     }
 
     private static Control Row(string name, Control control, Label value)
@@ -577,6 +592,7 @@ public sealed partial class MainMenu : Node3D
             GetViewport().SetInputAsHandled();
             return;
         }
+        if (KeybindPanel.AnyListening) return;
         if (@event.IsActionPressed("ui_cancel") && _page != "main")
         {
             GetViewport().SetInputAsHandled();

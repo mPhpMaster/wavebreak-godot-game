@@ -41,6 +41,7 @@ public static class RunMeta
     {
         Profile.EnsureLoaded();
         GameSettings.Load();
+        Keybinds.Load();
 
         Character.ApplyTo(main.Player.Stats);
         SkinDef skin = Launch.Automated ? Character.Skins[0] : Character.SelectedSkin;

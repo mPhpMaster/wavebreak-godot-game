@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using Wavebreak.Actors;
 using Wavebreak.Audio;
@@ -26,6 +27,7 @@ public sealed partial class PauseMenu : Node
     private readonly ResultsScreen _results;
 
     private Control _settings = null!;
+    private Control _keys = null!;
     private Button _resume = null!;
     private bool _open;
     private bool _mouseWasCaptured;
@@ -56,6 +58,9 @@ public sealed partial class PauseMenu : Node
         _settings = BuildSettings();
         _sheet.AddChild(_settings);
         _settings.Visible = false;
+        _keys = BuildKeys();
+        _sheet.AddChild(_keys);
+        _keys.Visible = false;
 
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--check-pause="))
@@ -89,6 +94,31 @@ public sealed partial class PauseMenu : Node
         ShowSettings(true);
         await Wait(0.3);
         await Screenshot.Capture(tree, this, System.IO.Path.Combine(dir, "pause-settings.png"));
+        // Key bindings: open the page, click the first row, press K for real.
+        ShowKeys(true);
+        await Wait(0.3);
+        // FindChildren matches engine class names only, never a C# class, so
+        // walk the tree and test the type directly.
+        static IEnumerable<Node> Walk(Node n)
+        {
+            foreach (Node c in n.GetChildren()) { yield return c; foreach (Node d in Walk(c)) yield return d; }
+        }
+        Button? firstKey = null;
+        foreach (Node n in Walk(_keys))
+            if (n is Button b && b.GetParent() is HBoxContainer && b.Text.Length <= 12 && b.Text != "BACK") { firstKey = b; break; }
+        Expect("key-binding page has rows", firstKey is not null);
+        firstKey?.EmitSignal(BaseButton.SignalName.Pressed);
+        await Wait(0.1);
+        Input.ParseInputEvent(new InputEventKey { Keycode = Key.K, PhysicalKeycode = Key.K, Pressed = true });
+        Input.ParseInputEvent(new InputEventKey { Keycode = Key.K, PhysicalKeycode = Key.K, Pressed = false });
+        await Wait(0.2);
+        string bound = Keybinds.Describe(Keybinds.Primary(Keybinds.Actions[0].Action));
+        Expect($"rebinding '{Keybinds.Actions[0].Label}' to K works (now: {bound})", bound == "K");
+        await Screenshot.Capture(tree, this, System.IO.Path.Combine(dir, "pause-keys.png"));
+        Keybinds.ResetAll();
+        ShowKeys(false);
+        await Wait(0.2);
+
         Esc();
         await Wait(0.3);
         Expect("Esc closes settings first, menu stays", _open && !_settings.Visible && tree.Paused);
@@ -106,11 +136,14 @@ public sealed partial class PauseMenu : Node
         bool toggle = @event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }
                       || (InputMap.HasAction("pause") && @event.IsActionPressed("pause"));
         if (!toggle) return;
+        // That Esc belongs to the key-binding row waiting for a key.
+        if (KeybindPanel.AnyListening) return;
 
         if (_open)
         {
             // Esc backs out of settings first, then out of the pause menu.
-            if (_settings.Visible) ShowSettings(false);
+            if (_keys.Visible) ShowKeys(false);
+            else if (_settings.Visible) ShowSettings(false);
             else Close();
             GetViewport().SetInputAsHandled();
             return;
@@ -171,7 +204,34 @@ public sealed partial class PauseMenu : Node
     private void ShowSettings(bool show)
     {
         _settings.Visible = show;
-        _sheet.ActionRow.Visible = _open && !show;
+        if (show) _keys.Visible = false;
+        _sheet.ActionRow.Visible = _open && !show && !_keys.Visible;
+    }
+
+    private void ShowKeys(bool show)
+    {
+        _keys.Visible = show;
+        _settings.Visible = !show && _open;
+        _sheet.ActionRow.Visible = false;
+    }
+
+    private Control BuildKeys()
+    {
+        var centre = new CenterContainer { MouseFilter = Control.MouseFilterEnum.Stop };
+        centre.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        var frame = new PanelContainer();
+        var style = new StyleBoxFlat
+        {
+            BgColor = new Color(0.06f, 0.07f, 0.11f, 0.98f),
+            BorderColor = new Color(0.30f, 0.55f, 0.70f, 0.9f),
+            ContentMarginLeft = 26, ContentMarginRight = 26, ContentMarginTop = 18, ContentMarginBottom = 18,
+        };
+        style.SetBorderWidthAll(2);
+        style.SetCornerRadiusAll(10);
+        frame.AddThemeStyleboxOverride("panel", style);
+        centre.AddChild(frame);
+        frame.AddChild(new KeybindPanel(() => ShowKeys(false)));
+        return centre;
     }
 
     /// <summary>The same controls as the title screen's settings page, as an
@@ -232,6 +292,7 @@ public sealed partial class PauseMenu : Node
         full.Toggled += GameSettings.SetFullscreen;
         page.AddChild(full);
 
+        page.AddChild(MainMenu.MenuButton("KEY BINDINGS", () => ShowKeys(true)));
         page.AddChild(MainMenu.MenuButton("BACK", () => ShowSettings(false)));
         return centre;
     }
