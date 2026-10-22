@@ -363,6 +363,36 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     // ------------------------------------------------------------------ loop
 
     private float _animProbeAt = -1f;
+    private int _boundaryCheck = -1;   // -1 unknown, 0 off, 1 on
+    private float _boundaryMax, _boundaryNext;
+
+    /// <summary>--check-boundary: run straight at the wall jumping, double
+    /// jumping and dashing; report the furthest point reached.</summary>
+    private void CheckBoundary()
+    {
+        if (_boundaryCheck < 0)
+        {
+            _boundaryCheck = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-boundary") >= 0 ? 1 : 0;
+            if (_boundaryCheck == 1) MoveOverride = () => Vector3.Right;
+        }
+        if (_boundaryCheck != 1) return;
+        float d = new Vector2(GlobalPosition.X, GlobalPosition.Z).Length();
+        _boundaryMax = Mathf.Max(_boundaryMax, d);
+        if (_time >= _boundaryNext)
+        {
+            _boundaryNext = _time + 0.45f;
+            RequestJump();
+            if ((int)(_time * 2f) % 3 == 0) RequestDash();
+        }
+        if (_time > 10f)
+        {
+            float limit = Game.Arena.Radius - BodyRadius - 0.6f;
+            GD.Print($"BOUNDARY max={_boundaryMax:0.00} limit={limit:0.00} radius={Game.Arena.Radius} " +
+                     $"{(_boundaryMax <= limit + 0.05f ? "PASS" : "FAIL")}");
+            _boundaryCheck = 0;
+            GetTree().Quit();
+        }
+    }
 
     /// <summary>--check-walk: print the rig's clip state a few times while the
     /// autopilot moves, proving locomotion clips keep cycling.</summary>
@@ -385,6 +415,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
         UpdateAim();
         ProbeAnimation();
+        CheckBoundary();
 
         bool alive = Health is null || Health.IsAlive;
         bool grounded = IsOnFloor();
@@ -463,6 +494,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         if (!grounded) _lastFallSpeed = Mathf.Max(0f, -Velocity.Y);
 
         MoveAndSlide();
+        KeepInsideArena();
 
         // Running into a wall should cost the speed you ran into it with, or
         // stored momentum comes back the moment you slide off the wall.
@@ -489,6 +521,30 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         UpdatePose(grounded, walk, dt);
         UpdateVisuals(alive, dt);
         UpdateCameraFeel(walk);
+    }
+
+    /// <summary>
+    /// Hard boundary at the arena edge. The wall's collider is a low ring and a
+    /// jump peaks at 6 m before the double jump, so the wall alone could be
+    /// cleared -- and outside there is floor but no enemies, no pickups and no
+    /// way back. Clamp the position and cancel only the outward part of the
+    /// velocity, so running along the edge still works.
+    /// </summary>
+    private void KeepInsideArena()
+    {
+        float limit = Game.Arena.Radius - BodyRadius - 0.6f;
+        var flat = new Vector2(GlobalPosition.X, GlobalPosition.Z);
+        float d = flat.Length();
+        if (d <= limit || d < 0.001f) return;
+
+        Vector2 n = flat / d;
+        GlobalPosition = new Vector3(n.X * limit, GlobalPosition.Y, n.Y * limit);
+        var normal = new Vector3(n.X, 0f, n.Y);
+        float outMove = _moveVelocity.Dot(normal);
+        if (outMove > 0f) _moveVelocity -= normal * outMove;
+        float outPush = _externalVelocity.Dot(normal);
+        if (outPush > 0f) _externalVelocity -= normal * outPush;
+        if (_dashTime > 0f) _dashDirection = (_dashDirection - normal * Mathf.Max(0f, _dashDirection.Dot(normal))).Normalized();
     }
 
     private bool Pressed(string action, bool available, ref bool requested)

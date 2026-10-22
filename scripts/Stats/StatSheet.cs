@@ -129,6 +129,12 @@ public sealed class StatSheet
             }
         }
 
+        // Stacked penalties stop at -75%. Items without a stack cap each take a
+        // slice off (max health -10..-25% apiece); summed without a floor, a few
+        // copies reached -100% and left a level-60 build on 1 max health. The
+        // trade-off items still bite, they just cannot erase the stat.
+        if (!IsBonusStat(stat)) additive = Math.Max(additive, -MaxPenalty);
+
         float raw = IsBonusStat(stat)
             // A bonus stat is read as the multiplier 1 + value, with base 0. Run
             // through the general formula, (0 + flat) * (1 + additive) is still 0,
@@ -144,6 +150,8 @@ public sealed class StatSheet
 
     /// <summary>Stats stored as a bonus over x1 and read through
     /// <see cref="GetMultiplier"/>.</summary>
+    public const float MaxPenalty = 0.75f;
+
     public static bool IsBonusStat(Stat stat) => stat is Stat.Damage or Stat.XpGain or Stat.GoldGain;
 
     /// <summary>Damage multiplier form of a "bonus" stat: 0 reads as x1.</summary>
