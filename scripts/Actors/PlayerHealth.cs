@@ -190,6 +190,13 @@ public sealed partial class PlayerHealth : Node, IDamageable
     {
         if (info is null) return;
 
+        if (Game.Screenshot.Invulnerable)
+        {
+            info.Nullified = true;
+            info.Amount = 0f;
+            return;
+        }
+
         if (_dead || info.Nullified)
         {
             info.Nullified = true;

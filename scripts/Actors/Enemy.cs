@@ -597,6 +597,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
 
         int xp = _def?.XpValue ?? 0;
         int gold = _def?.GoldValue ?? 0;
+        Data.ContentAudit.NoteKill(_def);
 
         // Slightly above the feet: drops read better when they are not embedded
         // in the floor, and the pickup layer spawns from this point.

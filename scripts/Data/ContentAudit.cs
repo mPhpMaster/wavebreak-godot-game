@@ -85,12 +85,31 @@ public static class ContentAudit
             Line($"first-spawn {def.Id} t={RunSeconds:0}{(def.IsElite ? " elite" : "")}{(def.IsBoss ? " boss" : "")}");
     }
 
+    private static readonly Dictionary<string, int> KillCounts = new();
+
+    /// <summary>Called by <see cref="Enemy"/> on death. A spawn count proves an
+    /// enemy appears; a kill count proves it can also be fought to the end.</summary>
+    public static void NoteKill(EnemyDef? def)
+    {
+        if (def is null || !Logging) return;
+        bool first = !KillCounts.ContainsKey(def.Id);
+        KillCounts[def.Id] = KillCounts.TryGetValue(def.Id, out int n) ? n + 1 : 1;
+        if (first && (def.IsBoss || def.IsElite || def.UnlockAtSeconds > 0f))
+            Line($"first-kill {def.Id} t={RunSeconds:0}");
+    }
+
     /// <summary>End-of-run totals. Called when the weapon system leaves the tree.</summary>
     public static void Report()
     {
         if (!Logging) return;
         string spawns = string.Join(" ", SpawnCounts.OrderByDescending(p => p.Value).Select(p => $"{p.Key}={p.Value}"));
         Line($"spawns {spawns}");
+        string kills = string.Join(" ", KillCounts.OrderByDescending(p => p.Value).Select(p => $"{p.Key}={p.Value}"));
+        Line($"kills {kills}");
+        if (Actors.EnemyManager.Instance is { } em)
+            foreach (Actors.Enemy e in em.AliveList)
+                if (GodotObject.IsInstanceValid(e) && e.IsAlive && e.IsBoss)
+                    Line($"boss-alive {e.Def?.Id} hp={e.HealthFraction * 100f:0}%");
         Line($"thorns hits={Enemy.ThornsHits} dealt={Enemy.ThornsDealt:0}");
     }
 

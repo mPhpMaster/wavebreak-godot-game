@@ -33,6 +33,11 @@ public static class Screenshot
     /// can verify it without a key press.</summary>
     public static bool ShowStats { get; private set; }
 
+    /// <summary>--invulnerable: the player cannot die. For long verification
+    /// runs that need to reach late-game content the autopilot would not
+    /// survive to; never meaningful for balance numbers.</summary>
+    public static bool Invulnerable { get; private set; }
+
     public static void ParseArgs()
     {
         foreach (string arg in OS.GetCmdlineUserArgs())
@@ -47,6 +52,8 @@ public static class Screenshot
                 Auto = true;
             else if (arg == "--show-stats")
                 ShowStats = true;
+            else if (arg == "--invulnerable")
+                Invulnerable = true;
         }
     }
 
