@@ -6,11 +6,9 @@ namespace Wavebreak.Meta;
 /// <summary>
 /// Player key rebinding, persisted in <c>user://keybinds.cfg</c>.
 ///
-/// Each action has one PRIMARY binding the player can change (the first key or
-/// mouse button in its project.godot entry); any further bindings — the arrow
-/// keys beside WASD, C beside Ctrl — are kept as they are. That keeps the screen
-/// a single column of "action: key" rows people can scan, while the alternates
-/// still work for anyone used to them.
+/// Each action has two editable bindings, a primary and a secondary (WASD and
+/// the arrow keys, Ctrl and C, Shift and right mouse), as in the shipped map.
+/// Either can be rebound or cleared; gamepad events on the action are kept.
 ///
 /// Rebinding to a key another action already uses SWAPS the two, rather than
 /// leaving two actions on one key (where one silently stops working) or refusing
@@ -45,7 +43,10 @@ public static class Keybinds
         ("music_volume_up", "Music up"),
     };
 
-    private static readonly Dictionary<string, InputEvent?> Defaults = new();
+    /// <summary>Bindings per action the player can edit: a primary and a secondary.</summary>
+    public const int Slots = 2;
+
+    private static readonly Dictionary<string, InputEvent?[]> Defaults = new();
     private static bool _loaded;
 
     /// <summary>Capture the shipped defaults, then apply the saved overrides.
@@ -56,7 +57,12 @@ public static class Keybinds
         _loaded = true;
 
         foreach (var (action, _) in Actions)
-            if (InputMap.HasAction(action)) Defaults[action] = Primary(action)?.Duplicate() as InputEvent;
+        {
+            if (!InputMap.HasAction(action)) continue;
+            var slots = new InputEvent?[Slots];
+            for (int i = 0; i < Slots; i++) slots[i] = Get(action, i)?.Duplicate() as InputEvent;
+            Defaults[action] = slots;
+        }
 
         // Automated runs (tests, captures) must behave the same on every machine.
         if (Launch.Automated) return;
@@ -66,7 +72,11 @@ public static class Keybinds
         foreach (var (action, _) in Actions)
         {
             if (!InputMap.HasAction(action) || !cfg.HasSectionKey("keys", action)) continue;
-            if (Decode(cfg.GetValue("keys", action).AsString()) is { } ev) SetPrimary(action, ev);
+            // "key:87,key:4194320" -- one entry per slot, empty for an unbound slot.
+            string[] parts = cfg.GetValue("keys", action).AsString().Split(',');
+            var slots = new InputEvent?[Slots];
+            for (int i = 0; i < Slots && i < parts.Length; i++) slots[i] = Decode(parts[i]);
+            SetAll(action, slots);
         }
     }
 
@@ -76,45 +86,78 @@ public static class Keybinds
         if (Launch.Automated) return;
         var cfg = new ConfigFile();
         foreach (var (action, _) in Actions)
-            if (InputMap.HasAction(action) && Primary(action) is { } ev)
-                cfg.SetValue("keys", action, Encode(ev));
+        {
+            if (!InputMap.HasAction(action)) continue;
+            var parts = new string[Slots];
+            for (int i = 0; i < Slots; i++) parts[i] = Get(action, i) is { } ev ? Encode(ev) : "";
+            cfg.SetValue("keys", action, string.Join(",", parts));
+        }
         cfg.Save(FilePath);
     }
 
-    /// <summary>The binding the player edits: first key or mouse button.</summary>
-    public static InputEvent? Primary(string action)
+    /// <summary>The key or mouse button in <paramref name="slot"/> (0 = primary,
+    /// 1 = secondary), or null when that slot is unbound.</summary>
+    public static InputEvent? Get(string action, int slot)
     {
+        int i = 0;
         foreach (InputEvent ev in InputMap.ActionGetEvents(action))
-            if (ev is InputEventKey or InputEventMouseButton) return ev;
+        {
+            if (ev is not (InputEventKey or InputEventMouseButton)) continue;
+            if (i++ == slot) return ev;
+        }
         return null;
     }
 
-    /// <summary>Bind <paramref name="ev"/> as the primary for <paramref name="action"/>.
-    /// Returns the action that previously had this input, which now has the old
-    /// primary of <paramref name="action"/> (a swap), or null.</summary>
-    public static string? Rebind(string action, InputEvent ev)
+    /// <summary>Kept for callers that only care about the first binding.</summary>
+    public static InputEvent? Primary(string action) => Get(action, 0);
+
+    /// <summary>
+    /// Bind <paramref name="ev"/> into a slot. If another action (or this
+    /// action's other slot) already uses that input, it receives this slot's old
+    /// binding instead -- a swap -- so no key ever drives two actions and nothing
+    /// is silently lost. Returns the action that gave the input up, or null.
+    /// Passing null clears the slot.
+    /// </summary>
+    public static string? Rebind(string action, int slot, InputEvent? ev)
     {
-        InputEvent? old = Primary(action);
+        InputEvent?[] mine = Read(action);
+        InputEvent? old = mine[slot];
         string? swapped = null;
-        foreach (var (other, _) in Actions)
+
+        if (ev is not null)
         {
-            if (other == action || !InputMap.HasAction(other)) continue;
-            if (Primary(other) is { } theirs && Same(theirs, ev))
+            foreach (var (other, _) in Actions)
             {
-                if (old is not null) SetPrimary(other, old);
-                swapped = other;
-                break;
+                if (!InputMap.HasAction(other)) continue;
+                InputEvent?[] theirs = other == action ? mine : Read(other);
+                for (int i = 0; i < Slots; i++)
+                {
+                    if (other == action && i == slot) continue;
+                    if (theirs[i] is { } e && Same(e, ev))
+                    {
+                        theirs[i] = old;
+                        if (other != action) SetAll(other, theirs);
+                        swapped = other;
+                        goto found;
+                    }
+                }
             }
         }
-        SetPrimary(action, ev);
+        found:
+        mine[slot] = ev;
+        SetAll(action, mine);
         Save();
         return swapped;
     }
 
     public static void ResetAll()
     {
-        foreach (var (action, ev) in Defaults)
-            if (ev is not null) SetPrimary(action, (InputEvent)ev.Duplicate());
+        foreach (var (action, slots) in Defaults)
+        {
+            var copy = new InputEvent?[Slots];
+            for (int i = 0; i < Slots; i++) copy[i] = slots[i]?.Duplicate() as InputEvent;
+            SetAll(action, copy);
+        }
         Save();
     }
 
@@ -136,28 +179,26 @@ public static class Keybinds
         _ => "—",
     };
 
-    /// <summary>All bindings for an action, primary first, for the hint text.</summary>
-    public static string DescribeAll(string action)
-    {
-        var parts = new List<string>();
-        foreach (InputEvent ev in InputMap.ActionGetEvents(action))
-            if (ev is InputEventKey or InputEventMouseButton) parts.Add(Describe(ev));
-        return string.Join(" / ", parts);
-    }
-
     // --------------------------------------------------------------- helpers
 
-    private static void SetPrimary(string action, InputEvent ev)
+    private static InputEvent?[] Read(string action)
     {
-        var events = new List<InputEvent>(InputMap.ActionGetEvents(action));
-        int index = events.FindIndex(e => e is InputEventKey or InputEventMouseButton);
-        // Drop any alternate that is now the same input, or it would show twice.
-        events.RemoveAll(e => e != (index >= 0 ? events[index] : null) && Same(e, ev));
-        index = events.FindIndex(e => e is InputEventKey or InputEventMouseButton);
-        if (index >= 0) events[index] = ev; else events.Insert(0, ev);
+        var slots = new InputEvent?[Slots];
+        for (int i = 0; i < Slots; i++) slots[i] = Get(action, i);
+        return slots;
+    }
+
+    /// <summary>Rewrite an action's key/mouse bindings to exactly these slots,
+    /// keeping any other event kinds (gamepad) it has.</summary>
+    private static void SetAll(string action, InputEvent?[] slots)
+    {
+        var keep = new List<InputEvent>();
+        foreach (InputEvent e in InputMap.ActionGetEvents(action))
+            if (e is not (InputEventKey or InputEventMouseButton)) keep.Add(e);
 
         InputMap.ActionEraseEvents(action);
-        foreach (InputEvent e in events) InputMap.ActionAddEvent(action, e);
+        foreach (InputEvent? e in slots) if (e is not null) InputMap.ActionAddEvent(action, e);
+        foreach (InputEvent e in keep) InputMap.ActionAddEvent(action, e);
     }
 
     private static bool Same(InputEvent a, InputEvent b) => (a, b) switch

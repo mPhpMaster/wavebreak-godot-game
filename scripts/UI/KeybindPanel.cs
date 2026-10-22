@@ -7,8 +7,11 @@ namespace Wavebreak.UI;
 
 /// <summary>
 /// The key-binding list, shared by the title screen's settings and the pause
-/// menu. Click a row, press the new key or mouse button; Esc cancels. Rows
-/// refresh after every change because a rebind can swap another action's key.
+/// menu. Every action has two bindings, as the game ships with (WASD and the
+/// arrow keys, Ctrl and C, Shift and right mouse). Click either one and press
+/// the new key or mouse button; Backspace or Delete clears it; Esc cancels.
+/// All rows refresh after every change because a rebind can swap another
+/// action's key.
 /// </summary>
 public sealed partial class KeybindPanel : VBoxContainer
 {
@@ -17,19 +20,19 @@ public sealed partial class KeybindPanel : VBoxContainer
     private static readonly Color Waiting = new(1.00f, 0.84f, 0.35f);
 
     private readonly Action _onBack;
-    private readonly List<(string Action, Button Key, Label Alt)> _rows = new();
-    private string? _listening;
+    private readonly List<(string Action, Button[] Keys)> _rows = new();
+    private (string Action, int Slot)? _listening;
+    private Label _status = null!;
 
     /// <summary>True while any panel waits for a key, so Esc handlers elsewhere
     /// (pause menu, title back-navigation) leave that Esc to cancel the bind.</summary>
     public static bool AnyListening { get; private set; }
 
-    private string? Listening
+    private (string Action, int Slot)? Listening
     {
         get => _listening;
         set { _listening = value; AnyListening = value is not null; }
     }
-    private Label _status = null!;
 
     public KeybindPanel(Action onBack) => _onBack = onBack;
 
@@ -41,12 +44,22 @@ public sealed partial class KeybindPanel : VBoxContainer
         AddThemeConstantOverride("separation", 8);
 
         AddChild(MainMenu.MakeLabel("KEY BINDINGS", 22, new Color(0.62f, 0.98f, 1.00f)));
-        _status = MainMenu.MakeLabel("Click an action, then press a key or mouse button. Esc cancels.", 14, Dim);
+        _status = MainMenu.MakeLabel("Click a key, then press the new one.  Backspace clears it, Esc cancels.", 14, Dim);
         AddChild(_status);
+
+        var header = new HBoxContainer();
+        header.AddThemeConstantOverride("separation", 12);
+        Label h0 = MainMenu.MakeLabel("", 13, Dim); h0.CustomMinimumSize = new Vector2(220f, 0f);
+        Label h1 = MainMenu.MakeLabel("primary", 13, Dim); h1.CustomMinimumSize = new Vector2(140f, 0f);
+        h1.HorizontalAlignment = HorizontalAlignment.Center;
+        Label h2 = MainMenu.MakeLabel("secondary", 13, Dim); h2.CustomMinimumSize = new Vector2(140f, 0f);
+        h2.HorizontalAlignment = HorizontalAlignment.Center;
+        header.AddChild(h0); header.AddChild(h1); header.AddChild(h2);
+        AddChild(header);
 
         var scroll = new ScrollContainer
         {
-            CustomMinimumSize = new Vector2(520f, 380f),
+            CustomMinimumSize = new Vector2(560f, 360f),
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
         };
         AddChild(scroll);
@@ -63,14 +76,19 @@ public sealed partial class KeybindPanel : VBoxContainer
             Label name = MainMenu.MakeLabel(label, 16, Ink);
             name.CustomMinimumSize = new Vector2(220f, 0f);
             row.AddChild(name);
-            var key = new Button { CustomMinimumSize = new Vector2(150f, 34f), FocusMode = FocusModeEnum.All };
-            key.AddThemeFontSizeOverride("font_size", 16);
-            key.Pressed += () => Listen(a);
-            row.AddChild(key);
-            Label alt = MainMenu.MakeLabel("", 13, Dim);
-            row.AddChild(alt);
+
+            var keys = new Button[Keybinds.Slots];
+            for (int slot = 0; slot < Keybinds.Slots; slot++)
+            {
+                int s = slot;
+                var key = new Button { CustomMinimumSize = new Vector2(140f, 34f), FocusMode = FocusModeEnum.All };
+                key.AddThemeFontSizeOverride("font_size", 16);
+                key.Pressed += () => Listen(a, s);
+                row.AddChild(key);
+                keys[slot] = key;
+            }
             list.AddChild(row);
-            _rows.Add((a, key, alt));
+            _rows.Add((a, keys));
         }
 
         var buttons = new HBoxContainer();
@@ -82,12 +100,13 @@ public sealed partial class KeybindPanel : VBoxContainer
         Refresh(null);
     }
 
-    private void Listen(string action)
+    private void Listen(string action, int slot)
     {
-        Listening = action;
-        foreach (var r in _rows)
-            if (r.Action == action) r.Key.Text = "press a key…";
-        _status.Text = "Press the new key or mouse button. Esc cancels.";
+        Refresh(null);
+        Listening = (action, slot);
+        foreach (var (a, keys) in _rows)
+            if (a == action) keys[slot].Text = "press a key…";
+        _status.Text = "Press the new key or mouse button.  Backspace clears, Esc cancels.";
         _status.AddThemeColorOverride("font_color", Waiting);
     }
 
@@ -99,26 +118,28 @@ public sealed partial class KeybindPanel : VBoxContainer
         {
             GetViewport().SetInputAsHandled();
             if (key.Keycode == Key.Escape) { Listening = null; Refresh("Cancelled."); return; }
+            if (key.Keycode is Key.Backspace or Key.Delete) { Commit(null); return; }
             Commit(new InputEventKey { PhysicalKeycode = key.PhysicalKeycode != Key.None ? key.PhysicalKeycode : key.Keycode });
         }
         else if (@event is InputEventMouseButton { Pressed: true } mouse
                  && mouse.ButtonIndex is not (MouseButton.WheelUp or MouseButton.WheelDown))
         {
-            // The click that opened listening is a release by now; this is the new one.
+            // The click that started listening fired on release; this is a new press.
             GetViewport().SetInputAsHandled();
             Commit(new InputEventMouseButton { ButtonIndex = mouse.ButtonIndex });
         }
     }
 
-    private void Commit(InputEvent ev)
+    private void Commit(InputEvent? ev)
     {
-        string action = Listening!;
+        var (action, slot) = Listening!.Value;
         Listening = null;
-        string? swapped = Keybinds.Rebind(action, ev);
-        string label = LabelOf(action);
-        Refresh(swapped is null
-            ? $"{label}: {Keybinds.Describe(ev)}"
-            : $"{label}: {Keybinds.Describe(ev)}  ·  swapped with {LabelOf(swapped)}");
+        string? swapped = Keybinds.Rebind(action, slot, ev);
+        string what = ev is null ? "cleared" : Keybinds.Describe(ev);
+        string which = slot == 0 ? "primary" : "secondary";
+        Refresh(swapped is null || swapped == action
+            ? $"{LabelOf(action)} ({which}): {what}"
+            : $"{LabelOf(action)} ({which}): {what}  ·  swapped with {LabelOf(swapped)}");
     }
 
     private static string LabelOf(string action)
@@ -129,13 +150,9 @@ public sealed partial class KeybindPanel : VBoxContainer
 
     private void Refresh(string? message)
     {
-        foreach (var (action, key, alt) in _rows)
-        {
-            key.Text = Keybinds.Describe(Keybinds.Primary(action));
-            string all = Keybinds.DescribeAll(action);
-            int sep = all.IndexOf(" / ", StringComparison.Ordinal);
-            alt.Text = sep >= 0 ? "also " + all[(sep + 3)..] : "";
-        }
+        foreach (var (action, keys) in _rows)
+            for (int slot = 0; slot < keys.Length; slot++)
+                keys[slot].Text = Keybinds.Describe(Keybinds.Get(action, slot));
         if (message is not null)
         {
             _status.Text = message;

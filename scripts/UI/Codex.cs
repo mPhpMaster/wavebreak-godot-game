@@ -136,7 +136,8 @@ public sealed partial class Codex : Control
         bool found = Profile.HasFoundSecret(k.Id);
         return Card(found ? k.DisplayName : "???",
                     found ? "A hidden shrine. It answered when touched." : "Something faint waits near the edge of the arena.",
-                    found ? $"Gift: {k.RewardText}" : "Gift: ???",
+                    found ? $"Gift: {k.RewardText}\nThis run: {SecretKindDef.Describe(k.RunBoons)}\nEvery run after: {SecretKindDef.Describe(k.LastingBoons)}"
+                          : "Gift: ???  ·  grants stat boosts when found",
                     found ? "FOUND" : "HIDDEN SHRINE",
                     found ? Earned : SecretInk, found);
     }
