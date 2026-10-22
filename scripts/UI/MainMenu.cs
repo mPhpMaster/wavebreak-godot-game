@@ -37,7 +37,8 @@ public sealed partial class MainMenu : Node3D
     private Camera3D _camera = null!;
     private float _orbit;
     private readonly List<(Node3D node, float radius, float speed, float phase)> _drifters = new();
-    private MeshInstance3D _hero = null!;
+    private Node3D _hero = null!;
+    private string? _heroLook;
 
     private Control _root = null!;
     private readonly Dictionary<string, Control> _pages = new();
@@ -162,14 +163,13 @@ public sealed partial class MainMenu : Node3D
             });
         }
 
-        // The hero: a placeholder capsule in the selected character's colour.
-        // The visuals library replaces this by LookId at merge time.
-        _hero = new MeshInstance3D
-        {
-            Mesh = new CapsuleMesh { Radius = 0.5f, Height = 1.8f },
-            Position = new Vector3(0f, 0.9f, 0f),
-        };
+        // The hero: the selected character in its chosen skin, rebuilt whenever
+        // the selection changes.
+        _hero = new Node3D { Name = "Hero" };
         AddChild(_hero);
+        // Its own key light: the arena light is far below the camera, and a
+        // character lit only by ambient reads as a silhouette.
+        _hero.AddChild(new OmniLight3D { Position = new Vector3(0.8f, 2.4f, -2.2f), LightEnergy = 2.2f, OmniRange = 6f });
         TintHero(Characters.ById(Profile.SelectedCharacter) ?? Characters.Default);
         AddChild(new OmniLight3D { Position = new Vector3(0f, 3f, 0f), LightColor = Accent, LightEnergy = 1.5f, OmniRange = 9f });
 
@@ -196,8 +196,24 @@ public sealed partial class MainMenu : Node3D
         UpdateCamera(0f);
     }
 
-    private void TintHero(CharacterDef def)
-        => _hero.MaterialOverride = Game.Arena.Flat(def.SelectedSkin.Tint, emission: 0.8f);
+    private void TintHero(CharacterDef def) => ShowHeroLook(def.SelectedSkin.LookId);
+
+    /// <summary>Swap the backdrop hero to a look. Rebuilds only on change: the
+    /// focus handlers call this on every hover.</summary>
+    private void ShowHeroLook(string lookId)
+    {
+        if (_heroLook == lookId) return;
+        _heroLook = lookId;
+        foreach (Node child in _hero.GetChildren())
+        {
+            if (child is Light3D) continue;
+            _hero.RemoveChild(child);
+            child.QueueFree();
+        }
+        Node3D model = Visuals.PlayerLooks.Build(lookId);
+        model.Scale = Vector3.One * 1.0f;
+        _hero.AddChild(model);
+    }
 
     public override void _Process(double delta)
     {
@@ -221,6 +237,20 @@ public sealed partial class MainMenu : Node3D
         // the menu column instead of under it.
         Vector3 right = new Vector3(-Mathf.Sin(_orbit), 0f, Mathf.Cos(_orbit));
         _camera.LookAt(right * 9f + new Vector3(0f, 1f, 0f), Vector3.Up);
+
+        // The hero is held at a fixed spot in the frame, right of the menu and
+        // character panels, rather than placed in the world: the camera orbits,
+        // and anywhere on the ground it spends half the orbit behind the UI.
+        if (_hero is not null)
+        {
+            Basis b = _camera.GlobalTransform.Basis;
+            _hero.Position = pos - b.Z * 7.5f + b.X * 4.75f - b.Y * 1.45f;
+            // Models face -Z, so turn by the camera direction plus half a turn
+            // to look back at the viewer, angled slightly toward the menu.
+            Vector3 toCam = (pos - _hero.Position) with { Y = 0f };
+            if (toCam.LengthSquared() > 0.01f)
+                _hero.Rotation = new Vector3(0f, Mathf.Atan2(toCam.X, toCam.Z) + Mathf.Pi + 0.35f, 0f);
+        }
     }
 
     // ================================================================== UI
@@ -371,7 +401,7 @@ public sealed partial class MainMenu : Node3D
             _skinLabel.AddThemeColorOverride("font_color", Locked);
         }
         _skinLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _hero.MaterialOverride = Game.Arena.Flat(skin.Tint, emission: 0.8f);
+        ShowHeroLook(skin.LookId);
     }
 
     private void ShowCharacter(CharacterDef c)

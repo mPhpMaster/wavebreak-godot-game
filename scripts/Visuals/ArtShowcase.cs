@@ -32,7 +32,11 @@ public static class ArtShowcase
             else if (arg.StartsWith("--art-theme=")) theme = arg["--art-theme=".Length..];
         }
 
-        if (theme is not null) main.CallDeferred(Node.MethodName.AddChild, new ThemeDresser(theme));
+        // Until the phase system dresses each map itself, every run is dressed
+        // in the meadow so the game is not played on the bare primitive arena.
+        // --art-theme=none keeps the old look (for A/B comparisons).
+        theme ??= "meadow";
+        if (theme != "none") main.CallDeferred(Node.MethodName.AddChild, new ThemeDresser(theme));
 
         if (stress > 0)
         {
