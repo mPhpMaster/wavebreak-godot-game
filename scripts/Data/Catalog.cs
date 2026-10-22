@@ -36,13 +36,15 @@ public static class Catalog
     public static IReadOnlyList<ItemDef> Items => ItemList;
 
     /// <summary>Weapon by id, or null. Used by UI that only carries an id from an
-    /// event and should never hold a reference to the runtime that owns it.</summary>
+    /// event and should never hold a reference to the runtime that owns it.
+    /// Falls back to the unlockable content in Meta.MetaContent, so earned
+    /// weapons and items are named like any other.</summary>
     public static WeaponDef? WeaponById(string? id)
-        => id is not null && WeaponsById.TryGetValue(id, out WeaponDef? def) ? def : null;
+        => id is not null && WeaponsById.TryGetValue(id, out WeaponDef? def) ? def : Meta.MetaContent.WeaponById(id);
 
     /// <summary>Item by id, or null.</summary>
     public static ItemDef? ItemById(string? id)
-        => id is not null && ItemsById.TryGetValue(id, out ItemDef? def) ? def : null;
+        => id is not null && ItemsById.TryGetValue(id, out ItemDef? def) ? def : Meta.MetaContent.ItemById(id);
 
     /// <summary>Enemy by id, or null.</summary>
     public static EnemyDef? EnemyById(string? id)

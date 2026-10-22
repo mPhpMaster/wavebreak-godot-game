@@ -48,6 +48,7 @@ public sealed partial class Main : Node3D
 
         AddChild(new Arena());
         BuildWorld();
+        Meta.RunMeta.Attach(this);
 
         EventBus.Subscribe<LevelGained>(OnLevelGained);
         EventBus.Subscribe<RunEnded>(OnRunEnded);
@@ -149,7 +150,7 @@ public sealed partial class Main : Node3D
         AddChild(_weapons);
 
         _inventory = new Progression.Inventory(_player.Stats);
-        _offers = new Progression.OfferPool(Catalog.Items, Catalog.Weapons, Run.Rng);
+        _offers = new Progression.OfferPool(Meta.MetaContent.OfferItems(Catalog.Items), Meta.MetaContent.OfferWeapons(Catalog.Weapons), Run.Rng);
 
         // Damage numbers and pickups are pooled nodes that need a parent in the
         // world, so they are children of the root rather than of the player.
@@ -169,7 +170,7 @@ public sealed partial class Main : Node3D
 
         // Everyone starts with one weapon; a run with no way to fight is not a
         // run, and the first level-up should be a choice rather than a rescue.
-        _weapons.Add(Catalog.Weapons[0]);
+        _weapons.Add(Meta.RunMeta.StartingWeapon());
 
         if (Screenshot.Auto)
         {

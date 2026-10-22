@@ -130,7 +130,14 @@ scripts/
   UI/          Hud, LevelUpPanel, ResultsScreen, DamagePopup
   Data/        Definitions, Catalog     <- all content
   Game/        Main, Arena, RunState, Screenshot
+  Meta/        Profile, Unlocks, Characters, MetaContent, SecretSpawner, UnlockTracker
 ```
+
+The project boots into `scenes/Title.tscn` (`UI/MainMenu`). Any game argument
+other than the menu's own (`--profile`, `--menu-shot`, `--menu-page`) skips it
+straight into the run, so every automated launch behaves as before. Automated
+runs never touch the real profile unless `--profile=<path>` is given. Unlocks
+only *add* content (`Meta/MetaContent`); the base catalogue is never locked.
 
 `Game/Main.cs` constructs the systems and ticks them **in one place** rather than
 letting each run its own `_Process`. That ordering is deliberate: with
