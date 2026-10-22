@@ -54,6 +54,74 @@ public sealed partial class Main : Node3D
 
         if (Screenshot.Requested)
             _ = RunScreenshot();
+        else if (!_guardsChecked && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-input-guards") >= 0)
+            _ = CheckInputGuards();
+    }
+
+    // Survives the scene reload a successful restart performs, so the check runs
+    // once rather than restarting itself forever.
+    private static bool _guardsChecked;
+
+    /// <summary>
+    /// --check-input-guards: drives the level-up panel and the results screen
+    /// with real key events and prints GUARD lines, ending in GUARD PASS/FAIL.
+    ///
+    /// It exists because the failure it guards against -- a key meant for the
+    /// game landing on a panel that has just opened -- needs a keyboard to
+    /// reproduce and is invisible in any screenshot. Space is the key that
+    /// matters: it is jump, and also ui_accept on any focused button.
+    /// </summary>
+    private async System.Threading.Tasks.Task CheckInputGuards()
+    {
+        _guardsChecked = true;
+        // Held in a local: after the restart this node is freed, and the tree is
+        // the only thing left to quit through.
+        SceneTree tree = GetTree();
+        bool ok = true;
+        void Expect(string what, bool condition)
+        {
+            GD.Print($"GUARD {(condition ? "ok  " : "FAIL")} {what}");
+            ok &= condition;
+        }
+        void Press(Key key)
+        {
+            Input.ParseInputEvent(new InputEventKey { Keycode = key, PhysicalKeycode = key, Pressed = true });
+            Input.ParseInputEvent(new InputEventKey { Keycode = key, PhysicalKeycode = key, Pressed = false });
+        }
+        async System.Threading.Tasks.Task Wait(double seconds)
+            => await tree.ToSignal(tree.CreateTimer(seconds, processAlways: true), SceneTreeTimer.SignalName.Timeout);
+
+        await Wait(1.0);
+        var choices = _offers.Roll(3, _weapons, _inventory, _player.Stats);
+        int before = _weapons.Weapons.Count + _inventory.TotalStacks;
+        _levelUp.Show(choices, Choose);
+        await Wait(0.05);
+        Press(Key.Space);
+        await Wait(0.1);
+        Expect("level-up: Space right after opening does not pick a card", _levelUp.IsOpen);
+        await Wait(0.5);
+        Press(Key.Key1);
+        await Wait(0.1);
+        Expect("level-up: 1 after the delay picks a card", !_levelUp.IsOpen
+               && _weapons.Weapons.Count + _inventory.TotalStacks > before);
+
+        _player.Health.Kill();
+        await Wait(0.1);
+        Press(Key.Space);
+        Press(Key.Enter);
+        await Wait(0.3);
+        Expect("results: Space/Enter right after death do not restart", _results.Visible && IsInsideTree());
+        await Wait(1.0);
+        Press(Key.Space);
+        await Wait(0.2);
+        Expect("results: Space never restarts (it is jump)", _results.Visible && IsInsideTree());
+
+        GD.Print(ok ? "GUARD PASS (pressing Enter to restart)" : "GUARD FAIL");
+        // The final step is the restart itself; the reloaded scene prints the
+        // seed line, which the caller treats as proof it happened.
+        Press(Key.Enter);
+        await Wait(1.5);
+        tree.Quit();
     }
 
     private void BuildWorld()

@@ -211,7 +211,7 @@ public sealed partial class LevelUpPanel : Control
         var card = new Card(root, back, stripe, rarity, title, stats, flavour, kind, button);
 
         int captured = index;
-        button.Pressed += () => Pick(captured);
+        button.Pressed += () => { if (Armed) Pick(captured); };
 
         // Highlight lightens whatever the card's body already is rather than
         // replacing it with one fixed colour — otherwise focusing a Legendary
@@ -320,6 +320,7 @@ public sealed partial class LevelUpPanel : Control
         // it was captured to begin with: a player who had pressed Escape to get
         // the cursor back should not have it grabbed away by a level-up.
         if (!IsOpen) _mouseWasCaptured = Input.MouseMode == Input.MouseModeEnum.Captured;
+        _shownAtMsec = Time.GetTicksMsec();
         Input.MouseMode = Input.MouseModeEnum.Visible;
 
         IsOpen = true;
@@ -397,10 +398,31 @@ public sealed partial class LevelUpPanel : Control
 
     // ---------------------------------------------------------------- input
 
+    /// <summary>
+    /// The panel ignores input for this long after it opens. A level-up lands in
+    /// the middle of a fight, while Space (jump, and also ui_accept on the
+    /// focused card) and the number keys are in use for other things; without
+    /// the delay, a jump pressed a frame after the panel appears picks the
+    /// first card on the player's behalf.
+    /// </summary>
+    private const ulong ArmDelayMsec = 400;
+
+    private ulong _shownAtMsec;
+
+    private bool Armed => Time.GetTicksMsec() - _shownAtMsec >= ArmDelayMsec;
+
     public override void _Input(InputEvent @event)
     {
         if (!IsOpen) return;
         if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
+
+        if (!Armed)
+        {
+            // Swallow it, so it cannot reach the focused card as an activation
+            // either. Escape is left alone: it frees the mouse.
+            if (key.Keycode != Key.Escape) GetViewport().SetInputAsHandled();
+            return;
+        }
 
         int index = key.Keycode switch
         {

@@ -163,7 +163,11 @@ public sealed partial class ResultsScreen : Control
         _loadout.AddThemeConstantOverride("separation", 3);
         scroll.AddChild(_loadout);
 
-        _restart = new Button { Text = "RESTART", FocusMode = FocusModeEnum.All };
+        // No keyboard focus. Space is ui_accept, so a focused button is pressed by
+        // the same Space the player was hammering to jump when they died -- the
+        // run restarted before the results could even be read. Keyboard restart
+        // goes through _Input instead (Enter / R), the mouse still clicks it.
+        _restart = new Button { Text = "RESTART", FocusMode = FocusModeEnum.None };
         _restart.AddThemeFontSizeOverride("font_size", 22);
         Inset(_restart, PanelWidth * 0.5f - 130f, PanelHeight - 74f, 260f, 46f);
         panel.AddChild(_restart);
@@ -211,7 +215,7 @@ public sealed partial class ResultsScreen : Control
         // Release the camera's mouse capture so Restart can be clicked. The
         // reloaded scene's camera captures it again on its own.
         Input.MouseMode = Input.MouseModeEnum.Visible;
-        _restart.GrabFocus();
+        _shownAtMsec = Time.GetTicksMsec();
     }
 
     private void WriteStats(RunState? run, Inventory? inventory, WeaponSystem? weapons)
@@ -295,14 +299,31 @@ public sealed partial class ResultsScreen : Control
         if (!Visible) return;
         if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
 
-        if (key.Keycode is not (Key.Enter or Key.KpEnter or Key.R or Key.Space)) return;
+        // Not Space: it is the jump key, and a death usually lands mid-jump.
+        if (key.Keycode is not (Key.Enter or Key.KpEnter or Key.R)) return;
 
         GetViewport().SetInputAsHandled();
         Restart();
     }
 
+    /// <summary>Input that arrives sooner than this after the screen opens was
+    /// meant for the game, not for this screen, and is ignored.</summary>
+    private const ulong ArmDelayMsec = 1000;
+
+    private ulong _shownAtMsec;
+
+    /// <summary>
+    /// True once a restart may be honoured. Never in an automated capture run:
+    /// those windows open on top of whatever the user is typing into, take focus,
+    /// and a stray Enter would silently replace the run being measured.
+    /// </summary>
+    private bool Armed => !Game.Screenshot.Requested
+                          && Time.GetTicksMsec() - _shownAtMsec >= ArmDelayMsec;
+
     private void Restart()
     {
+        if (!Armed) return;
+
         // Unpause first. The paused flag lives on the SceneTree, not on the
         // scene, so reloading while paused hands the fresh run a frozen tree and
         // the game never starts.
