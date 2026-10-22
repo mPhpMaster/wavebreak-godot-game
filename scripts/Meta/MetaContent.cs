@@ -273,7 +273,7 @@ public static class MetaContent
         return new ItemDef
         {
             Id = id, DisplayName = name, Description = description, Rarity = rarity,
-            Weight = weight, MaxStacks = maxStacks, Tint = tint, Effects = array,
+            Weight = weight, MaxStacks = maxStacks > 0 ? maxStacks : Catalog.DefaultStackCap(rarity), Tint = tint, Effects = array,
         };
     }
 }
