@@ -95,6 +95,9 @@ public sealed partial class Main : Node3D
         ui.AddChild(_levelUp);
         _results = new UI.ResultsScreen();
         ui.AddChild(_results);
+        // Last, so the sheet draws over the level-up panel: checking your build
+        // before choosing a card is the main reason to open it.
+        ui.AddChild(new UI.StatsPanel(_player, _inventory, _weapons, Run));
 
         // Everyone starts with one weapon; a run with no way to fight is not a
         // run, and the first level-up should be a choice rather than a rescue.

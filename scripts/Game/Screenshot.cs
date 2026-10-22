@@ -29,6 +29,10 @@ public static class Screenshot
     /// never coming — so every check past level 2 silently never runs.</summary>
     public static bool Auto { get; private set; }
 
+    /// <summary>--show-stats: hold the Tab character sheet open, so a capture
+    /// can verify it without a key press.</summary>
+    public static bool ShowStats { get; private set; }
+
     public static void ParseArgs()
     {
         foreach (string arg in OS.GetCmdlineUserArgs())
@@ -41,6 +45,8 @@ public static class Screenshot
                 Seed = (ulong)arg["--seed=".Length..].ToInt();
             else if (arg == "--auto")
                 Auto = true;
+            else if (arg == "--show-stats")
+                ShowStats = true;
         }
     }
 
