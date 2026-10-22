@@ -385,7 +385,8 @@ public sealed partial class EnemyManager : Node3D
     /// 10 at minute zero, +13 per minute, so: 1min 23, 3min 49, 5min 75, and
     /// the 200 ceiling (a frame-budget limit, not a design one) around minute 10.
     /// </summary>
-    private int LiveCap(float minutes) => Math.Min(MaxAlive, 10 + (int)(minutes * 13f));
+    private int LiveCap(float minutes)
+        => Math.Max(6, (int)(Math.Min(MaxAlive, 10 + (int)(minutes * 13f)) * LiveCapScale));
 
     /// <summary>
     /// Difficulty over time.
@@ -402,9 +403,11 @@ public sealed partial class EnemyManager : Node3D
         float minutes = MathF.Max(0f, runSeconds) / 60f;
         float scaling = PlayerRef.EnemyScaling;
 
-        DifficultyHp = (1f + minutes * 0.34f) * MathF.Pow(1.075f, minutes) * scaling;
-        DifficultyDamage = (1f + minutes * 0.16f) * scaling;
-        DifficultySpeed = MathF.Min(1f + minutes * 0.022f, 1.45f);
+        DifficultyHp = (1f + minutes * 0.34f) * MathF.Pow(1.075f, minutes) * scaling * PhaseHealthScale;
+        DifficultyDamage = (1f + minutes * 0.16f) * scaling * PhaseDamageScale;
+        // The phase factor goes on after the cap: the cap is about the clock
+        // never outpacing kiting, and a later map is allowed to be a step faster.
+        DifficultySpeed = MathF.Min(1f + minutes * 0.022f, 1.45f) * PhaseSpeedScale;
     }
 
     private void UpdateWaves(float runSeconds)
@@ -422,7 +425,7 @@ public sealed partial class EnemyManager : Node3D
             }
         }
 
-        if (runSeconds < _nextBossAt) return;
+        if (!TimedBosses || runSeconds < _nextBossAt) return;
         _nextBossAt = runSeconds + BossWaveInterval;
 
         int boss = PickBoss(runSeconds);
@@ -893,5 +896,69 @@ public sealed partial class EnemyManager : Node3D
         }
 
         return best;
+    }
+    // ------------------------------------------------------- phase control
+    // Hooks for Game.StageDirector, which runs the run as a sequence of maps.
+    // Additive on purpose: with none of these touched the director behaves
+    // exactly as it did with a single arena and a boss timer.
+
+    /// <summary>When false the director never spawns a boss on its own timer;
+    /// whoever cleared it is expected to call <see cref="SpawnBoss"/>.</summary>
+    public bool TimedBosses { get; set; } = true;
+
+    /// <summary>Per-phase multipliers on top of the time curve. 1 = no change.</summary>
+    public float PhaseHealthScale { get; set; } = 1f;
+    public float PhaseDamageScale { get; set; } = 1f;
+    public float PhaseSpeedScale { get; set; } = 1f;
+
+    /// <summary>Fraction of the normal live cap to allow. Lowered during a phase
+    /// boss fight: weapons aim at the nearest enemy, so with a full crowd around
+    /// the player the boss is almost never the target and the fight cannot end.</summary>
+    public float LiveCapScale { get; set; } = 1f;
+
+    /// <summary>
+    /// Put a specific boss on the field now, on the spawn ring around the
+    /// player, and announce it. Returns null when it could not be placed this
+    /// frame (pool exhausted, no floor found); callers should retry.
+    /// </summary>
+    public Enemy? SpawnBoss(EnemyDef def, float healthScale = 1f)
+    {
+        int index = _defs.IndexOf(def);
+        if (index < 0 || !PlayerRef.TryGet(out Node3D player, out _)) return null;
+        UpdateDifficulty(_runSeconds);
+        // Scaled for this one spawn only; the next Tick recomputes it anyway.
+        float hp = DifficultyHp;
+        DifficultyHp = hp * MathF.Max(0.01f, healthScale);
+        Enemy? boss = SpawnOne(index, player.GlobalPosition);
+        DifficultyHp = hp;
+        if (boss is not null)
+            Announce(def.DisplayName is { Length: > 0 } name ? name.ToUpperInvariant() : "BOSS",
+                     new Color(1f, 0.25f, 0.25f), 1.7f);
+        return boss;
+    }
+
+    /// <summary>
+    /// Remove every enemy without a kill and empty the credit bank, for a map
+    /// change. Unlike <see cref="Reset"/> it keeps the director's wave clock,
+    /// so arriving on a new map does not replay the opening elite schedule.
+    /// <paramref name="breather"/> is how long before the first spawn on the
+    /// new map, so the title card is read in peace.
+    /// </summary>
+    public void ClearField(float breather)
+    {
+        for (int i = 0; i < _alive.Count; i++)
+        {
+            Enemy e = _alive[i];
+            if (GodotObject.IsInstanceValid(e) && e.IsAlive) e.Despawn();
+        }
+        Sweep();
+        _credits = 0f;
+        _spawnTimer = MathF.Max(0f, breather);
+        _eliteWaveUntil = -1f;
+        // The floor height learned on the old map means nothing on the new one.
+        _groundKnown = false;
+        _lastGroundY = 0f;
+        _navCheckAt = 0f;
+        _gridValid = false;
     }
 }

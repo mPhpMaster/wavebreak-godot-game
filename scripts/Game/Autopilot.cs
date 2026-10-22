@@ -90,6 +90,43 @@ public sealed class Autopilot
         _wanderPhase += 0.02f;
         wish += new Vector3(Mathf.Cos(_wanderPhase), 0f, Mathf.Sin(_wanderPhase)) * 0.35f;
 
+        // Fight the phase boss at mid range instead of fleeing it. Weapons aim at
+        // whatever is nearest, so a bot that kites the boss along with the crowd
+        // never makes it the nearest thing, and the phase sits in overtime for
+        // ever: the first verification run spent six minutes with the boss at 61%.
+        if (Main.Instance?.Stages.BossPosition is Vector3 boss)
+        {
+            Vector3 toBoss = boss - me;
+            toBoss.Y = 0f;
+            float d = toBoss.Length();
+            if (d > 0.01f)
+            {
+                // Close enough that the boss is usually the nearest target:
+                // the crowd presses in to touching distance, so a boss held at
+                // 7 m is almost never what the weapons pick.
+                float pull = d > 4.5f ? 2.2f : d < 2.8f ? -1.2f : 0f;
+                // Circle while in the band, so its swing is dodged rather than eaten.
+                Vector3 orbit = new Vector3(-toBoss.Z, 0f, toBoss.X) / d * 0.6f;
+                wish = wish * 0.5f + toBoss / d * pull + orbit;
+            }
+        }
+
+        // An open portal overrides everything but a point-blank threat. Without
+        // this the bot orbits the centre forever with the way onward open, and an
+        // --auto run never sees a second map -- so nothing past phase one would
+        // ever be verified.
+        if (Main.Instance?.Stages.PortalPosition is Vector3 portal)
+        {
+            Vector3 toPortal = portal - me;
+            toPortal.Y = 0f;
+            if (toPortal.LengthSquared() > 0.01f)
+            {
+                float flee = considered > 0 && nearest < 2f ? 0.6f : 0.15f;
+                Vector3 avoid = considered > 0 ? away.Normalized() * flee : Vector3.Zero;
+                wish = toPortal.Normalized() + avoid;
+            }
+        }
+
         wish = wish.LengthSquared() > 0.0001f ? wish.Normalized() : Vector3.Zero;
         UseVerbs(nearest);
         return wish;

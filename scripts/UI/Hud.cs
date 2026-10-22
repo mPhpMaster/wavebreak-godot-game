@@ -9,8 +9,9 @@ using Wavebreak.Progression;
 namespace Wavebreak.UI;
 
 /// <summary>
-/// The always-on readout: health, shield, experience, level, clock, kills, gold
-/// and the weapons currently owned.
+/// The always-on readout: health, shield, experience, level, clock, kills, gold,
+/// the weapons currently owned, and the phase: which map, how long until its
+/// boss, and where the portal is once it opens.
 ///
 /// Built from <see cref="Control"/> nodes in code rather than from a scene. At
 /// this size that is a straight win — the whole layout is one readable file with
@@ -60,6 +61,9 @@ public sealed partial class Hud : Control
     private static readonly Color GoldTint = new(1.00f, 0.82f, 0.32f);
     private static readonly Color KillTint = new(1.00f, 0.62f, 0.56f);
     private static readonly Color LevelTint = new(0.80f, 0.72f, 1.00f);
+    private static readonly Color PhaseTint = new(0.78f, 0.84f, 0.95f);
+    private static readonly Color BossTint = new(1.00f, 0.36f, 0.32f);
+    private static readonly Color PortalTint = new(0.55f, 1.00f, 0.92f);
 
     // Charging is a dim slate so the meter recedes while there is nothing to do
     // with it; ready is the brightest cool tone on the HUD, because "you can
@@ -99,6 +103,11 @@ public sealed partial class Hud : Control
     private ColorRect _dashHalo = null!;
     private ColorRect _dashFill = null!;
     private Label _dashLabel = null!;
+    private Label _phaseLabel = null!;
+    private Label _phaseStatus = null!;
+    private Control _card = null!;
+    private Label _cardTitle = null!;
+    private Label _cardSubtitle = null!;
 
     // ------------------------------------------------------------- runtime
 
@@ -124,6 +133,12 @@ public sealed partial class Hud : Control
     /// <summary>Last countdown shown, in tenths of a second, so the label is only
     /// re-shaped when the digits change — same reasoning as the clock.</summary>
     private int _lastDashTenths = -1;
+
+    /// <summary>Seconds left on the title card, counting down. The card is
+    /// faded by this rather than by a tween so a pause (level-up) holds it.</summary>
+    private float _cardTime;
+    private const float CardSeconds = 3.6f;
+    private string _lastStatus = "";
     private bool _subscribed;
 
     // ------------------------------------------------------------ lifecycle
@@ -143,6 +158,9 @@ public sealed partial class Hud : Control
         BuildTopRight();
         BuildWeaponList();
         BuildDashMeter();
+        BuildPhaseReadout();
+        BuildTitleCard();
+        AddChild(new PortalMarker());
 
         Subscribe();
         RefreshXpBar();
@@ -162,6 +180,8 @@ public sealed partial class Hud : Control
         EventBus.Subscribe<EnemyKilled>(OnEnemyKilled);
         EventBus.Subscribe<WeaponAcquired>(OnWeaponAcquired);
         EventBus.Subscribe<PlayerDamaged>(OnPlayerDamaged);
+        EventBus.Subscribe<PhaseStarted>(OnPhaseStarted);
+        EventBus.Subscribe<PortalOpened>(OnPortalOpened);
     }
 
     private void Unsubscribe()
@@ -175,6 +195,8 @@ public sealed partial class Hud : Control
         EventBus.Unsubscribe<EnemyKilled>(OnEnemyKilled);
         EventBus.Unsubscribe<WeaponAcquired>(OnWeaponAcquired);
         EventBus.Unsubscribe<PlayerDamaged>(OnPlayerDamaged);
+        EventBus.Unsubscribe<PhaseStarted>(OnPhaseStarted);
+        EventBus.Unsubscribe<PortalOpened>(OnPortalOpened);
     }
 
     // ---------------------------------------------------------------- build
@@ -305,7 +327,64 @@ public sealed partial class Hud : Control
         AddChild(_dashLabel);
     }
 
+    /// <summary>
+    /// Two lines under the clock: which phase and map, and what the phase is
+    /// doing - counting down to the boss, fighting it, or waiting at the portal.
+    /// Under the clock because that is where the eye already goes to ask "how
+    /// long until something happens".
+    /// </summary>
+    private void BuildPhaseReadout()
+    {
+        _phaseLabel = Text("", 16, PhaseTint, HorizontalAlignment.Center);
+        StretchCentre(_phaseLabel, XpBarHeight + 56f, 22f);
+        AddChild(_phaseLabel);
+
+        _phaseStatus = Text("", 18, Ink, HorizontalAlignment.Center);
+        StretchCentre(_phaseStatus, XpBarHeight + 78f, 24f);
+        AddChild(_phaseStatus);
+    }
+
+    /// <summary>The big centred card shown when a map is entered. Upper third
+    /// rather than dead centre, so it never covers the player model.</summary>
+    private void BuildTitleCard()
+    {
+        _card = new Control { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        _card.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(_card);
+
+        _cardTitle = Text("", 52, Ink, HorizontalAlignment.Center);
+        _cardTitle.AddThemeConstantOverride("outline_size", 10);
+        _cardTitle.AnchorLeft = 0f; _cardTitle.AnchorRight = 1f;
+        _cardTitle.AnchorTop = 0.22f; _cardTitle.AnchorBottom = 0.22f;
+        _cardTitle.OffsetTop = 0f; _cardTitle.OffsetBottom = 64f;
+        _card.AddChild(_cardTitle);
+
+        _cardSubtitle = Text("", 22, PhaseTint, HorizontalAlignment.Center);
+        _cardSubtitle.AnchorLeft = 0f; _cardSubtitle.AnchorRight = 1f;
+        _cardSubtitle.AnchorTop = 0.22f; _cardSubtitle.AnchorBottom = 0.22f;
+        _cardSubtitle.OffsetTop = 66f; _cardSubtitle.OffsetBottom = 96f;
+        _card.AddChild(_cardSubtitle);
+    }
+
+    private void ShowCard(string title, string subtitle, Color tint)
+    {
+        _cardTitle.Text = title;
+        _cardTitle.AddThemeColorOverride("font_color", tint);
+        _cardSubtitle.Text = subtitle;
+        _cardTime = CardSeconds;
+        _card.Visible = true;
+    }
+
     // --------------------------------------------------------------- events
+
+    private void OnPhaseStarted(PhaseStarted e)
+    {
+        _phaseLabel.Text = $"PHASE {e.Phase}/{e.PhaseCount}  —  {e.StageName.ToUpperInvariant()}";
+        ShowCard($"PHASE {e.Phase}  ·  {e.StageName.ToUpperInvariant()}", e.Tagline, Ink);
+    }
+
+    private void OnPortalOpened(PortalOpened e)
+        => ShowCard("PORTAL OPEN", "Follow the light to the next map", PortalTint);
 
     /// <summary>
     /// Tracks the lifetime experience total the bar is derived from.
@@ -418,6 +497,7 @@ public sealed partial class Hud : Control
         UpdateClock();
         UpdateHealth(dt);
         UpdateDash(dt);
+        UpdatePhase(dt);
 
         // The bar eases toward the target rather than snapping — exponential
         // smoothing, so the rate is frame-rate independent; a fixed lerp per frame
@@ -446,6 +526,58 @@ public sealed partial class Hud : Control
 
         _lastClockSecond = second;
         _clockLabel.Text = _run.Clock;
+    }
+
+    /// <summary>
+    /// Sampled like the clock: the countdown and the boss's health are
+    /// continuous, and the label is only rewritten when its text changes.
+    /// </summary>
+    private void UpdatePhase(float dt)
+    {
+        if (_cardTime > 0f)
+        {
+            _cardTime -= dt;
+            // Quick fade in, hold, slow fade out.
+            float shown = CardSeconds - _cardTime;
+            float alpha = Mathf.Min(Mathf.Clamp(shown / 0.25f, 0f, 1f), Mathf.Clamp(_cardTime / 0.9f, 0f, 1f));
+            _card.Modulate = new Color(1f, 1f, 1f, alpha);
+            if (_cardTime <= 0f) _card.Visible = false;
+        }
+
+        StageDirector? stages = Main.Instance?.Stages;
+        if (stages is null) return;
+
+        string status;
+        Color tint = Ink;
+        switch (stages.State)
+        {
+            case StageDirector.PhaseState.Waves:
+                status = $"BOSS IN {RunState.Format(Mathf.Ceil(stages.SecondsToBoss))}";
+                break;
+            case StageDirector.PhaseState.Boss:
+                float hp = stages.BossHealth;
+                string name = stages.BossName.ToUpperInvariant();
+                status = hp >= 0f ? $"BOSS  {name}  {Mathf.CeilToInt(hp * 100f)}%" : $"BOSS  {name}";
+                // Overtime is said out loud: pressure that rises silently feels
+                // like a balance bug rather than a consequence.
+                if (stages.OvertimeSeconds > 0f)
+                    status += $"   OVERTIME +{Mathf.RoundToInt(stages.OvertimeSeconds / 30f * 12f)}%";
+                tint = BossTint;
+                break;
+            case StageDirector.PhaseState.PortalOpen:
+                status = "PORTAL OPEN  —  GO";
+                tint = PortalTint;
+                break;
+            default:
+                status = "VICTORY";
+                tint = PortalTint;
+                break;
+        }
+
+        if (status == _lastStatus) return;
+        _lastStatus = status;
+        _phaseStatus.Text = status;
+        _phaseStatus.AddThemeColorOverride("font_color", tint);
     }
 
     private void UpdateHealth(float dt)
@@ -591,6 +723,19 @@ public sealed partial class Hud : Control
         control.AnchorBottom = 1f;
         control.OffsetLeft = -width * 0.5f;
         control.OffsetRight = width * 0.5f;
+        control.OffsetTop = top;
+        control.OffsetBottom = top + height;
+    }
+
+    /// <summary>Full-width band at a fixed offset from the top, for centred text.</summary>
+    private static void StretchCentre(Control control, float top, float height)
+    {
+        control.AnchorLeft = 0f;
+        control.AnchorRight = 1f;
+        control.AnchorTop = 0f;
+        control.AnchorBottom = 0f;
+        control.OffsetLeft = 0f;
+        control.OffsetRight = 0f;
         control.OffsetTop = top;
         control.OffsetBottom = top + height;
     }

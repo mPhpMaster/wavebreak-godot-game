@@ -32,11 +32,13 @@ public sealed partial class Main : Node3D
     private UI.LevelUpPanel _levelUp = null!;
     private UI.ResultsScreen _results = null!;
     private Audio.AudioDirector _audio = null!;
+    private StageDirector _stages = null!;
 
     public Actors.Player Player => _player;
     public Combat.WeaponSystem Weapons => _weapons;
     public Progression.Inventory Inventory => _inventory;
     public Actors.EnemyManager Enemies => _enemies;
+    public StageDirector Stages => _stages;
 
     public override void _Ready()
     {
@@ -46,8 +48,13 @@ public sealed partial class Main : Node3D
         Run = new RunState(Screenshot.Requested ? Screenshot.Seed : (ulong)GD.Randi());
         GD.Print($"[wavebreak] seed {Run.Seed}");
 
-        AddChild(new Arena());
         BuildWorld();
+
+        // The arena is built by the stage director, not here: it is rebuilt on
+        // every phase change, and the thing that rebuilds it should be the only
+        // thing that ever creates one.
+        _stages = new StageDirector(this, Run, _enemies, _player, _camera, Data.Stages.Run, Catalog.Enemies);
+        _stages.Begin();
 
         EventBus.Subscribe<LevelGained>(OnLevelGained);
         EventBus.Subscribe<RunEnded>(OnRunEnded);
@@ -184,6 +191,10 @@ public sealed partial class Main : Node3D
         if (Run.Over) return;
 
         Run.Tick(dt);
+        // Before the enemy director: a phase change clears the field and sets
+        // the new multipliers, and the spawns this frame should already see them.
+        _stages.Tick(dt);
+        if (Run.Over) return;
         _enemies.Tick(dt, Run.Seconds);
         _weapons.Tick(dt);
     }
@@ -230,7 +241,8 @@ public sealed partial class Main : Node3D
         $"hp={_player.Health.Current:0}/{_player.Health.Max:0} seed={Run.Seed} " +
         $"jumps={_player.Jumps} airjumps={_player.AirJumpsUsed} dashes={_player.Dashes} " +
         $"slides={_player.Slides} slams={_player.Slams} slamhits={_player.SlamHits} " +
-        $"peakspeed={_player.PeakSpeed:0.0}";
+        $"peakspeed={_player.PeakSpeed:0.0} " +
+        $"phase={Run.Phase} phases={Run.PhaseCount} stage={Run.StageId} phasestate={_stages.State}";
 
     private async System.Threading.Tasks.Task RunScreenshot()
     {
