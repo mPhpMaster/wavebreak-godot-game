@@ -381,10 +381,15 @@ public sealed partial class WeaponSystem : Node
         SetPhysicsProcess(false);
     }
 
-    public override void _Ready() => Projectile.Initialize(this, ProjectileCapacity);
+    public override void _Ready()
+    {
+        Projectile.Initialize(this, ProjectileCapacity);
+        ContentAudit.Attach();
+    }
 
     public override void _ExitTree()
     {
+        ContentAudit.Report();
         Clear();
         Projectile.Shutdown();
         Targeting.Reset();
@@ -461,6 +466,9 @@ public sealed partial class WeaponSystem : Node
 
         Resolve();
         Targeting.Refresh();
+
+        // Flag-gated (--validate-content); runs once, before any real shot.
+        if (ContentAudit.Pending && _player is not null) ContentAudit.Run(this);
 
         for (int i = 0; i < _weapons.Count; i++)
             _weapons[i].Tick(dt, this);
