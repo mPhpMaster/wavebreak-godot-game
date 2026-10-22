@@ -61,6 +61,32 @@ public sealed partial class StatsPanel : Control
     private VBoxContainer _settings = null!;
     private float _refresh;
     private bool _available;
+    private Label _title = null!;
+    private Label _hint = null!;
+
+    /// <summary>Buttons the pause menu puts under the sheet. Empty and hidden
+    /// for the plain hold-Tab view.</summary>
+    public HBoxContainer ActionRow { get; private set; } = null!;
+
+    /// <summary>
+    /// Held open by the pause menu: the sheet stays up without Tab, is titled
+    /// PAUSED, and shows the menu's buttons. One view for both rather than a
+    /// second copy of every stat row that would drift out of step with this one.
+    /// </summary>
+    public bool Pinned
+    {
+        get => _pinned;
+        set
+        {
+            _pinned = value;
+            if (_title is null) return;
+            _title.Text = value ? "PAUSED" : "CHARACTER SHEET";
+            _hint.Text = value ? "Esc / P  resume" : "hold TAB";
+            ActionRow.Visible = value;
+            _refresh = 0f;
+        }
+    }
+    private bool _pinned;
 
     public StatsPanel(Player player, Inventory inventory, WeaponSystem weapons, RunState run)
     {
@@ -115,7 +141,8 @@ public sealed partial class StatsPanel : Control
         outer.AddThemeConstantOverride("separation", 8);
         frame.AddChild(outer);
 
-        outer.AddChild(Text("CHARACTER SHEET", 22, Heading, HorizontalAlignment.Center));
+        _title = Text("CHARACTER SHEET", 22, Heading, HorizontalAlignment.Center);
+        outer.AddChild(_title);
 
         var columns = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         columns.AddThemeConstantOverride("separation", 32);
@@ -126,12 +153,17 @@ public sealed partial class StatsPanel : Control
         _loadout = Column(columns, 280f);
         _settings = Column(columns, 210f);
 
-        outer.AddChild(Text("hold TAB", 13, Dim, HorizontalAlignment.Center));
+        ActionRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, Visible = false };
+        ActionRow.AddThemeConstantOverride("separation", 14);
+        outer.AddChild(ActionRow);
+
+        _hint = Text("hold TAB", 13, Dim, HorizontalAlignment.Center);
+        outer.AddChild(_hint);
     }
 
     public override void _Process(double delta)
     {
-        bool want = Screenshot.ShowStats || (_available && Input.IsActionPressed("stats"));
+        bool want = _pinned || Screenshot.ShowStats || (_available && Input.IsActionPressed("stats"));
         if (want != Visible)
         {
             Visible = want;
@@ -232,8 +264,7 @@ public sealed partial class StatsPanel : Control
         ("9 / 0", "effects"),
         ("[ / ]", "music"),
         ("M", "mute"),
-        ("Esc", "free mouse"),
-        ("P", "pause"),
+        ("Esc, P", "pause menu"),
     };
 
     /// <summary>One stat: name, value in its natural unit, and the change from

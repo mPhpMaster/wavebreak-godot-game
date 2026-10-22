@@ -76,6 +76,7 @@ public sealed class Autopilot
         // runs away from exactly where kills drop their orbs, so a fleeing bot
         // ends a 30s run at level 1 and never reaches the level-up path at all.
         wish += SeekPickup(me, nearest);
+        wish += SeekChest(me, nearest);
 
         // Bias back toward the middle. Without this the bot backs itself into
         // the arena wall and dies there every time, which measures the wall
@@ -163,6 +164,44 @@ public sealed class Autopilot
         // 0 with an enemy at 1.5m, full weight from 4m out.
         float safety = Mathf.Clamp((nearestEnemy - 1.5f) / 2.5f, 0f, 1f);
         return best / bestDist * SeekWeight * safety;
+    }
+
+    // Chest detours: how far the bot will walk for one, and how often it will
+    // press E at a chest it cannot afford (a person tries once, then moves on).
+    private const float ChestDetour = 22f;
+    private const float ChestSafeDistance = 6f;
+    private float _nextChestTry;
+
+    /// <summary>
+    /// Walks to the nearest chest it can open — free, or affordable — when
+    /// nothing is close, and presses interact once in reach. Pressing at an
+    /// unaffordable chest it happens to stand next to is deliberate: it is how
+    /// an unattended run exercises the refusal path. Self-contained so the bot's
+    /// other goals can change around it.
+    /// </summary>
+    private Vector3 SeekChest(Vector3 me, float nearestEnemy)
+    {
+        ChestSpawner? chests = ChestSpawner.Instance;
+        if (chests is null) return Vector3.Zero;
+
+        Chest? inReach = chests.Nearest(me, ChestSpawner.InteractRadius * 0.9f);
+        if (inReach is not null && (chests.CanAfford(inReach) || _clock >= _nextChestTry))
+        {
+            chests.RequestInteract();
+            if (!chests.CanAfford(inReach)) _nextChestTry = _clock + 8f;
+        }
+
+        if (nearestEnemy < ChestSafeDistance) return Vector3.Zero;
+        Chest? target = chests.Nearest(me, ChestDetour, chests.CanAfford);
+        if (target is null) return Vector3.Zero;
+
+        Vector3 d = target.GlobalPosition - me;
+        d.Y = 0f;
+        float dist = d.Length();
+        // Strong enough to override the wander and the orb pull, fading in as
+        // the nearest enemy falls behind the safe distance.
+        float safety = Mathf.Clamp((nearestEnemy - ChestSafeDistance) / 4f, 0f, 1f);
+        return dist < 0.3f ? Vector3.Zero : d / dist * 2.4f * safety;
     }
 
     private void UseVerbs(float nearest)

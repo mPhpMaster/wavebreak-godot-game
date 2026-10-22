@@ -44,11 +44,13 @@ public sealed partial class Main : Node3D
     {
         Instance = this;
         Screenshot.ParseArgs();
+        if (Visuals.ArtShowcase.Intercept(this)) return;
 
         Run = new RunState(Screenshot.Requested ? Screenshot.Seed : (ulong)GD.Randi());
         GD.Print($"[wavebreak] seed {Run.Seed}");
 
         BuildWorld();
+        Meta.RunMeta.Attach(this);
 
         // The arena is built by the stage director, not here: it is rebuilt on
         // every phase change, and the thing that rebuilds it should be the only
@@ -156,7 +158,7 @@ public sealed partial class Main : Node3D
         AddChild(_weapons);
 
         _inventory = new Progression.Inventory(_player.Stats);
-        _offers = new Progression.OfferPool(Catalog.Items, Catalog.Weapons, Run.Rng);
+        _offers = new Progression.OfferPool(Meta.MetaContent.OfferItems(Catalog.Items), Meta.MetaContent.OfferWeapons(Catalog.Weapons), Run.Rng);
 
         // Damage numbers and pickups are pooled nodes that need a parent in the
         // world, so they are children of the root rather than of the player.
@@ -172,11 +174,18 @@ public sealed partial class Main : Node3D
         ui.AddChild(_results);
         // Last, so the sheet draws over the level-up panel: checking your build
         // before choosing a card is the main reason to open it.
-        ui.AddChild(new UI.StatsPanel(_player, _inventory, _weapons, Run));
+        var sheet = new UI.StatsPanel(_player, _inventory, _weapons, Run);
+        ui.AddChild(sheet);
+        // Esc / P: pause with the sheet held open and the menu buttons under it.
+        ui.AddChild(new UI.PauseMenu(sheet, _levelUp, _results));
 
         // Everyone starts with one weapon; a run with no way to fight is not a
         // run, and the first level-up should be a choice rather than a rescue.
-        _weapons.Add(Catalog.Weapons[0]);
+        _weapons.Add(Meta.RunMeta.StartingWeapon());
+
+        // Attached for the whole run (the price ladder belongs to the run);
+        // each map populates it when the stage director builds that map.
+        ChestSpawner.Attach(this, Run.Seed);
 
         if (Screenshot.Auto)
         {
@@ -241,7 +250,7 @@ public sealed partial class Main : Node3D
         $"hp={_player.Health.Current:0}/{_player.Health.Max:0} seed={Run.Seed} " +
         $"jumps={_player.Jumps} airjumps={_player.AirJumpsUsed} dashes={_player.Dashes} " +
         $"slides={_player.Slides} slams={_player.Slams} slamhits={_player.SlamHits} " +
-        $"peakspeed={_player.PeakSpeed:0.0} " +
+        $"peakspeed={_player.PeakSpeed:0.0} {ChestSpawner.Instance?.SummaryFields} " +
         $"phase={Run.Phase} phases={Run.PhaseCount} stage={Run.StageId} phasestate={_stages.State}";
 
     private async System.Threading.Tasks.Task RunScreenshot()

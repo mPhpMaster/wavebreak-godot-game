@@ -223,6 +223,8 @@ public sealed class StageDirector
         }
         ApplyScaling(1f);
 
+        PopulateFinds(index);
+
         _player.Teleport(Arena.Centre + Vector3.Up * 0.3f);
         _camera.SnapToTarget();
 
@@ -231,6 +233,26 @@ public sealed class StageDirector
         Log($"phase {index + 1}/{_stages.Count} '{stage.DisplayName}' begins (boss in {PhaseLength:0}s, " +
             $"hp x{stage.EnemyHealthScale:0.00} dmg x{stage.EnemyDamageScale:0.00} spd x{stage.EnemySpeedScale:0.00})");
         EventBus.Publish(new PhaseStarted(index + 1, _stages.Count, stage.Id, stage.DisplayName, stage.Tagline));
+    }
+
+    /// <summary>
+    /// Chests and hidden shrines for the new map, parented to the arena so they
+    /// leave with it. Seeded from the run and the phase: the layout of a map is
+    /// fixed, but what is worth finding on it moves from run to run.
+    /// </summary>
+    private void PopulateFinds(int index)
+    {
+        if (_arena is null) return;
+        StageDef stage = Stage;
+        ulong salt = (ulong)(index + 1) * 0x9E3779B97F4A7C15UL;
+
+        int chests = Mathf.Min(stage.Chests, ChestSpawner.MaxWorldChests);
+        ChestSpawner.Instance?.Populate(_arena, new Rng(_run.Seed ^ salt), stage.InRadius - 6f, chests);
+
+        // The spawner rings them at 80-90% of the radius without knowing about
+        // terrain; nudge any that landed inside a mound or under a platform.
+        foreach (Meta.Shrine shrine in Meta.SecretSpawner.Populate(_arena, new Rng(_run.Seed ^ 0x5EC2E75UL ^ salt), stage.InRadius))
+            shrine.Position = _arena.ClearSpotNear(shrine.Position, 2.5f);
     }
 
     private void ApplyScaling(float overtime, float liveCap = 1f)

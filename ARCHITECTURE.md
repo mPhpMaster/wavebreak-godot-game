@@ -91,9 +91,10 @@ classes, and lets someone tune them without touching C#.
 | `EnemyDef.Cost` | per enemy | how the director's budget converts into threat — swarm vs. squad |
 | `EnemyDef.UnlockAtSeconds` | per enemy | paces which threats appear when |
 | `RunState.TargetSeconds` | 900 | nominal run length; the stage table is tuned to land near it |
-| `StageDef.PhaseSeconds` | 270 | waves per map before its boss arrives; 3 maps x (4:30 + boss) ~ 15 min |
+| `StageDef.PhaseSeconds` | 210 | waves per map before its boss arrives; 3 maps x (3:30 + ~2 min boss) ~ 15 min |
+| `StageDef.Radius` | 130-165 m | maps are 2-3x the old 60 m disc; spawns stay on a ring around the player, so density near the player is unchanged |
 | `StageDef.Enemy*Scale` | 1 / 1.25 / 1.55 hp | per-map step on top of the clock curve; phase 1 is exactly 1 so the opening is untouched |
-| `StageDef.BossHealthScale` | 0.55 | phase bosses are mandatory gates and weapons aim at the nearest enemy, so they carry less than the full time-curve health |
+| `StageDef.BossHealthScale` | 0.55 (0.45 last) | phase bosses are mandatory gates and weapons aim at the nearest enemy, so they carry less than the full time-curve health |
 | `StageDef.BossGraceSeconds` | 120 | boss lifetime before overtime adds +12% enemy hp/damage per 30 s |
 
 `HealthRegen` is stored **per minute** because that is the readable unit on a
@@ -122,6 +123,29 @@ Godot_v4.7.1-stable_mono_win64_console.exe --path . --resolution 1280x720 -- --s
 Seeded runs are reproducible (`Core/Rng.cs`), which is what makes a balance bug
 re-testable and lets captures be compared across changes.
 
+## Visuals: imported first, procedural always there
+
+`Visuals/` owns how things look; gameplay code never builds a mesh.
+
+- **Imported models are the primary look** (CC0 Kenney and Quaternius packs,
+  `assets/CREDITS.md`), wrapped as a `ModelSpec` with a clip map
+  (`ArtAssets`). **Procedural models are the fallback** (`ModelBuilder`): any
+  enemy without a mapping, or whose file is missing, still gets a body built
+  from its numbers. A new `EnemyDef` therefore never renders as nothing.
+- **One `CharacterRig` per character** is both model and animator. It plays
+  clips for imported models and poses parts for procedural ones, and layers the
+  same procedural squash, lean, flip and death on top of both. Gameplay talks
+  to it through four hooks: `PlayAttackWindup`, `PlayAttack`, `PlayHit`,
+  `PlayDeath` (enemies: `EnemyVisuals.SpawnCorpse`, because the pooled node
+  vanishes the instant it dies).
+- **Cost is per kind, not per instance.** Procedural meshes are built once per
+  spec and share one material (colour in vertices, flash/dissolve as instance
+  uniforms); imported clips advance at a reduced rate far from the camera; far
+  procedural enemies swap to a merged mesh via engine visibility ranges; props
+  go through MultiMesh. Measure with `--art-stress=N` against `--art-off`.
+- **Biomes are data** (`PropTheme`), consumed by `PropFactory` (floor shader,
+  scatter, sky, sun). A theme can mix kit and procedural props per kind.
+
 ## Layout
 
 ```
@@ -134,7 +158,22 @@ scripts/
   UI/          Hud, LevelUpPanel, ResultsScreen, DamagePopup
   Data/        Definitions, Catalog, Stages   <- all content (Stages = maps + phases)
   Game/        Main, Arena, StageDirector, Portal, RunState, Screenshot
+  Meta/        Profile, Unlocks, Characters, MetaContent, SecretSpawner, UnlockTracker
+  Visuals/     ModelSpec, ModelBuilder, CharacterRig, PlayerLooks, EnemyVisuals,
+               PropTheme, PropFactory, ToonMaterials, ArtAssets, showcase/stress
+assets/        imported CC0 models (see assets/CREDITS.md)
 ```
+
+The project boots into `scenes/Title.tscn` (`UI/MainMenu`). Any game argument
+other than the menu's own (`--profile`, `--menu-shot`, `--menu-page`) skips it
+straight into the run, so every automated launch behaves as before. Automated
+runs never touch the real profile unless `--profile=<path>` is given. Unlocks
+only *add* content (`Meta/MetaContent`); the base catalogue is never locked.
+
+Art checks: `-- --art-showcase=hero|enemies|closeup|props-<theme> --shot=x.png`
+stages a scene; `--art-theme=<theme>` plays a run in a biome;
+`--art-stress=150` (with `--art-off` / `--art-procedural` for A/B) prints a
+`STRESS` line with wall-clock frame times.
 
 `Game/Main.cs` constructs the systems and ticks them **in one place** rather than
 letting each run its own `_Process`. That ordering is deliberate: with

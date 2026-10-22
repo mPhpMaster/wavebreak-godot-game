@@ -1,22 +1,31 @@
 using System.Collections.Generic;
 using Godot;
 using Wavebreak.Data;
+using Wavebreak.Visuals;
 
 namespace Wavebreak.Game;
 
 /// <summary>
-/// The playfield for one stage: floor, wall, terrain, scatter and lighting, all
-/// built from primitives out of a <see cref="StageDef"/>.
+/// The playfield for one stage: collision floor, wall, terrain, landmarks and
+/// dressing, built from a <see cref="StageDef"/> and its <see cref="PropTheme"/>.
 ///
-/// Generated in code rather than authored as a scene because the arena's job is
-/// to be legible, not pretty, and because a stage that is pure data can be
-/// re-tuned or added without opening an editor. Swapping in a real level later
-/// means replacing this one node; nothing else refers to its contents — the
-/// director finds the floor by raycast and the player by collision.
+/// Two layers, deliberately separate:
 ///
-/// The arena is rebuilt on every phase change, so it must be safe to free and
-/// replace mid-run: everything it creates is a child, and the only state it
-/// leaves behind is <see cref="Current"/>.
+/// <b>Gameplay geometry</b> is built here from primitives — the floor polygon,
+/// the wall, mounds, platforms, ramps, ridges and a few solid landmarks. All of
+/// it collides, and all of it is placed by this file's own rejection sampler so
+/// that it never overlaps itself or the clear zone at the centre.
+///
+/// <b>Dressing</b> comes from <see cref="PropFactory"/>: the themed floor shader,
+/// sky, fog, sun, and a dense scatter of trees, rocks and grass that does
+/// <em>not</em> collide. Scatter that lands inside a terrain footprint is culled
+/// afterwards, so no tree grows through a platform.
+///
+/// Swapping in a hand-built level later means replacing this one node; nothing
+/// else refers to its contents — the director finds the floor by raycast and the
+/// player by collision. The arena is rebuilt on every phase change, so it must
+/// be safe to free and replace mid-run: everything it creates is a child, and
+/// the only state it leaves behind is <see cref="Current"/>.
 /// </summary>
 public sealed partial class Arena : Node3D
 {
@@ -40,11 +49,16 @@ public sealed partial class Arena : Node3D
     private const float WallColliderHeight = 40f;
     private const float WallHeight = 4f;
 
+    /// <summary>How far the visual floor runs past the wall, so the edge of the
+    /// map reads as a fence in a landscape rather than the edge of a plate.</summary>
+    private const float FloorSkirt = 60f;
+
     private readonly StageDef _stage;
+    private readonly PropTheme _theme;
     private readonly RandomNumberGenerator _rng = new();
 
     // Footprints of everything solid placed so far, so features do not overlap
-    // each other or the clear zone. A list scan is fine: there are a few dozen.
+    // each other or the clear zone, and so scatter can be culled out of them.
     private readonly List<(Vector2 At, float Radius)> _footprints = new();
 
     private StaticBody3D _body = null!;
@@ -54,6 +68,7 @@ public sealed partial class Arena : Node3D
     public Arena(StageDef stage)
     {
         _stage = stage;
+        _theme = PropTheme.Get(stage.Theme);
         Current = stage;
     }
 
@@ -72,8 +87,7 @@ public sealed partial class Arena : Node3D
         BuildWall();
         BuildCentrePad();
         BuildTerrain();
-        BuildScatter();
-        BuildLighting();
+        BuildDressing();
     }
 
     // ---------------------------------------------------------------- floor
@@ -90,73 +104,28 @@ public sealed partial class Arena : Node3D
         return new Vector3(Mathf.Cos(a) * circumradius, 0f, Mathf.Sin(a) * circumradius);
     }
 
+    /// <summary>
+    /// Collision only. The floor the player sees is the theme's shader disc,
+    /// which overhangs the wall; the floor the player stands on is this exact
+    /// polygon, whose edge is the wall's inner face. Enemy spawns find ground by
+    /// raycast, so a ray that misses the polygon — outside the wall — is
+    /// correctly rejected even though the visual floor continues out there.
+    /// </summary>
     private void BuildGround()
     {
-        // A fan of triangles rather than a CylinderMesh: the walls are placed by
-        // edge angle, and a mesh whose corner angles are an engine convention
-        // would leave the floor and the wall disagreeing about where the edge is.
-        var st = new SurfaceTool();
-        st.Begin(Mesh.PrimitiveType.Triangles);
         var points = new Vector3[Sides * 2];
         for (int k = 0; k < Sides; k++)
         {
             Vector3 a = Corner(k, _stage.Radius);
-            Vector3 b = Corner(k + 1, _stage.Radius);
-            st.SetNormal(Vector3.Up); st.AddVertex(Vector3.Zero);
-            st.SetNormal(Vector3.Up); st.AddVertex(a);
-            st.SetNormal(Vector3.Up); st.AddVertex(b);
             points[k * 2] = a;
             points[k * 2 + 1] = a + Vector3.Down;
         }
-        StandardMaterial3D ground = Flat(_stage.Ground);
-        // Winding is irrelevant to a floor seen only from above; turning culling
-        // off removes the one way this could render as nothing.
-        ground.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
-        AddChild(new MeshInstance3D { Name = "Ground", Mesh = st.Commit(), MaterialOverride = ground });
-
-        _body.AddChild(new CollisionShape3D { Shape = new ConvexPolygonShape3D { Points = points } });
-
-        // Concentric outlines. Without something static on the floor there is no
-        // sense of speed at all -- the player reads as stationary while the world
-        // slides, which makes movement feel weightless.
-        StandardMaterial3D grid = Flat(_stage.Grid);
-        for (float r = 10f; r < _stage.InRadius - 2f; r += 10f)
-            Outline(r, 0.24f, 0.015f, grid);
-    }
-
-    /// <summary>A flat polygon ring at in-radius <paramref name="r"/>. A torus
-    /// on round floors, where 64 slivers would be 64 nodes for the same look.</summary>
-    private void Outline(float r, float width, float y, Material material)
-    {
-        if (Sides >= 24)
-        {
-            AddChild(new MeshInstance3D
-            {
-                Mesh = new TorusMesh { InnerRadius = r - width * 0.5f, OuterRadius = r + width * 0.5f, RingSegments = 64 },
-                Position = new Vector3(0f, y, 0f),
-                Scale = new Vector3(1f, 0.15f, 1f),
-                MaterialOverride = material,
-            });
-            return;
-        }
-
-        float edge = 2f * r * Mathf.Tan(Mathf.Pi / Sides);
-        for (int k = 0; k < Sides; k++)
-        {
-            float a = EdgeAngle(k);
-            var dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
-            AddChild(new MeshInstance3D
-            {
-                Mesh = new BoxMesh { Size = new Vector3(edge + width, 0.02f, width) },
-                Transform = new Transform3D(XAlong(Tangent(dir)), dir * r + Vector3.Up * y),
-                MaterialOverride = material,
-            });
-        }
+        _body.AddChild(new CollisionShape3D { Name = "Ground", Shape = new ConvexPolygonShape3D { Points = points } });
     }
 
     private void BuildWall()
     {
-        StandardMaterial3D wall = Flat(_stage.Wall, emission: 0.25f);
+        StandardMaterial3D wall = Flat(_stage.Wall, emission: 0.35f);
         float edge = 2f * _stage.Radius * Mathf.Sin(Mathf.Pi / Sides);
         for (int k = 0; k < Sides; k++)
         {
@@ -191,9 +160,9 @@ public sealed partial class Arena : Node3D
         AddChild(new MeshInstance3D
         {
             Mesh = new TorusMesh { InnerRadius = 2.9f, OuterRadius = 3.2f, RingSegments = 48 },
-            Position = new Vector3(0f, 0.02f, 0f),
+            Position = new Vector3(0f, 0.04f, 0f),
             Scale = new Vector3(1f, 0.1f, 1f),
-            MaterialOverride = Flat(_stage.Wall, emission: 0.6f),
+            MaterialOverride = Flat(_stage.Wall, emission: 0.8f),
         });
     }
 
@@ -206,7 +175,7 @@ public sealed partial class Arena : Node3D
         for (int i = 0; i < _stage.Platforms; i++) PlacePlatform();
         for (int i = 0; i < _stage.Ridges; i++) PlaceRidge();
         for (int i = 0; i < _stage.Mounds; i++) PlaceMound();
-        for (int i = 0; i < _stage.SolidCount; i++) PlaceSolid();
+        for (int i = 0; i < _stage.Landmarks; i++) PlaceLandmark();
     }
 
     /// <summary>
@@ -216,37 +185,41 @@ public sealed partial class Arena : Node3D
     /// </summary>
     private void PlaceMound()
     {
-        float h = _stage.MoundHeight * _rng.RandfRange(0.8f, 1.2f);
-        float top = _rng.RandfRange(3f, 5f);
+        float h = _stage.MoundHeight * _rng.RandfRange(0.8f, 1.25f);
+        float top = _rng.RandfRange(3.5f, 7f);
         float bottom = top + h / Mathf.Tan(Mathf.DegToRad(20f));
         if (!TryPlace(bottom + 1f, out Vector3 at)) return;
 
         var mesh = new CylinderMesh { TopRadius = top, BottomRadius = bottom, Height = h, RadialSegments = 28, Rings = 1 };
-        AddSolid(mesh, new Transform3D(Basis.Identity, at + Vector3.Up * (h * 0.5f)), Flat(_stage.Terrain));
+        // The theme's own ground shader: a hill is the floor rising, and the
+        // shader is world-space, so the two meet without a seam.
+        AddSolid(mesh, new Transform3D(Basis.Identity, at + Vector3.Up * (h * 0.5f)), PropFactory.FloorMaterial(_theme));
 
         // A bright lip on the top edge. From a third-person camera at 26°, the
         // shading difference between a slope and the floor is too small to see;
         // the lip is what says "this is raised".
         AddChild(new MeshInstance3D
         {
-            Mesh = new TorusMesh { InnerRadius = top - 0.12f, OuterRadius = top + 0.12f, RingSegments = 32 },
+            Mesh = new TorusMesh { InnerRadius = top - 0.14f, OuterRadius = top + 0.14f, RingSegments = 32 },
             Position = at + Vector3.Up * (h + 0.01f),
             Scale = new Vector3(1f, 0.3f, 1f),
-            MaterialOverride = Flat(_stage.Wall, emission: 0.35f),
+            MaterialOverride = Flat(_stage.Wall, emission: 0.45f),
         });
     }
 
     /// <summary>
-    /// A raised slab with one ramp. Height is under the 6 m jump apex so the
-    /// player can always hop up, while enemies have to find the ramp — which is
-    /// what makes the top worth standing on for a few seconds.
+    /// A raised slab with one ramp and a pair of pillars on its back corners.
+    /// Height is under the 6 m jump apex so the player can always hop up, while
+    /// enemies have to find the ramp — which is what makes the top worth
+    /// standing on for a few seconds. The pillars make it a landmark you can
+    /// navigate by from across the map.
     /// </summary>
     private void PlacePlatform()
     {
         float h = _stage.PlatformHeight * _rng.RandfRange(0.9f, 1.1f);
-        float size = _rng.RandfRange(7f, 10f);
+        float size = _rng.RandfRange(8f, 12f);
         float rampLength = h / Mathf.Tan(Mathf.DegToRad(19f));
-        float footprint = size * 0.5f + rampLength * 0.6f + 1f;
+        float footprint = size * 0.5f + rampLength * 0.6f + 1.5f;
         if (!TryPlace(footprint, out Vector3 at)) return;
 
         // The group is offset so the platform and its ramp together are centred
@@ -264,15 +237,21 @@ public sealed partial class Arena : Node3D
         {
             Mesh = new BoxMesh { Size = new Vector3(size - 0.3f, 0.04f, size - 0.3f) },
             Transform = new Transform3D(yaw, platform + Vector3.Up * (h + 0.02f)),
-            MaterialOverride = Flat(_stage.Terrain.Lightened(0.25f), emission: 0.08f),
+            MaterialOverride = Flat(_stage.Terrain.Lightened(0.3f), emission: 0.1f),
         });
 
         // PrismMesh with the apex over its +X edge is a wedge rising toward +X.
         // Turned so +X points back at the platform, its high edge meets the top.
-        var ramp = new PrismMesh { LeftToRight = 1f, Size = new Vector3(rampLength, h, 3.6f) };
+        var ramp = new PrismMesh { LeftToRight = 1f, Size = new Vector3(rampLength, h, 3.8f) };
         Vector3 rampCentre = platform + rampSide * (size * 0.5f + rampLength * 0.5f - 0.05f);
         AddSolid(ramp, new Transform3D(XAlong(-rampSide), rampCentre + Vector3.Up * (h * 0.5f)),
                  Flat(_stage.Terrain.Darkened(0.12f)));
+
+        // Two pillars on the far corners, standing on the platform top.
+        Vector3 back = -rampSide * (size * 0.5f - 0.9f);
+        Vector3 across = yaw * Vector3.Forward * (size * 0.5f - 0.9f);
+        foreach (Vector3 corner in new[] { back + across, back - across })
+            AddProp(PropFactory.Kind.Pillar, platform + corner + Vector3.Up * h, 0.8f, collide: true);
     }
 
     /// <summary>
@@ -284,41 +263,92 @@ public sealed partial class Arena : Node3D
     {
         float h = _stage.RidgeHeight * _rng.RandfRange(0.85f, 1.15f);
         float length = 2f * h / Mathf.Tan(Mathf.DegToRad(17f));
-        float width = _rng.RandfRange(6f, 10f);
+        float width = _rng.RandfRange(7f, 12f);
         float footprint = Mathf.Max(length, width) * 0.5f + 1f;
         if (!TryPlace(footprint, out Vector3 at)) return;
 
         var basis = new Basis(Vector3.Up, _rng.RandfRange(0f, Mathf.Tau));
         var mesh = new PrismMesh { LeftToRight = 0.5f, Size = new Vector3(length, h, width) };
-        AddSolid(mesh, new Transform3D(basis, at + Vector3.Up * (h * 0.5f)), Flat(_stage.Terrain));
+        AddSolid(mesh, new Transform3D(basis, at + Vector3.Up * (h * 0.5f)), PropFactory.FloorMaterial(_theme));
 
         // A glowing crest line, for the same reason as the mound lip: it is the
         // only cue at a glance that the ground ahead tilts.
         AddChild(new MeshInstance3D
         {
-            Mesh = new BoxMesh { Size = new Vector3(0.22f, 0.08f, width) },
+            Mesh = new BoxMesh { Size = new Vector3(0.26f, 0.08f, width) },
             Transform = new Transform3D(basis, at + Vector3.Up * (h + 0.02f)),
-            MaterialOverride = Flat(_stage.Wall, emission: 0.35f),
+            MaterialOverride = Flat(_stage.Wall, emission: 0.45f),
         });
     }
 
-    /// <summary>A large obstacle that blocks bodies, in the stage's style. Kept
-    /// under the jump apex so it is never a wall the player cannot get over.</summary>
-    private void PlaceSolid()
+    /// <summary>
+    /// A solid landmark from the theme's own kit: a big rock formation, or a
+    /// ruin of pillars around an arch. These are the "points of interest" that
+    /// give a large map a shape you can remember, and the few obstacles that
+    /// actually block — kept well apart so there are always open lanes.
+    /// </summary>
+    private void PlaceLandmark()
     {
-        float h = _rng.RandfRange(2.6f, 4.8f);
-        float w = _rng.RandfRange(1.2f, 2.0f);
-        if (!TryPlace(w * 1.6f + 1f, out Vector3 at)) return;
+        bool ruin = _rng.Randf() < 0.4f;
+        float r = ruin ? 6f : 4f;
+        if (!TryPlace(r + 2f, out Vector3 at)) return;
 
-        Mesh mesh = _stage.Style switch
+        if (!ruin)
         {
-            ObstacleStyle.Pillars => new CylinderMesh { TopRadius = w * 0.8f, BottomRadius = w, Height = h, RadialSegments = 12 },
-            ObstacleStyle.Shards => new PrismMesh { Size = new Vector3(w * 2f, h, w * 1.4f), LeftToRight = _rng.RandfRange(0.2f, 0.8f) },
-            ObstacleStyle.Stones => new SphereMesh { Radius = w * 1.3f, Height = h, RadialSegments = 12, Rings = 6 },
-            _ => new BoxMesh { Size = new Vector3(w * 2f, h, w * 2f) },
-        };
-        var basis = new Basis(Vector3.Up, _rng.RandfRange(0f, Mathf.Tau));
-        AddSolid(mesh, new Transform3D(basis, at + Vector3.Up * (h * 0.5f)), Flat(_stage.ObstacleB, emission: 0.1f));
+            // A formation: one big rock and two smaller ones leaning on it.
+            AddProp(PropFactory.Kind.Rock, at, _rng.RandfRange(2.2f, 3.0f), collide: true);
+            for (int i = 0; i < 2; i++)
+            {
+                float a = _rng.RandfRange(0f, Mathf.Tau);
+                AddProp(PropFactory.Kind.Rock, at + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * 2.6f,
+                        _rng.RandfRange(1.1f, 1.6f), collide: true);
+            }
+            return;
+        }
+
+        // A ruin: an arch you can run through, flanked by broken pillars.
+        float yaw = _rng.RandfRange(0f, Mathf.Tau);
+        AddProp(PropFactory.Kind.Arch, at, 1.6f, collide: false, yaw: yaw);
+        var side = new Vector3(Mathf.Cos(yaw), 0f, -Mathf.Sin(yaw));
+        for (int i = 0; i < 4; i++)
+        {
+            float a = yaw + Mathf.Pi * (0.25f + 0.5f * i);
+            Vector3 p = at + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * 5f;
+            // Keep the doorway clear: nothing directly in line with the arch.
+            if (Mathf.Abs((p - at).Normalized().Dot(side)) > 0.9f) continue;
+            AddProp(PropFactory.Kind.Pillar, p, _rng.RandfRange(0.9f, 1.3f), collide: true);
+        }
+    }
+
+    /// <summary>
+    /// One theme prop placed by hand, optionally with a cylinder collider sized
+    /// from the mesh's own bounds — a kit model and a procedural one differ in
+    /// scale by an order of magnitude, so a hard-coded radius would be wrong for
+    /// one of them.
+    /// </summary>
+    private void AddProp(PropFactory.Kind kind, Vector3 at, float scale, bool collide, float? yaw = null)
+    {
+        Mesh mesh = PropFactory.PropMesh(kind, _theme, _rng.RandiRange(0, 3));
+        bool kit = _theme.UsesKit(kind);
+        if (kit && _theme.KitScale.TryGetValue(kind, out float k)) scale *= k;
+
+        var basis = new Basis(Vector3.Up, yaw ?? _rng.RandfRange(0f, Mathf.Tau)).Scaled(Vector3.One * scale);
+        AddChild(new MeshInstance3D
+        {
+            Mesh = mesh,
+            Transform = new Transform3D(basis, at),
+            MaterialOverride = kit ? null : ToonMaterials.Prop,
+        });
+        if (!collide) return;
+
+        Aabb box = mesh.GetAabb();
+        float radius = Mathf.Max(0.4f, Mathf.Max(box.Size.X, box.Size.Z) * 0.5f * scale * 0.75f);
+        float height = Mathf.Max(1f, (box.Position.Y + box.Size.Y) * scale);
+        _body.AddChild(new CollisionShape3D
+        {
+            Shape = new CylinderShape3D { Radius = radius, Height = height },
+            Position = at + Vector3.Up * (height * 0.5f),
+        });
     }
 
     /// <summary>
@@ -329,20 +359,44 @@ public sealed partial class Arena : Node3D
     /// </summary>
     private bool TryPlace(float r, out Vector3 at)
     {
-        float max = _stage.InRadius - r - 3f;
+        float max = _stage.InRadius - r - 4f;
         float min = _stage.ClearRadius + r;
-        for (int attempt = 0; attempt < 40 && max > min; attempt++)
+        for (int attempt = 0; attempt < 60 && max > min; attempt++)
         {
             float a = _rng.RandfRange(0f, Mathf.Tau);
             float d = Mathf.Sqrt(_rng.RandfRange(min * min / (max * max), 1f)) * max;
             var p = new Vector2(Mathf.Cos(a) * d, Mathf.Sin(a) * d);
-            if (Overlaps(p, r, 2f)) continue;
+            // A wide gap between features: these are the lanes the player kites
+            // down, and a map packed edge to edge would have none.
+            if (Overlaps(p, r, 5f)) continue;
             _footprints.Add((p, r));
             at = new Vector3(p.X, 0f, p.Y);
             return true;
         }
         at = Vector3.Zero;
         return false;
+    }
+
+    /// <summary>
+    /// The nearest point to <paramref name="p"/> (searching outward in rings)
+    /// where something of radius <paramref name="r"/> stands on open floor, clear
+    /// of terrain and inside the walls. For things other systems place without
+    /// knowing this map's layout.
+    /// </summary>
+    public Vector3 ClearSpotNear(Vector3 p, float r)
+    {
+        var flat = new Vector2(p.X, p.Z);
+        float limit = _stage.InRadius - r - 2f;
+        for (float step = 0f; step < 40f; step += 2f)
+            for (int i = 0; i < 12; i++)
+            {
+                float a = Mathf.Tau * i / 12f;
+                Vector2 c = flat + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * step;
+                if (c.Length() > limit) c = c.Normalized() * limit;
+                if (!Overlaps(c, r, 0.5f)) return new Vector3(c.X, p.Y, c.Y);
+                if (step == 0f) break;
+            }
+        return p;
     }
 
     private bool Overlaps(Vector2 p, float r, float gap)
@@ -360,81 +414,49 @@ public sealed partial class Arena : Node3D
         _body.AddChild(new CollisionShape3D { Shape = mesh.CreateConvexShape(), Transform = xform });
     }
 
-    // -------------------------------------------------------------- scatter
+    // ------------------------------------------------------------- dressing
 
-    private void BuildScatter()
+    private void BuildDressing()
     {
-        for (int i = 0; i < _stage.ScatterCount; i++)
-        {
-            float a = _rng.RandfRange(0f, Mathf.Tau);
-            float d = Mathf.Sqrt(_rng.Randf()) * (_stage.InRadius - 6f);
-            var flat = new Vector2(Mathf.Cos(a) * d, Mathf.Sin(a) * d);
-            // Scatter is decoration with no collision, so poking out of a mound
-            // or standing on the clear pad would only be visual noise.
-            if (d < 4f || Overlaps(flat, 0.8f, 0f)) continue;
+        AddChild(PropFactory.BuildFloor(_stage.Radius + FloorSkirt, _theme));
+        AddChild(PropFactory.MakeWorldEnvironment(_theme));
+        AddChild(PropFactory.MakeSun(_theme));
 
-            float h = _rng.RandfRange(0.6f, 2.4f);
-            float w = _rng.RandfRange(0.5f, 1.4f);
-            Mesh mesh = _stage.Style switch
-            {
-                ObstacleStyle.Pillars => new CylinderMesh { TopRadius = w * 0.18f, BottomRadius = w * 0.25f, Height = h * 1.6f, RadialSegments = 8 },
-                ObstacleStyle.Shards => new PrismMesh { Size = new Vector3(w, h * 1.3f, w * 0.6f), LeftToRight = _rng.Randf() },
-                ObstacleStyle.Stones => new SphereMesh { Radius = w * 0.6f, Height = h * 0.6f, RadialSegments = 10, Rings = 5 },
-                _ => new BoxMesh { Size = new Vector3(w, h, w) },
-            };
-            float height = mesh is CylinderMesh c ? c.Height : mesh is PrismMesh p ? p.Size.Y : mesh is SphereMesh s ? s.Height : h;
-
-            // Shards lean; everything else stands up straight.
-            Basis basis = new Basis(Vector3.Up, _rng.RandfRange(0f, Mathf.Tau));
-            if (_stage.Style == ObstacleStyle.Shards)
-                basis *= new Basis(Vector3.Right, _rng.RandfRange(-0.35f, 0.35f));
-
-            AddChild(new MeshInstance3D
-            {
-                Mesh = mesh,
-                Transform = new Transform3D(basis, new Vector3(flat.X, height * 0.5f, flat.Y)),
-                MaterialOverride = Flat(_stage.ObstacleA.Lerp(_stage.ObstacleB, _rng.Randf())),
-            });
-        }
+        // Seeded from the layout, not the run: the dressing is part of the place.
+        var rng = new Core.Rng((ulong)_stage.LayoutSeed ^ 0xD2E55UL);
+        Node3D props = PropFactory.Scatter(this, rng, _stage.InRadius - 3f, _theme, _stage.PropDensity,
+                                           clearRadius: _stage.ClearRadius);
+        CullScatter(props);
     }
 
-    // ------------------------------------------------------------- lighting
-
-    private void BuildLighting()
+    /// <summary>
+    /// Remove scatter instances standing inside terrain or landmarks. The scatter
+    /// does not know about this map's footprints, and a tree growing through a
+    /// platform top reads as a bug even though nothing collides with it.
+    /// </summary>
+    private void CullScatter(Node3D props)
     {
-        AddChild(new DirectionalLight3D
+        foreach (Node child in props.GetChildren())
         {
-            Rotation = new Vector3(Mathf.DegToRad(_stage.SunPitchDegrees), Mathf.DegToRad(_stage.SunYawDegrees), 0f),
-            LightColor = _stage.SunColor,
-            LightEnergy = _stage.SunEnergy,
-            ShadowEnabled = true,
-        });
-
-        var env = new Godot.Environment
-        {
-            BackgroundMode = Godot.Environment.BGMode.Sky,
-            Sky = new Sky { SkyMaterial = new ProceduralSkyMaterial
+            if (child is not MultiMeshInstance3D { Multimesh: { } mm }) continue;
+            int count = mm.InstanceCount;
+            var keep = new List<Transform3D>(count);
+            var keepData = mm.UseCustomData ? new List<Color>(count) : null;
+            for (int i = 0; i < count; i++)
             {
-                SkyTopColor = _stage.SkyTop,
-                SkyHorizonColor = _stage.SkyHorizon,
-                GroundHorizonColor = _stage.GroundHorizon,
-                GroundBottomColor = _stage.GroundBottom,
-            } },
-            AmbientLightSource = Godot.Environment.AmbientSource.Sky,
-            AmbientLightEnergy = _stage.AmbientEnergy,
-            GlowEnabled = true,
-            GlowIntensity = 0.5f,
-        };
-        if (_stage.FogDensity > 0f)
-        {
-            env.FogEnabled = true;
-            env.FogLightColor = _stage.FogColor;
-            env.FogDensity = _stage.FogDensity;
-            // Mostly spare the sky, or the horizon colour that sets the mood is
-            // the first thing the fog erases.
-            env.FogSkyAffect = 0.25f;
+                Transform3D t = mm.GetInstanceTransform(i);
+                if (Overlaps(new Vector2(t.Origin.X, t.Origin.Z), 0.6f, 0f)) continue;
+                keep.Add(t);
+                keepData?.Add(mm.GetInstanceCustomData(i));
+            }
+            if (keep.Count == count) continue;
+            mm.InstanceCount = keep.Count;
+            for (int i = 0; i < keep.Count; i++)
+            {
+                mm.SetInstanceTransform(i, keep[i]);
+                if (keepData is not null) mm.SetInstanceCustomData(i, keepData[i]);
+            }
         }
-        AddChild(new WorldEnvironment { Environment = env });
     }
 
     // -------------------------------------------------------------- helpers

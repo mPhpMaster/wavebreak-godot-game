@@ -34,6 +34,7 @@ $root = Split-Path $PSScriptRoot -Parent
 
 $godot = 'D:\tools\godot\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe'
 if (-not (Test-Path $godot)) { throw "Godot not found: $godot" }
+$offscreen = Join-Path $PSScriptRoot 'run-offscreen.ps1'
 
 $env:NUGET_PACKAGES = 'D:\tools\megabonk\nuget'
 $env:TMP = 'D:\tools\megabonk\tmp'; $env:TEMP = 'D:\tools\megabonk\tmp'
@@ -52,8 +53,20 @@ New-Item -ItemType Directory -Force -Path $shotDir | Out-Null
 $failures = @()
 foreach ($seed in $Seeds) {
     $shot = Join-Path $shotDir "seed-$seed.png"
-    $out = & $godot --path $root --resolution 1280x720 -- `
-        "--shot=$shot" "--shot-after=$Seconds" "--seed=$seed" --auto 2>&1 | Out-String
+    # Run on an invisible second desktop (D:\tools\megabonk\run-offscreen.ps1):
+    # a test window that pops up and takes focus over whatever the user is
+    # doing is not acceptable, and Godot ignores minimised/hidden start-up
+    # styles. The GPU still renders there, so the frame and SUMMARY are real.
+    $log = Join-Path $shotDir "seed-$seed.log"
+    $cmd = "`"$godot`" --path `"$root`" --resolution 1280x720 --fixed-fps 60 -- " +
+           "`"--shot=$shot`" `"--shot-after=$Seconds`" `"--seed=$seed`" --auto"
+    if (Test-Path $offscreen) {
+        & powershell -NoProfile -File $offscreen -Command $cmd -Out $log -TimeoutSec 600 | Out-Null
+        $out = Get-Content $log -Raw -ErrorAction SilentlyContinue
+    } else {
+        $out = & $godot --path $root --resolution 1280x720 -- `
+            "--shot=$shot" "--shot-after=$Seconds" "--seed=$seed" --auto 2>&1 | Out-String
+    }
 
     # Main prints one summary line: SUMMARY t=.. kills=.. level=.. xp=.. alive=..
     $line = ($out -split "`n" | Where-Object { $_ -match 'SUMMARY' } | Select-Object -First 1)

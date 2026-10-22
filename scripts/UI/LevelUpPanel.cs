@@ -355,7 +355,7 @@ public sealed partial class LevelUpPanel : Control
 
         for (int i = 0; i < _cards.Count; i++) _cards[i].Root.Visible = false;
 
-        if (_mouseWasCaptured) Input.MouseMode = Input.MouseModeEnum.Captured;
+        if (_mouseWasCaptured) Actors.PlayerCamera.TryCaptureMouse();
         _mouseWasCaptured = false;
 
         if (IsInsideTree()) GetTree().Paused = false;
