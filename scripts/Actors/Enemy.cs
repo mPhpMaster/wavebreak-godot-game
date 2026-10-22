@@ -73,6 +73,25 @@ internal static class PlayerRef
         }
     }
 
+    /// <summary>
+    /// Damage returned to an enemy each time it swings at the player:
+    /// <see cref="Stat.Thorns"/> scaled by the player's damage multiplier, or 0
+    /// when there is no player.
+    ///
+    /// Scaled by the damage stat so a thorns build does not fall off a cliff as
+    /// enemy health climbs with the difficulty curve — the same items that grow
+    /// the weapons grow the barbs.
+    /// </summary>
+    public static float Thorns
+    {
+        get
+        {
+            if (Node is null || _sheet is null) return 0f;
+            float t = _sheet.Get(Stat.Thorns);
+            return t <= 0f ? 0f : t * MathF.Max(0f, _sheet.GetMultiplier(Stat.Damage));
+        }
+    }
+
     /// <summary>Drop the cache. Call when a run ends so the next run does not
     /// inherit a stale handle.</summary>
     public static void Forget()
@@ -363,6 +382,8 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
 
         ApplyFlash(0f);
         Visible = true;
+
+        ContentAudit.NoteSpawn(_def);
     }
 
     /// <summary>Remove from the world without a kill — used when the director
@@ -474,6 +495,47 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         // Recoil, so a hit reads as a lunge and the attacker briefly breaks
         // contact instead of grinding against the player at zero distance.
         AddKnockback(-heading, 0.55f);
+
+        // Thorns answer the swing, not the damage: a hit swallowed by the
+        // player's invulnerability window still touched the barbs. Without that,
+        // the window would cap thorns at one enemy per half-second and the stat
+        // could never do what it promises — punish being surrounded.
+        float thorns = PlayerRef.Thorns;
+        if (thorns > 0f) Retaliate(thorns, heading);
+    }
+
+    /// <summary>Total thorns damage dealt this process, for verification logs.</summary>
+    public static float ThornsDealt { get; private set; }
+
+    /// <summary>Thorns retaliations that landed this process.</summary>
+    public static int ThornsHits { get; private set; }
+
+    private static readonly Color ThornsColor = new(0.80f, 0.92f, 0.70f);
+
+    private void Retaliate(float amount, Vector3 heading)
+    {
+        DamageInfo back = new()
+        {
+            Amount = amount,
+            Element = Element.Physical,
+            CanCrit = false,
+            Knockback = 0f,
+            Direction = -heading,
+            // Zero: a retaliation must not set off on-hit effects, or thorns
+            // would feed lifesteal and the two would loop into immortality.
+            ProcCoefficient = 0f,
+            Source = "thorns",
+        };
+
+        TakeDamage(back);
+        if (back.Nullified || back.Amount <= 0f) return;
+
+        ThornsHits++;
+        ThornsDealt += back.Amount;
+
+        if (back.Amount >= 0.5f)
+            EventBus.Publish(new PopupRequested(AimPoint + Vector3.Up * 0.35f,
+                Mathf.RoundToInt(back.Amount).ToString(), ThornsColor, 0.8f));
     }
 
     // -------------------------------------------------------------- damage

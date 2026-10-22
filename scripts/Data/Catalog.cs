@@ -217,8 +217,8 @@ public static class Catalog
     //
     //      dps = Damage * Projectiles / Cooldown
     //
-    //  Everything sits between 15 and 18 except the Legendary, which is allowed
-    //  21. That deliberately narrow band is the point — weapons are meant to be
+    //  Everything sits between 15 and 18 except the Epic, which is allowed 19,
+    //  and the Legendary, which is allowed 21. That deliberately narrow band is the point — weapons are meant to be
     //  chosen for *shape*, not for a bigger number, and a weapon that is simply
     //  better makes the level-up screen a formality. What separates them is how
     //  much of that DPS survives contact with reality: a spread shot loses most
@@ -531,6 +531,262 @@ public static class Catalog
             ProjectilesEveryNLevels = 4,
             MaxLevel = 8,
         },
+
+        // ================================================= second wave of weapons
+        //
+        // Same 15-18 dps band, same rule that shape is what is being chosen. Each
+        // of these exists to fill a role the first ten leave open: a line-piercer
+        // that is not a Legendary, a crit carrier at range, a damage aura that
+        // does not push, a slow melee that is all commitment, a scatter
+        // explosive, a homing swarm, a sniper, and an Epic so the weapon table
+        // has every rarity in it.
+
+        // ---- 11. Heavy line-piercer. Slow, fat, and it does not stop at the
+        // first body: pierce 6 means its real output is (dps x queue length), the
+        // same bet the Lance makes, at a common price and without the homing.
+        // The low speed is the cost — it will be dodged by anything that moves
+        // sideways, which in practice is Runners.
+        new WeaponDef
+        {
+            Id = "brinespike",
+            DisplayName = "Brinespike",
+            Description = "A barbed spike of crusted salt, thrown hard. It goes through the first of them and keeps its mind on the rest.",
+            Rarity = Rarity.Uncommon,
+            Shape = AttackShape.Projectile,
+            Element = Element.Poison,
+            Damage = 29f,
+            Cooldown = 1.8f,        // 16.1 dps per body in the line
+            Projectiles = 1,
+            ProjectileSpeed = 15f,  // slow on purpose: the price of pierce 6
+            Range = 22f,
+            Radius = 0.45f,
+            Pierce = 6,
+            Knockback = 3.5f,
+            CritChance = 0.04f,
+            ProcCoefficient = 1.3f,
+            SpreadDegrees = 0f,
+            Tint = new Color(0.60f, 0.90f, 0.62f),
+            DamagePerLevel = 0.28f,
+            CooldownPerLevel = -0.05f,
+            ProjectilesEveryNLevels = 4,   // a second spike is a whole second line
+            MaxLevel = 8,
+        },
+
+        // ---- 12. The crit carrier. Four needles at 4 damage is a pitiful number
+        // on its own; 22% innate crit is the highest in the game and it is rolled
+        // per needle, so every crit item is worth roughly twice as much here as
+        // on anything else. Proc coefficient is the lowest on the list for the
+        // same reason as the Fan's: four hits a volley must not out-proc a Mortar.
+        new WeaponDef
+        {
+            Id = "glasswire_needles",
+            DisplayName = "Glasswire Needles",
+            Description = "A fistful of drawn-glass needles. Most of them only sting. Some of them find the seam.",
+            Rarity = Rarity.Common,
+            Shape = AttackShape.Projectile,
+            Element = Element.Physical,
+            Damage = 4f,
+            Cooldown = 1.0f,        // 16.0 dps across four needles
+            Projectiles = 4,
+            ProjectileSpeed = 32f,
+            Range = 16f,
+            Radius = 0.22f,
+            Pierce = 0,
+            Knockback = 0.5f,
+            CritChance = 0.22f,     // highest innate crit: it is the crit-build weapon at range
+            ProcCoefficient = 0.35f,
+            SpreadDegrees = 10f,    // tight: a needle group, not a fan
+            Tint = new Color(0.86f, 0.96f, 1.00f),
+            DamagePerLevel = 0.22f,
+            CooldownPerLevel = -0.05f,
+            ProjectilesEveryNLevels = 2,   // 4 -> 7 by level 8: x1.75, under the rail's x3
+            MaxLevel = 8,
+        },
+
+        // ---- 13. Tight damage aura. The Halo's opposite: a third less reach and
+        // close to the full DPS band per body, with no knockback at all — it
+        // wants them to stay. That makes it the aura for a stand-and-take-it
+        // build (armour, thorns, regen) rather than for a kiting one, and the
+        // only aura where AreaSize items are a real damage increase.
+        new WeaponDef
+        {
+            Id = "rimeheart",
+            DisplayName = "Rimeheart",
+            Description = "A close ring of cutting cold. It does not push anything away. It would rather they stayed.",
+            Rarity = Rarity.Uncommon,
+            Shape = AttackShape.Aura,
+            Element = Element.Ice,
+            Damage = 13f,
+            Cooldown = 0.85f,       // 15.3 dps per body, inside a 2.3m ring
+            Projectiles = 1,
+            ProjectileSpeed = 0f,
+            Range = 2.3f,
+            Radius = 2.3f,
+            Pierce = 0,
+            Knockback = 0f,         // the design: nothing is shoved out of the ring
+            CritChance = 0.04f,
+            ProcCoefficient = 0.5f,
+            SpreadDegrees = 0f,
+            Tint = new Color(0.62f, 0.90f, 1.00f),
+            DamagePerLevel = 0.30f,
+            CooldownPerLevel = -0.05f,
+            ProjectilesEveryNLevels = 0,
+            MaxLevel = 8,
+        },
+
+        // ---- 14. Slow heavy melee. One swing every 2.8s for 48, in an arc as
+        // wide as the Cleaver's and a little longer. Its DPS is ordinary; what
+        // it sells is the size of the single number — enough to one-shot a
+        // pack of trash through minute five — and the biggest knockback in the
+        // game, which buys back the 2.8 seconds it spends doing nothing.
+        new WeaponDef
+        {
+            Id = "forgefall_maul",
+            DisplayName = "Forgefall Maul",
+            Description = "Still glowing from the anvil. You will not swing it often, and you will not need to.",
+            Rarity = Rarity.Rare,
+            Shape = AttackShape.Melee,
+            Element = Element.Fire,
+            Damage = 48f,
+            Cooldown = 2.8f,        // 17.1 dps per body, in one enormous lump
+            Projectiles = 1,
+            ProjectileSpeed = 0f,
+            Range = 4.8f,
+            Radius = 1.2f,
+            Pierce = 0,
+            Knockback = 9.5f,
+            CritChance = 0.08f,
+            ProcCoefficient = 1.8f, // slow and heavy, procs like the Mortar
+            SpreadDegrees = 80f,
+            Tint = new Color(1.00f, 0.40f, 0.20f),
+            DamagePerLevel = 0.32f,
+            CooldownPerLevel = -0.055f,
+            ProjectilesEveryNLevels = 0,   // area already; growth is all damage
+            MaxLevel = 8,
+        },
+
+        // ---- 15. Scatter explosive. Three small blasts thrown wide — the
+        // Spores' idea pushed further toward coverage. Individually the weakest
+        // explosions on the list; together they put an area denial carpet in
+        // front of the player, which is what a kiting build wants behind it.
+        new WeaponDef
+        {
+            Id = "hailstone_cluster",
+            DisplayName = "Hailstone Cluster",
+            Description = "Three fist-sized stones of old ice that burst when they land. Throw them where you are about to stop being.",
+            Rarity = Rarity.Common,
+            Shape = AttackShape.Explosive,
+            Element = Element.Ice,
+            Damage = 5.5f,
+            Cooldown = 1.0f,        // 16.5 dps across three stones
+            Projectiles = 3,
+            ProjectileSpeed = 13f,
+            Range = 11f,
+            Radius = 1.5f,
+            Pierce = 0,
+            Knockback = 1.6f,
+            CritChance = 0.03f,
+            ProcCoefficient = 0.5f,
+            SpreadDegrees = 46f,
+            Tint = new Color(0.80f, 0.92f, 1.00f),
+            DamagePerLevel = 0.22f,
+            CooldownPerLevel = -0.05f,
+            ProjectilesEveryNLevels = 3,
+            MaxLevel = 8,
+        },
+
+        // ---- 16. Homing swarm. Four slow seekers at four damage: the Wisp's
+        // never-miss promise spread over more bodies, so it spends its output on
+        // the crowd rather than on one target. The lowest per-hit number in the
+        // game, which is why ProjectileCount items look so good on it — every
+        // bonus projectile is another dart.
+        new WeaponDef
+        {
+            Id = "blightwasp_swarm",
+            DisplayName = "Blightwasp Swarm",
+            Description = "A papery nest that will not stay shut. What leaves it chooses its own target, and it is never you.",
+            Rarity = Rarity.Uncommon,
+            Shape = AttackShape.Homing,
+            Element = Element.Poison,
+            Damage = 4f,
+            Cooldown = 1.0f,        // 16.0 dps over four darts, nearly all of it lands
+            Projectiles = 4,
+            ProjectileSpeed = 12f,
+            Range = 22f,
+            Radius = 0.24f,
+            Pierce = 0,
+            Knockback = 0.3f,
+            CritChance = 0.05f,
+            ProcCoefficient = 0.3f,
+            SpreadDegrees = 70f,    // they leave as a cloud and converge
+            Tint = new Color(0.78f, 0.95f, 0.30f),
+            DamagePerLevel = 0.24f,
+            CooldownPerLevel = -0.05f,
+            ProjectilesEveryNLevels = 3,
+            MaxLevel = 8,
+        },
+
+        // ---- 17. Sniper. The longest reach and fastest shot of anything that is
+        // not the Lance, a big crit chance, and pierce 2 so a lucky line pays.
+        // Its weakness is the one every sniper has: it fires at the *nearest*
+        // target, and the nearest target past minute eight is usually something
+        // a smaller weapon should have handled.
+        new WeaponDef
+        {
+            Id = "searing_longshot",
+            DisplayName = "Searing Longshot",
+            Description = "A single white-hot bolt from very far away. It arrives before the sound does.",
+            Rarity = Rarity.Rare,
+            Shape = AttackShape.Projectile,
+            Element = Element.Fire,
+            Damage = 38f,
+            Cooldown = 2.3f,        // 16.5 dps, every point of it on one target
+            Projectiles = 1,
+            ProjectileSpeed = 46f,
+            Range = 38f,
+            Radius = 0.32f,
+            Pierce = 2,
+            Knockback = 4f,
+            CritChance = 0.18f,
+            ProcCoefficient = 1.6f,
+            SpreadDegrees = 0f,
+            Tint = new Color(1.00f, 0.82f, 0.55f),
+            DamagePerLevel = 0.30f,
+            CooldownPerLevel = -0.055f,
+            ProjectilesEveryNLevels = 4,
+            MaxLevel = 8,
+        },
+
+        // ---- 18. The Epic. Sits between the band and the Legendary at 19.3 dps:
+        // three homing bolts that each pierce twice, so it is a seeker that does
+        // not stop at its target. Priced up from the Wisp because pierce on a
+        // homing shot is close to free value — it turns around and finds the
+        // next one.
+        new WeaponDef
+        {
+            Id = "tempest_spindle",
+            DisplayName = "Tempest Spindle",
+            Description = "A brass spindle wound with live weather. Each thread it lets go of finds three throats before it frays.",
+            Rarity = Rarity.Epic,
+            Shape = AttackShape.Homing,
+            Element = Element.Lightning,
+            Damage = 9f,
+            Cooldown = 1.4f,        // 19.3 dps before pierce
+            Projectiles = 3,
+            ProjectileSpeed = 17f,
+            Range = 28f,
+            Radius = 0.34f,
+            Pierce = 2,
+            Knockback = 1.2f,
+            CritChance = 0.07f,
+            ProcCoefficient = 0.8f,
+            SpreadDegrees = 54f,
+            Tint = new Color(0.70f, 0.78f, 1.00f),
+            DamagePerLevel = 0.27f,
+            CooldownPerLevel = -0.055f,
+            ProjectilesEveryNLevels = 4,
+            MaxLevel = 8,
+        },
     };
 
     // =====================================================================
@@ -717,6 +973,120 @@ public static class Catalog
             XpValue = 400, GoldValue = 260,
             Cost = 30, UnlockAtSeconds = 230f, IsBoss = true,
             Tint = new Color(0.92f, 0.18f, 0.24f),
+        },
+
+        // ============================================== second wave of enemies
+        //
+        // Nothing below unlocks before 150s, so the first two and a half minutes
+        // — the part of the run tuned against the starter weapon alone — are
+        // exactly as they were. The new ordinary enemies fill the gaps in the
+        // cost ladder (3, 5, 11, 17) rather than doubling up on a rung, so each
+        // one has a minute where the director's target threat passes through it
+        // and it is the staple, instead of competing with an existing enemy for
+        // the same slot.
+
+        // ---- Runner, cost 3, at 150s. A swarm runner: fast enough to be a
+        // Runner (5.2 >= 5) but only marginally tougher than a Skitterling, and
+        // a third cheaper per body than anything else that fast, so the director
+        // buys them in numbers. The point is a minute-three wave that arrives
+        // from the side the player was not watching.
+        new EnemyDef
+        {
+            Id = "brine_leech",
+            DisplayName = "Brine Leech",
+            Health = 24f, Damage = 8f, MoveSpeed = 5.2f,
+            AttackRange = 1.3f, AttackCooldown = 0.7f,
+            Radius = 0.30f, Height = 0.7f, KnockbackResist = 0f,
+            XpValue = 3, GoldValue = 2,
+            Cost = 3, UnlockAtSeconds = 150f,
+            Tint = new Color(0.36f, 0.78f, 0.70f),
+        },
+
+        // ---- Grunt, cost 5, at 230s. Deliberately *not* a Brute: health 55 and
+        // resist 0.35 sit just under both silhouette thresholds, so it reads as
+        // an ordinary soldier and is shoved like one — it is the honest filler
+        // between the Gravel Brute and the Cinderling, a thing that just takes
+        // a few more hits than the eye expects.
+        new EnemyDef
+        {
+            Id = "kelp_shambler",
+            DisplayName = "Kelp Shambler",
+            Health = 55f, Damage = 13f, MoveSpeed = 2.5f,
+            AttackRange = 1.8f, AttackCooldown = 1.25f,
+            Radius = 0.52f, Height = 1.85f, KnockbackResist = 0.35f,
+            XpValue = 6, GoldValue = 3,
+            Cost = 5, UnlockAtSeconds = 230f,
+            Tint = new Color(0.30f, 0.56f, 0.34f),
+        },
+
+        // ---- Runner, cost 11, at 400s. The late runner. Cinderling is the
+        // first enemy faster than the player; this is the first *tough* one —
+        // 120 health at 6.1 speed means a kiting build can no longer outrun its
+        // problems and has to kill them, which is the question minute seven is
+        // supposed to ask.
+        new EnemyDef
+        {
+            Id = "gloom_lurcher",
+            DisplayName = "Gloom Lurcher",
+            Health = 120f, Damage = 25f, MoveSpeed = 6.1f,
+            AttackRange = 1.7f, AttackCooldown = 0.95f,
+            Radius = 0.50f, Height = 1.5f, KnockbackResist = 0.3f,
+            XpValue = 16, GoldValue = 9,
+            Cost = 11, UnlockAtSeconds = 400f,
+            Tint = new Color(0.40f, 0.30f, 0.62f),
+        },
+
+        // ---- Brute, cost 17, at 600s. Above the Rift Maw on the ladder; the
+        // target threat only reaches 17 after the run is over, so it is never
+        // the staple — it is the thing that turns up in the last five minutes
+        // often enough to matter and rarely enough to be an event. Nearly
+        // unshovable and very slow: the late-game test of raw damage that the
+        // Pale Sentinel is for minute five.
+        new EnemyDef
+        {
+            Id = "tidewall_colossus",
+            DisplayName = "Tidewall Colossus",
+            Health = 420f, Damage = 38f, MoveSpeed = 2.2f,
+            AttackRange = 2.6f, AttackCooldown = 1.6f,
+            Radius = 0.98f, Height = 3.0f, KnockbackResist = 0.9f,
+            XpValue = 30, GoldValue = 18,
+            Cost = 17, UnlockAtSeconds = 600f,
+            Tint = new Color(0.38f, 0.58f, 0.66f),
+        },
+
+        // ---- Elite, cost 11, at 190s. Fills the gap between the Warden (8) and
+        // the Herald (16) on the elite ladder, so the mid-game elite waves are a
+        // mix rather than a hand-off. Faster and frailer than the Warden: an
+        // elite that chases, so an elite wave stops being something a player can
+        // simply walk away from.
+        new EnemyDef
+        {
+            Id = "gale_revenant",
+            DisplayName = "Gale Revenant",
+            Health = 330f, Damage = 22f, MoveSpeed = 4.6f,
+            AttackRange = 2.0f, AttackCooldown = 0.95f,
+            Radius = 0.70f, Height = 2.3f, KnockbackResist = 0.5f,
+            XpValue = 45, GoldValue = 28,
+            Cost = 11, UnlockAtSeconds = 190f, IsElite = true,
+            Tint = new Color(0.75f, 0.95f, 0.88f),
+        },
+
+        // ---- Boss, cost 40, at 470s. Never the first boss — Thresher Prime is
+        // the only one unlocked at 240s — and weighted 40:30 against it at 8 and
+        // 12 minutes, so a run usually meets both. Faster than the Thresher and
+        // swinging more often, with less health: a boss you cannot simply
+        // outwalk, which is the same lesson the Gale Revenant teaches in an
+        // elite wave, asked again at the scale of a boss.
+        new EnemyDef
+        {
+            Id = "breaker_matriarch",
+            DisplayName = "Breaker Matriarch",
+            Health = 2400f, Damage = 50f, MoveSpeed = 3.5f,
+            AttackRange = 3.6f, AttackCooldown = 1.3f,
+            Radius = 1.65f, Height = 4.8f, KnockbackResist = 0.97f,
+            XpValue = 550, GoldValue = 360,
+            Cost = 40, UnlockAtSeconds = 470f, IsBoss = true,
+            Tint = new Color(0.20f, 0.62f, 0.86f),
         },
     };
 
@@ -986,10 +1356,228 @@ public static class Catalog
             Effect(Stat.XpGain, ModifierOp.Additive, 0.60f),
             Effect(Stat.GoldGain, ModifierOp.Additive, 0.60f),
             Effect(Stat.Luck, ModifierOp.Flat, 3f)),
+
+        // ================================================ second wave of items
+        //
+        // Written to give the first twenty-four something to *combine with*.
+        // Four build lines run through them, and each line has a Common to
+        // start it, something in the middle that commits to it, and a capped
+        // top end that pays for itself with a real cost:
+        //
+        //   thorns    Barnacle Crust -> Ballast Greaves / Coral Bastion -> Leviathan Hide
+        //   crit      Gutting Hook -> Gambler's Coin -> Headsman's Oath
+        //   area      Tidepool Lantern -> Spiral Conch -> (Rimeheart, Static Field)
+        //   movement  Gull Feather / Bosun's Whistle -> Riptide Anklet -> Stormrunner Treads -> Windborne Kite
+        //
+        // Several of them are trades rather than gifts. A trade is what makes an
+        // item build-defining: a -20% projectile speed on the Spiral Conch is a
+        // free pick for an aura build and a real decision for a Lance build, and
+        // that difference is the whole point of the item.
+
+        // ------------------------------------------------------------ Common
+
+        // The movement Common. Jump height is the stat that decides whether a
+        // player can hop a pack instead of going round it; the speed rider is
+        // small so this stays a movement item rather than a second Springheel.
+        Item("gull_feather", "Gull Feather", Rarity.Common, 1.0f, 0,
+            "Light enough to forget you are carrying it. The ground seems to forget you too, for a moment longer.",
+            new Color(0.92f, 0.94f, 0.96f),
+            Effect(Stat.JumpHeight, ModifierOp.Additive, 0.30f),
+            Effect(Stat.MoveSpeed, ModifierOp.Additive, 0.04f)),
+
+        // Dash cooldown as a Common. -14% additive on a 2.5s base is about a
+        // third of a second per copy, and the pickup rider means a player who
+        // dashes through the orb field collects more of it.
+        Item("bosuns_whistle", "Bosun's Whistle", Rarity.Common, 1.0f, 0,
+            "One sharp note and your legs remember they had somewhere to be.",
+            new Color(0.84f, 0.80f, 0.62f),
+            Effect(Stat.DashCooldown, ModifierOp.Additive, -0.14f),
+            Effect(Stat.PickupRange, ModifierOp.Additive, 0.15f)),
+
+        // The crit Common. Crit damage alone is worth little at 5% base chance
+        // and a great deal on Glasswire Needles or Riptide Blades — which is the
+        // shape of a build-starter: weak in general, strong in the right hands.
+        Item("gutting_hook", "Gutting Hook", Rarity.Common, 1.0f, 0,
+            "Curved for one job. When something does come apart, it comes apart further.",
+            new Color(0.88f, 0.70f, 0.62f),
+            Effect(Stat.CritDamage, ModifierOp.Additive, 0.20f)),
+
+        // The thorns Common. 6 thorns returns six damage (scaled by the damage
+        // stat) to every enemy that swings at you, which is nothing on a kiting
+        // build and a quiet aura on one that stands in the crowd.
+        Item("barnacle_crust", "Barnacle Crust", Rarity.Common, 1.0f, 0,
+            "It grew on you while you weren't looking. Anything that grabs you comes away bleeding.",
+            new Color(0.70f, 0.66f, 0.58f),
+            Effect(Stat.Thorns, ModifierOp.Flat, 6f),
+            Effect(Stat.Armor, ModifierOp.Flat, 2f)),
+
+        // Regen and shield together: the Common that rewards breaking contact.
+        // 5/min regen is close to the base rate again, and 6 shield refills on
+        // its own every time the player gets six quiet seconds.
+        Item("salted_bandages", "Salted Bandages", Rarity.Common, 1.0f, 0,
+            "They sting going on. They work. Both of those are the point.",
+            new Color(0.94f, 0.90f, 0.80f),
+            Effect(Stat.HealthRegen, ModifierOp.Flat, 5f),
+            Effect(Stat.Shield, ModifierOp.Flat, 6f)),
+
+        // ---------------------------------------------------------- Uncommon
+
+        // The dash item. -20% dash cooldown with a little speed and evasion:
+        // a player who is always about to dash is a player who is rarely hit.
+        Item("riptide_anklet", "Riptide Anklet", Rarity.Uncommon, 0.7f, 0,
+            "A cord of braided current around the ankle. It pulls, and you go with it.",
+            new Color(0.46f, 0.82f, 0.90f),
+            Effect(Stat.DashCooldown, ModifierOp.Additive, -0.20f),
+            Effect(Stat.MoveSpeed, ModifierOp.Additive, 0.05f),
+            Effect(Stat.Evasion, ModifierOp.Flat, 3f)),
+
+        // The anti-movement item, and the thorns build's commitment piece. Big
+        // armour and thorns, paid for in speed and jump — exactly the stats a
+        // thorns build was not going to use, and exactly the ones a kiting build
+        // cannot give up. One card, two completely different answers.
+        Item("ballast_greaves", "Ballast Greaves", Rarity.Uncommon, 0.7f, 0,
+            "Lead in the soles. You are not going anywhere, and nothing that reaches you leaves unhurt.",
+            new Color(0.56f, 0.58f, 0.64f),
+            Effect(Stat.Armor, ModifierOp.Flat, 12f),
+            Effect(Stat.Thorns, ModifierOp.Flat, 6f),
+            Effect(Stat.MoveSpeed, ModifierOp.Additive, -0.08f),
+            Effect(Stat.JumpHeight, ModifierOp.Additive, -0.20f)),
+
+        // Area with a pickup rider. Pure value for an aura or explosive build,
+        // and the pickup range keeps it from being a dead card in a rail build.
+        Item("tidepool_lantern", "Tidepool Lantern", Rarity.Uncommon, 0.7f, 0,
+            "A jar of water that remembers the moon. Its light reaches a little further than it should.",
+            new Color(0.56f, 0.84f, 0.96f),
+            Effect(Stat.AreaSize, ModifierOp.Additive, 0.18f),
+            Effect(Stat.PickupRange, ModifierOp.Additive, 0.25f)),
+
+        // A small, cheap luck item. Luck is the only stat that improves future
+        // level-ups rather than this one, so it is priced as an investment.
+        Item("tarnished_compass", "Tarnished Compass", Rarity.Uncommon, 0.7f, 0,
+            "It does not point north. It points at whatever is worth having, which is more useful.",
+            new Color(0.82f, 0.72f, 0.42f),
+            Effect(Stat.Luck, ModifierOp.Flat, 1f),
+            Effect(Stat.PickupRange, ModifierOp.Additive, 0.15f),
+            Effect(Stat.GoldGain, ModifierOp.Additive, 0.10f)),
+
+        // Lifesteal in exchange for regeneration: sustain moves from "time" to
+        // "kills". Good on a build that is always hitting, bad on one that runs.
+        // Capped for the same reason as the Fang.
+        Item("lamprey_ring", "Lamprey Ring", Rarity.Uncommon, 0.6f, 4,
+            "It latches on to whatever you hit. It stops feeding you the moment you stop hitting.",
+            new Color(0.72f, 0.36f, 0.48f),
+            Effect(Stat.Lifesteal, ModifierOp.Flat, 0.015f),
+            Effect(Stat.HealthRegen, ModifierOp.Flat, -3f)),
+
+        // -------------------------------------------------------------- Rare
+
+        // The kiting Rare: real speed and dash, sold for armour. A player who is
+        // never touched does not need armour — and one who is, very much does.
+        Item("stormrunner_treads", "Stormrunner Treads", Rarity.Rare, 0.45f, 0,
+            "Soled with something that crackles when it touches ground. You leave before the thunder does.",
+            new Color(0.64f, 0.74f, 1.00f),
+            Effect(Stat.MoveSpeed, ModifierOp.Additive, 0.16f),
+            Effect(Stat.DashCooldown, ModifierOp.Additive, -0.15f),
+            Effect(Stat.Armor, ModifierOp.Flat, -6f)),
+
+        // The crit build's middle piece. +12% crit is more than the Duelist's
+        // Edge, sold for a slice of base damage: it is a strict loss on a build
+        // that does not crit, and a large gain on one with crit damage behind it.
+        Item("gamblers_coin", "Gambler's Coin", Rarity.Rare, 0.45f, 0,
+            "Both sides are heads. You are no longer sure which side you are on.",
+            new Color(0.96f, 0.82f, 0.36f),
+            Effect(Stat.CritChance, ModifierOp.Flat, 0.12f),
+            Effect(Stat.Luck, ModifierOp.Flat, 1f),
+            Effect(Stat.Damage, ModifierOp.Additive, -0.08f)),
+
+        // Big area for slow projectiles. Free on an aura build, real on a mortar
+        // build (bigger blast, slower shell), and a trap on a Lance build.
+        Item("spiral_conch", "Spiral Conch", Rarity.Rare, 0.45f, 0,
+            "Hold it to your ear and you hear the sea. Hold it out and the sea hears you.",
+            new Color(0.96f, 0.76f, 0.70f),
+            Effect(Stat.AreaSize, ModifierOp.Additive, 0.32f),
+            Effect(Stat.ProjectileSpeed, ModifierOp.Additive, -0.20f)),
+
+        // The thorns build's Rare. Thorns and a large flat health pool, paid for
+        // in attack speed: the item wants enemies to come to you, so it does not
+        // mind that your weapons slow down while they do.
+        Item("coral_bastion", "Coral Bastion", Rarity.Rare, 0.45f, 0,
+            "A living wall that grew around your ribs. It is sharp on the outside and very patient.",
+            new Color(0.96f, 0.52f, 0.50f),
+            Effect(Stat.Thorns, ModifierOp.Flat, 14f),
+            Effect(Stat.MaxHealth, ModifierOp.Flat, 25f),
+            Effect(Stat.AttackSpeed, ModifierOp.Additive, -0.08f)),
+
+        // The small Crown. More gold and xp for a slightly stronger world; three
+        // copies is +24% enemy strength, which is a fair price for +120% gold.
+        Item("bounty_ledger", "Bounty Ledger", Rarity.Rare, 0.45f, 3,
+            "Every name in it has a price. Somebody out there has just added yours.",
+            new Color(0.86f, 0.78f, 0.56f),
+            Effect(Stat.GoldGain, ModifierOp.Additive, 0.40f),
+            Effect(Stat.XpGain, ModifierOp.Additive, 0.15f),
+            Effect(Stat.EnemyScaling, ModifierOp.Multiplicative, 1.08f)),
+
+        // -------------------------------------------------------------- Epic
+
+        // The crit build's top end: x1.5 on crit damage, so a +100% crit becomes
+        // +150% and every Gutting Hook behind it is multiplied too. The attack
+        // speed cost means it only pays if the build crits often already.
+        Item("headsmans_oath", "Headsman's Oath", Rarity.Epic, 0.25f, 2,
+            "A promise to finish every stroke you begin. You begin fewer of them.",
+            new Color(0.70f, 0.30f, 0.34f),
+            Effect(Stat.CritDamage, ModifierOp.Multiplicative, 1.5f),
+            Effect(Stat.AttackSpeed, ModifierOp.Additive, -0.12f)),
+
+        // The movement Epic: the only multiplicative speed in the game. x1.15
+        // compounds with every additive speed item, and the max-health cost is a
+        // percentage so it bites hardest on the build that relies on not being
+        // hit at all.
+        Item("windborne_kite", "Windborne Kite", Rarity.Epic, 0.25f, 2,
+            "Tethered at the wrist and always pulling. You are lighter than you were, in every sense.",
+            new Color(0.76f, 0.94f, 1.00f),
+            Effect(Stat.MoveSpeed, ModifierOp.Multiplicative, 1.15f),
+            Effect(Stat.JumpHeight, ModifierOp.Additive, 0.40f),
+            Effect(Stat.DashCooldown, ModifierOp.Additive, -0.25f),
+            Effect(Stat.MaxHealth, ModifierOp.Additive, -0.10f)),
+
+        // +1 projectile sold for damage instead of attack speed — the Splitshot
+        // Core's sibling. Which one is better depends on the weapon: on a
+        // seeker or the needles, count beats size; on the Maul it does nothing
+        // but widen the arc, and the damage cost is real.
+        Item("twin_tide_quiver", "Twin-Tide Quiver", Rarity.Epic, 0.25f, 2,
+            "Everything you loose from it comes out in pairs. Neither of the pair is quite whole.",
+            new Color(0.52f, 0.70f, 0.96f),
+            Effect(Stat.ProjectileCount, ModifierOp.Flat, 1f),
+            Effect(Stat.Damage, ModifierOp.Additive, -0.12f)),
+
+        // --------------------------------------------------------- Legendary
+
+        // The thorns Legendary. x2.5 on every point of thorns the build has and
+        // will have, plus enough armour to survive being the bait. The speed cost
+        // is the commitment: this run is now about being reached.
+        Item("leviathan_hide", "Leviathan Hide", Rarity.Legendary, 0.10f, 1,
+            "Flayed from something that was never killed, only outlasted. It still resents being touched.",
+            new Color(0.40f, 0.66f, 0.70f),
+            Effect(Stat.Thorns, ModifierOp.Flat, 10f),
+            Effect(Stat.Thorns, ModifierOp.Multiplicative, 2.5f),
+            Effect(Stat.Armor, ModifierOp.Flat, 20f),
+            Effect(Stat.MoveSpeed, ModifierOp.Additive, -0.15f)),
+
+        // The glass-cannon Legendary. x1.35 attack speed and x1.12 damage is the
+        // biggest offensive multiplier in the game, and it takes away a quarter
+        // of your health and all of your base regeneration to get it. A run that
+        // takes this has to stop being hit, or start stealing life.
+        Item("abyssal_metronome", "Abyssal Metronome", Rarity.Legendary, 0.10f, 1,
+            "It keeps time for something very large, very far down. Everything you do now happens on its beat.",
+            new Color(0.36f, 0.30f, 0.70f),
+            Effect(Stat.AttackSpeed, ModifierOp.Multiplicative, 1.35f),
+            Effect(Stat.Damage, ModifierOp.Multiplicative, 1.12f),
+            Effect(Stat.MaxHealth, ModifierOp.Additive, -0.25f),
+            Effect(Stat.HealthRegen, ModifierOp.Flat, -6f)),
     };
 
     // ------------------------------------------------------------- builders
-    // Two small helpers so that an item reads as one statement. Twenty-four
+    // Two small helpers so that an item reads as one statement. Forty-odd
     // items written as object initialisers with nested Godot arrays is a page of
     // punctuation, and the balance numbers stop being visible in it.
 
