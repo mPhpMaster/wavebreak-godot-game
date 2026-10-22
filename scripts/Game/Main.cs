@@ -42,6 +42,7 @@ public sealed partial class Main : Node3D
     {
         Instance = this;
         Screenshot.ParseArgs();
+        if (Visuals.ArtShowcase.Intercept(this)) return;
 
         Run = new RunState(Screenshot.Requested ? Screenshot.Seed : (ulong)GD.Randi());
         GD.Print($"[wavebreak] seed {Run.Seed}");

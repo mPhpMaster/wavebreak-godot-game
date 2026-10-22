@@ -269,6 +269,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     private StandardMaterial3D? _accentMaterial;
     private Color _baseColor = Colors.White;
     private Color _accentColor = Colors.White;
+    private Visuals.CharacterRig? _rig; // the model; see Visuals.EnemyVisuals
 
     // ------------------------------------------------- manager bookkeeping
 
@@ -491,6 +492,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             Source = _def?.Id ?? "enemy",
         };
         player.TakeDamage(hit);
+        _rig?.PlayAttack();
 
         // Recoil, so a hit reads as a lunge and the attacker briefly breaks
         // contact instead of grinding against the player at zero distance.
@@ -569,6 +571,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
 
         _health -= amount;
         _flashTimer = FlashDuration;
+        _rig?.PlayHit();
 
         if (info.Knockback > 0f) AddKnockback(info.Direction, info.Knockback);
 
@@ -598,6 +601,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         int xp = _def?.XpValue ?? 0;
         int gold = _def?.GoldValue ?? 0;
         Data.ContentAudit.NoteKill(_def);
+        Visuals.EnemyVisuals.SpawnCorpse(_rig);
 
         // Slightly above the feet: drops read better when they are not embedded
         // in the floor, and the pickup layer spawns from this point.
@@ -688,6 +692,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
 
     private void BuildBody(EnemyDef def, float radius, float height)
     {
+        _rig = Visuals.EnemyVisuals.Attach(this, def, _rig);
         Silhouette wanted = Classify(def);
         bool sameShape = wanted == _builtSilhouette
                       && Mathf.IsEqualApprox(radius, _builtRadius)
@@ -736,6 +741,9 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             _accentMesh.Position = new Vector3(0f, height + radius * 0.45f, 0f);
             _accentMesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         }
+
+        _bodyMesh.Visible = _rig is null; // the rig draws the body when there is one
+        if (_accentMesh is not null) _accentMesh.Visible = _rig is null && accent is not null;
 
         // Only the things worth noticing get a light. Hundreds of OmniLight3Ds
         // is the fastest way to melt the forward+ renderer.
