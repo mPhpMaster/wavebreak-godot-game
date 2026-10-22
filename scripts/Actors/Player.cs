@@ -558,6 +558,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         PlayerCamera.Instance?.KickFov(9f);
         PlayerCamera.Instance?.Shake(0.05f, 0.12f);
         FlashHit(0.25f);
+        EventBus.Publish(new PlayerMoved(MoveVerb.Dash, GlobalPosition));
     }
 
     // ----------------------------------------------------------------- slide
@@ -577,6 +578,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         _squash = -0.1f;
         PlayerCamera.Instance?.KickFov(5f);
         SpawnDust(GlobalPosition, 0.9f, 0.35f);
+        EventBus.Publish(new PlayerMoved(MoveVerb.Slide, GlobalPosition));
     }
 
     /// <summary>
@@ -636,6 +638,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         Slams++;
         _squash = 0.25f;
         PlayerCamera.Instance?.KickFov(-4f);
+        EventBus.Publish(new PlayerMoved(MoveVerb.SlamStart, GlobalPosition));
     }
 
     /// <summary>
@@ -698,6 +701,8 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         PlayerCamera.Instance?.KickFov(6f);
         SpawnShockwave(at, radius);
         FlashHit(0.5f);
+        // Strength is crowd size: a slam into nothing is a thud, into a pack a boom.
+        EventBus.Publish(new PlayerMoved(MoveVerb.SlamImpact, at, Mathf.Min(hits, 8) / 8f));
     }
 
     // ------------------------------------------------------------------ jump
@@ -733,6 +738,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
             _squash = 0.3f;
             _squashVelocity = 0f;
             SpawnDust(GlobalPosition, 0.7f, 0.3f);
+            EventBus.Publish(new PlayerMoved(MoveVerb.Jump, GlobalPosition));
         }
         else if (_jumpBuffer > 0f && !grounded && _airJumpsLeft > 0 && _dashTime <= 0f)
         {
@@ -750,6 +756,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
             _squash = 0.22f;
             _squashVelocity = 0f;
             SpawnRing(GlobalPosition, 1.1f, DashColor, 0.25f);
+            EventBus.Publish(new PlayerMoved(MoveVerb.AirJump, GlobalPosition));
         }
         else if (verticalVelocity > 0f && _inputAvailable && _hasJump
                  && !Input.IsActionPressed("jump") && MoveOverride is null)
@@ -775,6 +782,9 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         _squashVelocity = 0f;
         if (impact > 0.55f) PlayerCamera.Instance?.Shake(0.05f + 0.08f * impact, 0.18f);
         SpawnDust(GlobalPosition, 0.6f + impact * 0.8f, 0.3f);
+        // Same threshold as the dust: a hop's landing stays silent, a real drop
+        // is heard. Listeners scale by impact rather than re-deriving it.
+        EventBus.Publish(new PlayerMoved(MoveVerb.Land, GlobalPosition, impact));
     }
 
     // ------------------------------------------------------------------ aim
