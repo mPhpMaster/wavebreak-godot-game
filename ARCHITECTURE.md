@@ -153,10 +153,17 @@ scripts/
   UI/          Hud, LevelUpPanel, ResultsScreen, DamagePopup
   Data/        Definitions, Catalog     <- all content
   Game/        Main, Arena, RunState, Screenshot
+  Meta/        Profile, Unlocks, Characters, MetaContent, SecretSpawner, UnlockTracker
   Visuals/     ModelSpec, ModelBuilder, CharacterRig, PlayerLooks, EnemyVisuals,
                PropTheme, PropFactory, ToonMaterials, ArtAssets, showcase/stress
 assets/        imported CC0 models (see assets/CREDITS.md)
 ```
+
+The project boots into `scenes/Title.tscn` (`UI/MainMenu`). Any game argument
+other than the menu's own (`--profile`, `--menu-shot`, `--menu-page`) skips it
+straight into the run, so every automated launch behaves as before. Automated
+runs never touch the real profile unless `--profile=<path>` is given. Unlocks
+only *add* content (`Meta/MetaContent`); the base catalogue is never locked.
 
 Art checks: `-- --art-showcase=hero|enemies|closeup|props-<theme> --shot=x.png`
 stages a scene; `--art-theme=<theme>` plays a run in a biome;

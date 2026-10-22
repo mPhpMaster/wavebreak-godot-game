@@ -121,7 +121,21 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
     // ---------------------------------------------------------------- palette
 
-    private static readonly Color BodyColor = new(0.28f, 0.76f, 1.00f);
+    private Color _bodyColor = new(0.28f, 0.76f, 1.00f);
+
+    /// <summary>The look id of the chosen character skin, resolved into a model
+    /// by <see cref="Visuals.PlayerLooks"/>.</summary>
+    public string LookId { get; private set; } = Visuals.PlayerLooks.Default;
+
+    /// <summary>Applies a character skin: the model by look id, and the tint as
+    /// the body colour (it drives the i-frame shimmer, and is the whole body
+    /// colour for looks that fall back to a procedural model). Safe before or
+    /// after <see cref="_Ready"/>.</summary>
+    public void ApplySkin(Color tint, string lookId)
+    {
+        _bodyColor = tint;
+        SetLook(lookId);
+    }
     private static readonly Color DashColor = new(0.55f, 0.90f, 1.00f);
     private static readonly Color SlamColor = new(1.00f, 0.72f, 0.30f);
 
@@ -180,10 +194,6 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     private Node3D _pose = null!;        // squash/lean live here, under the yaw
     private Visuals.CharacterRig _rig = null!; // the model and its procedural animator
     private OmniLight3D _lamp = null!;
-
-    /// <summary>Which <see cref="Visuals.PlayerLooks"/> look to wear. Set before
-    /// the player enters the tree, or call <see cref="SetLook"/> afterwards.</summary>
-    public string LookId { get; set; } = Visuals.PlayerLooks.Default;
 
     private Camera3D? _camera;
     private Vector3 _moveVelocity;      // XZ, controller-authored (may exceed walk speed)
@@ -921,11 +931,12 @@ public sealed partial class Player : CharacterBody3D, IDamageable
             : 0f;
 
         // Verb tints as a glow on the model (dash streak, slam heat), the i-frame
-        // shimmer as a pulsing pale glow, and hits as the rig's white flash.
+        // shimmer as a pulsing glow in the skin's colour, and hits as the rig's
+        // white flash.
         if (_dashTime > 0f) _rig.SetGlow(DashColor, 1.6f);
         else if (_slamming) _rig.SetGlow(SlamColor, 1.2f);
-        else if (iframes > 0f) _rig.SetGlow(BodyColor, iframes * 0.9f);
-        else _rig.SetGlow(BodyColor, 0f);
+        else if (iframes > 0f) _rig.SetGlow(_bodyColor, iframes * 0.9f);
+        else _rig.SetGlow(_bodyColor, 0f);
         if (_flash > 0.05f) _rig.SetFlash(Mathf.Min(1f, _flash));
 
         if (!alive)

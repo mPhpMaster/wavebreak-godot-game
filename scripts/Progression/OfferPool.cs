@@ -248,7 +248,16 @@ public sealed class OfferPool
         // The offer pool is the one progression object built with the run's Rng,
         // so it is the natural place to hand that Rng to the drop table.
         PickupField.Ensure(_rng);
+
+        // Published rather than handed around: chests need the same filtered,
+        // luck-weighted catalogue, and a second pool would also re-seat the
+        // pickup field's Rng (see above) from whoever built it last.
+        Current = this;
     }
+
+    /// <summary>The run's pool, or null before one is built. The last one
+    /// constructed wins, which is the live run's.</summary>
+    public static OfferPool? Current { get; private set; }
 
     /// <summary>Items and weapons the pool can draw from, ignoring what is held.</summary>
     public int CatalogueSize => _items.Count + _weapons.Count;
@@ -399,6 +408,50 @@ public sealed class OfferPool
 
         float step = MathF.Max(0.05f, 1f + LuckPerTier * Math.Clamp(luck, MinLuck, MaxLuck));
         return MathF.Pow(step, tier);
+    }
+
+    /// <summary>
+    /// One item for a chest, or a supply payout when nothing at all is left.
+    ///
+    /// Same catalogue and the same rules as a level-up — nothing maxed, item
+    /// weight shaped by luck — with two levers a chest adds on top:
+    ///
+    /// <paramref name="luckBonus"/> is added to the player's luck before the
+    /// curve, so a better chest bends the same <see cref="LuckShift"/> further
+    /// rather than inventing a second rarity table to keep in balance.
+    ///
+    /// <paramref name="floor"/> excludes rarities below it, so a gilded chest
+    /// can never hand out a common. It is relaxed one step at a time when the
+    /// pool above it is empty (late runs cap the few epics and legendaries
+    /// quickly), because a downgraded item beats a chest that pays nothing.
+    /// </summary>
+    /// <param name="rng">Draws from this instead of the pool's own stream, so
+    /// chest rolls do not shift which cards the next level-up offers.</param>
+    public Offer RollChest(Inventory? inventory, StatSheet? stats, float luckBonus, Rarity floor, Rng? rng = null)
+    {
+        Rng draw = rng ?? _rng;
+        float luck = Math.Clamp((stats?.Get(Stat.Luck) ?? 0f) + luckBonus, MinLuck, MaxLuck);
+
+        for (int f = (int)floor; f >= 0; f--)
+        {
+            _candidates.Clear();
+            _weights.Clear();
+
+            for (int i = 0; i < _items.Count; i++)
+            {
+                ItemDef def = _items[i];
+                if ((int)def.Rarity < f || def.Weight <= 0f) continue;
+                if (inventory?.IsMaxed(def) == true) continue;
+
+                _candidates.Add(Offer.ForItem(def, inventory?.StacksOf(def) ?? 0));
+                _weights.Add(def.Weight * LuckShift(def.Rarity, luck));
+            }
+
+            int pick = draw.PickWeighted(_weights);
+            if (pick >= 0) return _candidates[pick];
+        }
+
+        return Supply(draw.RangeInt(0, 3));
     }
 
     /// <summary>
