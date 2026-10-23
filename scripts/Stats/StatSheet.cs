@@ -148,9 +148,13 @@ public sealed class StatSheet
         return value;
     }
 
+    /// <summary>Floor on summed additive penalties for regular stats.</summary>
+    public const float MaxPenalty = 0.75f;
+
     /// <summary>Stats stored as a bonus over x1 and read through
     /// <see cref="GetMultiplier"/>.</summary>
-    public const float MaxPenalty = 0.75f;
+    /// <summary>Asymptote of the XP and gold bonus: at most x3 income.</summary>
+    public const float IncomeCap = 2f;
 
     public static bool IsBonusStat(Stat stat) => stat is Stat.Damage or Stat.XpGain or Stat.GoldGain;
 
@@ -174,6 +178,11 @@ public sealed class StatSheet
         Stat.CritChance      => Math.Clamp(v, 0f, 1f),
         Stat.Armor           => Math.Max(0f, v),
         Stat.Evasion         => Math.Max(0f, v),
+        // Diminishing returns on income. Once +% items actually applied, stacking
+        // them had no ceiling: a 15-minute run ended at level 103 with 193k gold
+        // and 200 items. v / (1 + v/2): +50% -> +40%, +100% -> +67%,
+        // +300% -> +120%, never past +200%. Penalties pass through unchanged.
+        Stat.XpGain or Stat.GoldGain => v > 0f ? v / (1f + v / IncomeCap) : Math.Max(-0.9f, v),
         _ => v,
     };
 
