@@ -36,7 +36,6 @@ public sealed partial class MainMenu : Node3D
 
     private Camera3D _camera = null!;
     private float _orbit;
-    private readonly List<(Node3D node, float radius, float speed, float phase)> _drifters = new();
     private Node3D _hero = null!;
     private string? _heroLook;
 
@@ -117,112 +116,6 @@ public sealed partial class MainMenu : Node3D
         if (Launch.MenuShot is not null) _ = CaptureAndQuit();
     }
 
-    // ============================================================ backdrop
-
-    /// <summary>A miniature of the arena: disc, rings, scatter, a lit figure in
-    /// the middle and a slow tide of silhouettes circling it. Primitives only —
-    /// the run's art can replace this without the menu changing shape.</summary>
-    private void BuildBackdrop()
-    {
-        var env = new WorldEnvironment
-        {
-            Environment = new Godot.Environment
-            {
-                BackgroundMode = Godot.Environment.BGMode.Sky,
-                Sky = new Sky { SkyMaterial = new ProceduralSkyMaterial
-                {
-                    SkyTopColor = new Color(0.06f, 0.07f, 0.14f),
-                    SkyHorizonColor = new Color(0.30f, 0.22f, 0.40f),
-                    GroundHorizonColor = new Color(0.10f, 0.10f, 0.15f),
-                    GroundBottomColor = new Color(0.04f, 0.04f, 0.07f),
-                } },
-                AmbientLightSource = Godot.Environment.AmbientSource.Sky,
-                AmbientLightEnergy = 0.55f,
-                GlowEnabled = true,
-                GlowIntensity = 0.8f,
-                FogEnabled = true,
-                FogLightColor = new Color(0.20f, 0.18f, 0.30f),
-                FogDensity = 0.012f,
-            },
-        };
-        AddChild(env);
-        AddChild(new DirectionalLight3D
-        {
-            Rotation = new Vector3(Mathf.DegToRad(-50f), Mathf.DegToRad(30f), 0f),
-            LightEnergy = 1.0f,
-            ShadowEnabled = true,
-        });
-
-        const float radius = 24f;
-        AddChild(new MeshInstance3D
-        {
-            Mesh = new CylinderMesh { TopRadius = radius, BottomRadius = radius, Height = 1f, RadialSegments = 64 },
-            Position = new Vector3(0f, -0.5f, 0f),
-            MaterialOverride = Game.Arena.Flat(new Color(0.15f, 0.17f, 0.22f)),
-        });
-        for (int r = 6; r < radius; r += 6)
-            AddChild(new MeshInstance3D
-            {
-                Mesh = new TorusMesh { InnerRadius = r - 0.1f, OuterRadius = r + 0.1f, RingSegments = 64 },
-                Position = new Vector3(0f, 0.01f, 0f),
-                MaterialOverride = Game.Arena.Flat(new Color(0.30f, 0.32f, 0.45f), emission: 0.6f),
-            });
-        AddChild(new MeshInstance3D
-        {
-            Mesh = new TorusMesh { InnerRadius = radius - 0.4f, OuterRadius = radius + 0.4f, RingSegments = 64 },
-            Position = new Vector3(0f, 0.8f, 0f),
-            Scale = new Vector3(1f, 3f, 1f),
-            MaterialOverride = Game.Arena.Flat(new Color(0.35f, 0.30f, 0.50f), emission: 0.5f),
-        });
-
-        var rng = new RandomNumberGenerator { Seed = 7071 };
-        for (int i = 0; i < 26; i++)
-        {
-            float a = rng.RandfRange(0f, Mathf.Tau);
-            float d = rng.RandfRange(7f, radius - 3f);
-            float h = rng.RandfRange(0.6f, 3.2f);
-            AddChild(new MeshInstance3D
-            {
-                Mesh = new BoxMesh { Size = new Vector3(0.9f, h, 0.9f) },
-                Position = new Vector3(Mathf.Cos(a) * d, h * 0.5f, Mathf.Sin(a) * d),
-                Rotation = new Vector3(0f, rng.Randf() * Mathf.Tau, 0f),
-                MaterialOverride = Game.Arena.Flat(new Color(0.24f, 0.26f, 0.34f).Lerp(new Color(0.36f, 0.30f, 0.46f), rng.Randf())),
-            });
-        }
-
-        // The hero: the selected character in its chosen skin, rebuilt whenever
-        // the selection changes.
-        _hero = new Node3D { Name = "Hero" };
-        AddChild(_hero);
-        // Its own key light: the arena light is far below the camera, and a
-        // character lit only by ambient reads as a silhouette.
-        _hero.AddChild(new OmniLight3D { Position = new Vector3(0.8f, 2.4f, -2.2f), LightEnergy = 2.2f, OmniRange = 6f });
-        TintHero(Characters.ById(Profile.SelectedCharacter) ?? Characters.Default);
-        AddChild(new OmniLight3D { Position = new Vector3(0f, 3f, 0f), LightColor = Accent, LightEnergy = 1.5f, OmniRange = 9f });
-
-        // The tide: silhouettes circling at different radii and speeds.
-        var foe = Game.Arena.Flat(new Color(0.75f, 0.28f, 0.30f), emission: 0.35f);
-        for (int i = 0; i < 34; i++)
-        {
-            float size = rng.RandfRange(0.35f, 0.7f);
-            var body = new MeshInstance3D
-            {
-                Mesh = i % 3 == 0 ? new SphereMesh { Radius = size, Height = size * 2f }
-                                   : new CapsuleMesh { Radius = size * 0.7f, Height = size * 2.6f },
-                MaterialOverride = foe,
-            };
-            var holder = new Node3D();
-            holder.AddChild(body);
-            body.Position = new Vector3(0f, size * 1.3f, 0f);
-            AddChild(holder);
-            _drifters.Add((holder, rng.RandfRange(5f, radius - 4f), rng.RandfRange(0.08f, 0.22f) * (i % 2 == 0 ? 1f : -1f), rng.Randf() * Mathf.Tau));
-        }
-
-        _camera = new Camera3D { Fov = 60f, Current = true };
-        AddChild(_camera);
-        UpdateCamera(0f);
-    }
-
     private void TintHero(CharacterDef def) => ShowHeroSkin(def.SelectedSkin);
 
     /// <summary>Swap the backdrop hero to a skin: its model and its recolour.
@@ -242,47 +135,6 @@ public sealed partial class MainMenu : Node3D
         model.Scale = Vector3.One * 1.0f;
         _hero.AddChild(model);
         ApplyMenuHat();
-    }
-
-    public override void _Process(double delta)
-    {
-        if (_camera is null) return;
-        float dt = (float)delta;
-        UpdateCamera(dt);
-        foreach (var (node, radius, speed, phase) in _drifters)
-        {
-            float a = phase + _orbit * speed * 10f;
-            float r = radius + Mathf.Sin(_orbit * 2f + phase) * 1.2f;
-            node.Position = new Vector3(Mathf.Cos(a) * r, Mathf.Abs(Mathf.Sin(_orbit * 9f + phase)) * 0.25f, Mathf.Sin(a) * r);
-        }
-    }
-
-    private void UpdateCamera(float dt)
-    {
-        _orbit += dt * 0.06f;
-        var pos = new Vector3(Mathf.Cos(_orbit) * 30f, 13f + Mathf.Sin(_orbit * 0.7f) * 2f, Mathf.Sin(_orbit) * 30f);
-        _camera.Position = pos;
-        // Look a little to the side of centre so the arena sits to the right of
-        // the menu column instead of under it.
-        // Right-to-left layouts put the menu column on the right, so the scene
-        // (and the hero below) mirror to the other side.
-        float side = Loc.IsRtl ? -1f : 1f;
-        Vector3 right = new Vector3(-Mathf.Sin(_orbit), 0f, Mathf.Cos(_orbit));
-        _camera.LookAt(right * 9f * side + new Vector3(0f, 1f, 0f), Vector3.Up);
-
-        // The hero is held at a fixed spot in the frame, right of the menu and
-        // character panels, rather than placed in the world: the camera orbits,
-        // and anywhere on the ground it spends half the orbit behind the UI.
-        if (_hero is not null)
-        {
-            Basis b = _camera.GlobalTransform.Basis;
-            _hero.Position = pos - b.Z * 7.5f + b.X * 4.75f * side - b.Y * 1.45f;
-            // Models face -Z, so turn by the camera direction plus half a turn
-            // to look back at the viewer, angled slightly toward the menu.
-            Vector3 toCam = (pos - _hero.Position) with { Y = 0f };
-            if (toCam.LengthSquared() > 0.01f)
-                _hero.Rotation = new Vector3(0f, Mathf.Atan2(toCam.X, toCam.Z) + Mathf.Pi + 0.35f * side, 0f);
-        }
     }
 
     // ================================================================== UI

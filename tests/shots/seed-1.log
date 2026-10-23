@@ -1,0 +1,33 @@
+Godot Engine v4.7.1.stable.mono.official.a13da4feb - https://godotengine.org
+Vulkan 1.4.312 - Forward+ - Using Device #0: NVIDIA - NVIDIA GeForce GTX 1060 6GB
+
+[wavebreak] seed 1
+[profile] in-memory (automated run, nothing is saved)
+META challenges set=[] reward=x1
+META extras weaponslots=6 tomeslots=4 toggler=no mapchallenge=none
+META progress difficulty=normal pearls=0 shop=none charges=+0r/+0b/+0s
+META run character=drifter look=default start=splinter_rail maxhp=100 speed=6 earned_items=0/14 earned_weapons=0/3 pool=89i+26w earned=[] unlocks=0/303 profile=(memory)
+META route=classic maps=thornmeadow,rimeglass,cinder
+[shrine] placed Charge at=(-5.2,-52.3)
+[shrine] placed Charge at=(-11.0,40.0)
+[shrine] placed Charge at=(-48.4,31.7)
+[shrine] placed Challenge at=(-69.9,-61.2)
+[shrine] placed Statue at=(78.1,-52.5)
+[shrine] placed Greed at=(-12.8,56.6)
+[cute-shrine] placed Balance at=(-15.0,-84.7)
+[cute-shrine] placed Well at=(-52.2,-44.6)
+[stage] t=00:00 phase 1/3 'Thornmeadow' begins (boss in 210s, hp x1.00 dmg x1.00 spd x1.00)
+[chest] spawned tier=Standard free=False at=(-8.5,-0.0,3.9) t=0s
+[chest] spawned tier=Standard free=False at=(-73.6,-0.0,18.7) t=0s
+[chest] spawned tier=Standard free=False at=(-24.9,-0.0,111.7) t=0s
+[chest] spawned tier=Standard free=False at=(46.0,-0.0,101.2) t=0s
+[chest] spawned tier=Standard free=False at=(76.8,-0.0,-61.8) t=0s
+[chest] spawned tier=Standard free=False at=(7.6,-0.0,88.6) t=0s
+[stations] placed Merchant at=(-27.3,-0.0,60.7) phase=1
+[stations] placed Microwave at=(-33.7,-0.0,-65.2) phase=1
+[stations] placed 28/28 breakables phase=1
+[shot] saved D:\megabonk-src\10-newgame\tests\shots\seed-1.png (1280x720)
+SUMMARY t=00:29 kills=24 level=3 xp=20 gold=20 alive=16 weapons=3 items=0 hp=100/100 seed=1 jumps=13 airjumps=11 dashes=7 slides=4 slams=5 slamhits=5 peakspeed=26.0 chests=0 chestfree=0 chestspent=0 chestdenied=0 chestspawned=6 chestdrops=0 phase=1 phases=3 stage=thornmeadow phasestate=Waves difficulty=normal won=0 swarm=0 pearls=1 merchantbuys=0 merchantspent=0 microwaves=0 microwavespent=0 pots=0/28 stations=2 shrines=6 shrinecharged=0 shrineblessings=0 challengewon=0 challengefailed=0 statues=0 statuegold=0 greed=0
+META pearls +1 (Kills (24)=1, Elites (0)=0, Phases cleared (0)=0, Bosses (0)=0; tier=normal x1) balance=1
+META profile runs=1 kills=24 unlocks=0 secrets=0
+AUDIO played=158 fire=25 hit=37 death=21 hurt=0 xp=13 gold=4 levelup=2 dash=7 jump=13 airjump=11 slide=4 slam=5 land=10 runend=1 chest=0 dropped=53 stolen=0 ambient=1 mixrate=48000 master=1.0 sfx=1.0 music=1.0 muted=0 masterdb=0.0 busmute=0

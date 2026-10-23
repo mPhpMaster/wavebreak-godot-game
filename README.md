@@ -9,11 +9,13 @@ each of three maps, and hold the line through the Final Swarm.
 
 ## Download and install
 
-- **Installer:** `build/installer/Wavebreak-Setup-<version>.exe`
+Get the latest build from [Releases](https://github.com/mPhpMaster/wavebreak-godot-game/releases).
+
+- **Installer:** `Wavebreak-Setup-<version>.exe`
   - Installs for your user by default and adds a Start-menu shortcut, plus an optional desktop one.
   - Removable from *Add or remove programs*.
   - It is unsigned, so Windows SmartScreen asks once: *More info → Run anyway*.
-- **Portable:** `build/Wavebreak-windows.zip`. Unzip anywhere and run `Wavebreak.exe`.
+- **Portable:** `Wavebreak-<version>-windows.zip`. Unzip anywhere and run `Wavebreak.exe`.
 
 Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 

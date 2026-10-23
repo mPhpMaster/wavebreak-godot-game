@@ -408,3 +408,18 @@ track; the mode and pin live in `user://settings.cfg [boombox]` and automated
 runs never touch them. `UI/BoomboxPage` is the title page (play, pin, modes,
 volume); the pause menu has a MODE/SKIP row. `ContentAudit.Music` checks every
 map has its track and remix and every file loads with the right loop flag.
+
+## Title screen and boot splash
+
+`UI/MainMenu.Backdrop` builds the title scene from primitives: a sunset
+procedural sky, a shader sea (summed sine waves, crest foam and a foam ring
+around the island), a sand island with palms, rocks, shells and a lighthouse
+whose beacon pulses, gulls circling, and a few real enemy rigs bobbing in the
+shallows. The selected hero (and hat) stands on the beach, scaled up. The camera
+sways slowly instead of orbiting, so the menu column never covers the scene.
+Right-to-left layouts mirror the camera target, hero, lighthouse and monsters.
+
+The boot splash is `assets/splash.png` (icon, name, tagline on the menu's night
+colour), drawn by `installer/make_splash.py` and set under `[application]
+boot_splash/*` in `project.godot`, so the Godot logo never shows. The version
+(`config/version`, the exe's version resources and the installer) is 1.0.0.
