@@ -110,6 +110,14 @@ public partial class StageDef : Resource
     /// <summary>World chests placed when the map is built.</summary>
     [Export] public int Chests { get; set; } = 5;
 
+    /// <summary>Map shrines placed when the map is built (see
+    /// <see cref="Game.ShrineSpawner"/>): charge rings, timed challenges, gold
+    /// statues and greed altars. The hidden secret shrines are separate.</summary>
+    [Export] public int ChargeShrines { get; set; } = 3;
+    [Export] public int ChallengeShrines { get; set; } = 1;
+    [Export] public int StatueShrines { get; set; } = 1;
+    [Export] public int GreedShrines { get; set; } = 1;
+
     // ---------------------------------------------------------------- phase
 
     /// <summary>Seconds of ordinary waves before the phase boss arrives.</summary>
@@ -176,6 +184,7 @@ public static class Stages
             Ridges = 4, RidgeHeight = 2.2f,
             Landmarks = 10,
             Chests = 6,
+            ChargeShrines = 3, ChallengeShrines = 1, StatueShrines = 1, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
         },
 
@@ -197,6 +206,7 @@ public static class Stages
             Ridges = 6, RidgeHeight = 2.4f,
             Landmarks = 14,
             Chests = 7,
+            ChargeShrines = 4, ChallengeShrines = 2, StatueShrines = 1, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             EnemyHealthScale = 1.25f, EnemyDamageScale = 1.12f, EnemySpeedScale = 1.04f,
         },
@@ -220,6 +230,7 @@ public static class Stages
             Ridges = 18, RidgeHeight = 2.8f,
             Landmarks = 12,
             Chests = 7,
+            ChargeShrines = 4, ChallengeShrines = 2, StatueShrines = 2, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             // The last boss meets the steepest part of the clock curve; at 0.55
             // the first full run's final boss had 82,000 hp.

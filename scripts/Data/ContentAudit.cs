@@ -30,7 +30,7 @@ namespace Wavebreak.Data;
 /// rolls its own pool), so an audit run is a check, not a replay — use a
 /// separate run for seeded evidence.
 /// </summary>
-public static class ContentAudit
+public static partial class ContentAudit
 {
     private static bool _parsed;
     private static bool _log;
@@ -202,6 +202,7 @@ public static class ContentAudit
             AuditEnemies(system);
             AuditDirector();
             AuditOffers(system);
+            AuditShrines();
         }
         catch (Exception e)
         {
