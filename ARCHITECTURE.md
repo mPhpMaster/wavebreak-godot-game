@@ -97,7 +97,8 @@ classes, and lets someone tune them without touching C#.
 | `StageDef.BossHealthScale` | 0.55 (0.45 last) | phase bosses are mandatory gates and weapons aim at the nearest enemy, so they carry less than the full time-curve health |
 | `StageDef.BossGraceSeconds` | 120 | boss lifetime before overtime adds +12% enemy hp/damage per 30 s |
 | `DifficultyTiers.All` | Normal 1 / Hard 1.45 / Nightmare 2.1 hp | tier multipliers on enemy hp, damage, spawn rate, crowd growth and Pearls; Normal is exactly 1 |
-| `FinalSwarm` consts | +15% hp, +12% dmg, +0.35 spawn rate per 30 s | the endless phase after the last boss; uncapped so it always ends |
+| `FinalSwarm` consts | per 30 s: hp +15% x1.10 compound, dmg +25% x1.09 compound, +0.35 spawn rate | the endless phase after the last boss; compounding so even an 86%-armour build meets a wall |
+| `Enemy.Configure` speed cap | 5.2 m/s (5.6 elites/bosses) | nothing walks faster than the player's base 6 m/s once the clock and modifiers stack; dashes and leaps are exempt |
 | `RunRewards` consts | 1/20 kills, 10/phase, 15/boss, 60 win | Pearls per run, times the tier's reward |
 | `MetaShop.CostOf` | base x (n+1)^1.5 | shop prices; refund returns the full amount paid |
 
@@ -127,6 +128,47 @@ Godot_v4.7.1-stable_mono_win64_console.exe --path . --resolution 1280x720 -- --s
 Seeded runs are reproducible (`Core/Rng.cs`), which is what makes a balance bug
 re-testable and lets captures be compared across changes.
 
+Useful test flags (all after `--`):
+
+| Flag | What it does |
+|---|---|
+| `--auto --invulnerable --seed=N` | autopilot run that cannot die |
+| `--phase-seconds=N` / `--start-phase=N` | shorter phases / start on a later map |
+| `--give=id,id` | start holding these weapons and tomes at max; `all_items` adds one of every item |
+| `--perf` | every 5 s: FPS, CPU/GPU render ms, draw calls, nodes, live enemies, per-system ms (`Game/Prof`), and a node census every 30 s |
+| `--levelup-shot=x.png`, `--menu-shot=x.png --menu-page=<page>`, `--panel-shot=<prefix>` | capture screens |
+| `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL |
+
+`tests/smoke.ps1` runs three seeded 30-second runs. Automated launches run
+through `D:\tools\megabonk\run-offscreen.ps1`, which keeps the window on a hidden
+desktop.
+
+## Building the Windows release and installer
+
+```bash
+Godot_v4.7.1-stable_mono_win64_console.exe --headless --path . --export-release "Windows Desktop" build/windows/Wavebreak.exe
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/Wavebreak.iss
+```
+
+`export_presets.cfg` uses the custom .NET templates under
+`D:/tools/godot/export_templates/4.7.1.stable.mono/` and writes the icon
+(`icon.ico`, made by `installer/make_icon.py` from `icon.svg`) and version
+resources into the exe. The installer (`installer/Wavebreak.iss`) installs per
+user by default, adds Start-menu and optional desktop shortcuts, speaks English
+or Arabic, and writes `build/installer/Wavebreak-Setup-<version>.exe`.
+`build/` is git-ignored.
+
+## Physics and performance
+
+The project runs on **Jolt Physics** (`3d/physics_engine` in `project.godot`).
+Godot's own solver spent about 1 ms per enemy in `MoveAndSlide` against the
+convex map hulls and held a mid-run crowd at 7 FPS; Jolt runs the same scene at
+150+ FPS. On top of that, `Enemy.CoastThisTick` lets a grounded, self-driven,
+non-boss enemy skip its collision move on alternate ticks past 16 m and two in
+three past 30 m (staggered by instance), stepping straight along its velocity
+instead; the next real slide resolves any wall it touched. That cut the enemy
+step about 3x. Measure with `--perf`.
+
 ## Visuals: imported first, procedural always there
 
 `Visuals/` owns how things look; gameplay code never builds a mesh.
@@ -154,18 +196,28 @@ re-testable and lets captures be compared across changes.
 
 ```
 scripts/
-  Core/        EventBus, GameEvents, Rng, Pool
+  Core/        EventBus, GameEvents, Rng, Pool, Shrine/Stage events
   Stats/       Stat, StatSheet          <- the pipeline
-  Combat/      DamageInfo, WeaponSystem, WeaponRuntime, Projectile
-  Actors/      Player, PlayerHealth, PlayerCamera, Enemy, EnemyManager, Pickup
-  Progression/ XpCurve, Inventory, OfferPool
-  UI/          Hud, LevelUpPanel, ResultsScreen, DamagePopup
-  Data/        Definitions, Catalog, Stages   <- all content (Stages = maps + phases)
-  Game/        Main, Arena, StageDirector, Portal, RunState, Screenshot
-  Meta/        Profile, Unlocks, Characters, MetaContent, SecretSpawner, UnlockTracker
+  Combat/      DamageInfo, WeaponSystem, WeaponRuntime, Projectile, StatusEffects,
+               EnemyAttacks, Weapons/ (behaviours, item procs, effect meshes)
+  Actors/      Player, PlayerHealth, PlayerCamera, Enemy, EnemyManager, Pickup,
+               Chest, Merchant, Microwave, MapShrine, CuteShrine, Station
+  Audio/       AudioDirector, SfxSynth, MusicDirector, MusicTracks, Boombox, AudioSettings
+  Progression/ XpCurve, Inventory, OfferPool, TomeBook, LevelUpChoices
+  UI/          Hud, LevelUpPanel, PauseMenu, StatsPanel, ResultsScreen, BossBar, MainMenu
+               pages (Codex, MetaShop, Boombox, Graphics), DevPanel, CuteStyle, Icons
+  Data/        Definitions, Catalog*, Stages*, Tomes*, MapShrines, ContentAudit*  <- all content
+  Game/        Main, Arena, StageDirector, FinalSwarm, Portal, RunState, spawners,
+               Autopilot, Screenshot, PerfProbe/Prof
+  Meta/        Profile, Unlocks, Quests, Characters, Hats, Pearls, MetaShop, Difficulty,
+               Routes, Challenges, Leaderboard, Launch, Loc + ArabicText/, Graphics/Game settings
   Visuals/     ModelSpec, ModelBuilder, CharacterRig, PlayerLooks, EnemyVisuals,
                PropTheme, PropFactory, ToonMaterials, ArtAssets, showcase/stress
-assets/        imported CC0 models (see assets/CREDITS.md)
+assets/        imported CC0 models, icons, music, fonts (see assets/CREDITS.md)
+tools/         compose_music.py and other generators
+installer/     Inno Setup script, icon generator
+tests/         smoke.ps1, run-offscreen.ps1
+docs/          screenshots used by README.md
 ```
 
 The project boots into `scenes/Title.tscn` (`UI/MainMenu`). Any game argument
@@ -192,7 +244,9 @@ lives in the profile's `[meta]` section (`Profile.GetMeta/SetMeta`).
 
 The last boss's death is the win (`StageDirector.Won`, `FinalBossDefeated`):
 it is recorded at once, and then `Game/FinalSwarm` escalates until the player
-dies; that death still publishes `RunEnded(survived: true)`.
+dies; that death still publishes `RunEnded(survived: true)`. The pause menu's
+END RUN (`PauseMenu.EndRun`) finishes the run on the spot: a win after the last
+boss, a forfeit before it.
 `--no-final-swarm` restores the instant win; `--difficulty=<id>` forces a tier.
 
 ## Elements, statuses, megacrits, weapon upgrade rarities
@@ -299,29 +353,6 @@ unlock tracker, lifetime stats, the leaderboard and tier/challenge wins.
 and prints `DEVPANEL PASS/FAIL`; `--devpanel-shot=<prefix>` saves one PNG
 per tab; `--menu-shot=x.png --devpanel-menu[=unlock]` shows it on the title.
 
-## Developer panel
-
-`UI/DevPanel*.cs` (widgets in `UI/DevUi.cs`). Ctrl+Shift+Alt+F12 toggles it
-on the title and in a run; nothing else opens it and no normal UI mentions
-it. It is a CanvasLayer under the tree root, installed by `MainMenu._Ready`
-and `Main._Ready`, so it survives scene changes; it keeps itself the root's
-last child so its `_Input` sees the chord first. While open, the other
-panels' `_Input` return early on `DevPanel.IsOpen` (so a digit typed in a
-search box never picks a card), the mouse is free, and with "Pause game
-while open" (default on) the run stays paused: the pause is re-asserted each
-frame because the level-up panel unpauses on close.
-
-Tabs: Profile (unlock all or single rows, tiers, shrines, Pearls, shop,
-reset; saved at once and the title reloads to show it), Player, Build, Spawn,
-Stage, Info. Game-side entry points live in `*.Dev.cs` partials next to the
-code they drive (`StageDirector.Dev`, `Spawners.Dev`, `WeaponSystem.Dev`,
-`Inventory.Dev`, `Hud.Dev`, `Profile.Dev`, `Meta.Dev`, `Meta/DevCheats`).
-
-Any run-side action sets `DevPanel.UsedThisRun`; such a run skips the
-unlock tracker, lifetime stats, the leaderboard and tier/challenge wins.
-`-- --check-devpanel` drives every control (real chord, click and typing)
-and prints `DEVPANEL PASS/FAIL`; `--devpanel-shot=<prefix>` saves one PNG
-per tab; `--menu-shot=x.png --devpanel-menu[=unlock]` shows it on the title.
 ## Graphics settings
 
 `Meta/GraphicsSettings` holds every graphics option (`GraphicsConfig`) and
@@ -331,7 +362,11 @@ FSR 1/2.2), the directional shadow atlas and soft-shadow quality, every
 `Arena` and `ThemeDresser` call when they build a sky), `Engine.MaxFps`, vsync,
 window mode, UI scale (`ContentScaleFactor`), and the camera's FOV. The camera
 reads shake and "speed & dash zoom" scales, `DamagePopup` the number cap, and
-`Arena` the prop-density multiplier (next map). Environments and suns keep their
+`Arena` the prop-density multiplier (next map). "Weapon effects opacity"
+(default 75%) goes through `GraphicsSettings.FxFade`, which every projectile,
+swipe, explosion, aura disc and status arc uses for its fade, so a late build
+cannot wall off the screen. Swipes also start half transparent, sit at knee
+height and stay level; Breaker Swell draws at most four low rings. Environments and suns keep their
 authored values as metadata, so switching an effect back on restores the map's
 look; Sea Fret marks its fog as gameplay fog, which "fog off" keeps at 60%.
 The default is the High preset, which equals the pre-settings look; automated
@@ -354,6 +389,22 @@ Arabic sets the root window's layout direction to RTL (containers and anchored
 controls mirror; the title backdrop hero moves to the other side) and adds
 Noto Sans Arabic UI (OFL, `assets/fonts`) as a fallback on the default font.
 Changing the language reloads the title on the settings page.
+Numbers, signs, fractions, key names and units inside Arabic text are wrapped
+in directional isolates (`Loc.Ltr`; `T`/`F` do it automatically) so "+30%",
+"10/10" and "x1.32" keep their order. The developer panel is translated too
+(`ArabicText.UiDev`). `--latin-report` prints any visible English left on screen.
 `--dump-strings=<txt>` lists content strings with no Arabic; the content audit
 fails on any missing/empty translation, mismatched `{n}` holes, conflicting
 duplicates, a missing font, or a text server that cannot shape/bidi.
+
+## Music and the Boombox
+
+`tools/compose_music.py` renders every track procedurally (19 OGG loops and
+stings, about -20 dBFS, seamless loops). `Audio/MusicTracks` is the catalogue:
+which map, boss, swarm or menu each track belongs to, and how it unlocks (free,
+first heard in a real run, or a quest). `Audio/MusicDirector` asks
+`Audio/Boombox` for the loop to play: the map's own track, Shuffle, or a pinned
+track; the mode and pin live in `user://settings.cfg [boombox]` and automated
+runs never touch them. `UI/BoomboxPage` is the title page (play, pin, modes,
+volume); the pause menu has a MODE/SKIP row. `ContentAudit.Music` checks every
+map has its track and remix and every file loads with the right loop flag.
