@@ -55,7 +55,8 @@ public sealed partial class Main : Node3D
         // The arena is built by the stage director, not here: it is rebuilt on
         // every phase change, and the thing that rebuilds it should be the only
         // thing that ever creates one.
-        _stages = new StageDirector(this, Run, _enemies, _player, _camera, Data.Stages.Run, Catalog.Enemies);
+        // The route (Meta/Routes) is Data.Stages.Run unless the player picked another.
+        _stages = new StageDirector(this, Run, _enemies, _player, _camera, Meta.Routes.ForRun(Run.Seed), Catalog.Enemies);
         _stages.Begin();
 
         EventBus.Subscribe<LevelGained>(OnLevelGained);

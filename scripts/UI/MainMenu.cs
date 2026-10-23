@@ -65,6 +65,8 @@ public sealed partial class MainMenu : Node3D
     // pearl shop / difficulty (UI/MetaShopPage, UI/DifficultyPicker)
     private MetaShopPage _shop = null!;
     private DifficultyPicker _difficulty = null!;
+    private ChallengePicker _runPicker = null!;
+    private Button _runButton = null!;
     private Label _pearls = null!;
 
     public override void _Ready()
@@ -290,6 +292,7 @@ public sealed partial class MainMenu : Node3D
         _pages["keys"] = BuildKeysPage();
         _pages["shop"] = _shop = new MetaShopPage(() => ShowPage("main"));
         _pages["records"] = BuildLeaderboardPage();
+        _pages["run"] = _runPicker = new ChallengePicker(() => ShowPage("play"));
         foreach (Control p in _pages.Values) _root.AddChild(p);
     }
 
@@ -351,6 +354,14 @@ public sealed partial class MainMenu : Node3D
         }
         _difficulty = new DifficultyPicker();
         list.AddChild(_difficulty);
+
+        // Route & challenges (UI/ChallengePicker), under the character panel so
+        // the character list keeps its height.
+        _runButton = MenuButton("", () => ShowPage("run"));
+        Place(_runButton, 470f, 552f, 520f, 48f);
+        _runButton.MouseEntered += () => _runButton.GrabFocus();
+        page.AddChild(_runButton);
+        _difficulty.Button.FocusNeighborRight = _difficulty.Button.GetPathTo(_runButton);
         list.AddChild(MenuButton("BACK", () => ShowPage("main")));
 
         var panel = Panel(470f, 236f, 520f, 300f);
@@ -594,7 +605,12 @@ public sealed partial class MainMenu : Node3D
         // lands with something focused.
         switch (name)
         {
+            case "run":
+                _runPicker.Refresh();
+                _runPicker.FocusFirst();
+                break;
             case "play":
+                _runButton.Text = ChallengePicker.Summary();
                 int i = Math.Max(0, IndexOfCharacter(arg.Length > 0 ? arg : Profile.SelectedCharacter));
                 _charButtons[i].GrabFocus();
                 ShowCharacter(Characters.All[i]);
@@ -641,7 +657,7 @@ public sealed partial class MainMenu : Node3D
         if (@event.IsActionPressed("ui_cancel") && _page != "main")
         {
             GetViewport().SetInputAsHandled();
-            ShowPage("main");
+            ShowPage(_page == "run" ? "play" : "main");
         }
     }
 

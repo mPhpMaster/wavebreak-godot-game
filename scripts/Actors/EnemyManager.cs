@@ -311,7 +311,7 @@ public sealed partial class EnemyManager : Node3D
         // The bank cap is also the opening burst: whatever it allows is spent on
         // the first tick. At 40 that was forty enemies in the first second, which
         // no amount of live-cap tuning downstream can undo.
-        float bank = (10f + minutes * 26f) * SpawnRateScale * Meta.DifficultyTiers.Active.SpawnRate;
+        float bank = (10f + minutes * 26f) * SpawnRateScale * Meta.DifficultyTiers.Active.SpawnRate * Meta.Challenges.SpawnRate;
         if (_credits > bank) _credits = bank;
 
         UpdateWaves(runSeconds);
@@ -424,7 +424,7 @@ public sealed partial class EnemyManager : Node3D
 
     private float CreditRate(float minutes)
         => MathF.Max(0.1f, (BaseCreditRate + minutes * CreditRateGrowth) * PlayerRef.EnemyScaling
-                           * SpawnRateScale * Meta.DifficultyTiers.Active.SpawnRate);
+                           * SpawnRateScale * Meta.DifficultyTiers.Active.SpawnRate * Meta.Challenges.SpawnRate);
 
     /// <summary>
     /// Concurrent enemies allowed at a given point in the run.
@@ -441,7 +441,7 @@ public sealed partial class EnemyManager : Node3D
     /// the 200 ceiling (a frame-budget limit, not a design one) around minute 10.
     /// </summary>
     private int LiveCap(float minutes)
-        => Math.Max(6, (int)(Math.Min(MaxAlive, 10 + (int)(minutes * 13f * Meta.DifficultyTiers.Active.Crowd)) * LiveCapScale));
+        => Math.Max(6, (int)(Math.Min(MaxAlive, (int)((10 + (int)(minutes * 13f * Meta.DifficultyTiers.Active.Crowd)) * Meta.Challenges.Crowd)) * LiveCapScale));
 
     /// <summary>
     /// Difficulty over time.
@@ -460,11 +460,11 @@ public sealed partial class EnemyManager : Node3D
 
         // The run's difficulty tier (Meta.DifficultyTiers) rides on top; Normal is 1.
         Meta.DifficultyTier tier = Meta.DifficultyTiers.Active;
-        DifficultyHp = (1f + minutes * 0.34f) * MathF.Pow(1.075f, minutes) * scaling * PhaseHealthScale * tier.Health;
-        DifficultyDamage = (1f + minutes * 0.16f) * scaling * PhaseDamageScale * tier.Damage;
+        DifficultyHp = (1f + minutes * 0.34f) * MathF.Pow(1.075f, minutes) * scaling * PhaseHealthScale * tier.Health * Meta.Challenges.EnemyHealth;
+        DifficultyDamage = (1f + minutes * 0.16f) * scaling * PhaseDamageScale * tier.Damage * Meta.Challenges.EnemyDamage;
         // The phase factor goes on after the cap: the cap is about the clock
         // never outpacing kiting, and a later map is allowed to be a step faster.
-        DifficultySpeed = MathF.Min(1f + minutes * 0.022f, 1.45f) * PhaseSpeedScale;
+        DifficultySpeed = MathF.Min(1f + minutes * 0.022f, 1.45f) * PhaseSpeedScale * Meta.Challenges.EnemySpeed;
     }
 
     private void UpdateWaves(float runSeconds)
@@ -516,6 +516,7 @@ public sealed partial class EnemyManager : Node3D
             EnemyDef def = _defs[i];
             if (def.IsBoss || !def.DirectorSpawns || def.IsElite != elite) continue;
             if (runSeconds < def.UnlockAtSeconds) continue;
+            if (StageEnemyIds is { } only && !only.Contains(def.Id)) continue;
             return true;
         }
         return false;
@@ -564,7 +565,8 @@ public sealed partial class EnemyManager : Node3D
             EnemyDef def = _defs[i];
             float cost = MathF.Max(1f, def.Cost);
 
-            if (def.IsBoss || !def.DirectorSpawns || runSeconds < def.UnlockAtSeconds || cost > _credits)
+            if (def.IsBoss || !def.DirectorSpawns || runSeconds < def.UnlockAtSeconds || cost > _credits
+                || StageEnemyIds is { } only && !only.Contains(def.Id))
             {
                 _weights.Add(0f);
                 continue;
@@ -646,6 +648,7 @@ public sealed partial class EnemyManager : Node3D
         // from SpawnBoss, which scales DifficultyHp for that one spawn.
         enemy.Configure(def, DifficultyHp, DifficultyDamage, DifficultySpeed * jitter);
         enemy.Spawn(point);
+        Meta.Challenges.DressEnemy(enemy);
 
         Register(enemy);
     }
@@ -1031,6 +1034,10 @@ public sealed partial class EnemyManager : Node3D
     /// <summary>Multiplier on credit income and the credit bank: how fast the
     /// crowd refills. Raised by the Final Swarm. 1 = no change.</summary>
     public float SpawnRateScale { get; set; } = 1f;
+
+    /// <summary>The current map's enemy list (StageDef.EnemyIds), or null for
+    /// the whole roster. Filters ordinary and elite spawns, never bosses.</summary>
+    public HashSet<string>? StageEnemyIds { get; set; }
 
     /// <summary>
     /// Put a specific boss on the field now, on the spawn ring around the

@@ -287,6 +287,10 @@ public sealed class OfferPool
     /// constructed wins, which is the live run's.</summary>
     public static OfferPool? Current { get; internal set; }
 
+    /// <summary>Remove every item from the pool for this run (the No Items
+    /// challenge): level-ups offer weapons and tomes, chests pay supplies.</summary>
+    public void ClearItems() => _items.Clear();
+
     /// <summary>Items and weapons the pool can draw from, ignoring what is held.</summary>
     public int CatalogueSize => _items.Count + _weapons.Count;
 

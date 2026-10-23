@@ -199,3 +199,18 @@ dies; that death still publishes `RunEnded(survived: true)`.
 letting each run its own `_Process`. That ordering is deliberate: with
 independent callbacks, whether weapons fire before or after enemies move depends
 on scene-tree order, so hit registration changes when you reparent a node.
+
+## Routes, extra maps and challenges
+
+`Data/Stages.Shores.cs` adds Gravemoor (graveyard, pentagon, sunken graves that
+slow and gnaw) and Saltglass Shallows (tidal, 12 sides, tide pools that slow).
+The pools are `Game/MapHazards`, placed last so maps without hazards keep their
+layout. `Meta/Routes` picks the run's 3 maps: Classic (= `Stages.Run`), fixed
+routes, seeded draws, and "start on X". A non-classic map is copied with the
+classic numbers for its phase (`Stages.ForPhase`), so a route changes the ground,
+not the difficulty curve. `Meta/Challenges` and `ChallengeRuntime` are stackable
+run modifiers; every multiplier is exactly 1 when none is active. Automated runs
+use Classic and no challenges unless `--route=<id|a,b,c>` or
+`--challenges=<ids|all>` is given. `--check-boundary` walks `Stages.All`.
+`StageDef.MusicId` and `EnemyIds` are hooks for music and theme enemies
+(empty = default).

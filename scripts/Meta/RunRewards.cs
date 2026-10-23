@@ -40,9 +40,10 @@ public sealed partial class RunRewards : Node
     public sealed record Payout(IReadOnlyList<Line> Lines, long Subtotal, DifficultyTier Tier, long Total, bool Won)
     {
         /// <summary>"+123 Pearls (Hard x1.5)".</summary>
-        public string Headline => Tier.Reward > 1f
+        public string Headline => (Tier.Reward > 1f
             ? $"+{Total} {Pearls.Name}  ({Tier.Name} x{Tier.Reward:0.##})"
-            : $"+{Total} {Pearls.Name}";
+            : $"+{Total} {Pearls.Name}")
+            + (Challenges.RewardMultiplier > 1f ? $"  (challenges x{Challenges.RewardMultiplier:0.##})" : "");
     }
 
     /// <summary>The live run's settler, or null outside a run.</summary>
@@ -139,7 +140,7 @@ public sealed partial class RunRewards : Node
 
         long subtotal = lines.Sum(l => l.Amount);
         DifficultyTier tier = DifficultyTiers.Active;
-        long total = (long)MathF.Round(subtotal * tier.Reward);
+        long total = (long)MathF.Round(subtotal * tier.Reward * Challenges.RewardMultiplier);
         return new Payout(lines, subtotal, tier, total, won);
     }
 

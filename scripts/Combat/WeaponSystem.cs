@@ -485,8 +485,11 @@ public sealed partial class WeaponSystem : Node
         // Flag-gated (--validate-content); runs once, before any real shot.
         if (ContentAudit.Pending && _player is not null) ContentAudit.Run(this);
 
-        for (int i = 0; i < _weapons.Count; i++)
-            _weapons[i].Tick(dt, this);
+        // Pacifist challenge: weapons hold fire for a while on each map; shots
+        // already in flight still land.
+        if (!Meta.Challenges.WeaponsSilenced)
+            for (int i = 0; i < _weapons.Count; i++)
+                _weapons[i].Tick(dt, this);
 
         Projectile.UpdateAll(dt);
     }
