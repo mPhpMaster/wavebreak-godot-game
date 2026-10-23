@@ -172,6 +172,18 @@ public sealed partial class PauseMenu : Node
         GetViewport().SetInputAsHandled();
     }
 
+    /// <summary>Alt-tab or clicking another window pauses the run behind the
+    /// pause menu. Automated runs render in an unfocused window, so they skip it.</summary>
+    public override void _Notification(int what)
+    {
+        if (what is not ((int)NotificationApplicationFocusOut or (int)NotificationWMWindowFocusOut)) return;
+        if (_open || Meta.Launch.Automated || !IsInsideTree() || !CanOpen()) return;
+        Open();
+        // The camera frees the mouse on the same focus loss, possibly first; the
+        // run had it captured, so take it back when the player resumes.
+        _mouseWasCaptured = true;
+    }
+
     private bool CanOpen()
     {
         if (Screenshot.Requested) return false;
