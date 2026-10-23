@@ -4,3 +4,4 @@ obj/
 *.png
 !assets/**/*.png
 build/
+!docs/**/*.png

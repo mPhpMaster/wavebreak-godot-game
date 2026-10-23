@@ -99,6 +99,7 @@ public sealed partial class LevelUpPanel : Control
         ParseAutoPick();
 
         BuildChrome();
+        BuildConfetti();
         for (int i = 0; i < MaxCards; i++) _cards.Add(BuildCard(i));
         BuildControls();
 
@@ -112,6 +113,7 @@ public sealed partial class LevelUpPanel : Control
 
     public override void _ExitTree()
     {
+        AnyOpen = false;     // a scene change under an open hand must not leave it set
         if (!_subscribed) return;
         _subscribed = false;
         EventBus.Unsubscribe<RunEnded>(OnRunEnded);
@@ -321,6 +323,7 @@ public sealed partial class LevelUpPanel : Control
         _shownAtMsec = Time.GetTicksMsec();
         Input.MouseMode = Input.MouseModeEnum.Visible;
 
+        if (!IsOpen) StartConfetti();
         IsOpen = true;
         Visible = true;
         _autoPickLeft = AutoPickSeconds;
@@ -370,6 +373,7 @@ public sealed partial class LevelUpPanel : Control
             return;
         }
 
+        if (IsOpen) StopConfetti();
         IsOpen = false;
         Visible = false;
         _banishMode = false;

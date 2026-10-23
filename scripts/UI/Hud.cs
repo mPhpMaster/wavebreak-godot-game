@@ -175,6 +175,7 @@ public sealed partial class Hud : Control
     private void Subscribe()
     {
         if (_subscribed) return;
+        LevelUpPanel.OpenChanged += OnLevelUpOpen;
         _subscribed = true;
 
         EventBus.Subscribe<XpGained>(OnXpGained);
@@ -190,6 +191,7 @@ public sealed partial class Hud : Control
     private void Unsubscribe()
     {
         if (!_subscribed) return;
+        LevelUpPanel.OpenChanged -= OnLevelUpOpen;
         _subscribed = false;
 
         EventBus.Unsubscribe<XpGained>(OnXpGained);
@@ -369,13 +371,17 @@ public sealed partial class Hud : Control
         _card.AddChild(_cardSubtitle);
     }
 
+    /// <summary>The level-up cards have their own big title; the phase card
+    /// steps aside while they are up and comes back (with its time left) after.</summary>
+    private void OnLevelUpOpen(bool open) => _card.Visible = !open && _cardTime > 0f;
+
     private void ShowCard(string title, string subtitle, Color tint)
     {
         _cardTitle.Text = title;
         _cardTitle.AddThemeColorOverride("font_color", tint);
         _cardSubtitle.Text = subtitle;
         _cardTime = CardSeconds;
-        _card.Visible = true;
+        _card.Visible = !LevelUpPanel.AnyOpen;
     }
 
     // --------------------------------------------------------------- events
