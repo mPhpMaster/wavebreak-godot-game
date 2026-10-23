@@ -350,10 +350,12 @@ public sealed class StageDirector
         }
 
         // The crowd thins while the boss is up, so it can actually become the
-        // nearest target; overtime both hardens what does spawn and lets the
-        // crowd creep back, so a boss left alone gets more dangerous, not easier.
+        // nearest target. Overtime hardens what does spawn but keeps the crowd
+        // thin: letting it regrow hid the boss behind 150 bodies again, and one
+        // verification run spent eight minutes on a 2,800 hp boss -- a feedback
+        // loop that makes a slow kill slower, which is a soft lock in all but name.
         float steps = OvertimeSeconds / 30f;
-        ApplyScaling(1f + OvertimeStepPer30s * steps, Mathf.Min(1f, BossFightCrowd + 0.1f * steps));
+        ApplyScaling(1f + OvertimeStepPer30s * steps, BossFightCrowd);
     }
 
     private void SendBoss()
