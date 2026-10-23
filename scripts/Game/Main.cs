@@ -188,6 +188,8 @@ public sealed partial class Main : Node3D
         // Attached for the whole run (the price ladder belongs to the run);
         // each map populates it when the stage director builds that map.
         ChestSpawner.Attach(this, Run.Seed);
+        // Merchant, microwave and breakable pots: same lifetime and populate hook.
+        Interactables.Attach(this, Run.Seed);
 
         if (Screenshot.Auto)
         {
@@ -253,6 +255,7 @@ public sealed partial class Main : Node3D
         $"jumps={_player.Jumps} airjumps={_player.AirJumpsUsed} dashes={_player.Dashes} " +
         $"slides={_player.Slides} slams={_player.Slams} slamhits={_player.SlamHits} " +
         $"peakspeed={_player.PeakSpeed:0.0} {ChestSpawner.Instance?.SummaryFields} " +
+        $"{Interactables.Instance?.SummaryFields} " +
         $"phase={Run.Phase} phases={Run.PhaseCount} stage={Run.StageId} phasestate={_stages.State}";
 
     private async System.Threading.Tasks.Task RunScreenshot()

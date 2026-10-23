@@ -39,6 +39,14 @@ public static class Targeting
     /// of fakes and no scene tree at all.</summary>
     public static Func<List<IDamageable>, int>? Source { get; set; }
 
+    /// <summary>
+    /// Told about every area a weapon tests: centre, radius, and for a swing its
+    /// heading and the cosine of its half-arc (-1 for a full circle). Things that
+    /// weapons should break but never aim at (pots, crates) listen here instead of
+    /// joining the target list, so no weapon can ever lock on to one.
+    /// </summary>
+    public static Action<Vector3, float, Vector3, float>? AreaProbe { get; set; }
+
     /// <summary>Below this many targets a linear scan beats the index, and
     /// building buckets is pure overhead.</summary>
     private const int GridThreshold = 24;
@@ -130,6 +138,12 @@ public static class Targeting
     /// <returns>How many were found.</returns>
     public static int Overlap(Vector3 centre, float radius, List<IDamageable> into)
     {
+        AreaProbe?.Invoke(centre, radius, Vector3.Zero, -1f);
+        return OverlapTargets(centre, radius, into);
+    }
+
+    private static int OverlapTargets(Vector3 centre, float radius, List<IDamageable> into)
+    {
         EnsureFresh();
         EnsureGrid();
         into.Clear();
@@ -168,11 +182,12 @@ public static class Targeting
     /// </summary>
     public static int Cone(Vector3 origin, Vector3 heading, float range, float halfAngleDegrees, List<IDamageable> into)
     {
-        Overlap(origin, range, into);
-        if (into.Count == 0) return 0;
-
         Vector3 forward = Projectile.FlatDirection(heading, Vector3.Forward);
         float threshold = Mathf.Cos(Mathf.DegToRad(Mathf.Clamp(halfAngleDegrees, 0f, 180f)));
+        AreaProbe?.Invoke(origin, range, forward, threshold);
+
+        OverlapTargets(origin, range, into);
+        if (into.Count == 0) return 0;
 
         for (int i = into.Count - 1; i >= 0; i--)
         {

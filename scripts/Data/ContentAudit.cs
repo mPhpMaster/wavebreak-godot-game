@@ -202,6 +202,7 @@ public static class ContentAudit
             AuditEnemies(system);
             AuditDirector();
             AuditOffers(system);
+            Interactables.Audit(Check);
         }
         catch (Exception e)
         {

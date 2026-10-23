@@ -302,6 +302,7 @@ public sealed class StageDirector
 
         int chests = Mathf.Min(stage.Chests, ChestSpawner.MaxWorldChests);
         ChestSpawner.Instance?.Populate(_arena, new Rng(_run.Seed ^ salt), stage.InRadius - 6f, chests);
+        Interactables.Instance?.Populate(_arena, new Rng(_run.Seed ^ 0x5A0D5A0DUL ^ salt), stage.InRadius - 6f, stage, index + 1);
 
         // The spawner rings them at 80-90% of the radius without knowing about
         // terrain; nudge any that landed inside a mound or under a platform.
