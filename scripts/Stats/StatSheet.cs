@@ -77,6 +77,7 @@ public sealed class StatSheet
 
         Stat.ElementalDamage => 0f,     // read as a bonus: 0 => x1
         Stat.StatusDuration  => 1f,
+        Stat.Duration        => 1f,
         _ => 0f,
     };
 

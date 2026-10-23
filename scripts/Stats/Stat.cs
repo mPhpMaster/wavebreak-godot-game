@@ -64,6 +64,9 @@ public enum Stat
     PoisonChance,       // ... Poison
     FreezePower,        // each point: one fewer Chill stack to freeze, +20% freeze time
     UpgradeStats,       // extra stat lines on every rolled weapon upgrade
+    // --- appended: lifetime multiplier for lingering weapon effects (orbits,
+    // puddles, turrets, vortices) and timed item buffs. 1 = as authored.
+    Duration,
 }
 
 /// <summary>How a modifier folds into a stat. Order of application is fixed by

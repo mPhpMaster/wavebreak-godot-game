@@ -79,6 +79,7 @@ public sealed class TomeBook
         _stats.RemoveAllFrom(def);
         if (def.Op != ModifierOp.Multiplicative || def.PerLevel > 0f)
             _stats.Add(def.Stat, def.Op, def.ValueAtLevel(level), def);
+        TomeExtras.Apply(def, _stats, level);   // multi-stat tomes (Data/Tomes.Expansion.cs)
 
         if (_publish) EventBus.Publish(new TomeAcquired(def.Id, level));
         return true;
