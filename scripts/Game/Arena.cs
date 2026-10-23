@@ -176,6 +176,18 @@ public sealed partial class Arena : Node3D
         for (int i = 0; i < _stage.Ridges; i++) PlaceRidge();
         for (int i = 0; i < _stage.Mounds; i++) PlaceMound();
         for (int i = 0; i < _stage.Landmarks; i++) PlaceLandmark();
+        // Last, so a map without hazards draws exactly the layout it always did.
+        if (_stage.HazardPools > 0) PlaceHazards();
+    }
+
+    /// <summary>Flat hazard pools (Game.MapHazards). They reserve a footprint
+    /// like any feature, so nothing solid stands in one and scatter is culled.</summary>
+    private void PlaceHazards()
+    {
+        var pools = new List<Vector3>();
+        for (int i = 0; i < _stage.HazardPools; i++)
+            if (TryPlace(_stage.HazardRadius + 0.5f, out Vector3 at)) pools.Add(at);
+        AddChild(new MapHazards(_stage, pools));
     }
 
     /// <summary>

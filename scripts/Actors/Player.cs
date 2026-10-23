@@ -299,6 +299,10 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         _airJumpsLeft = AirJumps;
     }
 
+    /// <summary>Scale gravity for this run (low-gravity challenge). Jumps keep
+    /// their apex (v = sqrt(2gh)), they just rise and fall slower.</summary>
+    public void SetGravityScale(float scale) => _gravity = ReadGravity() * Mathf.Max(0.1f, scale);
+
     private static float ReadGravity()
     {
         Variant setting = ProjectSettings.GetSetting("physics/3d/default_gravity");

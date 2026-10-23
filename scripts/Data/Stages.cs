@@ -164,6 +164,33 @@ public partial class StageDef : Resource
     [Export] public float EnemyHealthScale { get; set; } = 1f;
     [Export] public float EnemyDamageScale { get; set; } = 1f;
     [Export] public float EnemySpeedScale { get; set; } = 1f;
+
+    // ------------------------------------------------------------ hooks
+    // Additive hooks for other systems; every default leaves a map as it was.
+
+    /// <summary>Music track id for this map. Empty means "use the map id"
+    /// (<see cref="MusicKey"/>), so a track named after the map just works.</summary>
+    [Export] public string MusicId { get; set; } = "";
+    public string MusicKey => MusicId.Length > 0 ? MusicId : Id;
+
+    /// <summary>Enemy ids the director may spawn as ordinary waves on this map.
+    /// Empty (the default) means the whole roster; bosses are never filtered.
+    /// For theme enemies: list the map's crowd here, including the theme ones.</summary>
+    [Export] public string[] EnemyIds { get; set; } = System.Array.Empty<string>();
+
+    // ------------------------------------------------------------ hazard
+    // Flat pools on the floor (see Game.MapHazards). Placed after every other
+    // feature, so a map with none draws exactly the layout it always did.
+
+    /// <summary>Number of hazard pools. 0 turns the hazard off.</summary>
+    [Export] public int HazardPools { get; set; }
+    [Export] public float HazardRadius { get; set; } = 5f;
+    /// <summary>Move speed multiplier while standing in a pool (1 = no slow).</summary>
+    [Export] public float HazardSlow { get; set; } = 1f;
+    /// <summary>Fraction of max health lost per second in a pool (0 = harmless).</summary>
+    [Export] public float HazardDamage { get; set; }
+    [Export] public Color HazardColor { get; set; } = new(0.3f, 0.7f, 0.8f);
+    [Export] public string HazardName { get; set; } = "";
 }
 
 /// <summary>
@@ -174,7 +201,7 @@ public partial class StageDef : Resource
 /// paced for (<see cref="Game.RunState.TargetSeconds"/>). The first verification
 /// run used 4:30 phases and finished its third boss after 21 minutes.
 /// </summary>
-public static class Stages
+public static partial class Stages
 {
     public static readonly IReadOnlyList<StageDef> Run = new List<StageDef>
     {

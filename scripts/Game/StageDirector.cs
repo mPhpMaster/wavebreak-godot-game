@@ -63,7 +63,7 @@ public sealed class StageDirector
     private readonly EnemyManager _enemies;
     private readonly Player _player;
     private readonly PlayerCamera _camera;
-    private readonly IReadOnlyList<StageDef> _stages;
+    private IReadOnlyList<StageDef> _stages;
     private readonly IReadOnlyList<EnemyDef> _roster;
     private readonly HashSet<string> _fought = new();
 
@@ -98,7 +98,8 @@ public sealed class StageDirector
     public StageDef Stage => _stages[Mathf.Clamp(_index, 0, _stages.Count - 1)];
 
     /// <summary>Length of the current phase's wave section.</summary>
-    public float PhaseLength => _phaseSecondsOverride > 0f ? _phaseSecondsOverride : Stage.PhaseSeconds;
+    public float PhaseLength => _phaseSecondsOverride > 0f ? _phaseSecondsOverride
+        : Stage.PhaseSeconds * Meta.Challenges.PhaseTimeScale;
 
     /// <summary>Seconds until the boss arrives; 0 once it has.</summary>
     public float SecondsToBoss => Mathf.Max(0f, PhaseLength - _run.PhaseSeconds);
@@ -147,9 +148,12 @@ public sealed class StageDirector
         // From here on bosses come from phases, not from the director's timer;
         // both at once would put two bosses on the field at 4:00.
         _enemies.TimedBosses = false;
+        // The boundary check walks every map there is, not just this run's route.
+        bool checkBoundary = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-boundary") >= 0;
+        if (checkBoundary) _stages = Data.Stages.All;
         EnterPhase(Mathf.Clamp(_startPhase - 1, 0, _stages.Count - 1));
 
-        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-boundary") >= 0)
+        if (checkBoundary)
             _ = CheckBoundary();
     }
 
@@ -293,6 +297,7 @@ public sealed class StageDirector
             _enemies.ClearField(ArrivalBreather);
         }
         ApplyScaling(1f);
+        _enemies.StageEnemyIds = stage.EnemyIds is { Length: > 0 } ids ? new HashSet<string>(ids) : null;
 
         PopulateFinds(index);
 

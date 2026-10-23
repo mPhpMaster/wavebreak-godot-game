@@ -99,6 +99,7 @@ public sealed partial class Codex : Control
         foreach (UnlockDef u in Unlocks.All) AddCard(UnlockCard(u));
         foreach (SecretKindDef k in SecretSpawner.Kinds) AddCard(ShrineCard(k));
         foreach (Data.TomeDef t in Data.Tomes.All) AddCard(TomeCard(t));
+        foreach (ChallengeDef c in Challenges.All) AddCard(ChallengeCard(c));
 
         if (BackButton is not null && _cards.Count > 0)
         {
