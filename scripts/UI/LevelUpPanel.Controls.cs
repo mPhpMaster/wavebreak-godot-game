@@ -65,10 +65,22 @@ public sealed partial class LevelUpPanel
             // ui_accept can never land on a control button by accident.
             FocusMode = FocusModeEnum.None,
             MouseFilter = MouseFilterEnum.Stop,
-            CustomMinimumSize = new Vector2(200f, 38f),
+            CustomMinimumSize = new Vector2(210f, 44f),
         };
-        b.AddThemeFontSizeOverride("font_size", 16);
+        b.AddThemeFontSizeOverride("font_size", 17);
         b.AddThemeColorOverride("font_color", ControlInk);
+        // A bright framed button: the old flat dark one was easy to miss under the cards.
+        StyleBoxFlat Box(Color bg, Color border)
+        {
+            var s = new StyleBoxFlat { BgColor = bg, BorderColor = border };
+            s.SetBorderWidthAll(2);
+            s.SetCornerRadiusAll(6);
+            return s;
+        }
+        b.AddThemeStyleboxOverride("normal", Box(new Color(0.10f, 0.22f, 0.32f, 0.96f), new Color(0.45f, 0.85f, 1.00f)));
+        b.AddThemeStyleboxOverride("hover", Box(new Color(0.14f, 0.32f, 0.46f, 0.98f), new Color(0.70f, 0.95f, 1.00f)));
+        b.AddThemeStyleboxOverride("pressed", Box(new Color(0.20f, 0.42f, 0.58f, 1.00f), Colors.White));
+        b.AddThemeStyleboxOverride("disabled", Box(new Color(0.08f, 0.09f, 0.12f, 0.80f), new Color(0.25f, 0.28f, 0.34f)));
         row.AddChild(b);
         return b;
     }

@@ -66,6 +66,27 @@ public sealed partial class Main : Node3D
             _ = RunScreenshot();
         else if (!_guardsChecked && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-input-guards") >= 0)
             _ = CheckInputGuards();
+        else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--levelup-shot=")) is { } shotArg)
+            _ = LevelUpShot(shotArg["--levelup-shot=".Length..]);
+    }
+
+    /// <summary>--levelup-shot=&lt;png&gt;: open a real level-up hand (after a
+    /// few picks, so upgrades and tomes appear too), photograph it, quit.</summary>
+    private async System.Threading.Tasks.Task LevelUpShot(string path)
+    {
+        SceneTree tree = GetTree();
+        async System.Threading.Tasks.Task Wait(double s)
+            => await tree.ToSignal(tree.CreateTimer(s, processAlways: true), SceneTreeTimer.SignalName.Timeout);
+        await Wait(1.0);
+        for (int i = 0; i < 4; i++)
+        {
+            var hand = _offers.Roll(3, _weapons, _inventory, _player.Stats);
+            if (hand.Count > 0) Choose(hand[i % hand.Count]);
+        }
+        _levelUp.Show(_offers.Roll(3, _weapons, _inventory, _player.Stats), Choose);
+        await Wait(0.8);
+        await Screenshot.Capture(tree, this, path);
+        tree.Quit();
     }
 
     // Survives the scene reload a successful restart performs, so the check runs

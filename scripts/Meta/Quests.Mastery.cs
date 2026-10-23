@@ -136,7 +136,10 @@ public static partial class Quests
 /// </summary>
 public static class MasteryQuests
 {
-    public static readonly IReadOnlyList<UnlockDef> All = Build();
+    // Built on first use: static fields initialise in file order, and Build()
+    // reads the reward tables declared further down.
+    private static IReadOnlyList<UnlockDef>? _all;
+    public static IReadOnlyList<UnlockDef> All => _all ??= Build();
 
     // ------------------------------------------------------------ helpers
 
@@ -216,8 +219,10 @@ public static class MasteryQuests
 
         // ---- weapons: kills and max level, generated from every weapon table
         var weapons = new List<WeaponDef>();
-        foreach (WeaponDef w in Catalog.Weapons) weapons.Add(w);
-        foreach (WeaponDef w in MetaContent.Weapons) if (!weapons.Exists(x => x.Id == w.Id)) weapons.Add(w);
+        foreach (WeaponDef w in Catalog.Weapons) if (w is not null) weapons.Add(w);
+        if (MetaContent.Weapons is null) Godot.GD.PushWarning("MasteryQuests: MetaContent.Weapons not ready");
+        foreach (WeaponDef w in MetaContent.Weapons ?? System.Array.Empty<WeaponDef>())
+            if (w is not null && !weapons.Exists(x => x.Id == w.Id)) weapons.Add(w);
         foreach (WeaponDef w in weapons)
         {
             WeaponSkins.TryGetValue(w.Id, out var skins);
