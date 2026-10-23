@@ -359,7 +359,8 @@ public sealed partial class ChestSpawner : Node
             colour = reward.IsBonus ? reward.Tint : Catalog.RarityColor(rarity);
         }
 
-        chest.Open(reward is null || reward.IsBonus ? "SUPPLY" : Catalog.RarityName(rarity), colour);
+        chest.Open(reward is null || reward.IsBonus ? "SUPPLY" : Catalog.RarityName(rarity), colour,
+                   reward is null ? UI.Icons.ForSupply(0f, 10) : UI.Icons.For(reward));
         EventBus.Publish(new PopupRequested(chest.Top + Vector3.Up * 0.9f, name, colour, 1.8f));
         if (cost > 0)
             EventBus.Publish(new PopupRequested(chest.Top, $"-{cost} gold", new Color(1f, 0.78f, 0.25f)));

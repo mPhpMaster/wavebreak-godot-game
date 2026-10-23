@@ -16,7 +16,7 @@ public sealed partial class MerchantPanel : ModalPanel
 {
     private Merchant? _merchant;
     private Label _gold = null!;
-    private readonly List<(Label rarity, Label title, Label effect, Button buy, PanelContainer card)> _cards = new();
+    private readonly List<(Label rarity, Label title, Label effect, Button buy, PanelContainer card, IconView icon)> _cards = new();
 
     public override void _Ready()
     {
@@ -50,12 +50,16 @@ public sealed partial class MerchantPanel : ModalPanel
             int slot = i;
             Button buy = MakeButton("", () => Buy(slot));
 
+            IconView icon = IconView.Make(64f);
+            icon.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+
             col.AddChild(key);
+            col.AddChild(icon);
             col.AddChild(rarity);
             col.AddChild(title);
             col.AddChild(effect);
             col.AddChild(buy);
-            _cards.Add((rarity, title, effect, buy, card));
+            _cards.Add((rarity, title, effect, buy, card, icon));
         }
 
         Body.AddChild(MakeLabel("press  1 · 2 · 3  to buy      Esc / E to leave", 14, InkDim));
@@ -97,6 +101,7 @@ public sealed partial class MerchantPanel : ModalPanel
             if (offer?.Item is not { } item)
             {
                 c.rarity.Text = "";
+                c.icon.Visible = false;
                 c.title.Text = "SOLD";
                 c.title.AddThemeColorOverride("font_color", InkDim);
                 c.effect.Text = "";
@@ -112,6 +117,8 @@ public sealed partial class MerchantPanel : ModalPanel
             bool afford = gold >= price;
             int held = Inventory.Current?.StacksOf(item) ?? 0;
 
+            c.icon.Visible = true;
+            c.icon.Set(Icons.For(item), colour);
             c.rarity.Text = Catalog.RarityName(item.Rarity) + (held > 0 ? $"   · held x{held}" : "   · NEW");
             c.rarity.AddThemeColorOverride("font_color", colour);
             c.title.Text = item.DisplayName;

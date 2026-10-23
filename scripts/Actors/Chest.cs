@@ -293,7 +293,7 @@ public sealed partial class Chest : Node3D
     /// the reward is granted by the caller — so the animation can never be the
     /// reason something was or was not received.
     /// </summary>
-    public void Open(string rarityText, Color rewardColor)
+    public void Open(string rarityText, Color rewardColor, UI.IconSpec? icon = null)
     {
         if (IsOpen) return;
         IsOpen = true;
@@ -330,6 +330,25 @@ public sealed partial class Chest : Node3D
         };
         AddChild(_rewardLabel);
 
+        // The reward's picture rides above its rarity, so the same glyph the
+        // level-up cards and the HUD use tells the player what came out.
+        Sprite3D? picture = null;
+        if (icon is { } spec && UI.Icons.Texture(spec.Glyph) is { } tex)
+        {
+            _rewardLabel.AddChild(picture = new Sprite3D
+            {
+                Texture = tex,
+                Modulate = spec.Color,
+                PixelSize = 0.0062f,
+                Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+                NoDepthTest = true,
+                Shaded = false,
+                RenderPriority = 3,
+                TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
+                Position = new Vector3(0f, 0.68f, 0f),
+            });
+        }
+
         Tween label = CreateTween();
         label.TweenProperty(_rewardLabel, "scale", Vector3.One, 0.25)
              .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
@@ -337,6 +356,8 @@ public sealed partial class Chest : Node3D
              .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
         label.TweenInterval(1.6);
         label.TweenProperty(_rewardLabel, "modulate:a", 0f, 0.5);
+        // 3D nodes do not inherit modulate, so the picture fades on its own.
+        if (picture is not null) label.Parallel().TweenProperty(picture, "modulate:a", 0f, 0.5);
 
         // Linger long enough to be seen open, then sink into the floor and go.
         Tween exit = CreateTween();

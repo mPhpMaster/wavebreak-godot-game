@@ -221,7 +221,7 @@ public sealed partial class StatsPanel : Control
         {
             Color c = Catalog.RarityColor(w.Def.Rarity);
             float dps = w.Interval > 0f ? w.VolleyDamage(stats) / w.Interval : 0f;
-            Row(_loadout, w.Def.DisplayName, $"Lv {w.Level}/{w.Def.MaxLevel}  ~{dps:0} dps", c);
+            Row(_loadout, w.Def.DisplayName, $"Lv {w.Level}/{w.Def.MaxLevel}  ~{dps:0} dps", c, Icons.For(w.Def));
         }
 
         TomeSection();
@@ -238,9 +238,9 @@ public sealed partial class StatsPanel : Control
         {
             string label = item.Count > 1 ? $"{item.DisplayName} x{item.Count}" : item.DisplayName;
             Label l = Text(label, 13, Catalog.RarityColor(item.Rarity));
-            l.CustomMinimumSize = new Vector2(134f, 0f);
+            l.CustomMinimumSize = new Vector2(112f, 0f);
             l.ClipText = true;
-            grid.AddChild(l);
+            grid.AddChild(IconView.Row(Icons.For(item.Def), l, 18f));
         }
 
         Clear(_settings);
@@ -353,9 +353,17 @@ public sealed partial class StatsPanel : Control
         column.AddChild(Text(title, 15, Heading));
     }
 
-    private static void Row(VBoxContainer column, string name, string value, Color? valueColour = null)
+    private static void Row(VBoxContainer column, string name, string value, Color? valueColour = null,
+                            IconSpec? icon = null)
     {
         var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        if (icon is { } spec)
+        {
+            IconView view = IconView.Make(18f, disc: false);
+            view.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            view.Set(spec);
+            row.AddChild(view);
+        }
         Label left = Text(name, 14, valueColour == Dim ? Dim : Ink);
         left.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         left.ClipText = true;

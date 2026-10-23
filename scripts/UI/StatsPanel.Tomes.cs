@@ -20,7 +20,7 @@ public sealed partial class StatsPanel
             foreach (TomeDef t in book.Held)
             {
                 int level = book.LevelOf(t);
-                Row(_loadout, t.DisplayName, $"Lv {level}/{t.MaxLevel}  {t.DescribeTotal(level)}", t.Tint);
+                Row(_loadout, t.DisplayName, $"Lv {level}/{t.MaxLevel}  {t.DescribeTotal(level)}", t.Tint, Icons.For(t));
             }
         }
 

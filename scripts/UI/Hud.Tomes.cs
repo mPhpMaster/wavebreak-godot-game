@@ -60,7 +60,7 @@ public sealed partial class Hud
             row = Text(name, 15, Ink);
             row.CustomMinimumSize = new Vector2(0f, RowHeight - 2f);
             if (def is not null) row.AddThemeColorOverride("font_color", def.Tint);
-            _tomeList.AddChild(row);
+            _tomeList.AddChild(def is not null ? IconView.Row(Icons.For(def), row, RowHeight - 2f) : row);
             _tomeRows[e.Id] = row;
         }
 
