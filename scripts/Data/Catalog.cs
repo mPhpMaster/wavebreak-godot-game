@@ -213,7 +213,7 @@ public static partial class Catalog
             _ when effect.Stat == Stat.HealthRegen => $"{Signed(v, "0.#")}{Meta.Loc.T("/min")}",
             _ => Signed(v, "0.##"),
         };
-        return $"{name} {amount}";
+        return $"{name} {Meta.Loc.Ltr(amount)}";
     }
 
 

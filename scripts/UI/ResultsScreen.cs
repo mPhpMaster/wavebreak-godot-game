@@ -254,11 +254,11 @@ public sealed partial class ResultsScreen : Control
         int weaponCount = weapons?.Weapons.Count ?? 0;
 
         _statNames.Text = Loc.T("Time\nLevel\nKills\nElites\nGold\nWeapons\nItems\nExperience");
-        _statValues.Text = $"{clock}\n{level}\n{kills}\n{elites}\n{gold}\n{weaponCount}\n{stacks}\n{xp}";
+        _statValues.Text = Loc.IsolateNumbers($"{clock}\n{level}\n{kills}\n{elites}\n{gold}\n{weaponCount}\n{stacks}\n{xp}");
         if (_payout is { } pay)
         {
             _statNames.Text += $"\n{Loc.T(Meta.Pearls.Name)}";
-            _statValues.Text += $"\n+{pay.Total}";
+            _statValues.Text += "\n" + Loc.Ltr($"+{pay.Total}");
         }
     }
 
@@ -279,7 +279,7 @@ public sealed partial class ResultsScreen : Control
         {
             _loadout.AddChild(Heading(Loc.T(pay.Headline).ToUpperInvariant()));
             foreach (Meta.RunRewards.Line line in pay.Lines)
-                if (line.Amount > 0) _loadout.AddChild(Row($"{Loc.T(line.Label)}  ·  +{line.Amount}", PearlTint));
+                if (line.Amount > 0) _loadout.AddChild(Row($"{Loc.T(line.Label)}  ·  {Loc.Ltr($"+{line.Amount}")}", PearlTint));
             _loadout.AddChild(Row(Loc.F("Balance  ·  {0}", Meta.Pearls.Balance), InkDim));
         }
 

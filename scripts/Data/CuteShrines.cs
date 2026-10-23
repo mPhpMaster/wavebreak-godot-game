@@ -114,7 +114,7 @@ public static class CuteShrines
             Stat.Damage => $"x{1f + v:0.00}",
             Stat.AttackSpeed or Stat.AreaSize => $"x{v:0.00}",
             Stat.CritChance => $"{v * 100f:0.#}%",
-            Stat.MoveSpeed => $"{v:0.0} m/s",
+            Stat.MoveSpeed => Meta.Loc.F("{0:0.0} m/s", v),
             Stat.Luck => $"{v:0.00}",
             _ => $"{v:0.#}",
         };

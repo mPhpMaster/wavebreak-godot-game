@@ -722,7 +722,7 @@ public sealed partial class ChestSpawner : Node
         int price = PriceFor(chest);
         Expect($"prompt shows for the chest in reach (focus={_focus == chest}, visible={_prompt.Visible})",
                _focus == chest && _prompt.Visible);
-        Expect($"prompt names the price: \"{_prompt.Text}\"", _prompt.Text.Contains($"{price} gold"));
+        Expect($"prompt names the price: \"{_prompt.Text}\"", _prompt.Text.Contains(Meta.Loc.F("{0} gold", price)));
         await Shot("chest-prompt-poor");
         int deniedBefore = Denied;
         Press();

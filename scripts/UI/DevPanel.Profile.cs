@@ -23,11 +23,12 @@ public sealed partial class DevPanel
         Label summary = DevUi.Lbl("", 14, DevUi.Dim);
         OnRefresh(() =>
         {
-            pearls.Text = $"{Pearls.Name}: {Pearls.Balance:N0}";
+            pearls.Text = $"{Loc.T(Pearls.Name)}: {Loc.Ltr($"{Pearls.Balance:N0}")}";
             int tiers = 0;
             for (int i = 0; i < DifficultyTiers.All.Count; i++) if (DifficultyTiers.IsUnlocked(i)) tiers++;
-            summary.Text = $"unlocks {Profile.UnlockedIds.Count}/{Unlocks.All.Count}  ·  shrines {Profile.FoundSecrets.Count}/{SecretSpawner.Kinds.Count}" +
-                           $"  ·  tiers {tiers}/{DifficultyTiers.All.Count}  ·  shop {MetaShop.Describe()}";
+            summary.Text = Loc.F("unlocks {0}/{1}  ·  shrines {2}/{3}  ·  tiers {4}/{5}  ·  shop {6}",
+                                 Profile.UnlockedIds.Count, Unlocks.All.Count, Profile.FoundSecrets.Count, SecretSpawner.Kinds.Count,
+                                 tiers, DifficultyTiers.All.Count, MetaShop.Describe());
         });
 
         page.AddChild(DevUi.Row(DevUi.Heading("UNLOCKS"), summary));
@@ -55,7 +56,7 @@ public sealed partial class DevPanel
         foreach (long amount in new long[] { 100, 1000, 10000 })
         {
             long a = amount;
-            money.AddChild(Reg($"pearls_{a}", DevUi.Btn($"+{a:N0} {Pearls.Name}", () => ProfileAct("Pearls", () =>
+            money.AddChild(Reg($"pearls_{a}", DevUi.Btn(Loc.IsArabic ? $"{Loc.Ltr($"+{a:N0}")} {Loc.T(Pearls.Name)}" : $"+{a:N0} {Pearls.Name}", () => ProfileAct("Pearls", () =>
             {
                 DevCheats.GivePearls(a);
                 return $"+{a:N0} {Pearls.Name} (balance {Pearls.Balance:N0}).";
@@ -78,12 +79,12 @@ public sealed partial class DevPanel
             if (_resetArmedAt == 0 || now - _resetArmedAt > 5000)
             {
                 _resetArmedAt = now;
-                reset.Text = "CLICK AGAIN TO WIPE THE PROFILE";
+                reset.Text = Loc.T("CLICK AGAIN TO WIPE THE PROFILE");
                 Say("Reset armed: click the red button again within 5 seconds to wipe everything.", false);
                 return;
             }
             _resetArmedAt = 0;
-            reset.Text = "Reset whole profile...";
+            reset.Text = Loc.T("Reset whole profile...");
             ProfileAct("Reset profile", () =>
             {
                 DevCheats.ResetProfile();
@@ -129,8 +130,8 @@ public sealed partial class DevPanel
         {
             if (!IsInstanceValid(row)) continue;
             bool on = Profile.IsUnlocked(u.Id);
-            string secret = u.Secret ? "  [secret]" : "";
-            row.Text = $"{(on ? "[x]" : "[  ]")}  {u.Name}{secret}   ·   {Unlocks.DescribeReward(u)}   ·   {u.Description}";
+            string secret = u.Secret ? Loc.T("  [secret]") : "";
+            row.Text = $"{(on ? "[x]" : "[  ]")}  {Loc.T(u.Name)}{secret}   ·   {Unlocks.DescribeReward(u)}   ·   {Loc.T(u.Description)}";
             row.AddThemeColorOverride("font_color", on ? DevUi.Good : u.Secret ? DevUi.Dim : DevUi.Ink);
         }
     }

@@ -476,7 +476,7 @@ public sealed partial class MainMenu : Node3D
         bool hidden = !open && source is { Secret: true };
 
         _charName.Text = hidden ? "???" : Loc.T(c.DisplayName);
-        _charLook.Text = $"look: {c.LookId}   ·   id: {c.Id}";
+        _charLook.Text = Loc.F("look: {0}   ·   id: {1}", Loc.Ltr(c.LookId), Loc.Ltr(c.Id));
         _charLook.AutoTranslateMode = AutoTranslateModeEnum.Disabled; // ids, a developer line
         _charBlurb.Text = Loc.T(hidden ? "Someone else walks these shores. You have not met them yet." : c.Blurb);
         _charStats.Text = hidden ? "" :
@@ -575,7 +575,7 @@ public sealed partial class MainMenu : Node3D
         _mute = new CheckButton { Text = Loc.T("Mute all"), ButtonPressed = AudioSettings.Muted };
         _mute.AddThemeFontSizeOverride("font_size", 18);
         _mute.Toggled += on => { if (on != AudioSettings.Muted) AudioSettings.ToggleMute(); };
-        page.AddChild(_mute);
+        page.AddChild(Loc.IsRtl ? MuteRow(_mute, n => Row(n, new HBoxContainer(), MakeLabel("", 16, Ink))) : _mute);
 
         page.AddChild(SectionLabel("CONTROLS & DISPLAY"));
         HSlider sens = Slider(GameSettings.MinSensitivity, GameSettings.MaxSensitivity, GameSettings.SensitivityStep, GameSettings.Sensitivity);
@@ -660,6 +660,22 @@ public sealed partial class MainMenu : Node3D
         row.AddChild(control);
         row.AddChild(value);
         return row;
+    }
+
+    /// <summary>Right to left, the mute switch sits in a row like the sliders
+    /// (name, then the control under the sliders' start) instead of a lone
+    /// switch at the far edge. <paramref name="row"/> builds the row with an
+    /// empty HBox in the control slot; the switch moves into it, text-less.</summary>
+    internal static Control MuteRow(CheckButton mute, Func<string, Control> row)
+    {
+        string name = mute.Text;
+        mute.Text = "";
+        mute.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+        mute.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        Control r = row(name);
+        foreach (Node n in r.GetChildren())
+            if (n is HBoxContainer slot) { slot.AddChild(mute); break; }
+        return r;
     }
 
     private static HSlider Slider(double min, double max, double step, double value)

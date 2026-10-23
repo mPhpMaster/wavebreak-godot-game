@@ -67,5 +67,43 @@ public static class Screenshot
         GD.Print(err == Error.Ok
             ? $"[shot] saved {path} ({img.GetWidth()}x{img.GetHeight()})"
             : $"[shot] FAILED to save {path}: {err}");
+        if (Meta.Loc.IsArabic && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--latin-report") >= 0)
+            LatinReport(tree.Root, path);
+    }
+
+    /// <summary>--latin-report (with --lang=ar): after each capture, print every
+    /// visible label, button or 3D label whose text still has a Latin word in
+    /// it, so a translation gap shows up as a line instead of a squint at a PNG.
+    /// Key names and short tokens (E, Esc, x1.5, SHIFT) are expected and pass.</summary>
+    private static void LatinReport(Node root, string shot)
+    {
+        var word = new System.Text.RegularExpressions.Regex(@"[A-Za-z]{3,}");
+        var allowed = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+        {
+            "WAVEBREAK", "SHIFT", "Esc", "Enter", "Space", "Ctrl", "Tab", "Alt", "Mouse", "Backspace", "dps",
+        };
+        void Walk(Node n)
+        {
+            string? text = n switch
+            {
+                Label { Visible: true } l when l.IsVisibleInTree() => l.Text,
+                Button { Visible: true } b when b.IsVisibleInTree() => b.Text,
+                RichTextLabel { Visible: true } r when r.IsVisibleInTree() => r.GetParsedText(),
+                Label3D { Visible: true } l3 when l3.IsVisibleInTree() => l3.Text,
+                _ => null,
+            };
+            // A whole-key text is translated by the engine at draw time.
+            if (!string.IsNullOrEmpty(text) && n.AutoTranslateMode != Node.AutoTranslateModeEnum.Disabled)
+                text = TranslationServer.Translate(text);
+            if (!string.IsNullOrEmpty(text))
+                foreach (System.Text.RegularExpressions.Match m in word.Matches(text))
+                    if (!allowed.Contains(m.Value))
+                    {
+                        GD.Print($"LATIN {System.IO.Path.GetFileName(shot)} {n.Name}: {text.Replace('\n', '|')}");
+                        break;
+                    }
+            foreach (Node c in n.GetChildren()) Walk(c);
+        }
+        Walk(root);
     }
 }

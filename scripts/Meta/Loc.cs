@@ -75,23 +75,113 @@ public static class Loc
     public static string T(string english)
     {
         if (!IsArabic || string.IsNullOrEmpty(english)) return english;
-        if (ArabicTable.TryGetValue(english, out string? ar) && ar.Length > 0) return ar;
         if (Cache.TryGetValue(english, out string? hit)) return hit;
-        string result = MatchPattern(english, strict: false) ?? english;
+        string result = ArabicTable.TryGetValue(english, out string? ar) && ar.Length > 0
+            ? ar
+            : MatchPattern(english, strict: false) ?? english;
+        result = IsolateNumbers(result);
         if (Cache.Count > 20000) Cache.Clear();
         Cache[english] = result;
         return result;
     }
 
     /// <summary>Translate a format string, then fill it: <c>F("Level {0}", n)</c>.
-    /// String arguments are translated too (names, stat words), numbers are not.</summary>
+    /// String arguments are translated too (names, stat words), numbers are not.
+    /// In Arabic every number in the result is kept left-to-right (see
+    /// <see cref="IsolateNumbers"/>), and string arguments that carry no Arabic
+    /// (key names, "x1.00", seeds) are isolated whole.</summary>
     public static string F(string englishFormat, params object?[] args)
     {
         if (!IsArabic) return string.Format(englishFormat, args);
         var local = new object?[args.Length];
-        for (int i = 0; i < args.Length; i++) local[i] = args[i] is string s ? T(s) : args[i];
-        try { return string.Format(T(englishFormat), local); }
+        for (int i = 0; i < args.Length; i++)
+            local[i] = args[i] is string s ? LtrIfLatin(T(s)) : args[i];
+        try { return IsolateNumbers(string.Format(T(englishFormat), local)); }
         catch (FormatException) { return string.Format(englishFormat, args); }
+    }
+
+    // ================================================================ bidi
+
+    /// <summary>Unicode LEFT-TO-RIGHT ISOLATE and POP DIRECTIONAL ISOLATE.</summary>
+    public const char Lri = '⁦', Pdi = '⁩';
+
+    /// <summary>Keep <paramref name="text"/> in left-to-right order inside
+    /// right-to-left text ("9 / 0", "x1.00", "+76%", "Lv 8/8", key names).
+    /// Wraps it in a directional isolate in Arabic (text with Arabic letters in
+    /// it gets only its numbers isolated); English gets it unchanged.</summary>
+    public static string Ltr(string text)
+    {
+        if (!IsRtl || string.IsNullOrEmpty(text)) return text;
+        if (text[0] == Lri && text[^1] == Pdi) return text;
+        // A value that carries Arabic ("6.0 م/ث") reads right to left as a
+        // whole; only its numbers are kept left to right.
+        if (HasArabic(text)) return IsolateNumbers(text);
+        return Lri + text + Pdi;
+    }
+
+    /// <summary><see cref="Ltr"/> for a formatted value: <c>Loc.Ltr($"{x:0.00}x")</c>.</summary>
+    public static string Ltr(FormattableString text) => Ltr(text.ToString());
+
+    /// <summary>Isolates a string with no Arabic letters but something
+    /// direction-sensitive in it (a digit, a Latin letter, a sign); Arabic text
+    /// is returned untouched (its numbers are handled by IsolateNumbers).</summary>
+    private static string LtrIfLatin(string s)
+    {
+        if (s.Length == 0 || HasArabic(s)) return s;
+        foreach (char c in s)
+            if (!char.IsWhiteSpace(c) && c is not ('·' or '—' or '–')) return Ltr(s);
+        return s;
+    }
+
+    public static bool HasArabic(string s)
+    {
+        foreach (char c in s)
+            if (c is >= '؀' and <= 'ۿ' or >= 'ݐ' and <= 'ݿ' or >= 'ﭐ' and <= '﷿' or >= 'ﹰ' and <= '﻿')
+                return true;
+        return false;
+    }
+
+    /// <summary>A number as it is written in the UI: an optional sign / "x" /
+    /// "~", digits with . , : - separators ("1920x1080" stays one), an optional "/ n" fraction (spaces
+    /// allowed around the slash), and an optional trailing % or x. In an
+    /// Arabic line the bidi algorithm would otherwise move the sign and the
+    /// percent to the wrong side ("%30+") and flip fractions ("5 / 0").
+    /// Separate numbers ("1 · 2 · 3") stay separate, so lists that mirror
+    /// with their labels keep mirroring.</summary>
+    private static readonly Regex NumberRun = new(
+        @"(?<hole>\{\d+(?:[:,][^}]*)?\})|(?<![\p{L}\d])(?:[+\-−~±]|[x×](?=\d))?\d+(?:[.,:\-]\d+)*(?:x\d+)?(?:[ ]?/[ ]?[+\-]?\d+(?:[.,:\-]\d+)*)?(?:%|x(?![\p{L}\d]))?",
+        RegexOptions.CultureInvariant);
+
+    /// <summary>In Arabic, wraps every number run in a left-to-right isolate
+    /// (text already inside an isolate, and {0}-style format holes, are left
+    /// alone). English: unchanged.</summary>
+    public static string IsolateNumbers(string text) => IsRtl ? IsolateNumbersAlways(text) : text;
+
+    private static string IsolateNumbersAlways(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        bool any = false;
+        foreach (char c in text) if (c is >= '0' and <= '9') { any = true; break; }
+        if (!any) return text;
+        var sb = new StringBuilder(text.Length + 8);
+        int i = 0;
+        while (i < text.Length)
+        {
+            int open = text.IndexOf(Lri, i);
+            int end = open < 0 ? text.Length : open;
+            if (end > i) sb.Append(NumberRun.Replace(text[i..end], m => m.Groups["hole"].Success ? m.Value : Lri + m.Value + Pdi));
+            if (open < 0) break;
+            int depth = 0, j = open;
+            for (; j < text.Length; j++)
+            {
+                if (text[j] is Lri or '⁧' or '⁨') depth++;
+                else if (text[j] == Pdi && --depth == 0) break;
+            }
+            j = Math.Min(j, text.Length - 1);
+            sb.Append(text, open, j - open + 1);
+            i = j + 1;
+        }
+        return sb.ToString();
     }
 
     /// <summary>Arabic text for a key, exact or through a pattern whose every
@@ -248,7 +338,9 @@ public static class Loc
         if (_registered) return;
         _registered = true;
         var tr = new Translation { Locale = Arabic };
-        foreach (var (en, ar) in ArabicTable) tr.AddMessage(en, ar);
+        // Whole-key labels are translated by the engine, never through T, so
+        // their numbers are isolated here.
+        foreach (var (en, ar) in ArabicTable) tr.AddMessage(en, IsolateNumbersAlways(ar));
         TranslationServer.AddTranslation(tr);
     }
 

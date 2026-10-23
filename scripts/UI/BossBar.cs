@@ -146,7 +146,7 @@ public sealed partial class BossBar : Control
             string name = _boss.Def?.DisplayName is { Length: > 0 } n
                 ? (Loc.IsArabic ? Loc.T(n) : n.ToUpperInvariant())
                 : Loc.T("BOSS");
-            _name.Text = name + (phase >= 2 ? Loc.T("  -  ENRAGED") : "") + (count > 1 ? $"  (+{count - 1})" : "");
+            _name.Text = name + (phase >= 2 ? Loc.T("  -  ENRAGED") : "") + (count > 1 ? "  (" + Loc.Ltr($"+{count - 1}") + ")" : "");
             _fill.Color = phase >= 2 ? FillEnraged : Fill;
         }
     }

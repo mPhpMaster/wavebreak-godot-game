@@ -5,6 +5,7 @@ using Wavebreak.Actors;
 using Wavebreak.Combat;
 using Wavebreak.Data;
 using Wavebreak.Game;
+using Wavebreak.Meta;
 using Wavebreak.Progression;
 using Wavebreak.Stats;
 
@@ -67,7 +68,7 @@ public sealed partial class DevPanel
         foreach (int amount in new[] { 100, 1000, 10000 })
         {
             int a = amount;
-            goldRow.AddChild(Reg($"gold_{a}", DevUi.Btn($"+{a:N0} gold", () => Act("Gold", () =>
+            goldRow.AddChild(Reg($"gold_{a}", DevUi.Btn(Loc.F("+{0:N0} gold", a), () => Act("Gold", () =>
             {
                 M.Inventory.DevSetGold(M.Inventory.Gold + a);
                 return $"+{a:N0} gold (now {M.Inventory.Gold:N0}).";
@@ -93,7 +94,7 @@ public sealed partial class DevPanel
         foreach (int n in new[] { 1, 5, 10 })
         {
             int k = n;
-            xpRow.AddChild(Reg($"level_{k}", DevUi.Btn($"Level up x{k}", () => LevelUp(k))));
+            xpRow.AddChild(Reg($"level_{k}", DevUi.Btn(Loc.F("Level up x{0}", k), () => LevelUp(k))));
         }
         SpinBox levels = DevUi.Spin(1, 200, 25);
         xpRow.AddChild(levels);
@@ -142,12 +143,12 @@ public sealed partial class DevPanel
         {
             if (Main.Instance is not { } m || !IsInstanceValid(m)) return;
             PlayerHealth h = m.Player.Health;
-            hp.Text = $"{h.Current:0} / {h.Max:0}" + (Screenshot.Invulnerable ? "   (god mode)" : "");
-            gold.Text = $"{m.Inventory.Gold:N0} gold";
-            level.Text = $"level {m.Inventory.Level}  ·  {m.Inventory.XpIntoLevel}/{m.Inventory.XpForNextLevel} XP";
+            hp.Text = Loc.Ltr($"{h.Current:0} / {h.Max:0}") + (Screenshot.Invulnerable ? Loc.T("   (god mode)") : "");
+            gold.Text = Loc.F("{0:N0} gold", m.Inventory.Gold);
+            level.Text = Loc.F("level {0}  ·  {1}/{2} XP", m.Inventory.Level, m.Inventory.XpIntoLevel, m.Inventory.XpForNextLevel);
             if (LevelUpChoices.Current is { } c)
-                charges.Text = $"rerolls {c.RerollsLeft}  ·  banishes {c.BanishesLeft}  ·  skips {c.SkipsLeft}";
-            speed.Text = $"{m.Player.Stats.Get(Stat.MoveSpeed):0.0} m/s";
+                charges.Text = Loc.F("rerolls {0}  ·  banishes {1}  ·  skips {2}", c.RerollsLeft, c.BanishesLeft, c.SkipsLeft);
+            speed.Text = Loc.F("{0:0.0} m/s", m.Player.Stats.Get(Stat.MoveSpeed));
         });
         return scroll;
     }
@@ -242,7 +243,7 @@ public sealed partial class DevPanel
         var weapons = AllWeapons.ToList();
         var items = AllItems.ToList();
         var tomes = Tomes.All.ToList();
-        left.AddChild(DevUi.Heading($"ADD ANYTHING  ·  {weapons.Count} weapons, {items.Count} items, {tomes.Count} tomes"));
+        left.AddChild(DevUi.Heading(Loc.F("ADD ANYTHING  ·  {0} weapons, {1} items, {2} tomes", weapons.Count, items.Count, tomes.Count)));
         var list = new DevFilterList("search weapons, items, tomes...");
         _buildList = list;
         foreach (var (label, kind) in new[] { ("All", 0), ("Weapons", 1), ("Items", 2), ("Tomes", 3) })
@@ -256,7 +257,7 @@ public sealed partial class DevPanel
         {
             WeaponDef def = w;
             list.Add($"weapon {def.Id} {def.DisplayName} {def.Rarity}", ContentRow(Icons.For(def), def.DisplayName, Catalog.RarityColor(def.Rarity),
-                $"weapon · {def.Rarity}",
+                Kind("weapon", def.Rarity),
                 Reg($"add_weapon:{def.Id}", DevUi.Btn("Add", () => AddWeapon(def, max: false), minWidth: 56f)),
                 Reg($"max_weapon:{def.Id}", DevUi.Btn("Max", () => AddWeapon(def, max: true), minWidth: 56f))), 1);
         }
@@ -264,7 +265,7 @@ public sealed partial class DevPanel
         {
             ItemDef def = i;
             list.Add($"item {def.Id} {def.DisplayName} {def.Rarity}", ContentRow(Icons.For(def), def.DisplayName, Catalog.RarityColor(def.Rarity),
-                $"item · {def.Rarity}",
+                Kind("item", def.Rarity),
                 Reg($"add_item:{def.Id}", DevUi.Btn("Add", () => AddItem(def, 1), minWidth: 56f)),
                 Reg($"add5_item:{def.Id}", DevUi.Btn("+5", () => AddItem(def, 5), minWidth: 56f))), 2);
         }
@@ -272,7 +273,7 @@ public sealed partial class DevPanel
         {
             TomeDef def = t;
             list.Add($"tome {def.Id} {def.DisplayName} {def.Rarity}", ContentRow(Icons.For(def), def.DisplayName, Catalog.RarityColor(def.Rarity),
-                $"tome · {def.Rarity}",
+                Kind("tome", def.Rarity),
                 Reg($"add_tome:{def.Id}", DevUi.Btn("Add", () => AddTome(def, max: false), minWidth: 56f)),
                 Reg($"max_tome:{def.Id}", DevUi.Btn("Max", () => AddTome(def, max: true), minWidth: 56f))), 3);
         }
@@ -318,6 +319,10 @@ public sealed partial class DevPanel
         return split;
     }
 
+    /// <summary>"weapon · Rare", in the player's language.</summary>
+    private static string Kind(string kind, Rarity rarity)
+        => Loc.IsArabic ? $"{Loc.T(kind)} · {Loc.T(Catalog.RarityName(rarity))}" : $"{kind} · {rarity}";
+
     private static HBoxContainer ContentRow(IconSpec icon, string name, Color color, string kind, params Control[] buttons)
     {
         var row = new HBoxContainer { CustomMinimumSize = new Vector2(0f, 32f) };
@@ -330,7 +335,8 @@ public sealed partial class DevPanel
         n.ClipText = true;
         row.AddChild(n);
         Label k = DevUi.Lbl(kind, 13, DevUi.Dim);
-        k.CustomMinimumSize = new Vector2(130f, 0f);
+        // No kind (the build side): the name gets the room.
+        k.CustomMinimumSize = new Vector2(kind.Length > 0 ? 130f : 0f, 0f);
         row.AddChild(k);
         foreach (Control b in buttons) row.AddChild(b);
         return row;
@@ -351,11 +357,11 @@ public sealed partial class DevPanel
         foreach (Node n in _buildSide.GetChildren()) n.QueueFree();
         Main m = M;
 
-        _buildSide.AddChild(DevUi.Lbl($"WEAPONS  {m.Weapons.Weapons.Count}/{WeaponSystem.MaxWeapons}", 14, DevUi.Dim));
+        _buildSide.AddChild(DevUi.Lbl(Loc.F("WEAPONS  {0}/{1}", m.Weapons.Weapons.Count, WeaponSystem.MaxWeapons), 14, DevUi.Dim));
         foreach (WeaponRuntime w in m.Weapons.Weapons.ToList())
         {
             WeaponDef def = w.Def;
-            _buildSide.AddChild(ContentRow(Icons.For(def), $"{def.DisplayName}  Lv {w.Level}/{def.MaxLevel}", Catalog.RarityColor(def.Rarity), "",
+            _buildSide.AddChild(ContentRow(Icons.For(def), Loc.F("{0}  Lv {1}/{2}", def.DisplayName, w.Level, def.MaxLevel), Catalog.RarityColor(def.Rarity), "",
                 DevUi.Btn("Max", () => AddWeapon(def, max: true), minWidth: 50f),
                 Reg($"remove_weapon:{def.Id}", DevUi.Btn("Remove", () => Act($"Remove {def.DisplayName}", () =>
                 {
@@ -367,20 +373,20 @@ public sealed partial class DevPanel
         }
 
         TomeBook? book = TomeBook.Current;
-        _buildSide.AddChild(DevUi.Lbl($"TOMES  {book?.Count ?? 0}/{book?.Slots ?? Tomes.MaxSlots}", 14, DevUi.Dim));
+        _buildSide.AddChild(DevUi.Lbl(Loc.F("TOMES  {0}/{1}", book?.Count ?? 0, book?.Slots ?? Tomes.MaxSlots), 14, DevUi.Dim));
         if (book is not null)
             foreach (TomeDef t in book.Held.ToList())
             {
                 TomeDef def = t;
-                _buildSide.AddChild(ContentRow(Icons.For(def), $"{def.DisplayName}  Lv {book.LevelOf(def)}/{def.MaxLevel}",
+                _buildSide.AddChild(ContentRow(Icons.For(def), Loc.F("{0}  Lv {1}/{2}", def.DisplayName, book.LevelOf(def), def.MaxLevel),
                     Catalog.RarityColor(def.Rarity), "", DevUi.Btn("Max", () => AddTome(def, max: true), minWidth: 50f)));
             }
 
-        _buildSide.AddChild(DevUi.Lbl($"ITEMS  {m.Inventory.TotalStacks}", 14, DevUi.Dim));
+        _buildSide.AddChild(DevUi.Lbl(Loc.F("ITEMS  {0}", m.Inventory.TotalStacks), 14, DevUi.Dim));
         foreach (ItemStack s in m.Inventory.Items.ToList())
         {
             ItemDef def = s.Def;
-            _buildSide.AddChild(ContentRow(Icons.For(def), s.Count > 1 ? $"{def.DisplayName}  x{s.Count}" : def.DisplayName,
+            _buildSide.AddChild(ContentRow(Icons.For(def), s.Count > 1 ? $"{Loc.T(def.DisplayName)}  {Loc.Ltr($"x{s.Count}")}" : def.DisplayName,
                 Catalog.RarityColor(def.Rarity), "",
                 DevUi.Btn("+1", () => AddItem(def, 1), minWidth: 40f),
                 Reg($"remove_item:{def.Id}", DevUi.Btn("-1", () => Act($"Remove {def.DisplayName}", () =>

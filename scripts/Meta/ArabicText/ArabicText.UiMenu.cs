@@ -57,7 +57,7 @@ public static partial class ArabicText
         ("Mouse sensitivity", "حساسية الماوس"),
         ("Language", "اللغة"),
         ("In a run:  - / =  volume   ·   9 / 0  effects   ·   [ / ]  music   ·   M  mute",
-         "أثناء الجولة:  - / =  الصوت   ·   9 / 0  المؤثرات   ·   [ / ]  الموسيقى   ·   M  كتم"),
+         "أثناء الجولة:  ⁦- / =⁩  الصوت   ·   ⁦9 / 0⁩  المؤثرات   ·   ⁦[ / ]⁩  الموسيقى   ·   ⁦M⁩  كتم"),
         ("GRAPHICS", "الرسوميات"),
         ("KEY BINDINGS", "تعيين الأزرار"),
 

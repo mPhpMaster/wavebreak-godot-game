@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Godot;
 using Wavebreak.Actors;
 using Wavebreak.Game;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -365,9 +366,9 @@ public sealed partial class DevPanel : CanvasLayer
     private static string DescribeContext()
     {
         if (Main.Instance is not { } m || !IsInstanceValid(m) || m.Run is null)
-            return $"title screen  ·  profile {Meta.Profile.Path ?? "(memory only: automated run)"}";
-        string state = m.Run.Over ? "run over" : $"phase {m.Run.Phase}/{m.Run.PhaseCount} {m.Run.StageName}  ·  {m.Run.Clock}";
-        return $"{state}  ·  x{Engine.TimeScale:0.##} time" + (UsedThisRun ? "  ·  dev run: not counted" : "");
+            return Loc.F("title screen  ·  profile {0}", Loc.Ltr(Meta.Profile.Path ?? Loc.T("(memory only: automated run)")));
+        string state = m.Run.Over ? Loc.T("run over") : Loc.F("phase {0}/{1} {2}  ·  {3}", m.Run.Phase, m.Run.PhaseCount, m.Run.StageName, m.Run.Clock);
+        return Loc.F("{0}  ·  x{1:0.##} time", state, Engine.TimeScale) + (UsedThisRun ? Loc.T("  ·  dev run: not counted") : "");
     }
 
     // -------------------------------------------------------------- actions
@@ -411,7 +412,9 @@ public sealed partial class DevPanel : CanvasLayer
         LastStatus = message;
         LastOk = ok;
         if (_status is null || !IsInstanceValid(_status)) return;
-        _status.Text = message;
+        // LastStatus stays English (the self-check reads it); the line shows the
+        // player's language.
+        _status.Text = Loc.T(message);
         _status.AddThemeColorOverride("font_color", ok ? DevUi.Good : DevUi.Bad);
     }
 

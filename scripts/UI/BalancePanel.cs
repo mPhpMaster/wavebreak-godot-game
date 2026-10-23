@@ -91,16 +91,17 @@ public sealed partial class BalancePanel : ModalPanel
             Label name = CuteStyle.Text(Loc.T(Catalog.StatName(b.Stat)), 16, CuteStyle.Ink);
             name.CustomMinimumSize = new Vector2(150f, 0f);
             row.AddChild(name);
-            Label from = CuteStyle.Text(before[b.Stat], 16, CuteStyle.InkSoft, HorizontalAlignment.Right);
+            Label from = CuteStyle.Text(Loc.Ltr(before[b.Stat]), 16, CuteStyle.InkSoft, HorizontalAlignment.Right);
             from.CustomMinimumSize = new Vector2(90f, 0f);
             row.AddChild(from);
-            row.AddChild(CuteStyle.Text("  →  ", 16, CuteStyle.InkSoft));
+            // The arrow points the way the row reads: before -> after.
+            row.AddChild(CuteStyle.Text(Loc.IsRtl ? "  ←  " : "  →  ", 16, CuteStyle.InkSoft));
             Color c = top ? CuteStyle.Coral.Darkened(0.2f) : new Color(0.20f, 0.62f, 0.42f);
-            Label to = CuteStyle.Text(after[b.Stat], 17, c);
+            Label to = CuteStyle.Text(Loc.Ltr(after[b.Stat]), 17, c);
             to.CustomMinimumSize = new Vector2(90f, 0f);
             row.AddChild(to);
             string delta = top ? CuteShrines.DescribeUnits(b, -plan.Take) : CuteShrines.DescribeUnits(b, plan.Give);
-            row.AddChild(CuteStyle.Text(delta.Replace(Loc.T(Catalog.StatName(b.Stat)), "").Trim(), 13, c));
+            row.AddChild(CuteStyle.Text(Loc.Ltr(delta.Replace(Loc.T(Catalog.StatName(b.Stat)), "").Trim().Trim(Loc.Lri, Loc.Pdi)), 13, c));
 
             _rows.AddChild(row);
         }

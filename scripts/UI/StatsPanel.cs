@@ -270,9 +270,9 @@ public sealed partial class StatsPanel : Control
         foreach ((string action, string label) in ControlRows)
         {
             if (!InputMap.HasAction(action)) continue;
-            string a = Keybinds.Describe(Keybinds.Get(action, 0));
+            string a = Loc.T(Keybinds.Describe(Keybinds.Get(action, 0)));
             InputEvent? second = Keybinds.Get(action, 1);
-            Row(_settings, second is null ? a : $"{a}, {Keybinds.Describe(second)}", Loc.T(label), Dim);
+            Row(_settings, second is null ? a : $"{a}{(Loc.IsArabic ? "، " : ", ")}{Loc.T(Keybinds.Describe(second))}", Loc.T(label), Dim);
         }
         Row(_settings, "Esc", Loc.T("pause menu"), Dim);
 
@@ -393,7 +393,7 @@ public sealed partial class StatsPanel : Control
         left.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         left.ClipText = true;
         row.AddChild(left);
-        row.AddChild(Text(value, 14, valueColour ?? Ink, HorizontalAlignment.Right));
+        row.AddChild(Text(Loc.IsolateNumbers(value), 14, valueColour ?? Ink, HorizontalAlignment.Right));
         column.AddChild(row);
     }
 

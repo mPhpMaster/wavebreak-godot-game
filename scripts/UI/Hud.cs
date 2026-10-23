@@ -630,9 +630,9 @@ public sealed partial class Hud : Control
         if (hasShield)
             _shieldFill.AnchorRight = Mathf.Clamp(_health.Shield / shieldMax, 0f, 1f);
 
-        _healthLabel.Text = shieldMax > 0.01f && _health.Shield >= 1f
+        _healthLabel.Text = Loc.Ltr(shieldMax > 0.01f && _health.Shield >= 1f
             ? $"{Mathf.CeilToInt(current)} / {Mathf.RoundToInt(max)}  +{Mathf.CeilToInt(_health.Shield)}"
-            : $"{Mathf.CeilToInt(current)} / {Mathf.RoundToInt(max)}";
+            : $"{Mathf.CeilToInt(current)} / {Mathf.RoundToInt(max)}");
     }
 
     /// <summary>

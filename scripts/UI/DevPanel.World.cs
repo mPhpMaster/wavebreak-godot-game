@@ -68,7 +68,7 @@ public sealed partial class DevPanel
         split.AddChild(left);
         var enemies = Catalog.Enemies.ToList();
         SpinBox count = DevUi.Spin(1, 60, 1);
-        left.AddChild(DevUi.Row(DevUi.Heading($"ENEMIES  ·  {enemies.Count}"), DevUi.Lbl("   count", 14, DevUi.Dim), count));
+        left.AddChild(DevUi.Row(DevUi.Heading(Loc.F("ENEMIES  ·  {0}", enemies.Count)), DevUi.Lbl("   count", 14, DevUi.Dim), count));
         var list = new DevFilterList("search enemies...");
         foreach (var (label, mode) in new[] { ("All", 0), ("Normal", 1), ("Elite", 2), ("Boss", 3) })
         {
@@ -92,7 +92,7 @@ public sealed partial class DevPanel
             n.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             n.ClipText = true;
             row.AddChild(n);
-            Label info = DevUi.Lbl($"{tag}  {def.Health:0} hp  ·  from {RunState.Format(def.UnlockAtSeconds)}", 13, DevUi.Dim);
+            Label info = DevUi.Lbl(Loc.F("{0}  {1:0} hp  ·  from {2}", tag, def.Health, RunState.Format(def.UnlockAtSeconds)), 13, DevUi.Dim);
             info.CustomMinimumSize = new Vector2(190f, 0f);
             row.AddChild(info);
             row.AddChild(Reg($"spawn_enemy:{def.Id}", DevUi.Btn("Spawn", () => SpawnEnemies(def, (int)count.Value), minWidth: 70f)));
@@ -121,12 +121,12 @@ public sealed partial class DevPanel
         foreach (MapShrineKind kind in System.Enum.GetValues<MapShrineKind>())
         {
             MapShrineKind k = kind;
-            shrines.AddChild(Reg($"shrine_{k}", DevUi.Btn($"{k} shrine", () => SpawnShrine(k))));
+            shrines.AddChild(Reg($"shrine_{k}", DevUi.Btn(Loc.IsArabic ? Loc.T(MapShrines.Name(k)) : $"{k} shrine", () => SpawnShrine(k))));
         }
         foreach (SecretKindDef secret in SecretSpawner.Kinds)
         {
             SecretKindDef k = secret;
-            shrines.AddChild(Reg($"secret_{k.Id}", DevUi.Btn($"Hidden: {k.DisplayName}", () => SpawnSecret(k), DevUi.Accent)));
+            shrines.AddChild(Reg($"secret_{k.Id}", DevUi.Btn(Loc.F("Hidden: {0}", k.DisplayName), () => SpawnSecret(k), DevUi.Accent)));
         }
         right.AddChild(shrines);
 
@@ -167,13 +167,13 @@ public sealed partial class DevPanel
             if (em.SpawnAt(def, SpawnPoint(side) + Vector3.Up * 0.2f) is not null) made++;
         }
         if (made == 0) throw new System.InvalidOperationException($"no room ({em.AliveCount}/{em.MaxAlive} alive)");
-        return $"Spawned {made} x {def.DisplayName}" + (made < count ? $" ({count - made} refused: live cap)." : ".");
+        return made < count ? $"Spawned {made} x {def.DisplayName} ({count - made} refused: live cap)." : $"Spawned {made} x {def.DisplayName}.";
     });
 
     private bool SpawnChest(ChestTier tier, bool free) => Act("Chest", () =>
     {
         Chest? c = ChestSpawner.Instance?.SpawnAt(tier, free, NextSpot());
-        return c is null ? null : $"{(free ? "Free " : "")}{tier} chest placed.";
+        return c is null ? null : free ? $"Free {tier} chest placed." : $"{tier} chest placed.";
     });
 
     private bool SpawnShrine(MapShrineKind kind) => Act($"{kind} shrine", () =>
@@ -233,7 +233,7 @@ public sealed partial class DevPanel
         for (int i = 1; i <= sd.PhaseCount; i++)
         {
             int n = i;
-            phases.AddChild(Reg($"phase_{n}", DevUi.Btn($"Phase {n}: {sd.Route[n - 1].DisplayName}", () => Act($"Phase {n}", () =>
+            phases.AddChild(Reg($"phase_{n}", DevUi.Btn(Loc.F("Phase {0}: {1}", n, sd.Route[n - 1].DisplayName), () => Act($"Phase {n}", () =>
             {
                 M.Stages.DevJumpToPhase(n);
                 return $"Jumped to phase {n} ({M.Run.StageName}).";
@@ -250,9 +250,9 @@ public sealed partial class DevPanel
 
         page.AddChild(DevUi.Heading("MAP & ROUTE"));
         var maps = new OptionButton { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(260f, 30f) };
-        foreach (StageDef s in Stages.All) maps.AddItem(s.DisplayName);
+        foreach (StageDef s in Stages.All) maps.AddItem(Loc.T(s.DisplayName));
         var routes = new OptionButton { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(260f, 30f) };
-        foreach (RouteDef r in Routes.All) routes.AddItem(r.Name);
+        foreach (RouteDef r in Routes.All) routes.AddItem(Loc.T(r.Name));
         page.AddChild(DevUi.Flow(
             Reg("map_pick", maps),
             Reg("set_map", DevUi.Btn("Play this map now", () => Act("Map", () =>
@@ -267,7 +267,9 @@ public sealed partial class DevPanel
                 RouteDef r = Routes.All[Mathf.Clamp(routes.Selected, 0, Routes.All.Count - 1)];
                 var stages = Routes.Build(r, M.Run.Seed);
                 M.Stages.DevSetRoute(stages);
-                return $"Route {r.Name}: {string.Join(" > ", stages.Select(s => s.DisplayName))}.";
+                return Loc.IsArabic
+                    ? Loc.F("Route {0}: {1}.", r.Name, string.Join("  <  ", stages.Select(s => Loc.T(s.DisplayName))))
+                    : $"Route {r.Name}: {string.Join(" > ", stages.Select(s => s.DisplayName))}.";
             })))));
 
         page.AddChild(DevUi.Heading("CHALLENGES (enemy effects apply now, player effects from the next run)"));
@@ -330,9 +332,9 @@ public sealed partial class DevPanel
         {
             if (Main.Instance is not { } m || !IsInstanceValid(m)) return;
             StageDirector d = m.Stages;
-            string boss = d.State == StageDirector.PhaseState.Waves ? $"boss in {RunState.Format(d.SecondsToBoss)}" : d.State.ToString();
-            phase.Text = $"{m.Run.Phase}/{m.Run.PhaseCount}  {m.Run.StageName}  ·  {boss}  ·  route {Routes.Active?.Name}";
-            tier.Text = $"{DifficultyTiers.Active.Name}  ·  challenges: {Challenges.Describe(Challenges.Active)}";
+            string boss = d.State == StageDirector.PhaseState.Waves ? Loc.F("boss in {0}", RunState.Format(d.SecondsToBoss)) : Loc.T(d.State.ToString());
+            phase.Text = Loc.F("{0}/{1}  {2}  ·  {3}  ·  route {4}", m.Run.Phase, m.Run.PhaseCount, m.Run.StageName, boss, Routes.Active?.Name ?? "");
+            tier.Text = Loc.F("{0}  ·  challenges: {1}", DifficultyTiers.Active.Name, ChallengeNames());
             speed.Text = $"x{Engine.TimeScale:0.##}";
         });
         return scroll;

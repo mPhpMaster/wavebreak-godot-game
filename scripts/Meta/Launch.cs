@@ -17,6 +17,7 @@ namespace Wavebreak.Meta;
 ///     --menu-shot=&lt;png&gt;     boot the title, capture, quit
 ///     --menu-page=&lt;page&gt;    main | play | codex | codex:secrets | settings | keys | graphics | boombox  (with --menu-shot)
 ///     --lang=en|ar          play in this language (menu flag; automated runs default to English)
+///     --latin-report        with --lang=ar: list visible text still holding Latin words at each capture
 ///     --dump-strings=&lt;txt&gt; write every content string with no Arabic translation, then quit
 ///     --secret-test         walk to every hidden secret and press interact
 ///     --offer-check         prove earned items/weapons are in the level-up pool
@@ -75,6 +76,7 @@ public static class Launch
                 SecretTest = true;
                 SkipsMenu = true;
             }
+            else if (arg == "--latin-report") { }   // Game/Screenshot: a capture diagnostic, menu or run
             else if (arg.StartsWith("--")) SkipsMenu = true;
         }
     }

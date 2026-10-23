@@ -310,7 +310,7 @@ public sealed partial class Codex : Control
     {
         long have = Quests.StoredProgress(u);
         if (have < 0) return "LOCKED";
-        string amount = $"{System.Math.Min(have, (long)u.Threshold):N0} / {u.Threshold:N0}";
+        string amount = Loc.Ltr($"{System.Math.Min(have, (long)u.Threshold):N0} / {u.Threshold:N0}");
         return Quests.IsRunMetric(u.Metric) ? Loc.F("BEST  {0}", amount) : amount;
     }
 

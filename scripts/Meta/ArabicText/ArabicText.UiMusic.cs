@@ -33,7 +33,7 @@ public static partial class ArabicText
         ("one-shot sting", "مقطع قصير مرة واحدة"),
         ("Locked: {0}", "مقفول: {0}"),
         ("In a run: [ / ] music volume. The pause menu's Settings has the same mode and skip.",
-         "أثناء الجولة: [ / ] لصوت الموسيقى. إعدادات قائمة الإيقاف فيها نفس الوضع والتخطي."),
+         "أثناء الجولة: ⁦[ / ]⁩ لصوت الموسيقى. إعدادات قائمة الإيقاف فيها نفس الوضع والتخطي."),
         ("PLAY to listen, PIN to play a loop everywhere. Locked tracks open as you reach maps and clear quests.",
          "اضغط العب لتسمع، وثبّت لتشغيل المقطع في كل مكان. المقاطع المقفولة تنفتح لما توصل الخرائط وتنهي المهام."),
         ("{0} is locked: {1}.", "{0} مقفول: {1}."),

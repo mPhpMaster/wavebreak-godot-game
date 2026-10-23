@@ -31,7 +31,9 @@ public sealed partial class MicrowavePanel : ModalPanel
         _gold = MakeLabel("", 18, Gold);
         Body.AddChild(_gold);
 
-        var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(720f, 320f) };
+        // Three fixed columns that always fit: a long name is trimmed rather
+        // than widening the grid past the panel (which hid a column).
+        var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(720f, 320f), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         Body.AddChild(scroll);
         _grid = new GridContainer { Columns = 3, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         _grid.AddThemeConstantOverride("h_separation", 8);
@@ -91,6 +93,9 @@ public sealed partial class MicrowavePanel : ModalPanel
                                   (maxed ? Loc.T("MAXED") : Loc.F("{0} gold", price)), () => Cook(captured));
 
             b.CustomMinimumSize = new Vector2(232f, 58f);
+            b.ClipText = true;
+            b.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            b.TooltipText = Loc.T(stack.DisplayName);
             b.AddThemeColorOverride("font_color", Catalog.RarityColor(stack.Rarity));
             b.AddThemeColorOverride("font_disabled_color", Catalog.RarityColor(stack.Rarity).Darkened(0.5f));
             b.Disabled = maxed || gold < price;

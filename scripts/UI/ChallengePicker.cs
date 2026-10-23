@@ -264,7 +264,7 @@ public sealed partial class ChallengePicker : Control
         var tags = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         tags.AddThemeConstantOverride("separation", 4);
         tags.AddChild(CuteStyle.Tag(def.GoalShort, color.Lerp(Colors.White, 0.35f), CuteStyle.Ink, 11));
-        tags.AddChild(CuteStyle.Tag($"+{def.Pearls}", CuteStyle.Butter.Lerp(Colors.White, 0.35f), CuteStyle.Ink, 11));
+        tags.AddChild(CuteStyle.Tag(Loc.Ltr($"+{def.Pearls}"), CuteStyle.Butter.Lerp(Colors.White, 0.35f), CuteStyle.Ink, 11));
         if (def.Cosmetic != CosmeticKind.None)
             tags.AddChild(CuteStyle.Tag(Loc.T(def.Cosmetic == CosmeticKind.Hat ? "HAT" : "SKIN"), CuteStyle.Rose.Lerp(Colors.White, 0.3f), CuteStyle.Ink, 11));
         tcol.AddChild(tags);

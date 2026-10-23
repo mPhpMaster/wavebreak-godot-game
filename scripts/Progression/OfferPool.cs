@@ -167,7 +167,7 @@ public sealed class Offer
         float before = def.CooldownAtLevel(from);
         float after = def.CooldownAtLevel(to);
         if (MathF.Abs(before - after) > 0.001f)
-            sb.Append($", {before:0.00}s → {after:0.00}s");
+            sb.Append(Loc.F(", {0:0.00}s → {1:0.00}s", before, after));
 
         int extra = def.ProjectilesAtLevel(to) - def.ProjectilesAtLevel(from);
         if (extra > 0) sb.Append(extra > 1 ? Loc.F(", +{0} projectiles", extra) : Loc.F(", +{0} projectile", extra));
@@ -197,7 +197,7 @@ public sealed class Offer
         string detailText = currentLevel <= 0 ? Loc.T("New tome") : Loc.F("Level {0} → {1}", currentLevel, next);
         string effect = currentLevel <= 0
             ? Loc.F("{0} per level (max {1})", def.DescribeStep(), def.MaxLevel)
-            : $"{def.DescribeTotal(currentLevel)} → {def.DescribeTotal(next)}";
+            : $"{def.DescribeTotal(currentLevel)}{(Loc.IsRtl ? " ← " : " → ")}{def.DescribeTotal(next)}";
         string description = string.IsNullOrWhiteSpace(def.Description) ? effect : def.Description;
         return new Offer(def.DisplayName, detail, description, effect, def.Rarity, def.Tint, tome: def, detailText: detailText);
     }

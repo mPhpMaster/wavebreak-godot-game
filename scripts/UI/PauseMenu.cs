@@ -368,7 +368,9 @@ public sealed partial class PauseMenu : Node
 
         mute.AddThemeFontSizeOverride("font_size", 18);
         mute.Toggled += on => { if (on != AudioSettings.Muted) AudioSettings.ToggleMute(); };
-        page.AddChild(mute);
+        page.AddChild(Loc.IsRtl
+            ? MainMenu.MuteRow(mute, n => Row(n, new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill }, MainMenu.MakeLabel("", 16, Colors.White)))
+            : mute);
 
         // Boombox (UI/BoomboxPage on the title screen has the full list).
         Boombox.Load();

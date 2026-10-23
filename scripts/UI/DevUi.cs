@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -66,7 +67,7 @@ internal static class DevUi
 
     public static Button Btn(string text, Action onPressed, Color? color = null, float minWidth = 0f)
     {
-        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(minWidth, 30f) };
+        var b = new Button { Text = Loc.T(text), FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(minWidth, 30f) };
         if (color is { } c) b.AddThemeColorOverride("font_color", c);
         b.Pressed += onPressed;
         return b;
@@ -74,14 +75,14 @@ internal static class DevUi
 
     public static CheckButton Toggle(string text, bool on, Action<bool> onToggled)
     {
-        var b = new CheckButton { Text = text, ButtonPressed = on, FocusMode = Control.FocusModeEnum.None };
+        var b = new CheckButton { Text = Loc.T(text), ButtonPressed = on, FocusMode = Control.FocusModeEnum.None };
         b.Toggled += v => onToggled(v);
         return b;
     }
 
     public static Label Lbl(string text, int size = 15, Color? color = null)
     {
-        var l = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore, VerticalAlignment = VerticalAlignment.Center };
+        var l = new Label { Text = Loc.T(text), MouseFilter = Control.MouseFilterEnum.Ignore, VerticalAlignment = VerticalAlignment.Center };
         l.AddThemeFontSizeOverride("font_size", size);
         l.AddThemeColorOverride("font_color", color ?? Ink);
         return l;
@@ -112,7 +113,10 @@ internal static class DevUi
 
     public static SpinBox Spin(double min, double max, double value, double step = 1)
     {
-        var s = new SpinBox { MinValue = min, MaxValue = max, Value = value, Step = step, CustomMinimumSize = new Vector2(96f, 30f) };
+        // Western digits like the rest of the game, in Arabic too.
+        var s = new SpinBox { MinValue = min, MaxValue = max, Value = value, Step = step, CustomMinimumSize = new Vector2(96f, 30f),
+                              LocalizeNumeralSystem = false };
+        s.GetLineEdit().LocalizeNumeralSystem = false;
         s.GetLineEdit().FocusMode = Control.FocusModeEnum.Click;
         return s;
     }
@@ -150,7 +154,7 @@ internal sealed class DevFilterList
 
     public DevFilterList(string placeholder)
     {
-        Search = new LineEdit { PlaceholderText = placeholder, ClearButtonEnabled = true,
+        Search = new LineEdit { PlaceholderText = Loc.T(placeholder), ClearButtonEnabled = true,
                                 SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(180f, 32f) };
         Search.TextChanged += _ => Apply();
         _count = DevUi.Lbl("", 13, DevUi.Dim);
@@ -163,7 +167,8 @@ internal sealed class DevFilterList
 
     public void Add(string key, Control row, object? tag = null)
     {
-        _rows.Add((key.ToLowerInvariant(), row, tag));
+        // Arabic names are searchable too (the English key stays first).
+        _rows.Add(((Loc.IsArabic ? key + " " + Loc.T(key) : key).ToLowerInvariant(), row, tag));
         Rows.AddChild(row);
     }
 
@@ -180,6 +185,6 @@ internal sealed class DevFilterList
             if (on) shown++;
         }
         Shown = shown;
-        _count.Text = $"{shown}/{_rows.Count}";
+        _count.Text = Loc.Ltr($"{shown}/{_rows.Count}");
     }
 }
