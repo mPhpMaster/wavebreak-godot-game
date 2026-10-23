@@ -23,7 +23,7 @@ public sealed partial class BossBar : Control
 {
     private const float Width = 560f;
     private const float BarHeight = 16f;
-    private const float Top = 82f;          // under the run clock
+    private const float Top = 158f;         // under the clock, phase readout and shrine banner
 
     private static readonly Color Trough = new(0.05f, 0.06f, 0.09f, 0.85f);
     private static readonly Color Fill = new(0.90f, 0.20f, 0.24f);
