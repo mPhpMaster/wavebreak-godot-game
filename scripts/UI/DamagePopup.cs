@@ -88,7 +88,9 @@ public sealed partial class DamagePopup : Node3D
     {
         if (string.IsNullOrEmpty(request.Text)) return;
 
-        Popup? popup = _pool?.Get();
+        // The graphics setting caps numbers below the pool size: recycle the
+        // oldest instead of drawing another.
+        Popup? popup = _live.Count >= Meta.GraphicsSettings.MaxDamageNumbers ? null : _pool?.Get();
         if (popup is null)
         {
             // Pool exhausted. Steal the oldest live entry: it has had the most

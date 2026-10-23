@@ -200,6 +200,7 @@ public partial class PlayerCamera : Node3D
         _arm.Margin = 0.3f;
         if (SphereCast) _arm.Shape = new SphereShape3D { Radius = 0.35f };
 
+        FieldOfView = Meta.GraphicsSettings.Current.Fov;
         _camera.Fov = FieldOfView;
         _camera.Near = 0.05f;
         _camera.Far = 500.0f;
@@ -250,6 +251,7 @@ public partial class PlayerCamera : Node3D
     /// </summary>
     public void Shake(float strength, float seconds)
     {
+        strength *= Meta.GraphicsSettings.ShakeScale;
         if (strength <= 0f || seconds <= 0f) return;
 
         _shakeStrength = Mathf.Max(_shakeStrength, strength);
@@ -393,7 +395,9 @@ public partial class PlayerCamera : Node3D
         _arm.SpringLength = _armLength;
 
         _fovKick = Mathf.Lerp(_fovKick, 0f, Damp(7f, dt));
-        float fov = FieldOfView + Mathf.Clamp(FovBoost, 0f, 18f) + _fovKick;
+        // The speed boost and dash kick ride on top of the player's field of
+        // view, scaled by the "speed & dash zoom" setting.
+        float fov = FieldOfView + (Mathf.Clamp(FovBoost, 0f, 18f) + _fovKick) * Meta.GraphicsSettings.ScreenFxScale;
         _camera.Fov = Mathf.Lerp(_camera.Fov, fov, Damp(9f, dt));
 
         UpdateShake(dt);

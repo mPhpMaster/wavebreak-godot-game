@@ -40,6 +40,7 @@ public sealed partial class ThemeDresser : Node
             PropFactory.Scatter(arena, new Core.Rng(20261022), radius - 3f, t, density, clearRadius: 8f);
         arena.AddChild(PropFactory.MakeWorldEnvironment(t));
         arena.AddChild(PropFactory.MakeSun(t));
+        Meta.GraphicsSettings.ApplyScene(arena);
         GD.Print($"[art] arena dressed as {t.Id}");
     }
 

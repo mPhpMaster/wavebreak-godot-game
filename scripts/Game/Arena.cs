@@ -436,9 +436,11 @@ public sealed partial class Arena : Node3D
 
         // Seeded from the layout, not the run: the dressing is part of the place.
         var rng = new Core.Rng((ulong)_stage.LayoutSeed ^ 0xD2E55UL);
-        Node3D props = PropFactory.Scatter(this, rng, _stage.InRadius - 3f, _theme, _stage.PropDensity,
+        Node3D props = PropFactory.Scatter(this, rng, _stage.InRadius - 3f, _theme, _stage.PropDensity * Meta.GraphicsSettings.PropDensityScale,
                                            clearRadius: _stage.ClearRadius);
         CullScatter(props);
+        // The new sky and sun take the player's graphics settings at once.
+        Meta.GraphicsSettings.ApplyScene(this);
     }
 
     /// <summary>

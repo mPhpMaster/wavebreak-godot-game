@@ -64,6 +64,7 @@ public sealed partial class MainMenu : Node3D
     private readonly List<(HSlider slider, VolumeChannel channel)> _volumeSliders = new();
     private CheckButton _mute = null!;
     private Codex _codex = null!;
+    private GraphicsPanel _graphics = null!;
 
     // pearl shop / difficulty (UI/MetaShopPage, UI/DifficultyPicker)
     private MetaShopPage _shop = null!;
@@ -87,7 +88,8 @@ public sealed partial class MainMenu : Node3D
         Profile.EnsureLoaded();
         GameSettings.Load();
         Keybinds.Load();
-        GameSettings.ApplyWindow();
+        GraphicsSettings.Load();
+        GraphicsSettings.ApplyWindowOnce();
         AudioSettings.Load();
         AudioSettings.Apply();
         MusicDirector.PlayTitle(this);
@@ -99,6 +101,7 @@ public sealed partial class MainMenu : Node3D
 
         BuildBackdrop();
         BuildUi();
+        GraphicsSettings.ApplyAll(this);
         ShowPage(DevReturnPage ?? (Launch.MenuShot is not null ? Launch.MenuPage : "main"));
         DevReturnPage = null;
         DevPanel.Install(this);
@@ -299,6 +302,7 @@ public sealed partial class MainMenu : Node3D
         _pages["codex"] = BuildCodexPage();
         _pages["settings"] = BuildSettingsPage();
         _pages["keys"] = BuildKeysPage();
+        _pages["graphics"] = BuildGraphicsPage();
         _pages["shop"] = _shop = new MetaShopPage(() => ShowPage("main"));
         _pages["records"] = BuildLeaderboardPage();
         _pages["run"] = _runPicker = new ChallengePicker(() => ShowPage("play"));
@@ -563,13 +567,9 @@ public sealed partial class MainMenu : Node3D
         sens.ValueChanged += v => { GameSettings.SetSensitivity((float)v); sensValue.Text = $"{GameSettings.Sensitivity:0.00}x"; };
         page.AddChild(Row("Mouse sensitivity", sens, sensValue));
 
-        var full = new CheckButton { Text = "Fullscreen", ButtonPressed = GameSettings.Fullscreen };
-        full.AddThemeFontSizeOverride("font_size", 18);
-        full.Toggled += GameSettings.SetFullscreen;
-        page.AddChild(full);
-
         Label keys = MakeLabel("In a run:  - / =  volume   ·   9 / 0  effects   ·   [ / ]  music   ·   M  mute", 14, InkDim);
         page.AddChild(keys);
+        page.AddChild(MenuButton("GRAPHICS", () => ShowPage("graphics")));
         page.AddChild(MenuButton("KEY BINDINGS", () => ShowPage("keys")));
         page.AddChild(MenuButton("BACK", () => ShowPage("main")));
         return page;
@@ -584,6 +584,17 @@ public sealed partial class MainMenu : Node3D
         frame.AddThemeStyleboxOverride("panel", style);
         Place(frame, 44f, 180f, 640f, 530f);
         frame.AddChild(new KeybindPanel(() => ShowPage("settings")));
+        return frame;
+    }
+
+    private Control BuildGraphicsPage()
+    {
+        var frame = new PanelContainer();
+        var style = new StyleBoxFlat { BgColor = PanelBack, ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 12, ContentMarginBottom = 12 };
+        style.SetCornerRadiusAll(6);
+        frame.AddThemeStyleboxOverride("panel", style);
+        Place(frame, 44f, 176f, 700f, 534f);
+        frame.AddChild(_graphics = new GraphicsPanel(() => ShowPage("settings"), 370f));
         return frame;
     }
 
@@ -643,6 +654,11 @@ public sealed partial class MainMenu : Node3D
             case "settings":
                 _volumeSliders[0].slider.GrabFocus();
                 break;
+            case "graphics":
+                _graphics.Refresh();
+                if (arg == "bottom") _graphics.FocusLast();
+                else _graphics.FocusFirst();
+                break;
             case "shop":
                 _shop.Refresh();
                 if (arg.Length > 0) _shop.FocusLine(arg); else _shop.FocusFirst();
@@ -673,11 +689,11 @@ public sealed partial class MainMenu : Node3D
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (KeybindPanel.AnyListening) return;
+        if (KeybindPanel.AnyListening || GraphicsPanel.Blocking) return;
         if (@event.IsActionPressed("ui_cancel") && _page != "main")
         {
             GetViewport().SetInputAsHandled();
-            ShowPage(_page switch { "run" => "play", "toggler" => "shop", _ => "main" });
+            ShowPage(_page switch { "run" => "play", "toggler" => "shop", "keys" or "graphics" => "settings", _ => "main" });
         }
     }
 
