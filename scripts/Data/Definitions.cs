@@ -105,6 +105,15 @@ public enum EnemyBehavior
     Artillery,
     /// <summary>Marks a spot beside the player, then teleports there.</summary>
     Blinker,
+    // ---- cute wave behaviours (Actors/Enemy.Cute.cs)
+    /// <summary>Sits disguised as a pot until the player comes close, then lunges.</summary>
+    Mimic,
+    /// <summary>Holds range and blows slow bubbles that trap the player briefly.</summary>
+    Bubbler,
+    /// <summary>Puffs up (hard to hurt) and rolls down a painted lane.</summary>
+    Puffer,
+    /// <summary>Sidles in sideways, then pinches the space in front of it.</summary>
+    Pincher,
 }
 
 /// <summary>One verb in a boss's moveset. See <see cref="BossAttack"/>.</summary>

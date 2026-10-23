@@ -55,7 +55,8 @@ public sealed partial class Enemy
     public bool IsBurrowed => _burrowed;
 
     /// <summary>Shooters, healers and artillery hold a band instead of closing in.</summary>
-    private bool HoldsRange => Behavior is EnemyBehavior.Shooter or EnemyBehavior.Healer or EnemyBehavior.Artillery;
+    private bool HoldsRange => Behavior is EnemyBehavior.Shooter or EnemyBehavior.Healer or EnemyBehavior.Artillery
+                                       or EnemyBehavior.Bubbler;
 
     // ------------------------------------------------------------ lifecycle
 
@@ -83,6 +84,7 @@ public sealed partial class Enemy
         // the spawn frame (the content audit) meets an ordinary body.
         if (def.Behavior == EnemyBehavior.Burrower) _surfacedFor = def.AbilityCooldown;
         if (def.Aura != EnemyAura.None) _auraDecal = EnemyAttacks.AcquireDecal();
+        SpawnCute();                                // Enemy.Cute.cs
     }
 
     private void EndExpansion()
@@ -91,6 +93,7 @@ public sealed partial class Enemy
         _trail = null;
         EnemyAttacks.ReleaseDecal(_auraDecal);
         _auraDecal = null;
+        EndCute();                                  // Enemy.Cute.cs
     }
 
     private void Burrow()
@@ -246,6 +249,7 @@ public sealed partial class Enemy
             info.Amount = 0f;
             return true;
         }
+        if (_cute) CuteIntercept(info);             // Enemy.Cute.cs
         if (_def is { ShieldArc: > 0f } def)
         {
             Vector3 dir = new(info.Direction.X, 0f, info.Direction.Z);
@@ -311,6 +315,10 @@ public sealed partial class Enemy
                     _tele = EnemyAttacks.AcquireDecal();
                 }
                 break;
+
+            default:
+                BeginCute(def, distance, heading);      // Enemy.Cute.cs
+                break;
         }
     }
 
@@ -331,6 +339,9 @@ public sealed partial class Enemy
                 break;
             case EnemyBehavior.Blinker:
                 _tele?.SetDisc(_actTo, MathF.Max(0.8f, _bodyRadius * 1.8f), t, BlinkColor);
+                break;
+            default:
+                WindUpCute(t, heading);                 // Enemy.Cute.cs
                 break;
         }
     }
@@ -394,7 +405,7 @@ public sealed partial class Enemy
                 break;
             }
             default:
-                Recover(RecoverTime);
+                if (!ReleaseCute(playerFeet)) Recover(RecoverTime);   // Enemy.Cute.cs
                 break;
         }
     }

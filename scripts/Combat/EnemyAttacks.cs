@@ -258,6 +258,7 @@ public static class EnemyAttacks
 
         for (int i = 0; i < LiveHazards.Count; i++) RetireHazard(LiveHazards[i]);
         LiveHazards.Clear();
+        CuteHazards.Clear();
     }
 
     // ------------------------------------------------------------ spawning
@@ -368,6 +369,8 @@ public static class EnemyAttacks
             SwapRemove(LiveHazards, i);
             RetireHazard(h);
         }
+
+        CuteHazards.Tick(dt, targetFeet, target);
     }
 
     /// <summary>Returns false when the hazard is finished.</summary>

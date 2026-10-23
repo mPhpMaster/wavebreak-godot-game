@@ -156,6 +156,7 @@ public sealed partial class Enemy
     /// <summary>Unit-scale steering for the idle state.</summary>
     private Vector3 Locomotion(Vector3 heading, float distance, bool hasTarget, Vector3 separation)
     {
+        if (_cute && CuteLocomotion(heading, distance, hasTarget, separation, out Vector3 cuteWish)) return cuteWish;
         float seek;
         Vector3 strafe = Vector3.Zero;
 
@@ -196,6 +197,7 @@ public sealed partial class Enemy
     private void StepBehaviour(float dt, Vector3 playerFeet, IDamageable? player, float distance, Vector3 heading)
     {
         if (_def is null) return;
+        if (_cute) StepCute(dt, playerFeet, player, distance, heading);   // Enemy.Cute.cs
 
         if (_act != Act.None)
         {
@@ -757,6 +759,7 @@ public sealed partial class Enemy
             glow = 0.7f;
         }
 
+        if (_cute) CutePose(ref pose, ref glow);    // Enemy.Cute.cs
         WritePose(pose, glow);
     }
 

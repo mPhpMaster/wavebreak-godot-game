@@ -107,6 +107,11 @@ public sealed class ModelSpec
     /// <summary>Seed for the small variations (rock knobs, spike angles).</summary>
     public uint Seed = 1;
 
+    /// <summary>A hand-built body (see <see cref="CustomBody"/>, used by
+    /// <c>CuteModels</c>): when set, the builder calls it instead of the body
+    /// plan for <see cref="Body"/>, which then only picks the animation.</summary>
+    public System.Action<CustomBody>? Custom;
+
     // --------------------------------------------------------------- imported
 
     /// <summary>An imported character scene. When set, the procedural fields above
