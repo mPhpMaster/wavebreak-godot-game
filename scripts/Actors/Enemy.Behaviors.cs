@@ -148,6 +148,7 @@ public sealed partial class Enemy
         _glow = 0f;
         if (_posed) WritePose(Vector3.One, 0f);
         _posed = false;
+        EndExpansion();
     }
 
     // ---------------------------------------------------------- locomotion
@@ -162,7 +163,7 @@ public sealed partial class Enemy
         {
             seek = 0f;
         }
-        else if (!HasMoves && Behavior == EnemyBehavior.Shooter)
+        else if (!HasMoves && HoldsRange)
         {
             // Hold a band, not a point: a shooter that parks on an exact radius
             // is a turret, and one that circles inside the band makes the
@@ -248,6 +249,10 @@ public sealed partial class Enemy
                     _actTo = new Vector3(playerFeet.X, GlobalPosition.Y, playerFeet.Z);
                     _tele = EnemyAttacks.AcquireDecal();
                 }
+                break;
+
+            default:
+                BeginExpansion(def, distance, heading, playerFeet);
                 break;
         }
     }
@@ -351,6 +356,9 @@ public sealed partial class Enemy
                 _actDir = FlatDir(_actTo - GlobalPosition, _actDir);
                 _tele?.SetDisc(_actTo, def.AbilityRadius, t * 0.5f, LeapColor);
                 break;
+            default:
+                WindUpExpansion(t, heading);
+                break;
         }
     }
 
@@ -388,6 +396,9 @@ public sealed partial class Enemy
                 _abilityTimer = cooldown;
                 // Off the ground: no weapon knockback or steering mid-arc.
                 _knockback = Vector3.Zero;
+                break;
+            default:
+                ReleaseExpansion(playerFeet);
                 break;
         }
     }
@@ -456,7 +467,7 @@ public sealed partial class Enemy
         _actTo = playerFeet;
 
         BeginWindUp(heading, move.WindUp * (_phase >= 2 ? 0.8f : 1f));
-        if (move.Move is BossMove.Slam or BossMove.Charge or BossMove.Summon)
+        if (move.Move is BossMove.Slam or BossMove.Charge or BossMove.Summon or BossMove.Riptide or BossMove.Surface or BossMove.Maelstrom)
             _tele = EnemyAttacks.AcquireDecal();
     }
 
@@ -526,7 +537,7 @@ public sealed partial class Enemy
                 _tele?.SetDisc(GlobalPosition, 3.2f, t, SummonColor);
                 break;
             default:
-                _actDir = heading;
+                if (!WindUpBossExpansion(m, t, heading)) _actDir = heading;
                 break;
         }
     }
@@ -602,6 +613,10 @@ public sealed partial class Enemy
                 Recover(0.5f);
                 break;
             }
+
+            default:
+                ReleaseBossExpansion(m, playerFeet, damage, tag);
+                break;
         }
     }
 

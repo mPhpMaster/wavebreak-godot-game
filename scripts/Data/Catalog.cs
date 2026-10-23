@@ -20,7 +20,7 @@ namespace Wavebreak.Data;
 /// Read the comments as the balance record. Where a number was chosen against
 /// another number, the comment says which.
 /// </summary>
-public static class Catalog
+public static partial class Catalog
 {
     // ------------------------------------------------------------------ access
 
@@ -193,7 +193,7 @@ public static class Catalog
     // ------------------------------------------------------------- the tables
 
     private static readonly List<WeaponDef> WeaponList = BuildWeapons();
-    private static readonly List<EnemyDef> EnemyList = BuildEnemies();
+    private static readonly List<EnemyDef> EnemyList = WithExpansionEnemies(BuildEnemies());
     private static readonly List<ItemDef> ItemList = BuildItems();
 
     private static readonly Dictionary<string, WeaponDef> WeaponsById = Index(WeaponList, static w => w.Id);

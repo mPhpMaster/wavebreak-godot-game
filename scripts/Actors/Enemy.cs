@@ -402,6 +402,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
 
         ApplyFlash(0f);
         Visible = true;
+        SpawnExpansion();
 
         ContentAudit.NoteSpawn(_def);
     }
@@ -496,6 +497,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             GlobalPosition = after;
             Velocity = new Vector3(Velocity.X, 0f, Velocity.Z);
         }
+        StepExpansion(dt, playerPosition, distance);
 
         // Face the committed direction during an action, so the body points
         // down the lane it is about to run rather than at where the player went.
@@ -604,6 +606,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             return;
         }
 
+        if (InterceptHit(info)) return;
         float amount = MathF.Max(0f, info.Amount);
         if (amount <= 0f)
         {
