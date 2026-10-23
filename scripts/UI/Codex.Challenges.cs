@@ -15,8 +15,9 @@ public sealed partial class Codex
         List<string> maps = Challenges.ClearedMaps(c);
         long wins = Challenges.Wins(c);
         bool done = wins > 0;
-        string cleared = maps.Count == 0 ? "No map cleared yet" : "Cleared: " + string.Join(", ", maps);
-        string status = done ? $"WON x{wins}" : $"CHALLENGE  ·  {maps.Count}/{Data.Stages.All.Count} MAPS";
+        string cleared = maps.Count == 0 ? Loc.T("No map cleared yet")
+            : Loc.F("Cleared: {0}", string.Join(Loc.IsArabic ? "، " : ", ", maps.ConvertAll(Loc.T)));
+        string status = done ? Loc.F("WON x{0}", wins) : Loc.F("CHALLENGE  ·  {0}/{1} MAPS", maps.Count, Data.Stages.All.Count);
         return Card(c.Name, c.Blurb, $"{c.RewardText}  ·  {cleared}", status, done ? Earned : ChallengeInk, done);
     }
 
@@ -29,7 +30,7 @@ public sealed partial class Codex
         long n = MapChallenges.Completions(c);
         bool done = n > 0;
         string map = c.Map?.DisplayName ?? c.MapId;
-        string status = done ? (n > 1 ? $"DONE x{n}" : "DONE") : map.ToUpperInvariant();
+        string status = done ? (n > 1 ? Loc.F("DONE x{0}", n) : Loc.T("DONE")) : Loc.IsArabic ? Loc.T(map) : map.ToUpperInvariant();
         string body = $"{c.GoalText}. {c.RulesText}.";
         return Card(c.Name, body, c.RewardText, status, done ? Earned : MapChallengeInk, done);
     }

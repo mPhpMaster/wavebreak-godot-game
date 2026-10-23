@@ -51,5 +51,5 @@ public sealed partial class FpsOverlay : CanvasLayer
         Update();
     }
 
-    private void Update() => _label.Text = $"{Engine.GetFramesPerSecond():0} FPS";
+    private void Update() => _label.Text = Loc.F("{0:0} FPS", Engine.GetFramesPerSecond());
 }

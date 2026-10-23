@@ -114,7 +114,8 @@ public sealed partial class MapShrine : Node3D
 
         _name = new Label3D
         {
-            Text = MapShrines.Name(Kind).ToUpperInvariant(),
+            Text = Meta.Loc.IsArabic ? Meta.Loc.T(MapShrines.Name(Kind)) : MapShrines.Name(Kind).ToUpperInvariant(),
+
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             FontSize = 40,
             PixelSize = 0.006f,

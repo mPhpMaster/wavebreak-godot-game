@@ -47,6 +47,7 @@ public sealed partial class Main : Node3D
     {
         Instance = this;
         Screenshot.ParseArgs();
+        Meta.Loc.Init(this);
         // Graphics settings at run start (automated runs: the fixed defaults).
         Meta.GraphicsSettings.Load();
         Meta.GraphicsSettings.ApplyAll(this);

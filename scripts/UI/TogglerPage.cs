@@ -46,7 +46,7 @@ public sealed partial class TogglerPage : Control
         if (_built) return;
         _built = true;
 
-        Label heading = CuteStyle.Title("THE TOGGLER", 20, CuteStyle.OnNightDim);
+        Label heading = CuteStyle.Title(Loc.T("THE TOGGLER"), 20, CuteStyle.OnNightDim);
         MainMenu.Place(heading, 64f, 182f, 300f, 26f);
         AddChild(heading);
         _counts = CuteStyle.Title("", 15, CuteStyle.Butter, HorizontalAlignment.Right);
@@ -63,7 +63,7 @@ public sealed partial class TogglerPage : Control
         var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         top.AddThemeConstantOverride("separation", 10);
         col.AddChild(top);
-        _search = new LineEdit { PlaceholderText = "Search…", CustomMinimumSize = new Vector2(290f, 40f), ClearButtonEnabled = true };
+        _search = new LineEdit { PlaceholderText = Loc.T("Search…"), CustomMinimumSize = new Vector2(290f, 40f), ClearButtonEnabled = true };
         _search.AddThemeFontSizeOverride("font_size", 17);
         _search.AddThemeStyleboxOverride("normal", CuteStyle.Box(CuteStyle.Cream, new Color(CuteStyle.Mint, 0.7f), 20, 2, 10));
         _search.AddThemeStyleboxOverride("focus", CuteStyle.Box(new Color(0, 0, 0, 0), Colors.White, 20, 3, 10));
@@ -83,14 +83,14 @@ public sealed partial class TogglerPage : Control
                  })
         {
             Shelf s = shelf;
-            Button b = CuteStyle.Pill(label, color, () => { _shelf = s; ApplyFilter(); }, 16);
+            Button b = CuteStyle.Pill(Loc.T(label), color, () => { _shelf = s; ApplyFilter(); }, 16);
             b.CustomMinimumSize = new Vector2(118f, 40f);
             top.AddChild(b);
             _shelfPills.Add((s, b));
         }
         var spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore };
         top.AddChild(spacer);
-        Button allOn = CuteStyle.Pill("All on", CuteStyle.Butter, AllOn, 16);
+        Button allOn = CuteStyle.Pill(Loc.T("All on"), CuteStyle.Butter, AllOn, 16);
         allOn.CustomMinimumSize = new Vector2(110f, 40f);
         top.AddChild(allOn);
 
@@ -115,7 +115,7 @@ public sealed partial class TogglerPage : Control
         bottom.AddThemeConstantOverride("separation", 14);
         MainMenu.Place(bottom, 60f, 670f, 1160f, 40f);
         AddChild(bottom);
-        _backButton = CuteStyle.Pill("BACK", CuteStyle.Peach, () => _back(), 18);
+        _backButton = CuteStyle.Pill(Loc.T("BACK"), CuteStyle.Peach, () => _back(), 18);
         _backButton.CustomMinimumSize = new Vector2(180f, 40f);
         bottom.AddChild(_backButton);
         _status = CuteStyle.Title("", 15, CuteStyle.OnNightDim);
@@ -150,13 +150,13 @@ public sealed partial class TogglerPage : Control
             row.AddChild(ic);
             var tcol = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill };
             tcol.AddThemeConstantOverride("separation", 0);
-            Label name = CuteStyle.Text(e.Name, 14, CuteStyle.Ink);
+            Label name = CuteStyle.Text(Loc.T(e.Name), 14, CuteStyle.Ink);
             name.ClipText = true;
             tcol.AddChild(name);
-            Label kind = CuteStyle.Text($"{e.Kind}  ·  {e.Rarity}", 11, CuteStyle.InkSoft);
+            Label kind = CuteStyle.Text(Loc.IsArabic ? $"{Loc.T(e.Kind.ToString())}  ·  {Loc.T(Catalog.RarityName(e.Rarity))}" : $"{e.Kind}  ·  {e.Rarity}", 11, CuteStyle.InkSoft);
             tcol.AddChild(kind);
             row.AddChild(tcol);
-            PanelContainer tagBox = CuteStyle.Tag("ON", CuteStyle.Mint, CuteStyle.Ink, 12);
+            PanelContainer tagBox = CuteStyle.Tag(Loc.T("ON"), CuteStyle.Mint, CuteStyle.Ink, 12);
             tagBox.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             row.AddChild(tagBox);
             tile.AddChild(CuteStyle.Inset(row, 8, 4, 8, 4));
@@ -186,9 +186,9 @@ public sealed partial class TogglerPage : Control
         _search.Text = arg.StartsWith("search=") ? arg["search=".Length..] : "";
         bool owned = Toggler.Owned;
         _locked.Visible = !owned;
-        _locked.Text = owned ? "" : "Buy The Toggler in the Pearl Shop to make these choices count. You can set them up now.";
+        _locked.Text = owned ? "" : Loc.T("Buy The Toggler in the Pearl Shop to make these choices count. You can set them up now.");
         ApplyFilter();
-        _status.Text = "Press a tile to switch it off or on. Switched-off things never show up in level-ups, chests or the merchant.";
+        _status.Text = Loc.T("Press a tile to switch it off or on. Switched-off things never show up in level-ups, chests or the merchant.");
         if (_tiles.FirstOrDefault(t => t.Tile.Visible).Tile is { } first) first.GrabFocus();
         else _search.GrabFocus();
     }
@@ -199,13 +199,18 @@ public sealed partial class TogglerPage : Control
         if (!off && Toggler.AtMinimum(e, _entries))
         {
             int total = _entries.Count(x => x.Kind == e.Kind);
-            _status.Text = $"Keep at least {Toggler.MinOf(e.Kind, total)} {e.Kind.ToString().ToLowerInvariant()}s on, so offers never run dry.";
+            _status.Text = Loc.F(e.Kind switch
+            {
+                ToggleKind.Weapon => "Keep at least {0} weapons on, so offers never run dry.",
+                ToggleKind.Item => "Keep at least {0} items on, so offers never run dry.",
+                _ => "Keep at least {0} tomes on, so offers never run dry.",
+            }, Toggler.MinOf(e.Kind, total));
             _status.AddThemeColorOverride("font_color", CuteStyle.Coral);
             return;
         }
         Toggler.Set(e.Id, !off);
         Profile.Save();
-        _status.Text = $"{e.Name} is now {(off ? "ON" : "OFF")}.";
+        _status.Text = Loc.F(off ? "{0} is now ON." : "{0} is now OFF.", e.Name);
         _status.AddThemeColorOverride("font_color", off ? CuteStyle.Mint : CuteStyle.Peach);
         RefreshTiles();
     }
@@ -214,7 +219,7 @@ public sealed partial class TogglerPage : Control
     {
         foreach (ToggleEntry e in _entries) Toggler.Set(e.Id, false);
         Profile.Save();
-        _status.Text = "Everything is back on.";
+        _status.Text = Loc.T("Everything is back on.");
         _status.AddThemeColorOverride("font_color", CuteStyle.Mint);
         RefreshTiles();
     }
@@ -232,6 +237,7 @@ public sealed partial class TogglerPage : Control
                 _ => true,
             };
             bool match = q.Length == 0 || e.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+                         || Loc.T(e.Name).Contains(q, StringComparison.OrdinalIgnoreCase)
                          || e.Rarity.ToString().Contains(q, StringComparison.OrdinalIgnoreCase);
             tile.Visible = shelf && match;
         }
@@ -246,7 +252,7 @@ public sealed partial class TogglerPage : Control
         {
             bool off = Toggler.IsOff(e.Id);
             CuteStyle.StyleCard(tile, ShelfColor(e.Kind), false, off);
-            tag.Text = off ? "OFF" : "ON";
+            tag.Text = Loc.T(off ? "OFF" : "ON");
             var s = new StyleBoxFlat { BgColor = off ? new Color(0.78f, 0.76f, 0.82f) : CuteStyle.Mint };
             s.SetCornerRadiusAll(10);
             s.ContentMarginLeft = 8; s.ContentMarginRight = 8; s.ContentMarginTop = 1; s.ContentMarginBottom = 1;
@@ -257,9 +263,9 @@ public sealed partial class TogglerPage : Control
         {
             int total = _entries.Count(x => x.Kind == k);
             int on = total - Toggler.OffCount(_entries, k);
-            return $"{name} {on}/{total}";
+            return $"{Loc.T(name)} {on}/{total}";
         }
-        _counts.Text = $"switched on:   {Shelf(ToggleKind.Weapon, "Weapons")}   ·   {Shelf(ToggleKind.Item, "Items")}   ·   {Shelf(ToggleKind.Tome, "Tomes")}";
+        _counts.Text = $"{Loc.T("switched on:")}   {Shelf(ToggleKind.Weapon, "Weapons")}   ·   {Shelf(ToggleKind.Item, "Items")}   ·   {Shelf(ToggleKind.Tome, "Tomes")}";
     }
 
     private void ShowEntry(ToggleEntry e)
@@ -271,7 +277,7 @@ public sealed partial class TogglerPage : Control
             TomeDef t => t.Description,
             _ => "",
         };
-        _status.Text = $"{e.Name}: {what}";
+        _status.Text = $"{Loc.T(e.Name)}: {Loc.T(what)}";
         _status.AddThemeColorOverride("font_color", CuteStyle.OnNightDim);
     }
 }

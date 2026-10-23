@@ -236,9 +236,9 @@ public static class WeaponUpgrades
 
     public static string DescribeLine(UpgradeStat stat, float v) => stat switch
     {
-        UpgradeStat.Projectiles => $"+{v:0} Projectile{(v > 1.5f ? "s" : "")}",
-        UpgradeStat.Pierce => $"+{v:0} Pierce",
-        _ => $"+{v * 100f:0.#}% {Name(stat)}",
+        UpgradeStat.Projectiles => v > 1.5f ? Meta.Loc.F("+{0:0} Projectiles", v) : Meta.Loc.F("+{0:0} Projectile", v),
+        UpgradeStat.Pierce => Meta.Loc.F("+{0:0} Pierce", v),
+        _ => Meta.Loc.F("+{0:0.#}% {1}", v * 100f, Name(stat)),
     };
 
     public static string Name(UpgradeStat stat) => stat switch

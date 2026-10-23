@@ -5,6 +5,7 @@ using Godot;
 using Wavebreak.Core;
 using Wavebreak.Data;
 using Wavebreak.Game;
+using Wavebreak.Meta;
 using Wavebreak.Progression;
 
 namespace Wavebreak.UI;
@@ -127,15 +128,15 @@ public sealed partial class LevelUpPanel : Control
         dim.MouseFilter = MouseFilterEnum.Stop;
         AddChild(dim);
 
-        _heading = MakeLabel("LEVEL UP", 44, Ink, HorizontalAlignment.Center);
+        _heading = MakeLabel(Loc.T("LEVEL UP"), 44, Ink, HorizontalAlignment.Center);
         Band(_heading, 720f, -264f, 60f);
         AddChild(_heading);
 
-        _subheading = MakeLabel("Choose one", 18, InkDim, HorizontalAlignment.Center);
+        _subheading = MakeLabel(Loc.T("Choose one"), 18, InkDim, HorizontalAlignment.Center);
         Band(_subheading, 720f, -208f, 28f);
         AddChild(_subheading);
 
-        Label hint = MakeLabel("press  1  ·  2  ·  3", 15, new Color(0.50f, 0.55f, 0.64f), HorizontalAlignment.Center);
+        Label hint = MakeLabel(Loc.T("press  1  ·  2  ·  3"), 15, new Color(0.50f, 0.55f, 0.64f), HorizontalAlignment.Center);
         Band(hint, 720f, 204f, 22f);
         AddChild(hint);
     }
@@ -532,18 +533,18 @@ public sealed partial class LevelUpPanel : Control
         // rather than one, and neither is load-bearing on its own — the rarity is
         // also spelled out in words.
         card.Stripe.Color = colour;
-        card.Rarity.Text = $"{Catalog.RarityName(rarity)}   {KindOf(offer)}";
+        card.Rarity.Text = $"{Loc.T(Catalog.RarityName(rarity))}   {Loc.T(KindOf(offer))}";
         card.Rarity.AddThemeColorOverride("font_color", colour);
 
         card.Icon.Set(Icons.For(offer), colour);
 
-        card.Title.Text = offer.Title;
+        card.Title.Text = Loc.T(offer.Title);
         card.Title.AddThemeColorOverride("font_color", offer.Tint.Lerp(Ink, 0.35f));
 
         card.Stats.Text = EffectText(offer);
-        card.Flavour.Text = offer.Description;
+        card.Flavour.Text = Loc.T(offer.Description);
         FlowText(card);
-        card.Kind.Text = offer.Detail;
+        card.Kind.Text = offer.DetailText;
 
         // Epics and legendaries get a visibly warmer body. When one appears the
         // player should know it before reading a word of it.
@@ -555,7 +556,7 @@ public sealed partial class LevelUpPanel : Control
         };
         Paint(card, card.Button.HasFocus());
 
-        card.Button.TooltipText = $"{index + 1}. {offer.Title} — {offer.Effect}";
+        card.Button.TooltipText = $"{index + 1}. {Loc.T(offer.Title)} — {offer.Effect}";
     }
 
     /// <summary>

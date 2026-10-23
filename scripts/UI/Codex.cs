@@ -156,9 +156,9 @@ public sealed partial class Codex : Control
         foreach (UnlockDef u in Unlocks.All)
             if (u.Secret) { secretsTotal++; if (Profile.IsUnlocked(u.Id)) secretsEarned++; }
         _stats.Text =
-            $"UNLOCKED {Profile.UnlockedIds.Count}/{Unlocks.All.Count}   ·   SECRETS {secretsEarned}/{secretsTotal}   ·   " +
-            $"runs {Profile.Get(Profile.Runs)}   wins {Profile.Get(Profile.Wins)}   kills {Profile.Get(Profile.TotalKills)}   " +
-            $"bosses {Profile.Get(Profile.BossesKilled)}   best {best / 60:00}:{best % 60:00}   best level {Profile.Get(Profile.BestLevel)}";
+            Loc.F("UNLOCKED {0}/{1}   ·   SECRETS {2}/{3}   ·   ", Profile.UnlockedIds.Count, Unlocks.All.Count, secretsEarned, secretsTotal) +
+            Loc.F("runs {0}   wins {1}   kills {2}   ", Profile.Get(Profile.Runs), Profile.Get(Profile.Wins), Profile.Get(Profile.TotalKills)) +
+            Loc.F("bosses {0}   best {1:00}:{2:00}   best level {3}", Profile.Get(Profile.BossesKilled), best / 60, best % 60, Profile.Get(Profile.BestLevel));
 
         foreach (UnlockDef u in Unlocks.All) AddCard(UnlockCard(u), TabsOf(u));
         foreach (SecretKindDef k in SecretSpawner.Kinds) AddCard(ShrineCard(k), Tab.Secrets | Tab.Lore);
@@ -170,7 +170,7 @@ public sealed partial class Codex : Control
         {
             int n = 0;
             foreach (Tab t in _cardTabs) if ((t & Tabs[i].Tab) != 0) n++;
-            _tabButtons[i].Text = $"{Tabs[i].Label}  {n}";
+            _tabButtons[i].Text = $"{Loc.T(Tabs[i].Label)}  {n}";
         }
         ApplyFilter();
     }
@@ -281,8 +281,8 @@ public sealed partial class Codex : Control
 
         string title = hidden ? "???" : u.Name;
         string body = hidden ? u.Hint : u.Description;
-        string reward = hidden ? "Reward: ???" : Unlocks.DescribeReward(u);
-        if (!hidden && u.Reward == RewardKind.Character && Characters.ById(u.RewardId) is { } c)
+        string reward = hidden ? Loc.T("Reward: ???") : Unlocks.DescribeReward(u);
+        if (!hidden && u.Reward == RewardKind.Character && Characters.ById(u.RewardId) is { } c && !Loc.IsArabic)
             reward += $"  (look: {c.LookId})";
         string status = done ? "UNLOCKED" : hidden ? "SECRET" : Progress(u);
         Color accent = done ? Earned : u.Secret ? SecretInk : Gold;
@@ -295,7 +295,8 @@ public sealed partial class Codex : Control
         bool found = Profile.HasFoundSecret(k.Id);
         return Card(found ? k.DisplayName : "???",
                     found ? "A hidden shrine. It answered when touched." : "Something faint waits near the edge of the arena.",
-                    found ? $"Gift: {k.RewardText}\nThis run: {SecretKindDef.Describe(k.RunBoons)}\nEvery run after: {SecretKindDef.Describe(k.LastingBoons)}"
+                    found ? Loc.F("Gift: {0}", k.RewardText) + "\n" + Loc.F("This run: {0}", SecretKindDef.Describe(k.RunBoons))
+                            + "\n" + Loc.F("Every run after: {0}", SecretKindDef.Describe(k.LastingBoons))
                           : "Gift: ???  ·  grants stat boosts when found",
                     found ? "FOUND" : "HIDDEN SHRINE",
                     found ? Earned : SecretInk, found);
@@ -310,7 +311,7 @@ public sealed partial class Codex : Control
         long have = Quests.StoredProgress(u);
         if (have < 0) return "LOCKED";
         string amount = $"{System.Math.Min(have, (long)u.Threshold):N0} / {u.Threshold:N0}";
-        return Quests.IsRunMetric(u.Metric) ? $"BEST  {amount}" : amount;
+        return Quests.IsRunMetric(u.Metric) ? Loc.F("BEST  {0}", amount) : amount;
     }
 
     private static Button Card(string title, string body, string reward, string status, Color accent, bool done)

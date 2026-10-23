@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Godot;
 using Wavebreak.Data;
 using Wavebreak.Stats;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -38,7 +39,7 @@ public sealed partial class BalancePanel : ModalPanel
         IconView icon = CuteStyle.Icon(new IconSpec("scales", CuteStyle.Lavender), 52f, CuteStyle.Lavender);
         icon.Disc = false;
         head.AddChild(icon);
-        head.AddChild(CuteStyle.Text("Shrine of Balance", 30, CuteStyle.Ink));
+        head.AddChild(CuteStyle.Text(Loc.T("Shrine of Balance"), 30, CuteStyle.Ink));
         Body.AddChild(head);
 
         _rule = CuteStyle.Text("", 15, CuteStyle.InkSoft, HorizontalAlignment.Center);
@@ -54,8 +55,8 @@ public sealed partial class BalancePanel : ModalPanel
 
         var buttons = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         buttons.AddThemeConstantOverride("separation", 16);
-        Button yes = CuteStyle.Pill("1  Balance me!", CuteStyle.Mint, () => { if (Armed) Confirm(); }, 18, on: true);
-        Button no = CuteStyle.Pill("2  Not now", CuteStyle.Peach, () => { if (Armed) Close(); }, 18);
+        Button yes = CuteStyle.Pill(Loc.T("1  Balance me!"), CuteStyle.Mint, () => { if (Armed) Confirm(); }, 18, on: true);
+        Button no = CuteStyle.Pill(Loc.T("2  Not now"), CuteStyle.Peach, () => { if (Armed) Close(); }, 18);
         foreach (Button b in new[] { yes, no })
         {
             b.CustomMinimumSize = new Vector2(200f, 46f);
@@ -68,8 +69,8 @@ public sealed partial class BalancePanel : ModalPanel
     public void Open(StatSheet sheet, (BalanceStat Top, float Take, float Give) plan, Action confirm)
     {
         _confirm = confirm;
-        _rule.Text = $"Takes half of your strongest bonus and shares it, plus {(CuteShrines.BalanceReturn - 1f) * 100f:0}%, " +
-                     $"with the other {CuteShrines.BalanceStats.Count - 1}. Once per shrine.";
+        _rule.Text = Loc.F("Takes half of your strongest bonus and shares it, plus {0:0}%, with the other {1}. Once per shrine.",
+                           (CuteShrines.BalanceReturn - 1f) * 100f, CuteShrines.BalanceStats.Count - 1);
         foreach (Node n in _rows.GetChildren()) { _rows.RemoveChild(n); n.QueueFree(); }
 
         var before = new Dictionary<Stat, string>();
@@ -87,7 +88,7 @@ public sealed partial class BalancePanel : ModalPanel
             IconView ic = CuteStyle.Icon(new IconSpec(b.Glyph, b.Color), 26f, b.Color);
             ic.Disc = false;
             row.AddChild(ic);
-            Label name = CuteStyle.Text(Catalog.StatName(b.Stat), 16, CuteStyle.Ink);
+            Label name = CuteStyle.Text(Loc.T(Catalog.StatName(b.Stat)), 16, CuteStyle.Ink);
             name.CustomMinimumSize = new Vector2(150f, 0f);
             row.AddChild(name);
             Label from = CuteStyle.Text(before[b.Stat], 16, CuteStyle.InkSoft, HorizontalAlignment.Right);
@@ -99,7 +100,8 @@ public sealed partial class BalancePanel : ModalPanel
             to.CustomMinimumSize = new Vector2(90f, 0f);
             row.AddChild(to);
             string delta = top ? CuteShrines.DescribeUnits(b, -plan.Take) : CuteShrines.DescribeUnits(b, plan.Give);
-            row.AddChild(CuteStyle.Text(delta.Replace(Catalog.StatName(b.Stat), "").Trim(), 13, c));
+            row.AddChild(CuteStyle.Text(delta.Replace(Loc.T(Catalog.StatName(b.Stat)), "").Trim(), 13, c));
+
             _rows.AddChild(row);
         }
         OpenPanel();

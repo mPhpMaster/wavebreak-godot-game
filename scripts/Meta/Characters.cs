@@ -381,11 +381,11 @@ public static partial class Characters
     /// <summary>"+25 Max Health, -8% Move Speed" for menus.</summary>
     public static string Describe(CharacterDef def)
     {
-        if (def.Stats.Count == 0) return "No modifiers";
+        if (def.Stats.Count == 0) return Loc.T("No modifiers");
         var parts = new List<string>();
         foreach (CharacterStat s in def.Stats)
         {
-            string name = Catalog.StatName(s.Stat);
+            string name = Loc.T(Catalog.StatName(s.Stat));
             parts.Add(s.Op switch
             {
                 ModifierOp.Additive => $"{(s.Value >= 0 ? "+" : "")}{s.Value * 100f:0}% {name}",
@@ -393,6 +393,6 @@ public static partial class Characters
                 _ => $"{(s.Value >= 0 ? "+" : "")}{s.Value:0.##} {name}",
             });
         }
-        return string.Join(",  ", parts);
+        return string.Join(Loc.IsArabic ? "،  " : ",  ", parts);
     }
 }

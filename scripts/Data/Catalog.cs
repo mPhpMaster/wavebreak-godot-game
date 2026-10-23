@@ -178,6 +178,9 @@ public static partial class Catalog
     /// "+6 Armour", "x1.20 Damage", "-12% Move Speed".</summary>
     public static string DescribeEffect(ItemEffect effect)
     {
+        // Arabic: the stat word leads ("الضرر +10%") and the amount follows it,
+        // which is how the line reads right to left. English is unchanged.
+        if (Meta.Loc.IsArabic) return DescribeEffectArabic(effect);
         string name = StatName(effect.Stat);
         float v = effect.PerStack;
 
@@ -197,6 +200,22 @@ public static partial class Catalog
                 return $"{Signed(v, "0.##")} {name}";
         }
     }
+
+    private static string DescribeEffectArabic(ItemEffect effect)
+    {
+        string name = Meta.Loc.T(StatName(effect.Stat));
+        float v = effect.PerStack;
+        string amount = effect.Op switch
+        {
+            ModifierOp.Multiplicative => $"×{v:0.##}",
+            ModifierOp.Additive => $"{Signed(v * 100f, "0.#")}%",
+            _ when IsFractionStat(effect.Stat) => $"{Signed(v * 100f, "0.#")}%",
+            _ when effect.Stat == Stat.HealthRegen => $"{Signed(v, "0.#")}{Meta.Loc.T("/min")}",
+            _ => Signed(v, "0.##"),
+        };
+        return $"{name} {amount}";
+    }
+
 
     private static string Signed(float value, string format)
         => value >= 0f ? "+" + value.ToString(format) : value.ToString(format);

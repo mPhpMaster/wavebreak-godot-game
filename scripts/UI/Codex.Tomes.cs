@@ -1,5 +1,6 @@
 using Godot;
 using Wavebreak.Data;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -9,6 +10,6 @@ public sealed partial class Codex
 {
     private static Button TomeCard(TomeDef t)
         => Card(t.DisplayName, t.Description,
-                $"{t.DescribeStep()} per level  ·  max Lv {t.MaxLevel}: {t.DescribeTotal(t.MaxLevel)}",
-                $"TOME  ·  {Catalog.RarityName(t.Rarity)}", t.Tint, true);
+                Loc.F("{0} per level  ·  max Lv {1}: {2}", t.DescribeStep(), t.MaxLevel, t.DescribeTotal(t.MaxLevel)),
+                Loc.F("TOME  ·  {0}", Catalog.RarityName(t.Rarity)), t.Tint, true);
 }

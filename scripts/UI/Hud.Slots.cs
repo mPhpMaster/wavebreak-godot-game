@@ -1,4 +1,5 @@
 using Godot;
+using Wavebreak.Meta;
 using Wavebreak.Combat;
 
 namespace Wavebreak.UI;
@@ -20,7 +21,7 @@ public sealed partial class Hud
 
     private void BuildWeaponHeader()
     {
-        _weaponHeader = Text("WEAPONS", 13, WeaponHeaderTint);
+        _weaponHeader = Text(Loc.T("WEAPONS"), 13, WeaponHeaderTint);
         _weaponList.AddChild(_weaponHeader);
         _weaponList.MoveChild(_weaponHeader, 0);
 
@@ -39,7 +40,7 @@ public sealed partial class Hud
         if (slots == _shownWeaponSlots && count == _shownWeaponCount) return;
         _shownWeaponSlots = slots;
         _shownWeaponCount = count;
-        _weaponHeader.Text = $"WEAPONS  {count}/{slots}";
+        _weaponHeader.Text = Loc.F("WEAPONS  {0}/{1}", count, slots);
 
         // Header plus one row per slot (rows are RowHeight plus the list's 2 px gap).
         float top = _weaponList.OffsetTop + (RowHeight - 6f) + slots * (RowHeight + 2f) + 10f;

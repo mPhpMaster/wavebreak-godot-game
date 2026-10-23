@@ -27,13 +27,13 @@ public static class ShopExtras
     {
         new() { Id = TogglerId, Name = "The Toggler", Blurb = "Switch off weapons, items and tomes you never want offered.",
                 PerLevel = 1f, MaxLevel = 1, BaseCost = 150,
-                Describe = v => v > 0f ? "Owned: press to open the Toggler" : "Unlocks the Toggler page" },
+                Describe = v => Loc.T(v > 0f ? "Owned: press to open the Toggler" : "Unlocks the Toggler page") },
         new() { Id = WeaponSlotId, Name = "Weapon Rack", Blurb = "Carry one more weapon at a time.",
                 PerLevel = 1f, MaxLevel = 3, BaseCost = 120,
-                Describe = v => $"+{v:0} weapon slot{(v == 1f ? "" : "s")} ({Combat.WeaponSystem.MaxWeapons + (int)v} total)" },
+                Describe = v => Loc.F(v == 1f ? "+{0:0} weapon slot ({1} total)" : "+{0:0} weapon slots ({1} total)", v, Combat.WeaponSystem.MaxWeapons + (int)v) },
         new() { Id = TomeSlotId, Name = "Bookshelf", Blurb = "Study one more tome at a time.",
                 PerLevel = 1f, MaxLevel = 3, BaseCost = 100,
-                Describe = v => $"+{v:0} tome slot{(v == 1f ? "" : "s")} ({Data.Tomes.MaxSlots + (int)v} total)" },
+                Describe = v => Loc.F(v == 1f ? "+{0:0} tome slot ({1} total)" : "+{0:0} tome slots ({1} total)", v, Data.Tomes.MaxSlots + (int)v) },
     };
 
     private static int Level(string id) => MetaShop.ById(id) is { } u ? MetaShop.LevelOf(u) : 0;

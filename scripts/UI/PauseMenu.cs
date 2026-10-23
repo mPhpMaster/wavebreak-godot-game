@@ -48,12 +48,12 @@ public sealed partial class PauseMenu : Node
         Name = "PauseMenu";
         ProcessMode = ProcessModeEnum.Always;
 
-        _resume = MainMenu.MenuButton("RESUME", Close);
+        _resume = MainMenu.MenuButton(Loc.T("RESUME"), Close);
         _sheet.ActionRow.AddChild(_resume);
-        _sheet.ActionRow.AddChild(MainMenu.MenuButton("SETTINGS", () => ShowSettings(true)));
-        _sheet.ActionRow.AddChild(MainMenu.MenuButton("RESTART", Restart));
-        _sheet.ActionRow.AddChild(MainMenu.MenuButton("MAIN MENU", ToMainMenu));
-        _sheet.ActionRow.AddChild(MainMenu.MenuButton("QUIT", () => GetTree().Quit()));
+        _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("SETTINGS"), () => ShowSettings(true)));
+        _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("RESTART"), Restart));
+        _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("MAIN MENU"), ToMainMenu));
+        _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("QUIT"), () => GetTree().Quit()));
         foreach (Node child in _sheet.ActionRow.GetChildren())
             if (child is Button b) b.CustomMinimumSize = new Vector2(150f, 44f);
 
@@ -336,9 +336,9 @@ public sealed partial class PauseMenu : Node
         page.AddThemeConstantOverride("separation", 10);
         frame.AddChild(page);
 
-        page.AddChild(MainMenu.MakeLabel("SETTINGS", 22, new Color(0.62f, 0.98f, 1.00f)));
+        page.AddChild(MainMenu.MakeLabel(Loc.T("SETTINGS"), 22, new Color(0.62f, 0.98f, 1.00f)));
 
-        CheckButton mute = new() { Text = "Mute all", ButtonPressed = AudioSettings.Muted };
+        CheckButton mute = new() { Text = Loc.T("Mute all"), ButtonPressed = AudioSettings.Muted };
         foreach (var (name, ch) in new[] { ("Master", VolumeChannel.Master), ("Effects", VolumeChannel.Sfx), ("Music", VolumeChannel.Music) })
         {
             VolumeChannel channel = ch;
@@ -352,7 +352,7 @@ public sealed partial class PauseMenu : Node
                 value.Text = $"{(int)slider.Value}/10";
                 mute.SetPressedNoSignal(AudioSettings.Muted);
             };
-            page.AddChild(Row(name, slider, value));
+            page.AddChild(Row(Loc.T(name), slider, value));
         }
 
         mute.AddThemeFontSizeOverride("font_size", 18);
@@ -364,11 +364,11 @@ public sealed partial class PauseMenu : Node
                                  SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(200f, 24f) };
         Label sensValue = MainMenu.MakeLabel($"{GameSettings.Sensitivity:0.00}x", 16, Colors.White);
         sens.ValueChanged += v => { GameSettings.SetSensitivity((float)v); sensValue.Text = $"{GameSettings.Sensitivity:0.00}x"; };
-        page.AddChild(Row("Mouse", sens, sensValue));
+        page.AddChild(Row(Loc.T("Mouse"), sens, sensValue));
 
-        page.AddChild(MainMenu.MenuButton("GRAPHICS", () => ShowGraphics(true)));
-        page.AddChild(MainMenu.MenuButton("KEY BINDINGS", () => ShowKeys(true)));
-        page.AddChild(MainMenu.MenuButton("BACK", () => ShowSettings(false)));
+        page.AddChild(MainMenu.MenuButton(Loc.T("GRAPHICS"), () => ShowGraphics(true)));
+        page.AddChild(MainMenu.MenuButton(Loc.T("KEY BINDINGS"), () => ShowKeys(true)));
+        page.AddChild(MainMenu.MenuButton(Loc.T("BACK"), () => ShowSettings(false)));
         return centre;
     }
 

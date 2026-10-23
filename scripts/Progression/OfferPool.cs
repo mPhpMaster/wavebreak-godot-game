@@ -6,6 +6,7 @@ using Wavebreak.Actors;
 using Wavebreak.Combat;
 using Wavebreak.Core;
 using Wavebreak.Data;
+using Wavebreak.Meta;
 using Wavebreak.Stats;
 
 namespace Wavebreak.Progression;
@@ -25,8 +26,9 @@ public sealed class Offer
                   Rarity rarity, Color tint,
                   WeaponDef? weapon = null, ItemDef? item = null,
                   float healFraction = 0f, int gold = 0, TomeDef? tome = null,
-                  WeaponUpgrade? upgrade = null)
+                  WeaponUpgrade? upgrade = null, string? detailText = null)
     {
+        DetailText = detailText ?? Loc.T(detail);
         Upgrade = upgrade;
         Tome = tome;
         Title = title;
@@ -56,6 +58,10 @@ public sealed class Offer
 
     /// <summary>Short status line: "New", "Level 3 → 4", "Stack 2/5".</summary>
     public string Detail { get; }
+
+    /// <summary><see cref="Detail"/> in the player's language, for the card.
+    /// Detail itself stays English: code reads it ("New...").</summary>
+    public string DetailText { get; }
 
     /// <summary>Flavour text, falling back to the mechanical summary when the
     /// definition has none.</summary>
@@ -123,10 +129,11 @@ public sealed class Offer
         if (isNew) upgrade = null;
 
         string detail = isNew ? "New weapon" : $"Level {currentLevel} → {next}";
+        string detailText = isNew ? Loc.T("New weapon") : Loc.F("Level {0} → {1}", currentLevel, next);
         string effect = isNew
-            ? $"{def.DamageAtLevel(1):0} damage every {def.CooldownAtLevel(1):0.00}s"
+            ? Loc.F("{0:0} damage every {1:0.00}s", def.DamageAtLevel(1), def.CooldownAtLevel(1))
               + Plural(def.ProjectilesAtLevel(1))
-              + (def.Element != Element.Physical ? $"\n{def.Element}: {StatusName(def.Element)}" : "")
+              + (def.Element != Element.Physical ? "\n" + Loc.F("{0}: {1}", def.Element.ToString(), StatusName(def.Element)) : "")
             : upgrade is not null ? upgrade.Describe() : WeaponDelta(def, currentLevel, next);
 
         string description = string.IsNullOrWhiteSpace(def.Description)
@@ -134,7 +141,7 @@ public sealed class Offer
             : def.Description;
 
         return new Offer(def.DisplayName, detail, description, effect,
-                         upgrade?.Rarity ?? def.Rarity, def.Tint, weapon: def, upgrade: upgrade);
+                         upgrade?.Rarity ?? def.Rarity, def.Tint, weapon: def, upgrade: upgrade, detailText: detailText);
     }
 
     private static string StatusName(Element e) => e switch
@@ -147,7 +154,7 @@ public sealed class Offer
     };
 
     private static string Plural(int projectiles)
-        => projectiles > 1 ? $", {projectiles} projectiles" : "";
+        => projectiles > 1 ? Loc.F(", {0} projectiles", projectiles) : "";
 
     /// <summary>Spells out what the level actually buys. A card that says "Level
     /// 3 → 4" and nothing else asks the player to trust the game; showing the two
@@ -155,7 +162,7 @@ public sealed class Offer
     private static string WeaponDelta(WeaponDef def, int from, int to)
     {
         var sb = new StringBuilder(64);
-        sb.Append($"{def.DamageAtLevel(from):0.#} → {def.DamageAtLevel(to):0.#} damage");
+        sb.Append(Loc.F("{0:0.#} → {1:0.#} damage", def.DamageAtLevel(from), def.DamageAtLevel(to)));
 
         float before = def.CooldownAtLevel(from);
         float after = def.CooldownAtLevel(to);
@@ -163,7 +170,7 @@ public sealed class Offer
             sb.Append($", {before:0.00}s → {after:0.00}s");
 
         int extra = def.ProjectilesAtLevel(to) - def.ProjectilesAtLevel(from);
-        if (extra > 0) sb.Append($", +{extra} projectile{(extra > 1 ? "s" : "")}");
+        if (extra > 0) sb.Append(extra > 1 ? Loc.F(", +{0} projectiles", extra) : Loc.F(", +{0} projectile", extra));
 
         return sb.ToString();
     }
@@ -173,32 +180,36 @@ public sealed class Offer
         string detail = held <= 0
             ? "New"
             : def.MaxStacks > 0 ? $"Stack {held + 1}/{def.MaxStacks}" : $"Stack {held + 1}";
+        string detailText = held <= 0
+            ? Loc.T("New")
+            : def.MaxStacks > 0 ? Loc.F("Stack {0}/{1}", held + 1, def.MaxStacks) : Loc.F("Stack {0}", held + 1);
 
         string effect = OfferPool.DescribeEffects(def);
         string description = string.IsNullOrWhiteSpace(def.Description) ? effect : def.Description;
 
-        return new Offer(def.DisplayName, detail, description, effect, def.Rarity, def.Tint, item: def);
+        return new Offer(def.DisplayName, detail, description, effect, def.Rarity, def.Tint, item: def, detailText: detailText);
     }
 
     internal static Offer ForTome(TomeDef def, int currentLevel)
     {
         int next = currentLevel + 1;
         string detail = currentLevel <= 0 ? "New tome" : $"Level {currentLevel} → {next}";
+        string detailText = currentLevel <= 0 ? Loc.T("New tome") : Loc.F("Level {0} → {1}", currentLevel, next);
         string effect = currentLevel <= 0
-            ? $"{def.DescribeStep()} per level (max {def.MaxLevel})"
+            ? Loc.F("{0} per level (max {1})", def.DescribeStep(), def.MaxLevel)
             : $"{def.DescribeTotal(currentLevel)} → {def.DescribeTotal(next)}";
         string description = string.IsNullOrWhiteSpace(def.Description) ? effect : def.Description;
-        return new Offer(def.DisplayName, detail, description, effect, def.Rarity, def.Tint, tome: def);
+        return new Offer(def.DisplayName, detail, description, effect, def.Rarity, def.Tint, tome: def, detailText: detailText);
     }
 
     internal static Offer Bonus(string title, string description, float healFraction, int gold, Color tint)
     {
         var sb = new StringBuilder(48);
-        if (healFraction > 0f) sb.Append($"Restores {healFraction * 100f:0}% health");
+        if (healFraction > 0f) sb.Append(Loc.F("Restores {0:0}% health", healFraction * 100f));
         if (gold > 0)
         {
-            if (sb.Length > 0) sb.Append(", ");
-            sb.Append($"+{gold} gold");
+            if (sb.Length > 0) sb.Append(Loc.T(", "));
+            sb.Append(Loc.F("+{0} gold", gold));
         }
 
         return new Offer(title, "Supply", description, sb.ToString(), Rarity.Common, tint,

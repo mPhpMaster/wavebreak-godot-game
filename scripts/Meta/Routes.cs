@@ -158,8 +158,10 @@ public static class Routes
     /// <summary>"Thornmeadow → Rimeglass Plateau → Cinder Reach", or the draw rule.</summary>
     public static string DescribeMaps(RouteDef r)
     {
-        if (!r.Drawn) return string.Join("  >  ", r.MapIds.Select(id => Stages.ById(id)?.DisplayName ?? id));
-        string first = r.StartId.Length > 0 ? (Stages.ById(r.StartId)?.DisplayName ?? r.StartId) : "?";
-        return $"{first}  >  ?  >  ?";
+        // Arabic reads right to left, so its arrow points left.
+        string arrow = Loc.IsRtl ? "  <  " : "  >  ";
+        if (!r.Drawn) return string.Join(arrow, r.MapIds.Select(id => Loc.T(Stages.ById(id)?.DisplayName ?? id)));
+        string first = r.StartId.Length > 0 ? Loc.T(Stages.ById(r.StartId)?.DisplayName ?? r.StartId) : "?";
+        return $"{first}{arrow}?{arrow}?";
     }
 }

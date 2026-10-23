@@ -187,8 +187,8 @@ public sealed partial class CuteShrineSpawner : Node
         {
             var plan = CuteShrines.PlanBalance(player.Stats);
             _prompt.ShowText(s.Top, plan is { } p
-                    ? $"{_keyName} — find your balance\nspread your {Catalog.StatName(p.Top.Stat)} around"
-                    : $"{CuteShrines.Name(s.Kind)}\ncome back with a stronger bonus",
+                    ? Meta.Loc.F("{0} — find your balance\nspread your {1} around", _keyName, Catalog.StatName(p.Top.Stat))
+                    : Meta.Loc.T(CuteShrines.Name(s.Kind)) + "\n" + Meta.Loc.T("come back with a stronger bonus"),
                 plan is null ? ShrinePrompt.TooPoor : CuteShrines.Tint(s.Kind).Lightened(0.55f));
             return;
         }
@@ -197,8 +197,9 @@ public sealed partial class CuteShrineSpawner : Node
         int left = CuteShrines.WellUsesPerShrine - s.Uses;
         bool ok = gold >= price;
         _prompt.ShowText(s.Top,
-            ok ? $"{_keyName} — toss {price} gold and make a wish\n{left} wish{(left == 1 ? "" : "es")} left"
-               : $"{_keyName} — toss {price} gold  (need {price - gold} more)",
+            ok ? Meta.Loc.F(left == 1 ? "{0} — toss {1} gold and make a wish\n{2} wish left" : "{0} — toss {1} gold and make a wish\n{2} wishes left",
+                            _keyName, price, left)
+               : Meta.Loc.F("{0} — toss {1} gold  (need {2} more)", _keyName, price, price - gold),
             ok ? CuteShrines.Tint(s.Kind).Lightened(0.55f) : ShrinePrompt.TooPoor);
     }
 
@@ -235,7 +236,7 @@ public sealed partial class CuteShrineSpawner : Node
         s.MarkSpent();
         EventBus.Publish(new PopupRequested(s.Top, "IN BALANCE!", CuteShrines.Tint(s.Kind).Lightened(0.3f), 1.6f));
         EventBus.Publish(new PopupRequested(s.Top + Vector3.Down * 0.7f,
-            $"{CuteShrines.DescribeUnits(plan.Value.Top, -plan.Value.Take)}, +{plan.Value.Give:0.#} units to the rest",
+            Meta.Loc.F("{0}, +{1:0.#} units to the rest", CuteShrines.DescribeUnits(plan.Value.Top, -plan.Value.Take), plan.Value.Give),
             new Color(0.95f, 0.92f, 1f), 1f));
         GD.Print($"[cute-shrine] balance top={plan.Value.Top.Stat} take={plan.Value.Take:0.00}u give={plan.Value.Give:0.00}u each");
     }
@@ -273,7 +274,8 @@ public sealed partial class CuteShrineSpawner : Node
         {
             ShrineBoon b = boons[i];
             player.Stats.Add(b.Stat, b.Op, b.Value, new WishGrant(WellThrows, b));
-            EventBus.Publish(new PopupRequested(s.Top + Vector3.Up * (0.6f * i), $"{b.Title} {b.Effect}", b.Color, 1.4f));
+            EventBus.Publish(new PopupRequested(s.Top + Vector3.Up * (0.6f * i), $"{Meta.Loc.T(b.Title)} {b.Effect}", b.Color, 1.4f));
+
         }
         if (grants > 1)
         {

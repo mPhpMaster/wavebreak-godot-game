@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Godot;
 using Wavebreak.Combat;
 using Wavebreak.Core;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -117,8 +118,20 @@ public sealed partial class DamagePopup : Node3D
         Vector3 at = request.Position + new Vector3(cos * ring, (slot & 3) * 0.07f, sin * ring);
         Vector3 drift = new(cos * 0.55f, 0f, sin * 0.55f);
 
-        popup.Begin(at, drift, request.Text, request.Color, request.Scale);
+        popup.Begin(at, drift, Localise(request.Text), request.Color, request.Scale);
         _live.Add(popup);
+    }
+
+    /// <summary>Words are translated here, once, for every publisher (pickups,
+    /// statuses, shrines, chests, banners): the table's exact keys and its
+    /// {0}-patterns ("-{0} gold") cover them. Bare numbers — nearly every popup —
+    /// skip the lookup entirely.</summary>
+    private static string Localise(string text)
+    {
+        if (!Loc.IsArabic) return text;
+        foreach (char c in text)
+            if (char.IsLetter(c)) return Loc.T(text);
+        return text;
     }
 
     // ----------------------------------------------------------------- step
@@ -238,8 +251,12 @@ internal sealed partial class Popup : Label3D, IPooled
         SetPhysicsProcess(false);
         Visible = false;
 
+        // Translated once in DamagePopup.Localise; the engine's per-text
+        // auto-translate would only repeat the lookup.
+        AutoTranslateMode = AutoTranslateModeEnum.Disabled;
         FontSize = FontPixels;
         PixelSize = BasePixelSize;
+
         Billboard = BaseMaterial3D.BillboardModeEnum.Enabled;
         Shaded = false;
         DoubleSided = true;

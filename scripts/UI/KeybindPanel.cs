@@ -93,7 +93,7 @@ public sealed partial class KeybindPanel : VBoxContainer
 
         var buttons = new HBoxContainer();
         buttons.AddThemeConstantOverride("separation", 12);
-        buttons.AddChild(MainMenu.MenuButton("RESET TO DEFAULTS", () => { Keybinds.ResetAll(); Refresh("Defaults restored."); }));
+        buttons.AddChild(MainMenu.MenuButton("RESET TO DEFAULTS", () => { Keybinds.ResetAll(); Refresh(Loc.T("Defaults restored.")); }));
         buttons.AddChild(MainMenu.MenuButton("BACK", () => { Listening = null; _onBack(); }));
         AddChild(buttons);
 
@@ -105,8 +105,8 @@ public sealed partial class KeybindPanel : VBoxContainer
         Refresh(null);
         Listening = (action, slot);
         foreach (var (a, keys) in _rows)
-            if (a == action) keys[slot].Text = "press a key…";
-        _status.Text = "Press the new key or mouse button.  Backspace clears, Esc cancels.";
+            if (a == action) keys[slot].Text = Loc.T("press a key…");
+        _status.Text = Loc.T("Press the new key or mouse button.  Backspace clears, Esc cancels.");
         _status.AddThemeColorOverride("font_color", Waiting);
     }
 
@@ -117,7 +117,7 @@ public sealed partial class KeybindPanel : VBoxContainer
         if (@event is InputEventKey { Pressed: true, Echo: false } key)
         {
             GetViewport().SetInputAsHandled();
-            if (key.Keycode == Key.Escape) { Listening = null; Refresh("Cancelled."); return; }
+            if (key.Keycode == Key.Escape) { Listening = null; Refresh(Loc.T("Cancelled.")); return; }
             if (key.Keycode is Key.Backspace or Key.Delete) { Commit(null); return; }
             Commit(new InputEventKey { PhysicalKeycode = key.PhysicalKeycode != Key.None ? key.PhysicalKeycode : key.Keycode });
         }
@@ -138,8 +138,8 @@ public sealed partial class KeybindPanel : VBoxContainer
         string what = ev is null ? "cleared" : Keybinds.Describe(ev);
         string which = slot == 0 ? "primary" : "secondary";
         Refresh(swapped is null || swapped == action
-            ? $"{LabelOf(action)} ({which}): {what}"
-            : $"{LabelOf(action)} ({which}): {what}  ·  swapped with {LabelOf(swapped)}");
+            ? Loc.F("{0} ({1}): {2}", LabelOf(action), which, what)
+            : Loc.F("{0} ({1}): {2}  ·  swapped with {3}", LabelOf(action), which, what, LabelOf(swapped)));
     }
 
     private static string LabelOf(string action)
@@ -152,7 +152,7 @@ public sealed partial class KeybindPanel : VBoxContainer
     {
         foreach (var (action, keys) in _rows)
             for (int slot = 0; slot < keys.Length; slot++)
-                keys[slot].Text = Keybinds.Describe(Keybinds.Get(action, slot));
+                keys[slot].Text = Loc.T(Keybinds.Describe(Keybinds.Get(action, slot)));
         if (message is not null)
         {
             _status.Text = message;

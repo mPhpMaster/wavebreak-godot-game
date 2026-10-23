@@ -329,7 +329,7 @@ public sealed partial class ItemProcs : Node
             _wishReady = 120f;
             health.HealFraction(0.5f);
             health.GrantInvulnerability(2f);
-            EventBus.Publish(new PopupRequested(at + Vector3.Up * 1.2f, "NOT YET", ProcColor, 1.3f));
+            EventBus.Publish(new PopupRequested(at + Vector3.Up * 1.2f, Meta.Loc.T("NOT YET"), ProcColor, 1.3f));
             return;
         }
 
@@ -338,7 +338,7 @@ public sealed partial class ItemProcs : Node
         {
             _lifebuoyReady = Mathf.Max(15f, 60f - 15f * (buoy - 1));
             health.HealFraction(0.30f);
-            EventBus.Publish(new PopupRequested(at + Vector3.Up * 1.2f, "AFLOAT", ProcColor, 1.1f));
+            EventBus.Publish(new PopupRequested(at + Vector3.Up * 1.2f, Meta.Loc.T("AFLOAT"), ProcColor, 1.1f));
         }
     }
 

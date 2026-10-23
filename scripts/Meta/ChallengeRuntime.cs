@@ -159,10 +159,11 @@ public sealed partial class ChallengeRuntime : Node
         if (_label is not null && _labelIn <= 0f)
         {
             _labelIn = 0.25f;
-            string text = string.Join("  ·  ", Challenges.Active.Select(c => c.Name));
-            if (_bossDeadline > 0f) text += $"\nEBB CLOCK {Mathf.CeilToInt(_bossDeadline - Now)}s";
-            if (Challenges.WeaponsSilenced) text += $"\nBECALMED {Mathf.CeilToInt(PacifistSeconds - (Now - _phaseStartedAt))}s";
-            if (Challenges.SurgeActive) text += "\nSPRING TIDE";
+            string text = string.Join("  ·  ", Challenges.Active.Select(c => Loc.T(c.Name)));
+            if (_bossDeadline > 0f) text += "\n" + Loc.F("EBB CLOCK {0}s", Mathf.CeilToInt(_bossDeadline - Now));
+            if (Challenges.WeaponsSilenced) text += "\n" + Loc.F("BECALMED {0}s", Mathf.CeilToInt(PacifistSeconds - (Now - _phaseStartedAt)));
+            if (Challenges.SurgeActive) text += "\n" + Loc.T("SPRING TIDE");
+
             _label.Text = text;
         }
     }

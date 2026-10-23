@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using Wavebreak.Meta;
 using Wavebreak.Core;
 using Wavebreak.Data;
 using Wavebreak.Progression;
@@ -32,7 +33,7 @@ public sealed partial class Hud
         Place(_tomeList, Margin, top, HealthBarWidth, RowHeight * (Tomes.MaxSlots + 2));
         AddChild(_tomeList);
 
-        _tomeHeader = Text("TOMES", 13, TomeHeaderTint);
+        _tomeHeader = Text(Loc.T("TOMES"), 13, TomeHeaderTint);
         _tomeList.AddChild(_tomeHeader);
 
         if (!_tomesSubscribed)
@@ -53,7 +54,7 @@ public sealed partial class Hud
         if (string.IsNullOrEmpty(e.Id) || _tomeList is null) return;
 
         TomeDef? def = Tomes.ById(e.Id);
-        string name = def?.DisplayName ?? e.Id;
+        string name = Loc.T(def?.DisplayName ?? e.Id);
 
         if (!_tomeRows.TryGetValue(e.Id, out Label? row))
         {
@@ -65,10 +66,10 @@ public sealed partial class Hud
         }
 
         bool maxed = def is not null && e.NewLevel >= def.MaxLevel;
-        row.Text = maxed ? $"{name}   MAX" : $"{name}   Lv {e.NewLevel}";
+        row.Text = maxed ? Loc.F("{0}   MAX", name) : Loc.F("{0}   Lv {1}", name, e.NewLevel);
 
         int slots = TomeBook.Current?.Slots ?? Tomes.MaxSlots;
-        _tomeHeader.Text = $"TOMES  {_tomeRows.Count}/{slots}";
+        _tomeHeader.Text = Loc.F("TOMES  {0}/{1}", _tomeRows.Count, slots);
         _tomeList.Visible = true;
     }
 }

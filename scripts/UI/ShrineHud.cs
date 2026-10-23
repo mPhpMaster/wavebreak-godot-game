@@ -2,6 +2,7 @@ using Godot;
 using Wavebreak.Actors;
 using Wavebreak.Data;
 using Wavebreak.Game;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -57,7 +58,7 @@ public sealed partial class ShrineHud : Control
         }
 
         _greed.Visible = s.GreedStacks > 0;
-        if (_greed.Visible) _greed.Text = $"GREED x{s.GreedStacks}";
+        if (_greed.Visible) _greed.Text = Loc.F("GREED x{0}", s.GreedStacks);
 
         QueueRedraw();
     }
@@ -87,7 +88,8 @@ public sealed partial class ShrineHud : Control
             DrawColoredPolygon(diamond, c);
             string glyph = MapShrines.Glyph(shrine.Kind);
             DrawString(font, p + new Vector2(-4f, 5f), glyph, HorizontalAlignment.Left, -1, 13, Shadow);
-            DrawString(font, p + new Vector2(-13f, r + 16f), $"{dist:0}m", HorizontalAlignment.Left, -1, 12, c.Lightened(0.4f));
+            DrawString(font, p + new Vector2(-13f, r + 16f), Loc.F("{0:0}m", dist), HorizontalAlignment.Left, -1, 12, c.Lightened(0.4f));
+
         }
     }
 

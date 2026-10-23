@@ -339,3 +339,21 @@ launches never load or save it. `UI/GraphicsPanel` is the shared page (title
 settings and pause menu); window mode, size and monitor wait for APPLY and
 revert after 10 s unless kept. `--check-graphics` drives every option and
 prints GRAPHICS PASS/FAIL; `--menu-page=graphics[:bottom]` captures the page.
+
+## Language (English / Arabic)
+
+`Meta/Loc` holds the language (Settings > Language; `[general] language` in
+`user://settings.cfg`, never read or written by automated runs; `--lang=ar`
+forces it for captures). English text is the key: `Meta/ArabicText/*.cs` are
+plain `(English, Arabic)` arrays, found by reflection (fields named `Content*`
+are content, the rest UI), loaded into a `Translation` for locale `ar` so
+Labels/Buttons whose whole text is a key auto-translate. Code that builds text
+calls `Loc.T(text)` or `Loc.F("template {0}", args)`; a key with `{n}` holes is
+also a pattern, so `T("Seasoned: Rimeheart")` resolves through `"Seasoned: {0}"`.
+Arabic sets the root window's layout direction to RTL (containers and anchored
+controls mirror; the title backdrop hero moves to the other side) and adds
+Noto Sans Arabic UI (OFL, `assets/fonts`) as a fallback on the default font.
+Changing the language reloads the title on the settings page.
+`--dump-strings=<txt>` lists content strings with no Arabic; the content audit
+fails on any missing/empty translation, mismatched `{n}` holes, conflicting
+duplicates, a missing font, or a text server that cannot shape/bidi.

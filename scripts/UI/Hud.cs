@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using Wavebreak.Meta;
 using Wavebreak.Actors;
 using Wavebreak.Core;
 using Wavebreak.Data;
@@ -226,7 +227,7 @@ public sealed partial class Hud : Control
     {
         float y = XpBarHeight + 12f;
 
-        _levelLabel = Text("LV 1", 24, LevelTint);
+        _levelLabel = Text(Loc.F("LV {0}", 1), 24, LevelTint);
         Place(_levelLabel, Margin, y, 120f, 30f);
         AddChild(_levelLabel);
 
@@ -279,11 +280,11 @@ public sealed partial class Hud : Control
     {
         float y = XpBarHeight + 12f;
 
-        _killLabel = Text("0 KILLS", 20, KillTint, HorizontalAlignment.Right);
+        _killLabel = Text(Loc.F("{0} KILLS", 0), 20, KillTint, HorizontalAlignment.Right);
         PlaceRight(_killLabel, Margin, y, 220f, 26f);
         AddChild(_killLabel);
 
-        _goldLabel = Text("0 GOLD", 20, GoldTint, HorizontalAlignment.Right);
+        _goldLabel = Text(Loc.F("{0} GOLD", 0), 20, GoldTint, HorizontalAlignment.Right);
         PlaceRight(_goldLabel, Margin, y + 26f, 220f, 26f);
         AddChild(_goldLabel);
     }
@@ -324,7 +325,7 @@ public sealed partial class Hud : Control
         // The key is named on the meter itself. Dash is the verb new players
         // forget they have, and a meter that does not say which key it belongs
         // to teaches nothing.
-        _dashLabel = Text("DASH  [SHIFT]  READY", 15, DashReady, HorizontalAlignment.Center);
+        _dashLabel = Text(Loc.T("DASH  [SHIFT]  READY"), 15, DashReady, HorizontalAlignment.Center);
         PlaceBottomCentre(_dashLabel, top - 24f, DashBarWidth + 120f, 22f);
         AddChild(_dashLabel);
     }
@@ -381,12 +382,12 @@ public sealed partial class Hud : Control
 
     private void OnPhaseStarted(PhaseStarted e)
     {
-        _phaseLabel.Text = $"PHASE {e.Phase}/{e.PhaseCount}  —  {e.StageName.ToUpperInvariant()}";
-        ShowCard($"PHASE {e.Phase}  ·  {e.StageName.ToUpperInvariant()}", e.Tagline, Ink);
+        _phaseLabel.Text = Loc.F("PHASE {0}/{1}  —  {2}", e.Phase, e.PhaseCount, Upper(e.StageName));
+        ShowCard(Loc.F("PHASE {0}  ·  {1}", e.Phase, Upper(e.StageName)), Loc.T(e.Tagline), Ink);
     }
 
     private void OnPortalOpened(PortalOpened e)
-        => ShowCard("PORTAL OPEN", "Follow the light to the next map", PortalTint);
+        => ShowCard(Loc.T("PORTAL OPEN"), Loc.T("Follow the light to the next map"), PortalTint);
 
     /// <summary>
     /// Tracks the lifetime experience total the bar is derived from.
@@ -444,7 +445,7 @@ public sealed partial class Hud : Control
         if (string.IsNullOrEmpty(e.Id)) return;
 
         WeaponDef? def = Catalog.WeaponById(e.Id);
-        string name = def?.DisplayName ?? e.Id;
+        string name = Loc.T(def?.DisplayName ?? e.Id);
 
         if (!_weaponRows.TryGetValue(e.Id, out Label? row))
         {
@@ -459,7 +460,7 @@ public sealed partial class Hud : Control
         }
 
         bool maxed = def is not null && e.NewLevel >= def.MaxLevel;
-        row.Text = maxed ? $"{name}   MAX" : $"{name}   Lv {e.NewLevel}";
+        row.Text = maxed ? Loc.F("{0}   MAX", name) : Loc.F("{0}   Lv {1}", name, e.NewLevel);
     }
 
     // -------------------------------------------------------------- refresh
@@ -477,7 +478,7 @@ public sealed partial class Hud : Control
         // The level and the numbers live on one line so the bar itself can stay a
         // bare strip. Reading "how far to the next choice" is what the bar is for;
         // the digits are for the player who wants to know whether to push.
-        _levelLabel.Text = $"LV {_level}   {XpCurve.XpIntoLevel(_xpTotal)} / {XpCurve.XpForLevel(_level)}";
+        _levelLabel.Text = Loc.F("LV {0}   {1} / {2}", _level, XpCurve.XpIntoLevel(_xpTotal), XpCurve.XpForLevel(_level));
     }
 
     private void RefreshCounters()
@@ -485,8 +486,8 @@ public sealed partial class Hud : Control
         // Elites are worth calling out separately: they are the reason a run
         // either has items or does not, and "34 kills" hides whether four of them
         // were the ones that mattered.
-        _killLabel.Text = _elites > 0 ? $"{_kills} KILLS  ({_elites}★)" : $"{_kills} KILLS";
-        _goldLabel.Text = $"{_gold} GOLD";
+        _killLabel.Text = _elites > 0 ? Loc.F("{0} KILLS  ({1}★)", _kills, _elites) : Loc.F("{0} KILLS", _kills);
+        _goldLabel.Text = Loc.F("{0} GOLD", _gold);
     }
 
     // ----------------------------------------------------------------- loop
@@ -554,29 +555,29 @@ public sealed partial class Hud : Control
         switch (stages.State)
         {
             case StageDirector.PhaseState.Waves:
-                status = $"BOSS IN {RunState.Format(Mathf.Ceil(stages.SecondsToBoss))}";
+                status = Loc.F("BOSS IN {0}", RunState.Format(Mathf.Ceil(stages.SecondsToBoss)));
                 break;
             case StageDirector.PhaseState.Boss:
                 float hp = stages.BossHealth;
-                string name = stages.BossName.ToUpperInvariant();
-                status = hp >= 0f ? $"BOSS  {name}  {Mathf.CeilToInt(hp * 100f)}%" : $"BOSS  {name}";
+                string name = Upper(stages.BossName);
+                status = hp >= 0f ? Loc.F("BOSS  {0}  {1}%", name, Mathf.CeilToInt(hp * 100f)) : Loc.F("BOSS  {0}", name);
                 // Overtime is said out loud: pressure that rises silently feels
                 // like a balance bug rather than a consequence.
                 if (stages.OvertimeSeconds > 0f)
-                    status += $"   OVERTIME +{Mathf.RoundToInt(stages.OvertimeSeconds / 30f * 12f)}%";
+                    status += "   " + Loc.F("OVERTIME +{0}%", Mathf.RoundToInt(stages.OvertimeSeconds / 30f * 12f));
                 tint = BossTint;
                 break;
             case StageDirector.PhaseState.FinalSwarm when stages.Swarm is { } swarm:
                 // The run is already won; this is the score attack after it.
-                status = $"FINAL SWARM  {RunState.Format(swarm.Seconds)}   ENEMY HP +{swarm.HealthBonusPercent}%";
+                status = Loc.F("FINAL SWARM  {0}   ENEMY HP +{1}%", RunState.Format(swarm.Seconds), swarm.HealthBonusPercent);
                 tint = BossTint;
                 break;
             case StageDirector.PhaseState.PortalOpen:
-                status = "PORTAL OPEN  —  GO";
+                status = Loc.T("PORTAL OPEN  —  GO");
                 tint = PortalTint;
                 break;
             default:
-                status = "VICTORY";
+                status = Loc.T("VICTORY");
                 tint = PortalTint;
                 break;
         }
@@ -667,7 +668,7 @@ public sealed partial class Hud : Control
         if (tenths == _lastDashTenths) return;
 
         _lastDashTenths = tenths;
-        _dashLabel.Text = ready ? "DASH  [SHIFT]  READY" : $"DASH  [SHIFT]  {tenths / 10f:0.0}s";
+        _dashLabel.Text = ready ? Loc.T("DASH  [SHIFT]  READY") : Loc.F("DASH  [SHIFT]  {0:0.0}s", tenths / 10f);
         _dashLabel.AddThemeColorOverride("font_color", ready ? DashReady : DashCharging.Lerp(Ink, 0.4f));
     }
 
@@ -677,6 +678,11 @@ public sealed partial class Hud : Control
     /// decoration: the HUD is drawn over a lit 3D scene whose brightness the UI
     /// does not control, and unoutlined text disappears the moment an explosion
     /// happens behind it.</summary>
+    /// <summary>A content name as a shouty header: upper-cased in English,
+    /// translated in Arabic (which has no case).</summary>
+    private static string Upper(string english)
+        => Loc.IsArabic ? Loc.T(english) : english.ToUpperInvariant();
+
     private static Label Text(string text, int size, Color color,
                               HorizontalAlignment align = HorizontalAlignment.Left)
     {

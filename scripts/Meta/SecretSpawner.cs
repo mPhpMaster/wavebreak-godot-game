@@ -34,7 +34,7 @@ public sealed class SecretKindDef
         var parts = new List<string>();
         foreach (CharacterStat b in boons)
             parts.Add(Catalog.DescribeEffect(new ItemEffect { Stat = b.Stat, Op = b.Op, PerStack = b.Value }));
-        return string.Join(", ", parts);
+        return string.Join(Loc.IsArabic ? "، " : ", ", parts);
     }
 }
 

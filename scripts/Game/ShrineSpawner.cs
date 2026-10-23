@@ -91,8 +91,8 @@ public sealed partial class ShrineSpawner : Node
     /// <summary>What the challenge banner says, or null when no trial runs.</summary>
     public string? ChallengeText => _trial switch
     {
-        Trial.Slaughter => $"CHALLENGE  ·  KILL {Math.Min(KillsSinceStart, _trialTarget)}/{_trialTarget}  ·  {Mathf.CeilToInt(_trialLeft)}s",
-        Trial.Guardians => $"CHALLENGE  ·  SLAY THE GUARDIANS {_guardiansDown}/{_trialTarget}  ·  {Mathf.CeilToInt(_trialLeft)}s",
+        Trial.Slaughter => Meta.Loc.F("CHALLENGE  ·  KILL {0}/{1}  ·  {2}s", Math.Min(KillsSinceStart, _trialTarget), _trialTarget, Mathf.CeilToInt(_trialLeft)),
+        Trial.Guardians => Meta.Loc.F("CHALLENGE  ·  SLAY THE GUARDIANS {0}/{1}  ·  {2}s", _guardiansDown, _trialTarget, Mathf.CeilToInt(_trialLeft)),
         _ => null,
     };
 
@@ -308,18 +308,18 @@ public sealed partial class ShrineSpawner : Node
     private void ShowPrompt(MapShrine s)
     {
         int gold = Inventory.Current?.Gold ?? 0;
-        string name = MapShrines.Name(s.Kind);
+        string name = Meta.Loc.T(MapShrines.Name(s.Kind));
         switch (s.Kind)
         {
             case MapShrineKind.Charge:
-                _prompt.ShowText(s.Top, $"{name}\ncharging  {s.Charge * 100f:0}%", MapShrines.Tint(s.Kind).Lightened(0.4f));
+                _prompt.ShowText(s.Top, name + "\n" + Meta.Loc.F("charging  {0:0}%", s.Charge * 100f), MapShrines.Tint(s.Kind).Lightened(0.4f));
                 break;
             case MapShrineKind.Challenge:
                 _prompt.ShowText(s.Top, s.Active
                         ? $"{name}\n{ChallengeText}"
                         : ChallengeRunning
-                            ? $"{name}\nanother challenge is running"
-                            : $"{_keyName} — start challenge\nwin: gilded reward · lose: nothing",
+                            ? name + "\n" + Meta.Loc.T("another challenge is running")
+                            : Meta.Loc.F("{0} — start challenge\nwin: gilded reward · lose: nothing", _keyName),
                     ChallengeRunning && !s.Active ? ShrinePrompt.TooPoor : ShrinePrompt.Neutral);
                 break;
             case MapShrineKind.Statue:
@@ -328,15 +328,15 @@ public sealed partial class ShrineSpawner : Node
                 bool ok = gold >= price;
                 int left = MapShrines.StatueUsesPerShrine - s.Uses;
                 _prompt.ShowText(s.Top,
-                    ok ? $"{_keyName} — offer {price} gold for a blessing\n{left} left"
-                       : $"{_keyName} — offer {price} gold  (need {price - gold} more)",
+                    ok ? Meta.Loc.F("{0} — offer {1} gold for a blessing\n{2} left", _keyName, price, left)
+                       : Meta.Loc.F("{0} — offer {1} gold  (need {2} more)", _keyName, price, price - gold),
                     ok ? ShrinePrompt.Neutral : ShrinePrompt.TooPoor);
                 break;
             }
             default:
             {
                 int left = MapShrines.GreedUsesPerShrine - s.Uses;
-                _prompt.ShowText(s.Top, $"{_keyName} — accept a curse  ({left} left)\n{MapShrines.DescribeGreed()}",
+                _prompt.ShowText(s.Top, Meta.Loc.F("{0} — accept a curse  ({1} left)", _keyName, left) + "\n" + MapShrines.DescribeGreed(),
                     MapShrines.Tint(s.Kind).Lightened(0.45f));
                 break;
             }
@@ -387,7 +387,7 @@ public sealed partial class ShrineSpawner : Node
         var source = new ShrineGrant(from, boon);
         player.Stats.Add(boon.Stat, boon.Op, boon.Value, source);
         Blessings++;
-        EventBus.Publish(new PopupRequested(at, $"{boon.Title} {boon.Effect}", boon.Color, 1.4f));
+        EventBus.Publish(new PopupRequested(at, $"{Meta.Loc.T(boon.Title)} {boon.Effect}", boon.Color, 1.4f));
         EventBus.Publish(new MapShrineUsed(from, ShrineOutcome.Blessed, at, $"{boon.Title} {boon.Effect}"));
         GD.Print($"[shrine] blessing {from}: {boon.Title} {boon.Effect} ({boon.Rarity})");
     }
@@ -513,7 +513,9 @@ public sealed partial class ShrineSpawner : Node
         string what = _trial == Trial.Slaughter ? $"KILL {_trialTarget} IN {MapShrines.SlaughterSeconds:0}s"
                                                 : $"SLAY {_trialTarget} GUARDIANS";
         EventBus.Publish(new PopupRequested(s.Top, "CHALLENGE!", MapShrines.Tint(MapShrineKind.Challenge).Lightened(0.2f), 1.8f));
+        // English "what" also goes to the shrine event below; the popup translates it.
         EventBus.Publish(new PopupRequested(s.Top + Vector3.Down * 0.7f, what, ShrinePrompt.Neutral, 1.1f));
+
         Publish(s, ShrineOutcome.ChallengeStarted, what);
         GD.Print($"[shrine] challenge {_trial} target={_trialTarget} t={run?.Seconds ?? 0f:0}s");
     }

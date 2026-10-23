@@ -155,7 +155,7 @@ public static class CuteHazards
         _pinchLeft = MathF.Max(_pinchLeft, seconds);
         _pinchSlow = MathF.Max(fresh ? 0f : _pinchSlow, Mathf.Clamp(slow, 0f, 0.8f));
         PinchesLanded++;
-        if (fresh) Popup(p, "PINCHED", PinchTextColor);
+        if (fresh) Popup(p, Meta.Loc.T("PINCHED"), PinchTextColor);
     }
 
     /// <summary>Hold the player in a bubble for <paramref name="seconds"/>.</summary>
@@ -165,7 +165,7 @@ public static class CuteHazards
         bool fresh = _trapLeft <= 0f;
         _trapLeft = MathF.Max(_trapLeft, MathF.Min(seconds, 1.5f));
         TrapsLanded++;
-        if (fresh) Popup(p, "BUBBLED!", TrapTextColor);
+        if (fresh) Popup(p, Meta.Loc.T("BUBBLED!"), TrapTextColor);
     }
 
     /// <summary>A lantern-fish asks for the lights to dim. <paramref name="weight"/>
@@ -228,7 +228,7 @@ public static class CuteHazards
                 done = true;
                 if (player is not null && player.IsDashing)
                 {
-                    Popup(player, "POP", TrapTextColor, 0.7f);
+                    Popup(player, Meta.Loc.T("POP"), TrapTextColor, 0.7f);
                 }
                 else
                 {
@@ -274,7 +274,7 @@ public static class CuteHazards
             if (player.IsDashing)
             {
                 _trapLeft = 0f;
-                Popup(player, "POP!", TrapTextColor, 0.9f);
+                Popup(player, Meta.Loc.T("POP!"), TrapTextColor, 0.9f);
             }
             else _trapLeft -= dt;
         }

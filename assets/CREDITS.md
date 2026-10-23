@@ -44,3 +44,9 @@ under CC0 1.0, like the art above. To change a track, edit the script and re-run
 | `swarm.ogg` | Final Swarm (loop) | D minor, 136 bpm | 56 s |
 | `victory.ogg` | win sting | C major | 7.5 s |
 | `defeat.ogg` | defeat sting | A minor | 10 s |
+
+## Fonts
+
+| File | Font | Author | Source | Licence |
+|---|---|---|---|---|
+| `fonts/NotoSansArabicUI-SemiBold.ttf` | Noto Sans Arabic UI SemiBold (Arabic fallback for the default font) | The Noto Project Authors | https://github.com/notofonts/arabic | SIL Open Font License 1.1 (`fonts/OFL.txt`) |

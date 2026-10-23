@@ -41,9 +41,9 @@ public sealed partial class RunRewards : Node
     {
         /// <summary>"+123 Pearls (Hard x1.5)".</summary>
         public string Headline => (Tier.Reward > 1f
-            ? $"+{Total} {Pearls.Name}  ({Tier.Name} x{Tier.Reward:0.##})"
-            : $"+{Total} {Pearls.Name}")
-            + (Challenges.RewardMultiplier > 1f ? $"  (challenges x{Challenges.RewardMultiplier:0.##})" : "");
+            ? Loc.F("+{0} {1}  ({2} x{3:0.##})", Total, Pearls.Name, Tier.Name, Tier.Reward)
+            : Loc.F("+{0} {1}", Total, Pearls.Name))
+            + (Challenges.RewardMultiplier > 1f ? Loc.F("  (challenges x{0:0.##})", Challenges.RewardMultiplier) : "");
     }
 
     /// <summary>The live run's settler, or null outside a run.</summary>
@@ -94,7 +94,9 @@ public sealed partial class RunRewards : Node
         GD.Print($"META difficulty win tier={tier.Id} unlocked={opened?.Id ?? "-"}");
         if (opened is not null && Player.Instance is { } p && IsInstanceValid(p))
             EventBus.Publish(new PopupRequested(p.GlobalPosition + new Vector3(0f, 4.4f, 0f),
-                $"{opened.Name.ToUpperInvariant()} UNLOCKED", new Color(1f, 0.84f, 0.38f), 1.3f));
+                Loc.IsArabic ? Loc.F("{0} UNLOCKED", opened.Name) : $"{opened.Name.ToUpperInvariant()} UNLOCKED",
+                new Color(1f, 0.84f, 0.38f), 1.3f));
+
     }
 
     /// <summary>

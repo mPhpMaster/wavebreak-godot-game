@@ -41,26 +41,26 @@ public sealed record MapChallengeDef(
 
     public string GoalText => Goal switch
     {
-        MapGoal.Survive => $"Survive {Map?.DisplayName ?? MapId} until its boss arrives",
-        MapGoal.Clear => $"Beat the boss of {Map?.DisplayName ?? MapId}",
-        _ => $"Win the run, then last {MapChallenges.SwarmSeconds:0}s in the Final Swarm",
+        MapGoal.Survive => Loc.F("Survive {0} until its boss arrives", Map?.DisplayName ?? MapId),
+        MapGoal.Clear => Loc.F("Beat the boss of {0}", Map?.DisplayName ?? MapId),
+        _ => Loc.F("Win the run, then last {0:0}s in the Final Swarm", MapChallenges.SwarmSeconds),
     };
 
     public string GoalShort => Goal switch
     {
-        MapGoal.Survive => "Reach the boss",
-        MapGoal.Clear => "Beat the boss",
-        _ => "Final Swarm",
+        MapGoal.Survive => Loc.T("Reach the boss"),
+        MapGoal.Clear => Loc.T("Beat the boss"),
+        _ => Loc.T("Final Swarm"),
     };
 
-    public string TierName => MapChallenges.TierNames[Math.Clamp(Tier, 0, MapChallenges.TierNames.Length - 1)];
+    public string TierName => Loc.T(MapChallenges.TierNames[Math.Clamp(Tier, 0, MapChallenges.TierNames.Length - 1)]);
 
     public string RewardText
     {
         get
         {
-            string s = $"{Pearls} {Meta.Pearls.Name}";
-            if (Cosmetic == CosmeticKind.Hat) s += $" + Hat: {Hats.ById(CosmeticId)?.Name ?? CosmeticId}";
+            string s = Loc.F("{0} Pearls", Pearls);
+            if (Cosmetic == CosmeticKind.Hat) s += " + " + Loc.F("Hat: {0}", Hats.ById(CosmeticId)?.Name ?? CosmeticId);
             else if (Cosmetic == CosmeticKind.Skin) s += " + " + Unlocks.DescribeSkin(CosmeticId);
             return s;
         }
@@ -73,9 +73,9 @@ public sealed record MapChallengeDef(
         {
             var parts = new List<string>();
             if (Twist != MapTwist.None) parts.Add(MapChallenges.TwistName(Twist));
-            foreach (string m in Modifiers) parts.Add(Challenges.ById(m)?.Name ?? m);
+            foreach (string m in Modifiers) parts.Add(Loc.T(Challenges.ById(m)?.Name ?? m));
             if (Tier > 0) parts.Add(TierName);
-            return parts.Count == 0 ? "No modifiers" : string.Join("  ·  ", parts);
+            return parts.Count == 0 ? Loc.T("No modifiers") : string.Join("  ·  ", parts);
         }
     }
 }
@@ -247,7 +247,7 @@ public static class MapChallenges
         return -1;
     }
 
-    public static string TwistName(MapTwist t) => t switch
+    public static string TwistName(MapTwist t) => Loc.T(t switch
     {
         MapTwist.Brambles => "Brambles",
         MapTwist.Whiteout => "Whiteout",
@@ -258,7 +258,7 @@ public static class MapChallenges
         MapTwist.LavaFloor => "Lava Floor",
         MapTwist.Ashfall => "Ashfall",
         _ => "",
-    };
+    });
 
     // ---------------------------------------------------------- selection
 

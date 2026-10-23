@@ -24,10 +24,10 @@ public sealed partial class LeaderboardPage : Control
     /// <summary>"WON  14:02  ·  1,204 kills  ·  level 31  ·  phase 3  ·  Kiln Sister".</summary>
     public static string Describe(LeaderboardEntry e)
     {
-        string s = $"{(e.Won ? "WON" : "FELL")}  {e.Clock}  ·  {e.Kills:N0} kills  ·  level {e.Level}";
-        if (e.Phase > 0) s += $"  ·  phase {e.Phase}";
-        s += $"  ·  {e.CharacterName}";
-        if (e.Difficulty.Length > 0) s += $"  ·  {e.Difficulty}";
+        string s = Loc.F("{0}  {1}  ·  {2:N0} kills  ·  level {3}", e.Won ? "WON" : "FELL", e.Clock, e.Kills, e.Level);
+        if (e.Phase > 0) s += "  ·  " + Loc.F("phase {0}", e.Phase);
+        s += "  ·  " + Loc.T(e.CharacterName);
+        if (e.Difficulty.Length > 0) s += "  ·  " + Loc.T(e.Difficulty);
         return s;
     }
 
