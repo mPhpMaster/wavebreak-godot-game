@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Wavebreak.Meta;
 
@@ -32,6 +33,28 @@ public enum Metric
     LevelUntouched,     // highest level reached this run before the first hit taken
     SecretsAny,         // distinct secret kinds ever found
     SecretsAll,         // 1 once every kind in SecretSpawner.Kinds has been found
+
+    // ---- quests (Meta/Quests.cs, tracked in UnlockTracker.Quests.cs). Keyed
+    // ones read UnlockDef.Key: a weapon id, a character id or a phase number.
+    WeaponKills,        // lifetime kills with the weapon in Key
+    RunKills,
+    RunSlamKills,
+    TotalSlamKills,
+    RunSlideMetres,
+    TotalSlideMetres,
+    PhaseBossBeaten,    // 1 once the boss of phase Key has ever been beaten
+    CharacterWins,      // lifetime wins as the character in Key
+    CharactersWon,      // distinct characters with at least one win
+    RunChests,
+    PhaseUntouched,     // 1 once phase Key was cleared without taking damage in it
+    UntouchedPhaseWin,  // 1 once a run was won with no damage taken in phase 1
+    RunShrines,
+    TotalShrines,
+    RunPhase,           // furthest phase reached this run
+    TotalCrits,
+    RunGoldEarned,
+    RunMaxedWeapons,
+    RunHealed,
 }
 
 public enum RewardKind { Character, Weapon, Item, Skin }
@@ -56,6 +79,10 @@ public sealed class UnlockDef
     /// <summary>Cryptic line for a hidden secret. Points at the act without
     /// naming it — a hint that states the rule is just a checklist.</summary>
     public string Hint { get; init; } = "";
+
+    /// <summary>Parameter for keyed metrics (weapon id, character id, phase
+    /// number). Empty for the rest.</summary>
+    public string Key { get; init; } = "";
 }
 
 /// <summary>
@@ -125,7 +152,7 @@ public static class Unlocks
         new() { Id = "all_shrines", Name = "The Augur's Path", Description = "Find every kind of hidden shrine.",
                 Metric = Metric.SecretsAll, Threshold = 1, Reward = RewardKind.Skin, RewardId = "gilded_augur.eclipse",
                 Secret = true, Hint = "Three lights hide where the arena thins. Greet them all." },
-    };
+    }.Concat(Quests.All).ToList();
 
     public static UnlockDef? ById(string? id)
     {

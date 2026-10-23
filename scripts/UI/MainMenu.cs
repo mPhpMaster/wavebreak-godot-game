@@ -51,6 +51,7 @@ public sealed partial class MainMenu : Node3D
     private Label _charBlurb = null!;
     private Label _charStats = null!;
     private Label _charLock = null!;
+    private Label _charPassive = null!;
     private Label _skinLabel = null!;
     private CharacterDef? _shownCharacter;
     private int _skinIndex;
@@ -288,6 +289,7 @@ public sealed partial class MainMenu : Node3D
         _pages["settings"] = BuildSettingsPage();
         _pages["keys"] = BuildKeysPage();
         _pages["shop"] = _shop = new MetaShopPage(() => ShowPage("main"));
+        _pages["records"] = BuildLeaderboardPage();
         foreach (Control p in _pages.Values) _root.AddChild(p);
     }
 
@@ -301,6 +303,7 @@ public sealed partial class MainMenu : Node3D
         page.AddChild(_playButton);
         page.AddChild(MenuButton("PEARL SHOP", () => ShowPage("shop")));
         page.AddChild(MenuButton("UNLOCKS & SECRETS", () => ShowPage("codex")));
+        page.AddChild(MenuButton("LEADERBOARD", () => ShowPage("records")));
         page.AddChild(MenuButton("SETTINGS", () => ShowPage("settings")));
         page.AddChild(MenuButton("QUIT", () => GetTree().Quit()));
 
@@ -328,8 +331,9 @@ public sealed partial class MainMenu : Node3D
         page.AddChild(heading);
 
         var list = new VBoxContainer();
-        Place(list, 60f, 236f, 340f, 420f);
-        list.AddThemeConstantOverride("separation", 10);
+        Place(list, 60f, 236f, 340f, 460f);
+        // 6, not 10: seven characters and Back must fit above the window's edge.
+        list.AddThemeConstantOverride("separation", 6);
         page.AddChild(list);
 
         foreach (CharacterDef def in Characters.All)
@@ -362,7 +366,9 @@ public sealed partial class MainMenu : Node3D
         _charStats.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _charLock = MakeLabel("", 16, Gold);
         _charLock.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        foreach (Label l in new[] { _charName, _charLook, _charBlurb, _charStats, _charLock }) box.AddChild(l);
+        _charPassive = MakeLabel("", 16, Gold);
+        _charPassive.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        foreach (Label l in new[] { _charName, _charLook, _charBlurb, _charStats, _charPassive, _charLock }) box.AddChild(l);
 
         // Skin picker: the arrow buttons and the left/right keys both cycle it.
         // The buttons take no focus so the up/down character list keeps it.
@@ -428,6 +434,7 @@ public sealed partial class MainMenu : Node3D
         _charBlurb.Text = hidden ? "Someone else walks these shores. You have not met them yet." : c.Blurb;
         _charStats.Text = hidden ? "" :
             $"Starts with {c.StartingWeaponDef.DisplayName}\n{Characters.Describe(c)}";
+        _charPassive.Text = hidden || c.PassiveName.Length == 0 ? "" : $"Passive — {c.PassiveName}: {c.PassiveText}";
         _charLock.Text = open ? "Press to begin the run"
             : hidden ? $"Secret — {source!.Hint}"
             : $"Locked — {source?.Description}";
@@ -470,6 +477,24 @@ public sealed partial class MainMenu : Node3D
         Place(back, 60f, 660f, 200f, 44f);
         page.AddChild(back);
         _codex.BackButton = back;
+        return page;
+    }
+
+    // ----------------------------------------------------------- leaderboard
+
+    private LeaderboardPage _leaderboard = null!;
+    private Button _leaderboardBack = null!;
+
+    private Control BuildLeaderboardPage()
+    {
+        var page = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+        page.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        _leaderboard = new LeaderboardPage();
+        Place(_leaderboard, 60f, 196f, 1000f, 450f);
+        page.AddChild(_leaderboard);
+        _leaderboardBack = MenuButton("BACK", () => ShowPage("main"));
+        Place(_leaderboardBack, 60f, 660f, 200f, 44f);
+        page.AddChild(_leaderboardBack);
         return page;
     }
 
@@ -585,6 +610,10 @@ public sealed partial class MainMenu : Node3D
             case "shop":
                 _shop.Refresh();
                 _shop.FocusFirst();
+                break;
+            case "records":
+                _leaderboard.Refresh();
+                _leaderboardBack.GrabFocus();
                 break;
             default:
                 _pearls.Text = $"{Pearls.Name} {Pearls.Balance}   ·   difficulty {DifficultyTiers.Selected.Name}";

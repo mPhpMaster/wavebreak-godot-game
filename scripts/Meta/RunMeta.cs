@@ -5,6 +5,7 @@ using Godot;
 using Wavebreak.Core;
 using Wavebreak.Data;
 using Wavebreak.Game;
+using Wavebreak.Stats;
 
 namespace Wavebreak.Meta;
 
@@ -49,6 +50,11 @@ public static class RunMeta
         // (MetaShop, DifficultyTiers, RunRewards).
         DifficultyTiers.BeginRun();
         MetaShop.ApplyTo(main.Player.Stats);
+        // Shop charge upgrades feed the level-up panel's charge stats.
+        if (MetaShop.BonusRerolls > 0) main.Player.Stats.Add(Stat.Rerolls, ModifierOp.Flat, MetaShop.BonusRerolls, MetaShop.Source);
+        if (MetaShop.BonusBanishes > 0) main.Player.Stats.Add(Stat.Banishes, ModifierOp.Flat, MetaShop.BonusBanishes, MetaShop.Source);
+        if (MetaShop.BonusSkips > 0) main.Player.Stats.Add(Stat.Skips, ModifierOp.Flat, MetaShop.BonusSkips, MetaShop.Source);
+        Leaderboard.DifficultyProvider = () => DifficultyTiers.Active.Name;
         var rewards = new RunRewards();
         rewards.Bind(main);
         main.AddChild(rewards);
@@ -72,6 +78,8 @@ public static class RunMeta
         var layer = new CanvasLayer { Name = "MetaUI", Layer = 20 };
         main.AddChild(layer);
         layer.AddChild(new UI.UnlockToast());
+        layer.AddChild(new UI.LeaderboardBanner());   // quests/passives/leaderboard
+        CharacterPassives.Attach(main, Character);
 
         // Shrines are placed per map by Game.StageDirector, under each arena, so
         // every phase has its own to find and they leave with the map.

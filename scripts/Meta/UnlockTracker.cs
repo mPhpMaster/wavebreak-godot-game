@@ -58,6 +58,7 @@ public sealed partial class UnlockTracker : Node
         EventBus.Subscribe<ChestOpened>(OnChestOpened);
         EventBus.Subscribe<SecretDiscovered>(OnSecretDiscovered);
         EventBus.Subscribe<RunEnded>(OnRunEnded);
+        SubscribeQuests();
     }
 
     public override void _ExitTree()
@@ -68,6 +69,7 @@ public sealed partial class UnlockTracker : Node
         EventBus.Unsubscribe<ChestOpened>(OnChestOpened);
         EventBus.Unsubscribe<SecretDiscovered>(OnSecretDiscovered);
         EventBus.Unsubscribe<RunEnded>(OnRunEnded);
+        UnsubscribeQuests();
         Commit();
     }
 
@@ -103,13 +105,20 @@ public sealed partial class UnlockTracker : Node
 
     private void OnRunEnded(RunEnded e)
     {
+        bool first = !_ended;
         _ended = true;
         // Survived alone is not a win: an automated run is finished early with
         // survived=true just to exercise the run-end path. A win is surviving to
         // the clock.
-        _won = e.Survived && e.Seconds >= RunState.TargetSeconds - 0.5f;
+        // With phases the win is the last boss falling, which usually lands
+        // before the nominal 15 minutes; the stage director says so by being in
+        // its victory state.
+        _won = e.Survived && (e.Seconds >= RunState.TargetSeconds - 0.5f
+                              || _main?.Stages is { State: StageDirector.PhaseState.Victory });
         PollBosses();
+        TickQuests(0);
         Evaluate();
+        if (first) Leaderboard.RecordRun(_main!, _won, _phase);
         Commit();
     }
 
@@ -117,6 +126,7 @@ public sealed partial class UnlockTracker : Node
 
     public override void _Process(double delta)
     {
+        TickQuests(delta);
         _poll += delta;
         if (_poll < PollInterval) return;
         _poll = 0;
@@ -186,7 +196,7 @@ public sealed partial class UnlockTracker : Node
         foreach (UnlockDef u in Unlocks.All)
         {
             if (Profile.IsUnlocked(u.Id)) continue;
-            float value = Measure(u.Metric);
+            float value = MeasureUnlock(u);
             if (value < u.Threshold) continue;
             if (!Profile.Unlock(u.Id)) continue;
             Profile.Save();
@@ -213,6 +223,7 @@ public sealed partial class UnlockTracker : Node
         Profile.Best(Profile.BestSeconds, (long)run.Seconds);
         Profile.Best(Profile.BestKills, run.Kills);
         Profile.Best(Profile.BestLevel, _main.Inventory.Level);
+        CommitQuests();
         Profile.Save();
         GD.Print($"META profile runs={Profile.Get(Profile.Runs)} kills={Profile.Get(Profile.TotalKills)} unlocks={Profile.UnlockedIds.Count} secrets={Profile.FoundSecrets.Count}");
     }

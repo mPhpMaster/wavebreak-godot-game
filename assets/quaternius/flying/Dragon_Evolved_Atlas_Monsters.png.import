@@ -2,13 +2,10 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://k4nic03mfeac"
+uid="uid://byamv0o4e5ggb"
 path="res://.godot/imported/Dragon_Evolved_Atlas_Monsters.png-29b1dc22067c32042d573c599487cee1.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "19edfe03ec2ac473b0a20d5684c8b79c"
 }
 
 [deps]
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
