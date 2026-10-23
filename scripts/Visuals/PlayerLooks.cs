@@ -13,7 +13,7 @@ namespace Wavebreak.Visuals;
 /// gameplay camera's distance the silhouette is what tells two characters apart;
 /// colour alone does not survive a screen full of enemies.
 /// </summary>
-public static class PlayerLooks
+public static partial class PlayerLooks
 {
     public const string Default = "default";
 
@@ -78,8 +78,8 @@ public static class PlayerLooks
     private static ModelSpec? Resolve(string id)
     {
         if (id.StartsWith("proc-")) return Make(id["proc-".Length..]);
-        if (Imported.TryGetValue(id, out string? file)
-            && ArtAssets.Model(file, 1.75f, ArtAssets.HumanoidClips, "hero:" + id) is { } imported)
+        if ((Imported.TryGetValue(id, out string? file) || ExpansionLooks.TryGetValue(id, out file))
+            && ArtAssets.Model(file, 1.75f, ArtAssets.ClipsFor(file), "hero:" + id) is { } imported)
         {
             imported.LodDistance = 0f;
             return imported;

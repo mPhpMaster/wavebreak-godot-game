@@ -14,5 +14,6 @@ were copied in.
 | `kenney/nature-kit` | Nature Kit | Kenney | https://kenney.nl/assets/nature-kit | CC0 1.0 |
 | `kenney/mini-dungeon/chest.glb`, `kenney/mini-dungeon/Textures/colormap.png` | Mini Dungeon | Kenney | https://kenney.nl/assets/mini-dungeon | CC0 1.0 |
 | `quaternius/{blob,flying,big}` | Ultimate Monsters | Quaternius | https://quaternius.com | CC0 1.0 |
+| `quaternius/flying/{Pigeon,Glub,Glub_Evolved,Hywirl,Goleling,Goleling_Evolved,Tribal,Armabee_Evolved,Squidle,Dragon}.gltf`, `quaternius/big/{Ninja,Monkroose,Tribal}.gltf`, `quaternius/blob/Wizard.gltf` (enemy expansion) | Ultimate Monsters | Quaternius | https://quaternius.com | CC0 1.0 |
 
 CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/

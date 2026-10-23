@@ -99,6 +99,7 @@ public sealed partial class CharacterPassives : Node
         EventBus.Subscribe<EnemyDamaged>(OnEnemyDamaged);
         EventBus.Subscribe<PlayerDamaged>(OnPlayerDamaged);
         EventBus.Subscribe<PlayerMoved>(OnPlayerMoved);
+        ReadyExpansion();
     }
 
     public override void _ExitTree()
@@ -106,6 +107,7 @@ public sealed partial class CharacterPassives : Node
         EventBus.Unsubscribe<EnemyDamaged>(OnEnemyDamaged);
         EventBus.Unsubscribe<PlayerDamaged>(OnPlayerDamaged);
         EventBus.Unsubscribe<PlayerMoved>(OnPlayerMoved);
+        ExitExpansion();
     }
 
     private Player? LivePlayer
@@ -165,6 +167,9 @@ public sealed partial class CharacterPassives : Node
             case PassiveKind.Kindling:
                 TickBurns(dt);
                 break;
+            default:
+                TickExpansion(p, dt, alive);
+                break;
         }
     }
 
@@ -204,6 +209,9 @@ public sealed partial class CharacterPassives : Node
                     _ambush = AmbushSeconds;
                 }
                 break;
+            default:
+                EnemyDamagedExpansion(e, killed);
+                break;
         }
     }
 
@@ -221,6 +229,7 @@ public sealed partial class CharacterPassives : Node
 
     private void OnPlayerMoved(PlayerMoved e)
     {
+        MovedExpansion(e);
         if (_kind != PassiveKind.Overcharge || e.Verb is not (MoveVerb.Dash or MoveVerb.AirJump)) return;
         _charge++;
         if (_charge < OverchargeEvery) return;

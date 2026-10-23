@@ -1,0 +1,148 @@
+using System;
+using Godot;
+
+namespace Wavebreak.Visuals;
+
+/// <summary>
+/// Hats on a rig. Imported Kenney heroes carry a skeleton with a "head" bone,
+/// and the hat follows that bone (position and rotation relative to its rest
+/// pose, so the bone's own axis convention does not matter). Procedural heroes
+/// have the head baked into the body mesh, so the hat is parented to the hips
+/// at the head's computed top, which is exactly where ModelBuilder puts it.
+///
+/// Hat meshes are authored in head units (head half-width = 1, origin on the
+/// crown, front = -Z); this file measures each rig's head and scales to fit.
+/// </summary>
+public sealed partial class CharacterRig
+{
+    private Node3D? _hat;
+    private string? _hatId;
+
+    /// <summary>Wear <paramref name="hatId"/> (null or "none" removes the hat).</summary>
+    public void SetHat(string? hatId)
+    {
+        if (hatId == _hatId && (_hat is null || IsInstanceValid(_hat))) return;
+        if (_hat is not null && IsInstanceValid(_hat)) _hat.QueueFree();
+        _hat = null;
+        _hatId = hatId;
+        if (string.IsNullOrEmpty(hatId) || hatId == Meta.Hats.NoneId) return;
+        if (HatModels.Get(hatId) is not { } mesh) return;
+
+        var mi = new MeshInstance3D
+        {
+            Name = "HatMesh",
+            Mesh = mesh,
+            MaterialOverride = ToonMaterials.CharacterNoOutline,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+
+        if (Spec.IsImported && FindHeadBone(out Skeleton3D? skel, out int bone, out float halfWidth, out Vector3 offset))
+        {
+            var follow = new HatFollower(skel!, bone, offset, Spec.SceneYaw, _hips) { Name = "Hat" };
+            mi.Scale = Vector3.One * halfWidth;
+            follow.AddChild(mi);
+            AddChild(follow);
+            _hat = follow;
+            return;
+        }
+
+        // Procedural (or an imported model without a head bone): sit on the
+        // computed crown under the hips, so lean and bob carry it.
+        float h = Spec.Height;
+        float hr, top;
+        if (!Spec.IsImported && Spec.Body == BodyType.Biped && _model is not null)
+        {
+            hr = 0.155f * h * Spec.HeadScale;
+            float shoulder = 0.70f * h - _model.HipsOffset.Y;
+            top = shoulder + hr * 1.85f;
+        }
+        else
+        {
+            hr = h * 0.14f;
+            top = h * 0.98f - (_model?.HipsOffset.Y ?? 0f);
+        }
+        var anchor = new Node3D { Name = "Hat", Position = new Vector3(0f, top, 0f) };
+        mi.Scale = Vector3.One * hr;
+        anchor.AddChild(mi);
+        _hips.AddChild(anchor);
+        _hat = anchor;
+    }
+
+    /// <summary>Finds a bone named like "head" and measures the head from the
+    /// rest pose: half-width in world metres, and the crown's offset from the
+    /// bone in skeleton space.</summary>
+    private bool FindHeadBone(out Skeleton3D? skel, out int bone, out float halfWidth, out Vector3 offset)
+    {
+        skel = null; bone = -1; halfWidth = 0f; offset = Vector3.Zero;
+        Node3D? inst = _hips.GetChildCount() > 0 ? _hips.GetChild(0) as Node3D : null;
+        if (inst is null) return false;
+        skel = FindSkeleton(inst);
+        if (skel is null) return false;
+
+        for (int i = 0; i < skel.GetBoneCount(); i++)
+        {
+            string n = skel.GetBoneName(i).ToLowerInvariant();
+            if (n == "head" || (bone < 0 && n.Contains("head"))) bone = i;
+        }
+        if (bone < 0) return false;
+
+        // Skeleton -> instance transform (unscaled instance space).
+        Transform3D skelToInst = Transform3D.Identity;
+        for (Node? n = skel; n is not null && n != inst; n = n.GetParent())
+            if (n is Node3D n3) skelToInst = n3.Transform * skelToInst;
+
+        Aabb box = MeasureScene(inst);
+        Transform3D rest = skel.GetBoneGlobalRest(bone);
+        Vector3 headInst = skelToInst * rest.Origin;
+        float topInst = box.Position.Y + box.Size.Y;
+        float headHeight = MathF.Max(0.01f, topInst - headInst.Y);
+        Vector3 crownSkel = skelToInst.AffineInverse() * new Vector3(headInst.X, topInst, headInst.Z);
+        offset = crownSkel - rest.Origin;
+
+        float scale = Spec.SceneScale > 0f ? Spec.SceneScale : 1f;
+        halfWidth = headHeight * 0.68f * scale;
+        return true;
+    }
+
+    private static Skeleton3D? FindSkeleton(Node n)
+    {
+        if (n is Skeleton3D s) return s;
+        foreach (Node c in n.GetChildren())
+            if (FindSkeleton(c) is { } found) return found;
+        return null;
+    }
+}
+
+/// <summary>Keeps a hat on a bone: rest-relative rotation, crown offset,
+/// and the rig's facing (the model's own import yaw is undone so the hat's
+/// front stays the character's front).</summary>
+internal sealed partial class HatFollower : Node3D
+{
+    private readonly Skeleton3D _skel;
+    private readonly int _bone;
+    private readonly Vector3 _offset;
+    private readonly Basis _unyaw;
+    private readonly Basis _restInv;
+
+    public HatFollower() { _skel = null!; }
+
+    public HatFollower(Skeleton3D skel, int bone, Vector3 offset, float yaw, Node3D hips)
+    {
+        _skel = skel;
+        _bone = bone;
+        _offset = offset;
+        _unyaw = new Basis(Vector3.Up, -yaw);
+        _restInv = skel.GetBoneGlobalRest(bone).Basis.Inverse();
+        TopLevel = true;
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_skel is null || !IsInstanceValid(_skel) || !_skel.IsInsideTree()) return;
+        Transform3D sg = _skel.GlobalTransform;
+        Transform3D pose = _skel.GetBoneGlobalPose(_bone);
+        Basis d = pose.Basis * _restInv;
+        Vector3 local = pose.Origin + d * _offset;
+        GlobalTransform = new Transform3D(sg.Basis.Orthonormalized() * d * _unyaw, sg * local);
+    }
+}

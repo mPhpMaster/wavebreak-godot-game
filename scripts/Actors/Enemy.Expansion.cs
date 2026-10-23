@@ -78,7 +78,10 @@ public sealed partial class Enemy
             CollisionMask = 0;
             GlobalPosition += new Vector3(0f, def.Hover, 0f);
         }
-        if (def.Behavior == EnemyBehavior.Burrower) Burrow();
+        // Burrowers arrive above ground, ready to dig: out on the spawn ring
+        // they go under at their first step, and anything that hits them on
+        // the spawn frame (the content audit) meets an ordinary body.
+        if (def.Behavior == EnemyBehavior.Burrower) _surfacedFor = def.AbilityCooldown;
         if (def.Aura != EnemyAura.None) _auraDecal = EnemyAttacks.AcquireDecal();
     }
 
