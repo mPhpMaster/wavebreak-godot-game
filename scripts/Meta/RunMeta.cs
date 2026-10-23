@@ -80,6 +80,7 @@ public static class RunMeta
         layer.AddChild(new UI.UnlockToast());
         layer.AddChild(new UI.LeaderboardBanner());   // quests/passives/leaderboard
         CharacterPassives.Attach(main, Character);
+        Combat.Weapons.ItemProcs.Attach(main);   // on-hit/on-kill/movement items
 
         // Shrines are placed per map by Game.StageDirector, under each arena, so
         // every phase has its own to find and they leave with the map.

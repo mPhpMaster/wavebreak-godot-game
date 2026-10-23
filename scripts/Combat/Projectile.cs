@@ -289,6 +289,7 @@ public sealed partial class Projectile : Node3D, IPooled
 
         Place(spec.Origin, dir);
         Dress();
+        ClearMotion();   // Combat/Weapons/Projectile.Motion.cs
     }
 
     /// <summary>
@@ -357,6 +358,8 @@ public sealed partial class Projectile : Node3D, IPooled
     private void Step(float dt)
     {
         _age += dt;
+
+        if (_motion != ProjectileMotion.None) { StepMotion(dt); return; }
 
         if (_mode == ProjectileMode.Cosmetic)
         {
@@ -499,6 +502,7 @@ public sealed partial class Projectile : Node3D, IPooled
         _template = null;
         _lock = null;
         _pierced.Clear();
+        ClearMotion();
     }
 
     /// <summary>Horizontal component, normalised, with a fallback for a vector

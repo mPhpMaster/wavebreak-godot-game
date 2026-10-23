@@ -108,7 +108,9 @@ public sealed class WeaponRuntime
 
     private void Fire(WeaponSystem system, StatSheet stats)
     {
-        switch (Def.Shape)
+        // Expansion weapons (Combat/Weapons) deliver themselves; see WeaponBehaviors.
+        if (Weapons.WeaponBehaviors.TryFire(this, system, stats)) { }
+        else switch (Def.Shape)
         {
             case AttackShape.Melee:
                 FireMelee(system, stats);

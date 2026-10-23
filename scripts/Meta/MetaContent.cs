@@ -41,6 +41,7 @@ public static class MetaContent
     public static List<ItemDef> OfferItems(IReadOnlyList<ItemDef> catalogue)
     {
         var list = new List<ItemDef>(catalogue);
+        list.RemoveAll(d => !Unlocks.IsContentUnlocked(d.Id));   // gated expansion entries, see ExpansionUnlocks
         foreach (ItemDef def in Items)
             if (Unlocks.IsContentUnlocked(def.Id)) list.Add(def);
         return list;
@@ -50,6 +51,7 @@ public static class MetaContent
     public static List<WeaponDef> OfferWeapons(IReadOnlyList<WeaponDef> catalogue)
     {
         var list = new List<WeaponDef>(catalogue);
+        list.RemoveAll(d => !Unlocks.IsContentUnlocked(d.Id));   // gated expansion entries, see ExpansionUnlocks
         foreach (WeaponDef def in Weapons)
             if (Unlocks.IsContentUnlocked(def.Id)) list.Add(def);
         return list;

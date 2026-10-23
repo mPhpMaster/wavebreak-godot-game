@@ -20,7 +20,7 @@ namespace Wavebreak.Data;
 /// Read the comments as the balance record. Where a number was chosen against
 /// another number, the comment says which.
 /// </summary>
-public static class Catalog
+public static partial class Catalog
 {
     // ------------------------------------------------------------------ access
 

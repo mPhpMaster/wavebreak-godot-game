@@ -152,7 +152,7 @@ public static class Unlocks
         new() { Id = "all_shrines", Name = "The Augur's Path", Description = "Find every kind of hidden shrine.",
                 Metric = Metric.SecretsAll, Threshold = 1, Reward = RewardKind.Skin, RewardId = "gilded_augur.eclipse",
                 Secret = true, Hint = "Three lights hide where the arena thins. Greet them all." },
-    }.Concat(Quests.All).ToList();
+    }.Concat(Quests.All).Concat(ExpansionUnlocks.All).ToList();
 
     public static UnlockDef? ById(string? id)
     {

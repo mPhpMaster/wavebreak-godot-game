@@ -74,6 +74,7 @@ public sealed class StatSheet
         Stat.Skips           => 3f,
 
         Stat.EnemyScaling    => 1f,
+        Stat.Duration        => 1f,
         _ => 0f,
     };
 

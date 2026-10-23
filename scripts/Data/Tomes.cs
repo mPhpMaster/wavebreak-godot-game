@@ -67,7 +67,7 @@ public partial class TomeDef : Resource
 /// two income tomes go through the StatSheet's income soft cap like any item
 /// (+30% XP shapes to about +26%); nothing a tome adds is exempt from a clamp.
 /// </summary>
-public static class Tomes
+public static partial class Tomes
 {
     /// <summary>Distinct tomes a player can hold in one run.</summary>
     public const int MaxSlots = 4;

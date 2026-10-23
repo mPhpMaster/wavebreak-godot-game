@@ -51,6 +51,10 @@ public enum Stat
     // --- meta: how fast the world gets harder. Lets an item trade danger for
     // reward, which is where a lot of the interesting build decisions live.
     EnemyScaling,
+
+    // --- appended: lifetime multiplier for lingering weapon effects (orbits,
+    // puddles, turrets, vortices) and timed item buffs. 1 = as authored.
+    Duration,
 }
 
 /// <summary>How a modifier folds into a stat. Order of application is fixed by

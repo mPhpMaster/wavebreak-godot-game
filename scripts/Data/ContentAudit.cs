@@ -206,6 +206,7 @@ public static partial class ContentAudit
             AuditTomes(system);
             Interactables.Audit(Check);
             AuditShrines();
+            AuditExpansion(system);
         }
         catch (Exception e)
         {
