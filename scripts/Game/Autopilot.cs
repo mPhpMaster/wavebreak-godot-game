@@ -19,7 +19,7 @@ namespace Wavebreak.Game;
 /// bot survives ten minutes the balance is too soft, and if it dies in thirty
 /// seconds something is broken.
 /// </summary>
-public sealed class Autopilot
+public sealed partial class Autopilot
 {
     private readonly Player _player;
     private float _wanderPhase;

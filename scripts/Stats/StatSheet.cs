@@ -69,6 +69,10 @@ public sealed class StatSheet
         Stat.GoldGain        => 0f,
         Stat.Luck            => 0f,
 
+        Stat.Rerolls         => 2f,     // charges per run, see LevelUpChoices
+        Stat.Banishes        => 1f,
+        Stat.Skips           => 3f,
+
         Stat.EnemyScaling    => 1f,
         _ => 0f,
     };
@@ -178,6 +182,7 @@ public sealed class StatSheet
         Stat.CritChance      => Math.Clamp(v, 0f, 1f),
         Stat.Armor           => Math.Max(0f, v),
         Stat.Evasion         => Math.Max(0f, v),
+        Stat.Rerolls or Stat.Banishes or Stat.Skips => Math.Max(0f, v),
         // Diminishing returns on income. Once +% items actually applied, stacking
         // them had no ceiling: a 15-minute run ended at level 103 with 193k gold
         // and 200 items. v / (1 + v/2): +50% -> +40%, +100% -> +67%,

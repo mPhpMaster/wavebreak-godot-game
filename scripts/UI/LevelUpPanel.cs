@@ -98,6 +98,7 @@ public sealed partial class LevelUpPanel : Control
 
         BuildChrome();
         for (int i = 0; i < MaxCards; i++) _cards.Add(BuildCard(i));
+        BuildControls();
 
         // A run can end while a choice is open — a damage-over-time tick, or a
         // contact hit resolved in the same frame the level landed. Closing on
@@ -291,28 +292,11 @@ public sealed partial class LevelUpPanel : Control
         _current.AddRange(next.Offers);
         _callback = next.Callback;
 
-        int count = _current.Count;
-        float totalWidth = count * CardWidth + (count - 1) * CardGap;
-        float left = -totalWidth * 0.5f;
+        LayoutCards();
 
-        for (int i = 0; i < _cards.Count; i++)
-        {
-            Card card = _cards[i];
-            if (i >= count)
-            {
-                card.Root.Visible = false;
-                continue;
-            }
-
-            Fill(card, _current[i], i);
-            card.Root.OffsetLeft = left + i * (CardWidth + CardGap);
-            card.Root.OffsetRight = card.Root.OffsetLeft + CardWidth;
-            card.Root.Visible = true;
-        }
-
-        _subheading.Text = _queue.Count > 0
-            ? $"Choose one   ({_queue.Count} more to come)"
-            : "Choose one";
+        _banishMode = false;
+        UpdateSubheading();
+        RefreshControls();
 
         // The camera keeps the mouse captured for steering, which hides the
         // cursor -- so a mouse player could see the cards but not click them.
@@ -338,6 +322,30 @@ public sealed partial class LevelUpPanel : Control
 
     private bool _mouseWasCaptured;
 
+    /// <summary>Fill and position one card per current offer; hide the rest.
+    /// Shared by opening the panel and by reroll/banish replacing cards.</summary>
+    private void LayoutCards()
+    {
+        int count = _current.Count;
+        float totalWidth = count * CardWidth + (count - 1) * CardGap;
+        float left = -totalWidth * 0.5f;
+
+        for (int i = 0; i < _cards.Count; i++)
+        {
+            Card card = _cards[i];
+            if (i >= count)
+            {
+                card.Root.Visible = false;
+                continue;
+            }
+
+            Fill(card, _current[i], i);
+            card.Root.OffsetLeft = left + i * (CardWidth + CardGap);
+            card.Root.OffsetRight = card.Root.OffsetLeft + CardWidth;
+            card.Root.Visible = true;
+        }
+    }
+
     private void Close()
     {
         if (!IsOpen && !Visible)
@@ -350,6 +358,7 @@ public sealed partial class LevelUpPanel : Control
 
         IsOpen = false;
         Visible = false;
+        _banishMode = false;
         _current.Clear();
         _callback = null;
 
@@ -393,6 +402,7 @@ public sealed partial class LevelUpPanel : Control
         // a capture that picks the first offer every time builds the same run
         // every time, and never exercises a weapon that happens to roll third.
         Rng? rng = Main.Instance?.Run.Rng;
+        _banishMode = false;
         Pick(rng?.RangeInt(0, _current.Count) ?? 0);
     }
 
@@ -424,6 +434,14 @@ public sealed partial class LevelUpPanel : Control
             return;
         }
 
+        // Reroll / banish / skip. After the arm check, so a key held (or
+        // mashed) as the panel opens cannot spend a charge.
+        if (HandleControlKey(@event))
+        {
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
         int index = key.Keycode switch
         {
             Key.Key1 or Key.Kp1 => 0,
@@ -444,6 +462,14 @@ public sealed partial class LevelUpPanel : Control
     private void Pick(int index)
     {
         if (!IsOpen || index < 0 || index >= _current.Count) return;
+
+        // In banish mode the card the player points at is removed from the pool
+        // and replaced, rather than taken.
+        if (_banishMode)
+        {
+            BanishAt(index);
+            return;
+        }
 
         Offer chosen = _current[index];
         Action<Offer>? callback = _callback;
@@ -564,6 +590,7 @@ public sealed partial class LevelUpPanel : Control
                 _                      => "· WEAPON",
             };
 
+        if (offer.Tome is not null) return "· TOME";
         return offer.Item is not null ? "· ITEM" : "· SUPPLY";
     }
 
