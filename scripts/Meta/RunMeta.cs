@@ -45,6 +45,16 @@ public static class RunMeta
 
         Character.ApplyTo(main.Player.Stats);
 
+        // Pearl shop upgrades, the difficulty tier and the end-of-run payout
+        // (MetaShop, DifficultyTiers, RunRewards).
+        DifficultyTiers.BeginRun();
+        MetaShop.ApplyTo(main.Player.Stats);
+        var rewards = new RunRewards();
+        rewards.Bind(main);
+        main.AddChild(rewards);
+        GD.Print($"META progress difficulty={DifficultyTiers.Active.Id} pearls={Pearls.Balance} shop={MetaShop.Describe()} " +
+                 $"charges=+{MetaShop.BonusRerolls}r/+{MetaShop.BonusBanishes}b/+{MetaShop.BonusSkips}s");
+
         // Every shrine kind ever found leaves a small lasting boon.
         foreach (SecretKindDef kind in SecretSpawner.Kinds)
             if (Profile.HasFoundSecret(kind.Id))

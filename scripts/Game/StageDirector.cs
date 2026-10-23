@@ -37,6 +37,9 @@ public sealed class StageDirector
         PortalOpen,
         /// <summary>The last boss died; the win is announced after a short beat.</summary>
         Victory,
+        /// <summary>The last boss died and the run is won; an endless, escalating
+        /// swarm follows until death (see <see cref="Game.FinalSwarm"/>).</summary>
+        FinalSwarm,
     }
 
     /// <summary>Pressure added per 30 s a boss outlives its grace window, as a
@@ -81,6 +84,16 @@ public sealed class StageDirector
     private float _openPortalAt;
 
     public PhaseState State { get; private set; } = PhaseState.Waves;
+
+    /// <summary>True from the moment the last phase boss dies: the run is won,
+    /// even if the player then dies in the Final Swarm.</summary>
+    public bool Won { get; private set; }
+
+    /// <summary>Phase bosses killed this run (one per phase cleared).</summary>
+    public int BossesDefeated { get; private set; }
+
+    /// <summary>The endless phase after the last boss, once it has begun.</summary>
+    public FinalSwarm? Swarm { get; private set; }
 
     public StageDef Stage => _stages[Mathf.Clamp(_index, 0, _stages.Count - 1)];
 
@@ -231,6 +244,10 @@ public sealed class StageDirector
                     Log($"portal entered -> phase {_index + 2}/{_stages.Count}");
                     EnterPhase(_index + 1);
                 }
+                break;
+
+            case PhaseState.FinalSwarm:
+                Swarm?.Tick(dt);
                 break;
 
             case PhaseState.Victory:
@@ -419,6 +436,7 @@ public sealed class StageDirector
     {
         Log($"phase {_index + 1} boss down");
         _boss = null;
+        BossesDefeated++;
         ApplyScaling(1f);
         // The boss drops a lot; collect it for the player rather than making the
         // walk to the portal a detour through the boss's corpse.
@@ -426,6 +444,17 @@ public sealed class StageDirector
 
         if (_index >= _stages.Count - 1)
         {
+            Won = true;
+            bool swarm = Game.FinalSwarm.Enabled;
+            EventBus.Publish(new FinalBossDefeated(_run.Seconds, swarm));
+            if (swarm)
+            {
+                Log("run won");
+                Swarm = new FinalSwarm(_run, _enemies, Stage);
+                State = PhaseState.FinalSwarm;
+                Swarm.Begin();
+                return;
+            }
             State = PhaseState.Victory;
             _victoryIn = VictoryDelay;
             return;

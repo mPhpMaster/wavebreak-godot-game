@@ -96,6 +96,10 @@ classes, and lets someone tune them without touching C#.
 | `StageDef.Enemy*Scale` | 1 / 1.25 / 1.55 hp | per-map step on top of the clock curve; phase 1 is exactly 1 so the opening is untouched |
 | `StageDef.BossHealthScale` | 0.55 (0.45 last) | phase bosses are mandatory gates and weapons aim at the nearest enemy, so they carry less than the full time-curve health |
 | `StageDef.BossGraceSeconds` | 120 | boss lifetime before overtime adds +12% enemy hp/damage per 30 s |
+| `DifficultyTiers.All` | Normal 1 / Hard 1.45 / Nightmare 2.1 hp | tier multipliers on enemy hp, damage, spawn rate, crowd growth and Pearls; Normal is exactly 1 |
+| `FinalSwarm` consts | +15% hp, +12% dmg, +0.35 spawn rate per 30 s | the endless phase after the last boss; uncapped so it always ends |
+| `RunRewards` consts | 1/20 kills, 10/phase, 15/boss, 60 win | Pearls per run, times the tier's reward |
+| `MetaShop.CostOf` | base x (n+1)^1.5 | shop prices; refund returns the full amount paid |
 
 `HealthRegen` is stored **per minute** because that is the readable unit on a
 tooltip; `StatSheet.RegenPerSecond()` is the only place that conversion happens.
@@ -174,6 +178,22 @@ Art checks: `-- --art-showcase=hero|enemies|closeup|props-<theme> --shot=x.png`
 stages a scene; `--art-theme=<theme>` plays a run in a biome;
 `--art-stress=150` (with `--art-off` / `--art-procedural` for A/B) prints a
 `STRESS` line with wall-clock frame times.
+
+## Meta currency, shop, difficulty, Final Swarm
+
+Pearls (`Meta/Pearls`) are paid once per run by `Meta/RunRewards` (on RunEnded,
+when the results screen asks, or when the run scene is left early) and spent in
+the title screen's Pearl Shop (`UI/MetaShopPage`, `Meta/MetaShop`), whose levels
+go onto the player's StatSheet tagged `MetaShop.Source`. Reroll/banish/skip
+charges are exposed as `MetaShop.BonusRerolls/BonusBanishes/BonusSkips` for the
+level-up code to read. Difficulty tiers (`Meta/DifficultyTiers`) are picked on
+the character page; `Active` is read by `EnemyManager` every tick. All of it
+lives in the profile's `[meta]` section (`Profile.GetMeta/SetMeta`).
+
+The last boss's death is the win (`StageDirector.Won`, `FinalBossDefeated`):
+it is recorded at once, and then `Game/FinalSwarm` escalates until the player
+dies; that death still publishes `RunEnded(survived: true)`.
+`--no-final-swarm` restores the instant win; `--difficulty=<id>` forces a tier.
 
 `Game/Main.cs` constructs the systems and ticks them **in one place** rather than
 letting each run its own `_Process`. That ordering is deliberate: with

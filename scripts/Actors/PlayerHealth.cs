@@ -338,7 +338,9 @@ public sealed partial class PlayerHealth : Node, IDamageable
         _invulnerable = 0f;
         _pendingHealEvent = 0f;
 
-        EventBus.Publish(new RunEnded(false, _elapsed, _level, _kills));
+        // A death after the last boss fell (in the Final Swarm) still ends a won run.
+        bool won = Game.Main.Instance is { } main && main.Stages is { Won: true };
+        EventBus.Publish(new RunEnded(won, _elapsed, _level, _kills));
         Died?.Invoke();
     }
 

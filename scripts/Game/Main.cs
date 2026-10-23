@@ -253,7 +253,8 @@ public sealed partial class Main : Node3D
         $"jumps={_player.Jumps} airjumps={_player.AirJumpsUsed} dashes={_player.Dashes} " +
         $"slides={_player.Slides} slams={_player.Slams} slamhits={_player.SlamHits} " +
         $"peakspeed={_player.PeakSpeed:0.0} {ChestSpawner.Instance?.SummaryFields} " +
-        $"phase={Run.Phase} phases={Run.PhaseCount} stage={Run.StageId} phasestate={_stages.State}";
+        $"phase={Run.Phase} phases={Run.PhaseCount} stage={Run.StageId} phasestate={_stages.State} " +
+        $"{Meta.RunRewards.SummaryFields}";
 
     private async System.Threading.Tasks.Task RunScreenshot()
     {

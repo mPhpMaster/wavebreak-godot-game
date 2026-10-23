@@ -564,6 +564,11 @@ public sealed partial class Hud : Control
                     status += $"   OVERTIME +{Mathf.RoundToInt(stages.OvertimeSeconds / 30f * 12f)}%";
                 tint = BossTint;
                 break;
+            case StageDirector.PhaseState.FinalSwarm when stages.Swarm is { } swarm:
+                // The run is already won; this is the score attack after it.
+                status = $"FINAL SWARM  {RunState.Format(swarm.Seconds)}   ENEMY HP +{swarm.HealthBonusPercent}%";
+                tint = BossTint;
+                break;
             case StageDirector.PhaseState.PortalOpen:
                 status = "PORTAL OPEN  —  GO";
                 tint = PortalTint;

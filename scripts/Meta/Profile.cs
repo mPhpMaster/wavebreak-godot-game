@@ -42,6 +42,10 @@ public static class Profile
     public static void SelectSkin(string characterId, string skinId) => SkinChoice[characterId] = skinId;
     private static readonly HashSet<string> SecretSet = new();
 
+    // Spendable and settable meta values (currency, shop levels, difficulty).
+    // Kept apart from Stats, which only ever grow; these can go down.
+    private static readonly Dictionary<string, long> MetaValues = new();
+
     private static bool _loaded;
 
     /// <summary>Where the profile lives, or null when this process must not
@@ -102,6 +106,13 @@ public static class Profile
                 Stats[key] = Math.Max(0L, v.AsInt64());
         }
 
+        foreach (string key in SafeKeys(cfg, "meta"))
+        {
+            Variant v = cfg.GetValue("meta", key);
+            if (v.VariantType is Variant.Type.Int or Variant.Type.Float)
+                MetaValues[key] = Math.Max(0L, v.AsInt64());
+        }
+
         ReadSet(cfg, "unlocks", UnlockSet);
         ReadSet(cfg, "secrets", SecretSet);
 
@@ -150,6 +161,7 @@ public static class Profile
         foreach (string id in UnlockSet) cfg.SetValue("unlocks", id, true);
         foreach (string id in SecretSet) cfg.SetValue("secrets", id, true);
         foreach (var (character, skin) in SkinChoice) cfg.SetValue("skins", character, skin);
+        foreach (var (key, value) in MetaValues) cfg.SetValue("meta", key, value);
 
         string temp = Path + ".tmp";
         Error err = cfg.Save(temp);
@@ -179,6 +191,18 @@ public static class Profile
     public static void Best(string stat, long value)
     {
         if (value > Get(stat)) Stats[stat] = value;
+    }
+
+    // ----------------------------------------------------------------- meta
+    // Values that can go down as well as up: Pearls, shop levels, the chosen
+    // difficulty. Never negative; zero is not stored.
+
+    public static long GetMeta(string key) => MetaValues.TryGetValue(key, out long v) ? v : 0L;
+
+    public static void SetMeta(string key, long value)
+    {
+        if (value <= 0) MetaValues.Remove(key);
+        else MetaValues[key] = value;
     }
 
     // ------------------------------------------------------ unlocks/secrets

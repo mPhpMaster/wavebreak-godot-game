@@ -311,7 +311,7 @@ public sealed partial class EnemyManager : Node3D
         // The bank cap is also the opening burst: whatever it allows is spent on
         // the first tick. At 40 that was forty enemies in the first second, which
         // no amount of live-cap tuning downstream can undo.
-        float bank = 10f + minutes * 26f;
+        float bank = (10f + minutes * 26f) * SpawnRateScale * Meta.DifficultyTiers.Active.SpawnRate;
         if (_credits > bank) _credits = bank;
 
         UpdateWaves(runSeconds);
@@ -423,7 +423,8 @@ public sealed partial class EnemyManager : Node3D
     // ------------------------------------------------------------- director
 
     private float CreditRate(float minutes)
-        => MathF.Max(0.1f, (BaseCreditRate + minutes * CreditRateGrowth) * PlayerRef.EnemyScaling);
+        => MathF.Max(0.1f, (BaseCreditRate + minutes * CreditRateGrowth) * PlayerRef.EnemyScaling
+                           * SpawnRateScale * Meta.DifficultyTiers.Active.SpawnRate);
 
     /// <summary>
     /// Concurrent enemies allowed at a given point in the run.
@@ -440,7 +441,7 @@ public sealed partial class EnemyManager : Node3D
     /// the 200 ceiling (a frame-budget limit, not a design one) around minute 10.
     /// </summary>
     private int LiveCap(float minutes)
-        => Math.Max(6, (int)(Math.Min(MaxAlive, 10 + (int)(minutes * 13f)) * LiveCapScale));
+        => Math.Max(6, (int)(Math.Min(MaxAlive, 10 + (int)(minutes * 13f * Meta.DifficultyTiers.Active.Crowd)) * LiveCapScale));
 
     /// <summary>
     /// Difficulty over time.
@@ -457,8 +458,10 @@ public sealed partial class EnemyManager : Node3D
         float minutes = MathF.Max(0f, runSeconds) / 60f;
         float scaling = PlayerRef.EnemyScaling;
 
-        DifficultyHp = (1f + minutes * 0.34f) * MathF.Pow(1.075f, minutes) * scaling * PhaseHealthScale;
-        DifficultyDamage = (1f + minutes * 0.16f) * scaling * PhaseDamageScale;
+        // The run's difficulty tier (Meta.DifficultyTiers) rides on top; Normal is 1.
+        Meta.DifficultyTier tier = Meta.DifficultyTiers.Active;
+        DifficultyHp = (1f + minutes * 0.34f) * MathF.Pow(1.075f, minutes) * scaling * PhaseHealthScale * tier.Health;
+        DifficultyDamage = (1f + minutes * 0.16f) * scaling * PhaseDamageScale * tier.Damage;
         // The phase factor goes on after the cap: the cap is about the clock
         // never outpacing kiting, and a later map is allowed to be a step faster.
         DifficultySpeed = MathF.Min(1f + minutes * 0.022f, 1.45f) * PhaseSpeedScale;
@@ -1024,6 +1027,10 @@ public sealed partial class EnemyManager : Node3D
     /// boss fight: weapons aim at the nearest enemy, so with a full crowd around
     /// the player the boss is almost never the target and the fight cannot end.</summary>
     public float LiveCapScale { get; set; } = 1f;
+
+    /// <summary>Multiplier on credit income and the credit bank: how fast the
+    /// crowd refills. Raised by the Final Swarm. 1 = no change.</summary>
+    public float SpawnRateScale { get; set; } = 1f;
 
     /// <summary>
     /// Put a specific boss on the field now, on the spawn ring around the

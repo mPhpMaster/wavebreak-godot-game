@@ -61,6 +61,11 @@ public sealed partial class MainMenu : Node3D
     private CheckButton _mute = null!;
     private Codex _codex = null!;
 
+    // pearl shop / difficulty (UI/MetaShopPage, UI/DifficultyPicker)
+    private MetaShopPage _shop = null!;
+    private DifficultyPicker _difficulty = null!;
+    private Label _pearls = null!;
+
     public override void _Ready()
     {
         Launch.Parse();
@@ -282,6 +287,7 @@ public sealed partial class MainMenu : Node3D
         _pages["codex"] = BuildCodexPage();
         _pages["settings"] = BuildSettingsPage();
         _pages["keys"] = BuildKeysPage();
+        _pages["shop"] = _shop = new MetaShopPage(() => ShowPage("main"));
         foreach (Control p in _pages.Values) _root.AddChild(p);
     }
 
@@ -293,6 +299,7 @@ public sealed partial class MainMenu : Node3D
 
         _playButton = MenuButton("PLAY", () => ShowPage("play"));
         page.AddChild(_playButton);
+        page.AddChild(MenuButton("PEARL SHOP", () => ShowPage("shop")));
         page.AddChild(MenuButton("UNLOCKS & SECRETS", () => ShowPage("codex")));
         page.AddChild(MenuButton("SETTINGS", () => ShowPage("settings")));
         page.AddChild(MenuButton("QUIT", () => GetTree().Quit()));
@@ -304,6 +311,8 @@ public sealed partial class MainMenu : Node3D
         stats.CustomMinimumSize = new Vector2(0f, 60f);
         stats.VerticalAlignment = VerticalAlignment.Bottom;
         page.AddChild(stats);
+        _pearls = MakeLabel("", 15, Gold);
+        page.AddChild(_pearls);
         return page;
     }
 
@@ -336,6 +345,8 @@ public sealed partial class MainMenu : Node3D
             _charButtons.Add(b);
             list.AddChild(b);
         }
+        _difficulty = new DifficultyPicker();
+        list.AddChild(_difficulty);
         list.AddChild(MenuButton("BACK", () => ShowPage("main")));
 
         var panel = Panel(470f, 236f, 520f, 300f);
@@ -571,7 +582,12 @@ public sealed partial class MainMenu : Node3D
             case "settings":
                 _volumeSliders[0].slider.GrabFocus();
                 break;
+            case "shop":
+                _shop.Refresh();
+                _shop.FocusFirst();
+                break;
             default:
+                _pearls.Text = $"{Pearls.Name} {Pearls.Balance}   ·   difficulty {DifficultyTiers.Selected.Name}";
                 _playButton.GrabFocus();
                 break;
         }

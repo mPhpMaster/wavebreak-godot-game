@@ -61,6 +61,8 @@ public sealed partial class ResultsScreen : Control
     private Button _restart = null!;
 
     private bool _subscribed;
+    private Meta.RunRewards.Payout? _payout;
+    private static readonly Color PearlTint = new(0.80f, 0.90f, 1.00f);
 
     /// <summary>True once the screen has been raised for this run.</summary>
     public bool IsShown { get; private set; }
@@ -207,11 +209,22 @@ public sealed partial class ResultsScreen : Control
         bool survived = run?.Survived ?? false;
         Color accent = survived ? Victory : Defeat;
 
-        _title.Text = survived ? "YOU SURVIVED" : "YOU DIED";
+        // Pearls are paid here at the latest (idempotent; usually already paid
+        // by the RunEnded handler), so the numbers below are what was credited.
+        _payout = Meta.RunRewards.Settle();
+        FinalSwarm? swarm = Main.Instance?.Stages?.Swarm;
+
+        // A death in the Final Swarm is still a won run: the last boss fell.
+        _title.Text = survived ? (swarm is not null ? "VICTORY" : "YOU SURVIVED") : "YOU DIED";
         _title.AddThemeColorOverride("font_color", accent);
         _accent.Color = accent;
 
         _subtitle.Text = run is null ? "" : $"seed {run.Seed}";
+        if (swarm is not null)
+            _subtitle.Text = $"Run won  ·  then held the Final Swarm for {RunState.Format(swarm.Seconds)} " +
+                             $"({swarm.Kills} kills, enemy hp +{swarm.HealthBonusPercent}%)  ·  " + _subtitle.Text;
+        if (Meta.DifficultyTiers.Active.Reward > 1f)
+            _subtitle.Text = $"{Meta.DifficultyTiers.Active.Name}  ·  " + _subtitle.Text;
 
         WriteStats(run, inventory, weapons);
         BuildLoadout();
@@ -239,6 +252,11 @@ public sealed partial class ResultsScreen : Control
 
         _statNames.Text = "Time\nLevel\nKills\nElites\nGold\nWeapons\nItems\nExperience";
         _statValues.Text = $"{clock}\n{level}\n{kills}\n{elites}\n{gold}\n{weaponCount}\n{stacks}\n{xp}";
+        if (_payout is { } pay)
+        {
+            _statNames.Text += $"\n{Meta.Pearls.Name}";
+            _statValues.Text += $"\n+{pay.Total}";
+        }
     }
 
     /// <summary>
@@ -252,6 +270,15 @@ public sealed partial class ResultsScreen : Control
     private void BuildLoadout()
     {
         foreach (Node child in _loadout.GetChildren()) child.QueueFree();
+
+        // Where this run's Pearls came from (Meta.RunRewards), above the build.
+        if (_payout is { } pay)
+        {
+            _loadout.AddChild(Heading(pay.Headline.ToUpperInvariant()));
+            foreach (Meta.RunRewards.Line line in pay.Lines)
+                if (line.Amount > 0) _loadout.AddChild(Row($"{line.Label}  ·  +{line.Amount}", PearlTint));
+            _loadout.AddChild(Row($"Balance  ·  {Meta.Pearls.Balance}", InkDim));
+        }
 
         if (_weaponOrder.Count > 0)
         {
