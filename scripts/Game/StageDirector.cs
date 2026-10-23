@@ -210,6 +210,13 @@ public sealed class StageDirector
                     _bossAt = _run.PhaseSeconds;
                     _nextBossReport = _bossAt + 30f;
                     _retryAt = 0f;
+                    // The boss walks onto an empty field. Thinning the live cap
+                    // alone is not enough: by the third map 150 enemies are
+                    // already standing round the player, every weapon aims at the
+                    // nearest of them, and the first full run's last boss lost 5%
+                    // of its health per 30 s. The crowd refills to the boss-fight
+                    // cap after a short breather.
+                    _enemies.ClearField(ArrivalBreather);
                     SendBoss();
                 }
                 break;
