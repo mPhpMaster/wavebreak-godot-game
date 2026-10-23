@@ -24,8 +24,9 @@ public sealed class Offer
     private Offer(string title, string detail, string description, string effect,
                   Rarity rarity, Color tint,
                   WeaponDef? weapon = null, ItemDef? item = null,
-                  float healFraction = 0f, int gold = 0)
+                  float healFraction = 0f, int gold = 0, TomeDef? tome = null)
     {
+        Tome = tome;
         Title = title;
         Detail = detail;
         Description = description;
@@ -71,11 +72,19 @@ public sealed class Offer
     /// <summary>Gold this offer pays. Non-zero only on consolation offers.</summary>
     public int Gold { get; }
 
+    /// <summary>The tome this offer teaches or levels, or null.</summary>
+    public TomeDef? Tome { get; }
+
     public bool IsWeapon => Weapon is not null;
     public bool IsItem => Item is not null;
+    public bool IsTome => Tome is not null;
 
-    /// <summary>True for the consolation offer: no weapon, no item, just a payout.</summary>
-    public bool IsBonus => Weapon is null && Item is null;
+    /// <summary>True for the consolation offer: no weapon, item or tome, just a payout.</summary>
+    public bool IsBonus => Weapon is null && Item is null && Tome is null;
+
+    /// <summary>The definition behind the card (weapon, item or tome), or null
+    /// for a supply offer. What a banish removes from the pool.</summary>
+    public object? Source => (object?)Weapon ?? (object?)Item ?? Tome;
 
     /// <summary>Alias of <see cref="Title"/>, so a caller that thinks in
     /// definitions rather than cards reads the same field.</summary>
@@ -151,6 +160,17 @@ public sealed class Offer
         string description = string.IsNullOrWhiteSpace(def.Description) ? effect : def.Description;
 
         return new Offer(def.DisplayName, detail, description, effect, def.Rarity, def.Tint, item: def);
+    }
+
+    internal static Offer ForTome(TomeDef def, int currentLevel)
+    {
+        int next = currentLevel + 1;
+        string detail = currentLevel <= 0 ? "New tome" : $"Level {currentLevel} → {next}";
+        string effect = currentLevel <= 0
+            ? $"{def.DescribeStep()} per level (max {def.MaxLevel})"
+            : $"{def.DescribeTotal(currentLevel)} → {def.DescribeTotal(next)}";
+        string description = string.IsNullOrWhiteSpace(def.Description) ? effect : def.Description;
+        return new Offer(def.DisplayName, detail, description, effect, def.Rarity, def.Tint, tome: def);
     }
 
     internal static Offer Bonus(string title, string description, float healFraction, int gold, Color tint)
@@ -233,6 +253,14 @@ public sealed class OfferPool
     /// <param name="weapons">The weapon catalogue.</param>
     /// <param name="rng">The run's seeded random source, so the same seed offers
     /// the same choices.</param>
+    /// <summary>Tomes the pool draws from, with the run's levels. Null leaves
+    /// tomes out entirely (a pool with nothing to receive them).</summary>
+    public TomeBook? Tomes { get; set; }
+
+    /// <summary>Weapon, item and tome definitions banished this run. Filtered
+    /// out of every level-up roll and chest roll.</summary>
+    public HashSet<object> Banished { get; } = new(ReferenceEqualityComparer.Instance);
+
     public OfferPool(IReadOnlyList<ItemDef>? items, IReadOnlyList<WeaponDef>? weapons, Rng rng)
     {
         _rng = rng ?? throw new ArgumentNullException(nameof(rng));
@@ -257,7 +285,7 @@ public sealed class OfferPool
 
     /// <summary>The run's pool, or null before one is built. The last one
     /// constructed wins, which is the live run's.</summary>
-    public static OfferPool? Current { get; private set; }
+    public static OfferPool? Current { get; internal set; }
 
     /// <summary>Items and weapons the pool can draw from, ignoring what is held.</summary>
     public int CatalogueSize => _items.Count + _weapons.Count;
@@ -335,6 +363,7 @@ public sealed class OfferPool
         {
             ItemDef def = _items[i];
             if (inventory?.IsMaxed(def) == true) continue;
+            if (Banished.Count > 0 && Banished.Contains(def)) continue;
 
             int held = inventory?.StacksOf(def) ?? 0;
 
@@ -348,6 +377,8 @@ public sealed class OfferPool
             _weights.Add(weight);
         }
 
+        AddTomeCandidates(luck);
+
         if (!offerWeapons) return;
 
         int owned = inventory?.WeaponCount ?? 0;
@@ -355,6 +386,7 @@ public sealed class OfferPool
         for (int i = 0; i < _weapons.Count; i++)
         {
             WeaponDef def = _weapons[i];
+            if (Banished.Count > 0 && Banished.Contains(def)) continue;
             int level;
 
             if (weapons is not null)
@@ -380,6 +412,55 @@ public sealed class OfferPool
             _candidates.Add(Offer.ForWeapon(def, level));
             _weights.Add(weight);
         }
+    }
+
+    /// <summary>Relative pull of a tome the player already reads against a new
+    /// one. Upgrades edge ahead: a slot already spent should keep paying.</summary>
+    private const float TomeUpgradeWeight = 1.15f;
+    private const float NewTomeWeight = 0.9f;
+
+    /// <summary>Every tome still worth offering: held and below its cap, or new
+    /// with a slot free. Tome weights are authored like item weights, so luck is
+    /// the only thing applied on top.</summary>
+    private void AddTomeCandidates(float luck)
+    {
+        if (Tomes is not { } book) return;
+        IReadOnlyList<TomeDef> all = Data.Tomes.All;
+        for (int i = 0; i < all.Count; i++)
+        {
+            TomeDef def = all[i];
+            if (!book.CanTake(def)) continue;
+            if (Banished.Count > 0 && Banished.Contains(def)) continue;
+
+            int level = book.LevelOf(def);
+            float weight = def.Weight <= 0f ? 0f
+                : def.Weight * (level > 0 ? TomeUpgradeWeight : NewTomeWeight) * LuckShift(def.Rarity, luck);
+            if (weight <= 0f) continue;
+
+            _candidates.Add(Offer.ForTome(def, level));
+            _weights.Add(weight);
+        }
+    }
+
+    /// <summary>
+    /// One fresh offer that is not any of <paramref name="keep"/> — the card that
+    /// replaces a banished one. Falls back to a supply offer when nothing else is
+    /// left, so the slot is never empty.
+    /// </summary>
+    public Offer RollReplacement(IReadOnlyList<Offer> keep, WeaponSystem? weaponSystem, Inventory? inventory, StatSheet? stats)
+    {
+        List<Offer> roll = Roll(keep.Count + 1, weaponSystem, inventory, stats);
+        foreach (Offer o in roll)
+        {
+            if (o.Source is null) continue;
+            bool dup = false;
+            foreach (Offer k in keep) if (ReferenceEquals(k.Source, o.Source)) { dup = true; break; }
+            if (!dup) return o;
+        }
+
+        int supplies = 0;
+        foreach (Offer k in keep) if (k.IsBonus) supplies++;
+        return Supply(supplies);
     }
 
     /// <summary>
@@ -442,6 +523,7 @@ public sealed class OfferPool
                 ItemDef def = _items[i];
                 if ((int)def.Rarity < f || def.Weight <= 0f) continue;
                 if (inventory?.IsMaxed(def) == true) continue;
+                if (Banished.Count > 0 && Banished.Contains(def)) continue;
 
                 _candidates.Add(Offer.ForItem(def, inventory?.StacksOf(def) ?? 0));
                 _weights.Add(def.Weight * LuckShift(def.Rarity, luck));

@@ -157,6 +157,7 @@ public sealed partial class Hud : Control
         BuildClock();
         BuildTopRight();
         BuildWeaponList();
+        BuildTomeList();
         BuildDashMeter();
         BuildPhaseReadout();
         BuildTitleCard();

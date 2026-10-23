@@ -223,6 +223,8 @@ public sealed partial class StatsPanel : Control
             Row(_loadout, w.Def.DisplayName, $"Lv {w.Level}/{w.Def.MaxLevel}  ~{dps:0} dps", c);
         }
 
+        TomeSection();
+
         Section(_loadout, $"ITEMS  {_inventory.TotalStacks}");
         if (_inventory.Items.Count == 0) _loadout.AddChild(Text("none yet", 14, Dim));
         // Two per row: a late build carries thirty-odd distinct items, which in a

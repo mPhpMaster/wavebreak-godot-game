@@ -161,6 +161,8 @@ public sealed partial class Main : Node3D
 
         _inventory = new Progression.Inventory(_player.Stats);
         _offers = new Progression.OfferPool(Meta.MetaContent.OfferItems(Catalog.Items), Meta.MetaContent.OfferWeapons(Catalog.Weapons), Run.Rng);
+        // Tomes and the reroll/banish/skip charges; both publish themselves as Current.
+        _ = new Progression.LevelUpChoices(_offers, _weapons, _inventory, _player.Stats, new Progression.TomeBook(_player.Stats));
 
         // Damage numbers and pickups are pooled nodes that need a parent in the
         // world, so they are children of the root rather than of the player.
@@ -220,7 +222,7 @@ public sealed partial class Main : Node3D
             // Never show the panel in autopilot runs: it pauses the tree waiting
             // for a click, so the run would stop at level 2 and every system past
             // it would go unverified while the log still looked healthy.
-            Choose(choices[Run.Rng.RangeInt(0, choices.Count)]);
+            Autopilot.ResolveLevelUp(choices, Run.Rng, Choose);
             return;
         }
         _levelUp.Show(choices, Choose);
@@ -230,6 +232,7 @@ public sealed partial class Main : Node3D
     {
         if (offer.Weapon is not null) _weapons.Add(offer.Weapon);
         else if (offer.Item is not null) _inventory.Add(offer.Item);
+        else if (offer.Tome is not null) Progression.TomeBook.Current?.Add(offer.Tome);
         else offer.Apply(_player, _inventory);
     }
 

@@ -41,6 +41,13 @@ public enum Stat
     GoldGain,
     Luck,
 
+    // --- level-up choices: charges per run. Read as whole numbers; the
+    // level-up controller subtracts what it has spent, so an item granting
+    // +1 Rerolls mid-run is one more reroll immediately.
+    Rerolls,
+    Banishes,
+    Skips,
+
     // --- meta: how fast the world gets harder. Lets an item trade danger for
     // reward, which is where a lot of the interesting build decisions live.
     EnemyScaling,

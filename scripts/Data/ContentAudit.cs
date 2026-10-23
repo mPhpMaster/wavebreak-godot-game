@@ -30,7 +30,7 @@ namespace Wavebreak.Data;
 /// rolls its own pool), so an audit run is a check, not a replay — use a
 /// separate run for seeded evidence.
 /// </summary>
-public static class ContentAudit
+public static partial class ContentAudit
 {
     private static bool _parsed;
     private static bool _log;
@@ -159,6 +159,7 @@ public static class ContentAudit
                 if (GodotObject.IsInstanceValid(e) && e.IsAlive && e.IsBoss)
                     Line($"boss-alive {e.Def?.Id} hp={e.HealthFraction * 100f:0}%");
         Line($"thorns hits={Enemy.ThornsHits} dealt={Enemy.ThornsDealt:0}");
+        ReportLevelUp();
     }
 
     // ------------------------------------------------------------------ audit
@@ -202,6 +203,7 @@ public static class ContentAudit
             AuditEnemies(system);
             AuditDirector();
             AuditOffers(system);
+            AuditTomes(system);
         }
         catch (Exception e)
         {
