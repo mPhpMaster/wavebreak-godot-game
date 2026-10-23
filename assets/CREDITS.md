@@ -16,3 +16,24 @@ were copied in.
 | `quaternius/{blob,flying,big}` | Ultimate Monsters | Quaternius | https://quaternius.com | CC0 1.0 |
 
 CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
+
+## Music
+
+Every file in `assets/music/` is original to this project: the notes were composed
+for it and rendered with no samples by `tools/compose_music.py`, which uses
+numpy/scipy synthesis and ffmpeg/libvorbis. It is dedicated to the public domain
+under CC0 1.0, like the art above. To change a track, edit the script and re-run
+`python tools/compose_music.py [--only name]`.
+
+| File | Use | Key / tempo | Length |
+|---|---|---|---|
+| `title.ogg` | title menu (loop) | D major, 80 bpm | 48 s |
+| `meadow.ogg` | thornmeadow (loop) | G major, 104 bpm | 74 s |
+| `frost.ogg` | rimeglass (loop) | D dorian, 84 bpm | 69 s |
+| `ashlands.ogg` | cinder (loop) | A minor, 96 bpm | 60 s |
+| `graveyard.ogg` | graveyard map (loop) | E harmonic minor, 3/4, 96 bpm | 60 s |
+| `tidal.ogg` | tidal map (loop) | F lydian, 90 bpm | 64 s |
+| `boss.ogg` | phase boss (loop) | C minor, 124 bpm | 46 s |
+| `swarm.ogg` | Final Swarm (loop) | D minor, 136 bpm | 56 s |
+| `victory.ogg` | win sting | C major | 7.5 s |
+| `defeat.ogg` | defeat sting | A minor | 10 s |

@@ -194,7 +194,8 @@ public sealed partial class AudioDirector : Node
             VolumeDb = AmbientDb,
         };
         AddChild(_ambient);
-        _ambient.Play();
+        // Real music replaces the drone bed (its A drone clashes with other keys).
+        if (!MusicDirector.Active) _ambient.Play();
 
         MaybeDump();
         MaybePressKeys();
@@ -253,7 +254,7 @@ public sealed partial class AudioDirector : Node
     /// <summary>Creates the Sfx and Music buses if this process has not already.
     /// Built in code because the project has no bus layout file, and checked by
     /// name because the AudioServer outlives a scene reload.</summary>
-    private static void EnsureBuses()
+    internal static void EnsureBuses()
     {
         if (AudioServer.GetBusIndex(SfxBus) < 0)
         {

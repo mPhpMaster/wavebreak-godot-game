@@ -141,6 +141,7 @@ public sealed partial class Main : Node3D
         // listens to the bus; nothing below needs a reference to it.
         _audio = new Audio.AudioDirector();
         AddChild(_audio);
+        Audio.MusicDirector.BeginRun(this);
 
         _player = new Actors.Player();
         AddChild(_player);

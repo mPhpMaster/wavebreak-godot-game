@@ -84,6 +84,7 @@ public sealed partial class MainMenu : Node3D
         GameSettings.ApplyWindow();
         AudioSettings.Load();
         AudioSettings.Apply();
+        MusicDirector.PlayTitle(this);
 
         // A results screen or a run may have left the tree paused or the mouse
         // captured; the menu needs neither.
