@@ -91,6 +91,7 @@ public static class Leaderboard
     public static void RecordRun(Main main, bool won, int phase)
     {
         if (!Enabled || main is null || !GodotObject.IsInstanceValid(main) || main.Run is null) return;
+        if (UI.DevPanel.UsedThisRun) { GD.Print("META leaderboard skipped (developer panel used)"); return; }
         EnsureLoaded();
 
         var entry = new LeaderboardEntry

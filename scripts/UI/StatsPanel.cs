@@ -41,7 +41,7 @@ public sealed partial class StatsPanel : Control
     /// keeps a busy wave from rebuilding text sixty times a second.</summary>
     private const float RefreshInterval = 0.25f;
 
-    private static readonly (string Title, Stat[] Stats)[] Groups =
+    internal static readonly (string Title, Stat[] Stats)[] Groups =
     {
         ("SURVIVAL", new[] { Stat.MaxHealth, Stat.HealthRegen, Stat.Armor, Stat.Evasion,
                              Stat.Shield, Stat.Thorns, Stat.Lifesteal }),
@@ -299,7 +299,7 @@ public sealed partial class StatsPanel : Control
         Row(_stats, Catalog.StatName(stat), Format(stats, stat, value), colour);
     }
 
-    private static string Format(StatSheet stats, Stat stat, float v) => stat switch
+    internal static string Format(StatSheet stats, Stat stat, float v) => stat switch
     {
         Stat.MaxHealth       => $"{v:0}",
         Stat.HealthRegen     => $"{v:0.#} /min",

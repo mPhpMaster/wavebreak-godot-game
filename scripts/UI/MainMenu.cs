@@ -43,6 +43,9 @@ public sealed partial class MainMenu : Node3D
     private Control _root = null!;
     private readonly Dictionary<string, Control> _pages = new();
     private string _page = "main";
+    /// <summary>Page to land on after the developer panel reloads the title.</summary>
+    internal static string? DevReturnPage;
+    internal string CurrentPage => _page;
     private Button _playButton = null!;
 
     // character page
@@ -96,7 +99,9 @@ public sealed partial class MainMenu : Node3D
 
         BuildBackdrop();
         BuildUi();
-        ShowPage(Launch.MenuShot is not null ? Launch.MenuPage : "main");
+        ShowPage(DevReturnPage ?? (Launch.MenuShot is not null ? Launch.MenuPage : "main"));
+        DevReturnPage = null;
+        DevPanel.Install(this);
 
         if (Launch.MenuShot is not null) _ = CaptureAndQuit();
     }
@@ -661,7 +666,7 @@ public sealed partial class MainMenu : Node3D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (_root is null) return;
+        if (_root is null || DevPanel.IsOpen) return;
         if (_page == "play" && (@event.IsActionPressed("ui_left") || @event.IsActionPressed("ui_right")))
         {
             CycleSkin(@event.IsActionPressed("ui_left") ? -1 : 1);

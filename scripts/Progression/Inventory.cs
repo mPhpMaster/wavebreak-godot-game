@@ -46,7 +46,7 @@ public sealed class ItemStack
 /// re-entrancy flag stops the inventory's own publish from feeding back into its
 /// own handler, which is the difference between "two paths" and "double credit".
 /// </summary>
-public sealed class Inventory
+public sealed partial class Inventory
 {
     /// <summary>The live inventory, or null between runs. Pickups resolve it
     /// through this rather than being handed a reference at spawn time.</summary>

@@ -99,6 +99,7 @@ public sealed partial class UnlockTracker : Node
 
     private void OnSecretDiscovered(SecretDiscovered e)
     {
+        if (UI.DevPanel.UsedThisRun) return;
         if (Profile.FindSecret(e.Kind)) Profile.Save();
         Evaluate();
     }
@@ -107,6 +108,9 @@ public sealed partial class UnlockTracker : Node
     {
         bool first = !_ended;
         _ended = true;
+        // A run the developer panel touched earns nothing: no quests, no
+        // lifetime stats, no leaderboard row.
+        if (UI.DevPanel.UsedThisRun) return;
         // Survived alone is not a win: an automated run is finished early with
         // survived=true just to exercise the run-end path. A win is surviving to
         // the clock.
@@ -127,6 +131,7 @@ public sealed partial class UnlockTracker : Node
 
     public override void _Process(double delta)
     {
+        if (UI.DevPanel.UsedThisRun) return;
         TickQuests(delta);
         _poll += delta;
         if (_poll < PollInterval) return;
@@ -214,6 +219,7 @@ public sealed partial class UnlockTracker : Node
     {
         if (_committed || _main is null || !IsInstanceValid(_main) || _main.Run is null) return;
         _committed = true;
+        if (UI.DevPanel.UsedThisRun) { GD.Print("META profile not updated (developer panel used this run)"); return; }
 
         RunState run = _main.Run;
         Profile.Add(Profile.Runs, 1);

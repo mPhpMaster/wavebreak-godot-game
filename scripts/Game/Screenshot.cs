@@ -36,7 +36,7 @@ public static class Screenshot
     /// <summary>--invulnerable: the player cannot die. For long verification
     /// runs that need to reach late-game content the autopilot would not
     /// survive to; never meaningful for balance numbers.</summary>
-    public static bool Invulnerable { get; private set; }
+    public static bool Invulnerable { get; set; }
 
     public static void ParseArgs()
     {

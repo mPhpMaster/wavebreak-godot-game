@@ -330,7 +330,7 @@ public sealed partial class ResultsScreen : Control
 
     public override void _Input(InputEvent @event)
     {
-        if (!Visible) return;
+        if (!Visible || DevPanel.IsOpen) return;
         if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
 
         if (key.Keycode == Key.Escape)

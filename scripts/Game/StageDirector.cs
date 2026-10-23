@@ -25,7 +25,7 @@ namespace Wavebreak.Game;
 /// the pressure on everything else, and a boss that vanishes without dying (a
 /// pool reset, a fall out of the world) is simply sent again.
 /// </summary>
-public sealed class StageDirector
+public sealed partial class StageDirector
 {
     public enum PhaseState
     {

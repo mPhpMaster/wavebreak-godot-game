@@ -29,6 +29,9 @@ public static class Launch
     public static string MenuPage { get; private set; } = "main";
     public static bool SecretTest { get; private set; }
     public static bool OfferCheck { get; private set; }
+    /// <summary>--devpanel-menu[=unlock]: open the developer panel on the title
+    /// (with --menu-shot); "unlock" also presses Unlock everything.</summary>
+    public static string? DevPanelMenu { get; private set; }
 
     /// <summary>True when any game argument other than the menu's own was given.</summary>
     public static bool SkipsMenu { get; private set; }
@@ -48,6 +51,7 @@ public static class Launch
             if (arg.StartsWith("--profile=")) ProfilePath = arg["--profile=".Length..];
             else if (arg.StartsWith("--menu-shot=")) MenuShot = arg["--menu-shot=".Length..];
             else if (arg.StartsWith("--menu-page=")) MenuPage = arg["--menu-page=".Length..];
+            else if (arg.StartsWith("--devpanel-menu")) DevPanelMenu = arg.Length > "--devpanel-menu=".Length ? arg["--devpanel-menu=".Length..] : "open";
             else if (arg.StartsWith("--character="))
             {
                 CharacterId = arg["--character=".Length..];

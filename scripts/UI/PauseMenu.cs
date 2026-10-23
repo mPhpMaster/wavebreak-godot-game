@@ -153,7 +153,7 @@ public sealed partial class PauseMenu : Node
     {
         bool toggle = @event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }
                       || (InputMap.HasAction("pause") && @event.IsActionPressed("pause"));
-        if (!toggle) return;
+        if (!toggle || DevPanel.IsOpen) return;
         // That Esc belongs to the key-binding row waiting for a key.
         if (KeybindPanel.AnyListening) return;
 
@@ -186,7 +186,7 @@ public sealed partial class PauseMenu : Node
 
     private bool CanOpen()
     {
-        if (Screenshot.Requested) return false;
+        if (Screenshot.Requested || DevPanel.IsOpen) return false;
         if (_levelUp.IsOpen || _results.Visible) return false;
         if (Main.Instance?.Run is { Over: true }) return false;
         return !GetTree().Paused;

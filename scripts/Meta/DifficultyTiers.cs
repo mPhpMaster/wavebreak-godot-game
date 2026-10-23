@@ -32,7 +32,7 @@ public sealed record DifficultyTier(
 /// smoke tests and captures are unchanged. <c>--difficulty=&lt;id&gt;</c> forces
 /// a tier for a test run, locked or not.
 /// </summary>
-public static class DifficultyTiers
+public static partial class DifficultyTiers
 {
     public static readonly IReadOnlyList<DifficultyTier> All = new List<DifficultyTier>
     {

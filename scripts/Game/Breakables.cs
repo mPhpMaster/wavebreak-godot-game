@@ -159,7 +159,7 @@ public sealed partial class Breakables : Node3D
             _multis[v] = mmi;
         }
 
-        for (int i = 0; i < 6; i++) _bursts.Add(MakeBurst());
+        for (int i = _bursts.Count; i < 6; i++) _bursts.Add(MakeBurst());
     }
 
     // -------------------------------------------------------------- probes

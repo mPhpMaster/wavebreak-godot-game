@@ -25,7 +25,7 @@ namespace Wavebreak.Meta;
 /// Unlock ids are stored, not booleans per unlock: an id that a later version
 /// removes is simply ignored, and a new unlock starts locked without migration.
 /// </summary>
-public static class Profile
+public static partial class Profile
 {
     public const string DefaultPath = "user://profile.cfg";
     private const int Version = 1;
