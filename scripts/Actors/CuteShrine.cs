@@ -87,7 +87,8 @@ public sealed partial class CuteShrine : Node3D
 
         _name = new Label3D
         {
-            Text = CuteShrines.Name(Kind).ToUpperInvariant(),
+            Text = Meta.Loc.IsArabic ? Meta.Loc.T(CuteShrines.Name(Kind)) : CuteShrines.Name(Kind).ToUpperInvariant(),
+
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             FontSize = 40,
             PixelSize = 0.006f,

@@ -335,11 +335,12 @@ public sealed partial class Interactables : Node
 
     private string PromptText(Station s) => s switch
     {
-        Merchant m when m.Offers is not null && !m.Usable => $"{_keyName} — merchant (sold out)",
-        Merchant => $"{_keyName} — trade with merchant",
-        Microwave { Used: true } => "microwave (used)",
-        Microwave => $"{_keyName} — use microwave · from {MicrowavePrice(Rarity.Common)} gold",
-        _ => $"{_keyName} — {s.Verb}",
+        Merchant m when m.Offers is not null && !m.Usable => Meta.Loc.F("{0} — merchant (sold out)", _keyName),
+        Merchant => Meta.Loc.F("{0} — trade with merchant", _keyName),
+        Microwave { Used: true } => Meta.Loc.T("microwave (used)"),
+        Microwave => Meta.Loc.F("{0} — use microwave · from {1} gold", _keyName, MicrowavePrice(Rarity.Common)),
+        _ => $"{_keyName} — {Meta.Loc.T(s.Verb)}",
+
     };
 
     private Station? Focus(Vector3 at)

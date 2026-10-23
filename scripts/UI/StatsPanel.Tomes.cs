@@ -1,4 +1,5 @@
 using Wavebreak.Data;
+using Wavebreak.Meta;
 using Wavebreak.Progression;
 
 namespace Wavebreak.UI;
@@ -10,17 +11,17 @@ public sealed partial class StatsPanel
     {
         TomeBook? book = TomeBook.Current;
         int slots = book?.Slots ?? Tomes.MaxSlots;
-        Section(_loadout, $"TOMES  {book?.Count ?? 0}/{slots}");
+        Section(_loadout, Loc.F("TOMES  {0}/{1}", book?.Count ?? 0, slots));
         if (book is null || book.Count == 0)
         {
-            _loadout.AddChild(Text("none yet", 14, Dim));
+            _loadout.AddChild(Text(Loc.T("none yet"), 14, Dim));
         }
         else
         {
             foreach (TomeDef t in book.Held)
             {
                 int level = book.LevelOf(t);
-                Row(_loadout, t.DisplayName, $"Lv {level}/{t.MaxLevel}  {t.DescribeTotal(level)}", t.Tint, Icons.For(t));
+                Row(_loadout, t.DisplayName, Loc.F("Lv {0}/{1}  {2}", level, t.MaxLevel, t.DescribeTotal(level)), t.Tint, Icons.For(t));
             }
         }
 

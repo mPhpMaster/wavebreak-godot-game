@@ -63,7 +63,7 @@ public sealed partial class LeaderboardBanner : Control
         foreach (LeaderboardEntry x in Leaderboard.Top) if (x.When == e.When) entry = x;
         if (entry is null) return;
 
-        _head.Text = e.Rank == 1 ? "NEW BEST RUN  ·  #1 ON THE LEADERBOARD" : $"NEW LEADERBOARD ENTRY  ·  #{e.Rank} OF {Leaderboard.Size}";
+        _head.Text = e.Rank == 1 ? Loc.T("NEW BEST RUN  ·  #1 ON THE LEADERBOARD") : Loc.F("NEW LEADERBOARD ENTRY  ·  #{0} OF {1}", e.Rank, Leaderboard.Size);
         _row.Text = LeaderboardPage.Describe(entry);
         _panel.Visible = true;
     }

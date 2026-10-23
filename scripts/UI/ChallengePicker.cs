@@ -67,16 +67,17 @@ public sealed partial class ChallengePicker : Control
     public static string Summary()
     {
         IReadOnlyList<ChallengeDef> set = Challenges.Selected;
-        string chal = set.Count == 0 ? "no modifiers" : $"{set.Count} modifier{(set.Count == 1 ? "" : "s")} x{Challenges.RewardFor(set):0.##}";
-        if (MapChallenges.Selected is { } m) return $"MAP CHALLENGE: {m.Name.ToUpperInvariant()}  ·  {chal}";
-        return $"ROUTE: {Routes.Selected.Name.ToUpperInvariant()}  ·  {chal}";
+        string chal = set.Count == 0 ? Loc.T("no modifiers")
+            : Loc.F(set.Count == 1 ? "{0} modifier x{1:0.##}" : "{0} modifiers x{1:0.##}", set.Count, Challenges.RewardFor(set));
+        if (MapChallenges.Selected is { } m) return Loc.F("MAP CHALLENGE: {0}  ·  {1}", Upper(m.Name), chal);
+        return Loc.F("ROUTE: {0}  ·  {1}", Upper(Routes.Selected.Name), chal);
     }
 
     // ============================================================== build
 
     private void Build()
     {
-        Label heading = CuteStyle.Title("ROUTE & CHALLENGES", 20, CuteStyle.OnNightDim);
+        Label heading = CuteStyle.Title(Loc.T("ROUTE & CHALLENGES"), 20, CuteStyle.OnNightDim);
         MainMenu.Place(heading, 64f, 182f, 400f, 26f);
         AddChild(heading);
         _total = CuteStyle.Title("", 17, CuteStyle.Butter, HorizontalAlignment.Right);
@@ -94,8 +95,8 @@ public sealed partial class ChallengePicker : Control
         var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         top.AddThemeConstantOverride("separation", 10);
         col.AddChild(top);
-        _tabMaps = CuteStyle.Pill("Map challenges", CuteStyle.Lavender, () => ShowView(false), 17);
-        _tabMods = CuteStyle.Pill("Modifiers", CuteStyle.Butter, () => ShowView(true), 17);
+        _tabMaps = CuteStyle.Pill(Loc.T("Map challenges"), CuteStyle.Lavender, () => ShowView(false), 17);
+        _tabMods = CuteStyle.Pill(Loc.T("Modifiers"), CuteStyle.Butter, () => ShowView(true), 17);
         foreach (Button b in new[] { _tabMaps, _tabMods }) { b.CustomMinimumSize = new Vector2(190f, 40f); top.AddChild(b); }
         var spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore };
         top.AddChild(spacer);
@@ -136,8 +137,8 @@ public sealed partial class ChallengePicker : Control
         row.AddThemeConstantOverride("separation", 12);
         MainMenu.Place(row, 60f, 670f, 700f, 40f);
         AddChild(row);
-        _backButton = CuteStyle.Pill("BACK", CuteStyle.Peach, () => _back(), 18);
-        _clear = CuteStyle.Pill("CLEAR ALL", CuteStyle.Rose, ClearAll, 18);
+        _backButton = CuteStyle.Pill(Loc.T("BACK"), CuteStyle.Peach, () => _back(), 18);
+        _clear = CuteStyle.Pill(Loc.T("CLEAR ALL"), CuteStyle.Rose, ClearAll, 18);
         foreach (Button b in new[] { _backButton, _clear }) { b.CustomMinimumSize = new Vector2(180f, 42f); row.AddChild(b); }
         _clear.FocusEntered += () => ShowText("flag", CuteStyle.Rose, "Clear all", "Unselect the map challenge and every modifier.");
         _backButton.FocusEntered += () => ShowText("next", CuteStyle.Peach, "Back", "Back to choosing who washes up.");
@@ -164,7 +165,7 @@ public sealed partial class ChallengePicker : Control
             ic.Disc = false;
             ic.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             inner.AddChild(ic);
-            Label name = CuteStyle.Text(Data.Stages.ById(id)?.DisplayName ?? id, 15, CuteStyle.Ink);
+            Label name = CuteStyle.Text(Loc.T(Data.Stages.ById(id)?.DisplayName ?? id), 15, CuteStyle.Ink);
             name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             name.ClipText = true;
             inner.AddChild(name);
@@ -205,10 +206,10 @@ public sealed partial class ChallengePicker : Control
             row.AddChild(ic);
             var tcol = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill };
             tcol.AddThemeConstantOverride("separation", 0);
-            tcol.AddChild(CuteStyle.Text(c.Name, 17, CuteStyle.Ink));
+            tcol.AddChild(CuteStyle.Text(Loc.T(c.Name), 17, CuteStyle.Ink));
             tcol.AddChild(CuteStyle.Text(c.RewardText, 13, CuteStyle.InkSoft));
             row.AddChild(tcol);
-            PanelContainer mark = CuteStyle.Tag("ON", CuteStyle.Mint, CuteStyle.Ink, 13);
+            PanelContainer mark = CuteStyle.Tag(Loc.T("ON"), CuteStyle.Mint, CuteStyle.Ink, 13);
             mark.Name = "Mark";
             mark.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             row.AddChild(mark);
@@ -251,11 +252,11 @@ public sealed partial class ChallengePicker : Control
         tcol.AddThemeConstantOverride("separation", 1);
         row.AddChild(tcol);
         var head = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        Label name = CuteStyle.Text(def.Name, 15, CuteStyle.Ink);
+        Label name = CuteStyle.Text(Loc.T(def.Name), 15, CuteStyle.Ink);
         name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         name.ClipText = true;
         head.AddChild(name);
-        if (done) head.AddChild(CuteStyle.Tag("DONE", CuteStyle.Mint, CuteStyle.Ink, 11));
+        if (done) head.AddChild(CuteStyle.Tag(Loc.T("DONE"), CuteStyle.Mint, CuteStyle.Ink, 11));
         tcol.AddChild(head);
         Label rules = CuteStyle.Text(def.RulesText, 11, CuteStyle.InkSoft);
         rules.ClipText = true;
@@ -265,7 +266,7 @@ public sealed partial class ChallengePicker : Control
         tags.AddChild(CuteStyle.Tag(def.GoalShort, color.Lerp(Colors.White, 0.35f), CuteStyle.Ink, 11));
         tags.AddChild(CuteStyle.Tag($"+{def.Pearls}", CuteStyle.Butter.Lerp(Colors.White, 0.35f), CuteStyle.Ink, 11));
         if (def.Cosmetic != CosmeticKind.None)
-            tags.AddChild(CuteStyle.Tag(def.Cosmetic == CosmeticKind.Hat ? "HAT" : "SKIN", CuteStyle.Rose.Lerp(Colors.White, 0.3f), CuteStyle.Ink, 11));
+            tags.AddChild(CuteStyle.Tag(Loc.T(def.Cosmetic == CosmeticKind.Hat ? "HAT" : "SKIN"), CuteStyle.Rose.Lerp(Colors.White, 0.3f), CuteStyle.Ink, 11));
         tcol.AddChild(tags);
 
         b.AddChild(CuteStyle.Inset(row, 10, 6, 10, 6));
@@ -284,8 +285,8 @@ public sealed partial class ChallengePicker : Control
         ic.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         row.AddChild(ic);
         var tcol = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        tcol.AddChild(CuteStyle.Text("No map challenge", 15, CuteStyle.Ink));
-        tcol.AddChild(CuteStyle.Text("Play your chosen route", 11, CuteStyle.InkSoft));
+        tcol.AddChild(CuteStyle.Text(Loc.T("No map challenge"), 15, CuteStyle.Ink));
+        tcol.AddChild(CuteStyle.Text(Loc.T("Play your chosen route"), 11, CuteStyle.InkSoft));
         row.AddChild(tcol);
         b.AddChild(CuteStyle.Inset(row, 10, 6, 10, 6));
         b.FocusEntered += () => ShowText("wave", CuteStyle.Sky, "No map challenge",
@@ -350,7 +351,7 @@ public sealed partial class ChallengePicker : Control
         Profile.Save();
         Refresh();
         RouteDef r = Routes.Selected;
-        ShowText("next", CuteStyle.Sky, $"Route: {r.Name}", $"{Routes.DescribeMaps(r)}.  {r.Blurb}");
+        ShowText("next", CuteStyle.Sky, Loc.F("Route: {0}", r.Name), $"{Routes.DescribeMaps(r)}.  {Loc.T(r.Blurb)}");
     }
 
     private void ClearAll()
@@ -368,8 +369,8 @@ public sealed partial class ChallengePicker : Control
         MapChallengeDef? sel = MapChallenges.Selected;
         RouteDef r = Routes.Selected;
         _route.Text = sel is not null
-            ? $"Route:  {Routes.DescribeMaps(Routes.ById("start:" + sel.MapId) ?? r)}   (map challenge)"
-            : $"Route:  {r.Name}   ·   {Routes.DescribeMaps(r)}";
+            ? Loc.F("Route:  {0}   (map challenge)", Routes.DescribeMaps(Routes.ById("start:" + sel.MapId) ?? r))
+            : Loc.F("Route:  {0}   ·   {1}", r.Name, Routes.DescribeMaps(r));
 
         foreach (var (id, b, count) in _mapTabs)
         {
@@ -393,9 +394,9 @@ public sealed partial class ChallengePicker : Control
         }
 
         IReadOnlyList<ChallengeDef> set = Challenges.Selected;
-        string mods = set.Count == 0 ? "no modifiers" : $"{set.Count} modifier{(set.Count == 1 ? "" : "s")}";
-        string map = sel is null ? "" : $"{sel.Name}  ·  ";
-        _total.Text = $"{map}{mods}  ·  {Pearls.Name} x{Challenges.RewardFor(set.Concat(sel?.Modifiers.Select(Challenges.ById).OfType<ChallengeDef>() ?? Enumerable.Empty<ChallengeDef>()).Distinct()):0.##}";
+        string mods = set.Count == 0 ? Loc.T("no modifiers") : Loc.F(set.Count == 1 ? "{0} modifier" : "{0} modifiers", set.Count);
+        string map = sel is null ? "" : $"{Loc.T(sel.Name)}  ·  ";
+        _total.Text = $"{map}{mods}  ·  {Loc.T(Pearls.Name)} x{Challenges.RewardFor(set.Concat(sel?.Modifiers.Select(Challenges.ById).OfType<ChallengeDef>() ?? Enumerable.Empty<ChallengeDef>()).Distinct()):0.##}";
     }
 
     /// <summary>The card's picture: the crown for a run-winning challenge,
@@ -426,33 +427,38 @@ public sealed partial class ChallengePicker : Control
         (Color color, string glyph) = MapLook[mapId];
         int n = MapChallenges.DoneCount(mapId);
         ShowText(glyph, color, Data.Stages.ById(mapId)?.DisplayName ?? mapId,
-            $"{n} of {MapChallenges.ForMap(mapId).Count()} challenges done here.  {Data.Stages.ById(mapId)?.Tagline}");
+            Loc.F("{0} of {1} challenges done here.", n, MapChallenges.ForMap(mapId).Count()) + "  " + Loc.T(Data.Stages.ById(mapId)?.Tagline ?? ""));
     }
 
     private void ShowMapChallenge(MapChallengeDef c)
     {
         long times = MapChallenges.Completions(c);
-        string record = times > 0 ? $"Done {times}x." : "Not done yet.";
-        string selected = MapChallenges.Selected == c ? "  Selected: press again to clear." : "  Press to select.";
+        string record = times > 0 ? Loc.F("Done {0}x.", times) : Loc.T("Not done yet.");
+        string selected = "  " + Loc.T(MapChallenges.Selected == c ? "Selected: press again to clear." : "Press to select.");
         Color color = MapLook[c.MapId].Color;
         string glyph = CardGlyph(c);
-        ShowText(glyph, color, $"{c.Name}  ·  {c.GoalText}",
-            $"{c.Blurb}  Rules: {c.RulesText}.  Reward: {c.RewardText}.  {record}{selected}");
+        ShowText(glyph, color, $"{Loc.T(c.Name)}  ·  {c.GoalText}",
+            $"{Loc.T(c.Blurb)}  " + Loc.F("Rules: {0}.  Reward: {1}.", c.RulesText, c.RewardText) + $"  {record}{selected}");
     }
 
     private void ShowModifier(ChallengeDef c)
     {
         List<string> maps = Challenges.ClearedMaps(c);
         long wins = Challenges.Wins(c);
-        string record = maps.Count == 0 ? "not cleared yet" : $"cleared on {string.Join(", ", maps)}";
-        if (wins > 0) record += $"; won {wins}x";
-        ShowText(ModifierGlyph.GetValueOrDefault(c.Id, "star"), CuteStyle.Butter, $"{c.Name}  ·  {c.RewardText}", $"{c.Blurb}  ({record})");
+        string record = maps.Count == 0 ? Loc.T("not cleared yet")
+            : Loc.F("cleared on {0}", string.Join(Loc.IsArabic ? "، " : ", ", maps.ConvertAll(Loc.T)));
+        if (wins > 0) record += Loc.F("; won {0}x", wins);
+        ShowText(ModifierGlyph.GetValueOrDefault(c.Id, "star"), CuteStyle.Butter, $"{Loc.T(c.Name)}  ·  {c.RewardText}", $"{Loc.T(c.Blurb)}  ({record})");
     }
 
     private void ShowText(string glyph, Color color, string title, string body)
     {
         _detailIcon.Set(new IconSpec(glyph, color), color);
-        _detailTitle.Text = title;
-        _detailBody.Text = body;
+        _detailTitle.Text = Loc.T(title);
+        _detailBody.Text = Loc.T(body);
     }
+
+    /// <summary>English names shout in capitals; Arabic has no case, so it is
+    /// just the translated name.</summary>
+    private static string Upper(string name) => Loc.IsArabic ? Loc.T(name) : name.ToUpperInvariant();
 }

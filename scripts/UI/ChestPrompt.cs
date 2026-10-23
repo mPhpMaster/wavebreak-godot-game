@@ -1,4 +1,5 @@
 using Godot;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -47,10 +48,11 @@ public sealed partial class ChestPrompt : Label3D
     {
         bool affordable = free || gold >= cost;
         Text = free
-            ? $"{key} — open free chest"
+            ? Loc.F("{0} — open free chest", key)
             : affordable
-                ? $"{key} — open chest · {cost} gold"
-                : $"{key} — open chest · {cost} gold  (need {cost - gold} more)";
+                ? Loc.F("{0} — open chest · {1} gold", key, cost)
+                : Loc.F("{0} — open chest · {1} gold  (need {2} more)", key, cost, cost - gold);
+
         if (_punch <= 0f) Modulate = free ? FreeColor : affordable ? Affordable : TooPoor;
         GlobalPosition = anchor;
         Visible = true;

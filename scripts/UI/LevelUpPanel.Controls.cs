@@ -105,19 +105,19 @@ public sealed partial class LevelUpPanel
         _rerollButton.Visible = _banishButton.Visible = _skipButton.Visible = any;
         if (choices is null) return;
 
-        _rerollButton.Text = $"REROLL [{KeyName(RerollAction)}]   {choices.RerollsLeft}";
+        _rerollButton.Text = Loc.F("REROLL [{0}]   {1}", KeyName(RerollAction), choices.RerollsLeft);
         _banishButton.Text = _banishMode
-            ? $"CANCEL [{KeyName(BanishAction)}]"
-            : $"BANISH [{KeyName(BanishAction)}]   {choices.BanishesLeft}";
-        _skipButton.Text = $"SKIP [{KeyName(SkipAction)}]   {choices.SkipsLeft}";
+            ? Loc.F("CANCEL [{0}]", KeyName(BanishAction))
+            : Loc.F("BANISH [{0}]   {1}", KeyName(BanishAction), choices.BanishesLeft);
+        _skipButton.Text = Loc.F("SKIP [{0}]   {1}", KeyName(SkipAction), choices.SkipsLeft);
 
         _rerollButton.Disabled = choices.RerollsLeft <= 0;
         _banishButton.Disabled = !_banishMode && choices.BanishesLeft <= 0;
         _skipButton.Disabled = choices.SkipsLeft <= 0;
 
-        _rerollButton.TooltipText = "Draw three new cards.";
-        _banishButton.TooltipText = "Remove one card from the pool for the rest of the run, and draw a replacement.";
-        _skipButton.TooltipText = $"Skip this level for {LevelUpChoices.SkipGold(Progression.Inventory.Current?.Level ?? 1)} gold.";
+        _rerollButton.TooltipText = Loc.T("Draw three new cards.");
+        _banishButton.TooltipText = Loc.T("Remove one card from the pool for the rest of the run, and draw a replacement.");
+        _skipButton.TooltipText = Loc.F("Skip this level for {0} gold.", LevelUpChoices.SkipGold(Progression.Inventory.Current?.Level ?? 1));
 
         _banishButton.AddThemeColorOverride("font_color", _banishMode ? BanishInk : ControlInk);
     }
@@ -130,13 +130,13 @@ public sealed partial class LevelUpPanel
         }
         else if (_banishMode)
         {
-            _subheading.Text = "Banish which card?  It will not be offered again this run";
+            _subheading.Text = Loc.T("Banish which card?  It will not be offered again this run");
         }
         else
         {
             _subheading.Text = _queue.Count > 0
-                ? $"Choose one   ({_queue.Count} more to come)"
-                : "Choose one";
+                ? Loc.F("Choose one   ({0} more to come)", _queue.Count)
+                : Loc.T("Choose one");
         }
         _subheading.AddThemeColorOverride("font_color", _banishMode ? BanishInk : InkDim);
     }
@@ -195,7 +195,7 @@ public sealed partial class LevelUpPanel
         Offer target = _current[index];
         if (!LevelUpChoices.CanBanish(target))
         {
-            UpdateSubheading("Supply payouts cannot be banished");
+            UpdateSubheading(Loc.T("Supply payouts cannot be banished"));
             RefreshControls();
             return;
         }
@@ -206,7 +206,7 @@ public sealed partial class LevelUpPanel
         {
             _current[index] = replacement;
             LayoutCards();
-            UpdateSubheading($"{target.Title} banished");
+            UpdateSubheading(Loc.F("{0} banished", target.Title));
             ReArm();
         }
         else

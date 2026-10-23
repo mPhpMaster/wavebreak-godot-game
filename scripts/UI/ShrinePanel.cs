@@ -4,6 +4,7 @@ using Godot;
 using Wavebreak.Core;
 using Wavebreak.Data;
 using Wavebreak.Game;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -69,13 +70,13 @@ public sealed partial class ShrinePanel : Control
         dim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(dim);
 
-        _heading = MakeLabel("SHRINE CHARGED", 38, MapShrines.Tint(MapShrineKind.Charge).Lightened(0.3f));
+        _heading = MakeLabel(Loc.T("SHRINE CHARGED"), 38, MapShrines.Tint(MapShrineKind.Charge).Lightened(0.3f));
         Band(_heading, 720f, -190f, 54f);
         AddChild(_heading);
-        Label sub = MakeLabel("Choose a blessing for this run", 17, InkDim);
+        Label sub = MakeLabel(Loc.T("Choose a blessing for this run"), 17, InkDim);
         Band(sub, 720f, -136f, 26f);
         AddChild(sub);
-        Label hint = MakeLabel("press  1  ·  2  ·  3", 15, new Color(0.50f, 0.55f, 0.64f));
+        Label hint = MakeLabel(Loc.T("press  1  ·  2  ·  3"), 15, new Color(0.50f, 0.55f, 0.64f));
         Band(hint, 720f, 130f, 24f);
         AddChild(hint);
 
@@ -171,15 +172,16 @@ public sealed partial class ShrinePanel : Control
             if (i >= count) { c.Root.Visible = false; continue; }
             ShrineBoon b = _current[i];
             c.Stripe.Color = b.Color;
-            c.Rarity.Text = Catalog.RarityName(b.Rarity);
+            c.Rarity.Text = Loc.T(Catalog.RarityName(b.Rarity));
             c.Rarity.AddThemeColorOverride("font_color", b.Color);
-            c.Title.Text = b.Title;
+            c.Title.Text = Loc.T(b.Title);
             c.Effect.Text = b.Effect;
             c.Effect.AddThemeColorOverride("font_color", b.Color.Lerp(Ink, 0.4f));
             c.Root.OffsetLeft = -total * 0.5f + i * (CardWidth + CardGap);
             c.Root.OffsetRight = c.Root.OffsetLeft + CardWidth;
             c.Root.Visible = true;
-            c.Button.TooltipText = $"{i + 1}. {b.Title} {b.Effect}";
+            c.Button.TooltipText = $"{i + 1}. {Loc.T(b.Title)} {b.Effect}";
+
         }
 
         if (!IsOpen) _mouseWasCaptured = Input.MouseMode == Input.MouseModeEnum.Captured;

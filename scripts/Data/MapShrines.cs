@@ -98,7 +98,7 @@ public static class MapShrines
         var parts = new List<string>();
         foreach (var (stat, op, value) in GreedStack)
             parts.Add(Catalog.DescribeEffect(new ItemEffect { Stat = stat, Op = op, PerStack = value }));
-        return string.Join(", ", parts);
+        return string.Join(Meta.Loc.IsArabic ? "، " : ", ", parts);
     }
 
     // ------------------------------------------------------- challenge

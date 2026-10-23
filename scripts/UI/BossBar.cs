@@ -1,5 +1,6 @@
 using Godot;
 using Wavebreak.Actors;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -142,8 +143,10 @@ public sealed partial class BossBar : Control
         {
             _lastCount = count;
             _lastPhase = phase;
-            string name = _boss.Def?.DisplayName is { Length: > 0 } n ? n.ToUpperInvariant() : "BOSS";
-            _name.Text = name + (phase >= 2 ? "  -  ENRAGED" : "") + (count > 1 ? $"  (+{count - 1})" : "");
+            string name = _boss.Def?.DisplayName is { Length: > 0 } n
+                ? (Loc.IsArabic ? Loc.T(n) : n.ToUpperInvariant())
+                : Loc.T("BOSS");
+            _name.Text = name + (phase >= 2 ? Loc.T("  -  ENRAGED") : "") + (count > 1 ? $"  (+{count - 1})" : "");
             _fill.Color = phase >= 2 ? FillEnraged : Fill;
         }
     }

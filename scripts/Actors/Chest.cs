@@ -314,7 +314,8 @@ public sealed partial class Chest : Node3D
 
         _rewardLabel = new Label3D
         {
-            Text = rarityText,
+            Text = Meta.Loc.T(rarityText),
+
             Modulate = rewardColor,
             OutlineModulate = new Color(0.03f, 0.03f, 0.05f),
             OutlineSize = 14,

@@ -82,8 +82,8 @@ public sealed partial class StatsPanel : Control
         {
             _pinned = value;
             if (_title is null) return;
-            _title.Text = value ? "PAUSED" : "CHARACTER SHEET";
-            _hint.Text = value ? "Esc / P  resume" : "hold TAB";
+            _title.Text = Loc.T(value ? "PAUSED" : "CHARACTER SHEET");
+            _hint.Text = Loc.T(value ? "Esc / P  resume" : "hold TAB");
             ActionRow.Visible = value;
             _refresh = 0f;
         }
@@ -143,7 +143,7 @@ public sealed partial class StatsPanel : Control
         outer.AddThemeConstantOverride("separation", 8);
         frame.AddChild(outer);
 
-        _title = Text("CHARACTER SHEET", 22, Heading, HorizontalAlignment.Center);
+        _title = Text(Loc.T("CHARACTER SHEET"), 22, Heading, HorizontalAlignment.Center);
         outer.AddChild(_title);
 
         var columns = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
@@ -159,7 +159,7 @@ public sealed partial class StatsPanel : Control
         ActionRow.AddThemeConstantOverride("separation", 14);
         outer.AddChild(ActionRow);
 
-        _hint = Text("hold TAB", 13, Dim, HorizontalAlignment.Center);
+        _hint = Text(Loc.T("hold TAB"), 13, Dim, HorizontalAlignment.Center);
         outer.AddChild(_hint);
     }
 
@@ -198,15 +198,15 @@ public sealed partial class StatsPanel : Control
         PlayerHealth health = _player.Health;
         Row(_character, "Health", $"{health.Current:0} / {health.Max:0}");
         if (health.ShieldMax > 0f) Row(_character, "Shield", $"{health.Shield:0} / {health.ShieldMax:0}");
-        Row(_character, "Regen", $"{stats.RegenPerSecond():0.##} /s");
+        Row(_character, "Regen", Loc.F("{0:0.##} /s", stats.RegenPerSecond()));
         Row(_character, "Damage taken", $"-{stats.ArmorReduction() * 100f:0}%");
         Row(_character, "Dodge", $"{stats.EvasionChance() * 100f:0}%");
 
         Section(_character, "MOVEMENT");
         float dash = _player.DashCooldownRemaining;
-        Row(_character, "Dash", dash <= 0f ? "ready" : $"{dash:0.0}s", dash <= 0f ? Better : Ink);
-        Row(_character, "Speed now", $"{_player.PlanarVelocity.Length():0.0} m/s");
-        Row(_character, "Top speed", $"{_player.PeakSpeed:0.0} m/s");
+        Row(_character, "Dash", dash <= 0f ? Loc.T("ready") : Loc.F("{0:0.0}s", dash), dash <= 0f ? Better : Ink);
+        Row(_character, "Speed now", Loc.F("{0:0.0} m/s", _player.PlanarVelocity.Length()));
+        Row(_character, "Top speed", Loc.F("{0:0.0} m/s", _player.PeakSpeed));
 
         Clear(_stats);
         foreach ((string title, Stat[] group) in Groups)
@@ -216,18 +216,18 @@ public sealed partial class StatsPanel : Control
         }
 
         Clear(_loadout);
-        Section(_loadout, $"WEAPONS  {_weapons.Weapons.Count}/{_weapons.Slots}");
+        Section(_loadout, Loc.F("WEAPONS  {0}/{1}", _weapons.Weapons.Count, _weapons.Slots));
         foreach (WeaponRuntime w in _weapons.Weapons)
         {
             Color c = Catalog.RarityColor(w.Def.Rarity);
             float dps = w.Interval > 0f ? w.VolleyDamage(stats) / w.Interval : 0f;
-            Row(_loadout, w.Def.DisplayName, $"Lv {w.Level}/{w.Def.MaxLevel}  ~{dps:0} dps", c, Icons.For(w.Def));
+            Row(_loadout, w.Def.DisplayName, Loc.F("Lv {0}/{1}  ~{2:0} dps", w.Level, w.Def.MaxLevel, dps), c, Icons.For(w.Def));
         }
 
         TomeSection();
 
-        Section(_loadout, $"ITEMS  {_inventory.TotalStacks}");
-        if (_inventory.Items.Count == 0) _loadout.AddChild(Text("none yet", 14, Dim));
+        Section(_loadout, Loc.F("ITEMS  {0}", _inventory.TotalStacks));
+        if (_inventory.Items.Count == 0) _loadout.AddChild(Text(Loc.T("none yet"), 14, Dim));
         // Two per row: a late build carries thirty-odd distinct items, which in a
         // single column would run off the bottom of a 720p screen.
         var grid = new GridContainer { Columns = 2, MouseFilter = MouseFilterEnum.Ignore };
@@ -236,7 +236,7 @@ public sealed partial class StatsPanel : Control
         _loadout.AddChild(grid);
         foreach (ItemStack item in _inventory.Items)
         {
-            string label = item.Count > 1 ? $"{item.DisplayName} x{item.Count}" : item.DisplayName;
+            string label = item.Count > 1 ? $"{Loc.T(item.DisplayName)} x{item.Count}" : Loc.T(item.DisplayName);
             Label l = Text(label, 13, Catalog.RarityColor(item.Rarity));
             l.CustomMinimumSize = new Vector2(112f, 0f);
             l.ClipText = true;
@@ -245,21 +245,21 @@ public sealed partial class StatsPanel : Control
 
         Clear(_settings);
         Section(_settings, "SOUND");
-        _settings.AddChild(Text(AudioSettings.Describe(VolumeChannel.Master), 13, AudioSettings.Muted ? Worse : Ink));
-        _settings.AddChild(Text(AudioSettings.Describe(VolumeChannel.Sfx), 13, Ink));
-        _settings.AddChild(Text(AudioSettings.Describe(VolumeChannel.Music), 13, Ink));
+        _settings.AddChild(Text(Loc.T(AudioSettings.Describe(VolumeChannel.Master)), 13, AudioSettings.Muted ? Worse : Ink));
+        _settings.AddChild(Text(Loc.T(AudioSettings.Describe(VolumeChannel.Sfx)), 13, Ink));
+        _settings.AddChild(Text(Loc.T(AudioSettings.Describe(VolumeChannel.Music)), 13, Ink));
 
         Section(_settings, "CONTROLS");
         // Read from the live bindings, so a rebound key shows its new name here.
-        Row(_settings, "Mouse", "look", Dim);
+        Row(_settings, "Mouse", Loc.T("look"), Dim);
         foreach ((string action, string label) in ControlRows)
         {
             if (!InputMap.HasAction(action)) continue;
             string a = Keybinds.Describe(Keybinds.Get(action, 0));
             InputEvent? second = Keybinds.Get(action, 1);
-            Row(_settings, second is null ? a : $"{a}, {Keybinds.Describe(second)}", label, Dim);
+            Row(_settings, second is null ? a : $"{a}, {Keybinds.Describe(second)}", Loc.T(label), Dim);
         }
-        Row(_settings, "Esc", "pause menu", Dim);
+        Row(_settings, "Esc", Loc.T("pause menu"), Dim);
 
         Section(_settings, "RUN");
         Row(_settings, "Seed", _run.Seed.ToString(), Dim);
@@ -302,9 +302,9 @@ public sealed partial class StatsPanel : Control
     internal static string Format(StatSheet stats, Stat stat, float v) => stat switch
     {
         Stat.MaxHealth       => $"{v:0}",
-        Stat.HealthRegen     => $"{v:0.#} /min",
-        Stat.Armor           => $"{v:0}  (-{stats.ArmorReduction() * 100f:0}% dmg)",
-        Stat.Evasion         => $"{v:0}  ({stats.EvasionChance() * 100f:0}% dodge)",
+        Stat.HealthRegen     => Loc.F("{0:0.#} /min", v),
+        Stat.Armor           => Loc.F("{0:0}  (-{1:0}% dmg)", v, stats.ArmorReduction() * 100f),
+        Stat.Evasion         => Loc.F("{0:0}  ({1:0}% dodge)", v, stats.EvasionChance() * 100f),
         Stat.Shield          => $"{v:0}",
         Stat.Thorns          => $"{v:0.#}",
         Stat.Lifesteal       => $"{v * 100f:0.#}%",
@@ -313,10 +313,10 @@ public sealed partial class StatsPanel : Control
         Stat.CritChance      => $"{v * 100f:0.#}%",
         Stat.CritDamage      => $"+{v * 100f:0}%",
         Stat.ProjectileCount => $"+{v:0}",
-        Stat.MoveSpeed       => $"{v:0.0} m/s",
-        Stat.JumpHeight      => $"{v:0.0} m",
-        Stat.DashCooldown    => $"{v:0.00} s",
-        Stat.PickupRange     => $"{v:0.0} m",
+        Stat.MoveSpeed       => Loc.F("{0:0.0} m/s", v),
+        Stat.JumpHeight      => Loc.F("{0:0.0} m", v),
+        Stat.DashCooldown    => Loc.F("{0:0.00} s", v),
+        Stat.PickupRange     => Loc.F("{0:0.0} m", v),
         Stat.XpGain or Stat.GoldGain or Stat.Luck => $"{(v >= 0f ? "+" : "")}{v * 100f:0}%",
         Stat.ElementalDamage => $"x{1f + v:0.00}",
         Stat.StatusChance or Stat.MegacritChance or Stat.IgniteChance or Stat.ChillChance
@@ -350,7 +350,7 @@ public sealed partial class StatsPanel : Control
     private static void Section(VBoxContainer column, string title)
     {
         if (column.GetChildCount() > 0) column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6) });
-        column.AddChild(Text(title, 15, Heading));
+        column.AddChild(Text(Loc.T(title), 15, Heading));
     }
 
     private static void Row(VBoxContainer column, string name, string value, Color? valueColour = null,
@@ -364,7 +364,7 @@ public sealed partial class StatsPanel : Control
             view.Set(spec);
             row.AddChild(view);
         }
-        Label left = Text(name, 14, valueColour == Dim ? Dim : Ink);
+        Label left = Text(Loc.T(name), 14, valueColour == Dim ? Dim : Ink);
         left.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         left.ClipText = true;
         row.AddChild(left);

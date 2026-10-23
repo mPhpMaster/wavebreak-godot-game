@@ -142,3 +142,8 @@ levelup_skip={
 [rendering]
 
 renderer/rendering_method="forward_plus"
+
+[internationalization]
+
+locale/include_text_server_data=true
+rendering/text_driver="ICU / HarfBuzz / Graphite (Built-in)"

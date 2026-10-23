@@ -100,7 +100,7 @@ public sealed partial class GraphicsPanel : VBoxContainer
         list.AddChild(Section("DISPLAY"));
         _mode = new OptionButton();
         StyleOption(_mode);
-        foreach (string m in GraphicsSettings.WindowModes) _mode.AddItem(m);
+        foreach (string m in GraphicsSettings.WindowModes) _mode.AddItem(Loc.T(m));
         _mode.ItemSelected += i => { _pendMode = (int)i; PendingChanged(); };
         list.AddChild(Row("Window mode", _mode));
 
@@ -117,7 +117,7 @@ public sealed partial class GraphicsPanel : VBoxContainer
             for (int s = 0; s < screens; s++)
             {
                 Vector2I size = DisplayServer.ScreenGetSize(s);
-                _monitor.AddItem($"Monitor {s + 1}  ({size.X}x{size.Y})");
+                _monitor.AddItem(Loc.F("Monitor {0}  ({1}x{2})", s + 1, size.X, size.Y));
             }
             _monitor.ItemSelected += i => { _pendMonitor = (int)i; PendingChanged(); };
             list.AddChild(Row("Monitor", _monitor));
@@ -303,7 +303,7 @@ public sealed partial class GraphicsPanel : VBoxContainer
     }
 
     private void UpdateConfirm()
-        => _confirmLabel.Text = $"Keep these display settings?  Reverting in {Math.Ceiling(_confirmLeft):0} s";
+        => _confirmLabel.Text = Loc.F("Keep these display settings?  Reverting in {0:0} s", Math.Ceiling(_confirmLeft));
 
     public override void _Process(double delta)
     {
@@ -339,7 +339,7 @@ public sealed partial class GraphicsPanel : VBoxContainer
 
     private void Say(string text, Color? color = null)
     {
-        _status.Text = text;
+        _status.Text = Loc.T(text);
         _status.AddThemeColorOverride("font_color", color ?? Ink);
     }
 
@@ -349,7 +349,7 @@ public sealed partial class GraphicsPanel : VBoxContainer
     {
         var ob = new OptionButton();
         StyleOption(ob);
-        foreach (string s in items) ob.AddItem(s);
+        foreach (string s in items) ob.AddItem(Loc.T(s));
         ob.ItemSelected += i => { set((int)i); Refresh(); };
         _refreshers.Add(() => ob.Select(get()));
         return ob;
@@ -375,7 +375,7 @@ public sealed partial class GraphicsPanel : VBoxContainer
         cb.AddThemeFontSizeOverride("font_size", 16);
         Label state = MainMenu.MakeLabel("", 16, Ink);
         cb.Toggled += on => { set(on); Refresh(); };
-        _refreshers.Add(() => { cb.SetPressedNoSignal(get()); state.Text = get() ? "On" : "Off"; });
+        _refreshers.Add(() => { cb.SetPressedNoSignal(get()); state.Text = Loc.T(get() ? "On" : "Off"); });
         HBoxContainer row = Row(name, cb);
         row.AddChild(state);
         return row;

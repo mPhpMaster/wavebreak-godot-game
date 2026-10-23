@@ -78,6 +78,13 @@ public sealed partial class MainMenu : Node3D
     public override void _Ready()
     {
         Launch.Parse();
+        Loc.Init(this);
+        if (Launch.DumpStrings is { } dump)
+        {
+            LocContent.Dump(dump);
+            GetTree().Quit();
+            return;
+        }
         if (Launch.SkipsMenu)
         {
             // Deferred: changing scene from inside the outgoing scene's _Ready is
@@ -257,8 +264,11 @@ public sealed partial class MainMenu : Node3D
         _camera.Position = pos;
         // Look a little to the side of centre so the arena sits to the right of
         // the menu column instead of under it.
+        // Right-to-left layouts put the menu column on the right, so the scene
+        // (and the hero below) mirror to the other side.
+        float side = Loc.IsRtl ? -1f : 1f;
         Vector3 right = new Vector3(-Mathf.Sin(_orbit), 0f, Mathf.Cos(_orbit));
-        _camera.LookAt(right * 9f + new Vector3(0f, 1f, 0f), Vector3.Up);
+        _camera.LookAt(right * 9f * side + new Vector3(0f, 1f, 0f), Vector3.Up);
 
         // The hero is held at a fixed spot in the frame, right of the menu and
         // character panels, rather than placed in the world: the camera orbits,
@@ -266,12 +276,12 @@ public sealed partial class MainMenu : Node3D
         if (_hero is not null)
         {
             Basis b = _camera.GlobalTransform.Basis;
-            _hero.Position = pos - b.Z * 7.5f + b.X * 4.75f - b.Y * 1.45f;
+            _hero.Position = pos - b.Z * 7.5f + b.X * 4.75f * side - b.Y * 1.45f;
             // Models face -Z, so turn by the camera direction plus half a turn
             // to look back at the viewer, angled slightly toward the menu.
             Vector3 toCam = (pos - _hero.Position) with { Y = 0f };
             if (toCam.LengthSquared() > 0.01f)
-                _hero.Rotation = new Vector3(0f, Mathf.Atan2(toCam.X, toCam.Z) + Mathf.Pi + 0.35f, 0f);
+                _hero.Rotation = new Vector3(0f, Mathf.Atan2(toCam.X, toCam.Z) + Mathf.Pi + 0.35f * side, 0f);
         }
     }
 
@@ -291,6 +301,7 @@ public sealed partial class MainMenu : Node3D
         _root.AddChild(shade);
 
         Label title = MakeLabel("WAVEBREAK", 72, Ink);
+        title.AutoTranslateMode = AutoTranslateModeEnum.Disabled; // the name stays the name
         Place(title, 56f, 54f, 600f, 90f);
         title.AddThemeConstantOverride("outline_size", 10);
         _root.AddChild(title);
@@ -330,8 +341,8 @@ public sealed partial class MainMenu : Node3D
 
         long best = Profile.Get(Profile.BestSeconds);
         Label stats = MakeLabel(
-            $"runs {Profile.Get(Profile.Runs)}   ·   best {best / 60:00}:{best % 60:00}   ·   " +
-            $"unlocks {Profile.UnlockedIds.Count}/{Unlocks.All.Count}", 15, InkDim);
+            Loc.F("runs {0}   ·   best {1:00}:{2:00}   ·   unlocks {3}/{4}",
+                  Profile.Get(Profile.Runs), best / 60, best % 60, Profile.UnlockedIds.Count, Unlocks.All.Count), 15, InkDim);
         stats.CustomMinimumSize = new Vector2(0f, 30f);
         stats.VerticalAlignment = VerticalAlignment.Bottom;
         page.AddChild(stats);
@@ -365,7 +376,7 @@ public sealed partial class MainMenu : Node3D
             CharacterDef c = def;
             bool open = c.IsAvailable;
             bool hidden = !open && Unlocks.ById(c.UnlockedBy) is { Secret: true };
-            string label = open ? c.DisplayName : hidden ? "???" : $"{c.DisplayName}  ·  locked";
+            string label = open ? Loc.T(c.DisplayName) : hidden ? "???" : Loc.F("{0}  ·  locked", c.DisplayName);
             Button b = MenuButton(label, () => StartRun(c));
             if (!open) b.AddThemeColorOverride("font_color", Locked);
             b.FocusEntered += () => ShowCharacter(c);
@@ -406,8 +417,9 @@ public sealed partial class MainMenu : Node3D
         // The buttons take no focus so the up/down character list keeps it.
         var skinRow = new HBoxContainer();
         skinRow.AddThemeConstantOverride("separation", 10);
-        Button prev = SkinArrow("<", -1);
-        Button next = SkinArrow(">", +1);
+        // Right to left, "previous" sits on the right and points that way.
+        Button prev = SkinArrow(Loc.IsRtl ? ">" : "<", -1);
+        Button next = SkinArrow(Loc.IsRtl ? "<" : ">", +1);
         _skinLabel = MakeLabel("", 18, Ink);
         _skinLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _skinLabel.HorizontalAlignment = HorizontalAlignment.Center;
@@ -442,14 +454,14 @@ public sealed partial class MainMenu : Node3D
         int n = c.Skins.Count;
         if (skin.IsAvailable)
         {
-            _skinLabel.Text = $"skin: {skin.Name}   ({_skinIndex + 1}/{n})";
+            _skinLabel.Text = Loc.F("skin: {0}   ({1}/{2})", skin.Name, _skinIndex + 1, n);
             _skinLabel.AddThemeColorOverride("font_color", Ink);
         }
         else
         {
             UnlockDef? source = Unlocks.ById(Unlocks.SourceOf(skin.Id));
-            string how = source is null ? "" : source.Secret && !Profile.IsUnlocked(source.Id) ? $" — {source.Hint}" : $" — {source.Description}";
-            _skinLabel.Text = $"skin: {skin.Name}  ·  locked{how}   ({_skinIndex + 1}/{n})";
+            string how = source is null ? "" : " — " + Loc.T(source.Secret && !Profile.IsUnlocked(source.Id) ? source.Hint : source.Description);
+            _skinLabel.Text = Loc.F("skin: {0}  ·  locked{1}   ({2}/{3})", skin.Name, how, _skinIndex + 1, n);
             _skinLabel.AddThemeColorOverride("font_color", Locked);
         }
         _skinLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -463,15 +475,16 @@ public sealed partial class MainMenu : Node3D
         UnlockDef? source = Unlocks.ById(c.UnlockedBy);
         bool hidden = !open && source is { Secret: true };
 
-        _charName.Text = open ? c.DisplayName : hidden ? "???" : c.DisplayName;
+        _charName.Text = hidden ? "???" : Loc.T(c.DisplayName);
         _charLook.Text = $"look: {c.LookId}   ·   id: {c.Id}";
-        _charBlurb.Text = hidden ? "Someone else walks these shores. You have not met them yet." : c.Blurb;
+        _charLook.AutoTranslateMode = AutoTranslateModeEnum.Disabled; // ids, a developer line
+        _charBlurb.Text = Loc.T(hidden ? "Someone else walks these shores. You have not met them yet." : c.Blurb);
         _charStats.Text = hidden ? "" :
-            $"Starts with {c.StartingWeaponDef.DisplayName}\n{Characters.Describe(c)}";
-        _charPassive.Text = hidden || c.PassiveName.Length == 0 ? "" : $"Passive — {c.PassiveName}: {c.PassiveText}";
-        _charLock.Text = open ? "Press to begin the run"
-            : hidden ? $"Secret — {source!.Hint}"
-            : $"Locked — {source?.Description}";
+            Loc.F("Starts with {0}", c.StartingWeaponDef.DisplayName) + "\n" + Characters.Describe(c);
+        _charPassive.Text = hidden || c.PassiveName.Length == 0 ? "" : Loc.F("Passive — {0}: {1}", c.PassiveName, c.PassiveText);
+        _charLock.Text = open ? Loc.T("Press to begin the run")
+            : hidden ? Loc.F("Secret — {0}", source!.Hint)
+            : Loc.F("Locked — {0}", source?.Description ?? "");
         if (open) TintHero(c);
 
         if (_shownCharacter != c)
@@ -538,8 +551,8 @@ public sealed partial class MainMenu : Node3D
     private Control BuildSettingsPage()
     {
         var page = new VBoxContainer();
-        Place(page, 60f, 200f, 380f, 480f);
-        page.AddThemeConstantOverride("separation", 10);
+        Place(page, 60f, 190f, 380f, 520f);
+        page.AddThemeConstantOverride("separation", 6);
 
         page.AddChild(SectionLabel("SOUND"));
         foreach (var (name, ch) in new[] { ("Master", VolumeChannel.Master), ("Effects", VolumeChannel.Sfx), ("Music", VolumeChannel.Music) })
@@ -559,7 +572,7 @@ public sealed partial class MainMenu : Node3D
             _volumeSliders.Add((s, channel));
             page.AddChild(Row(name, s, value));
         }
-        _mute = new CheckButton { Text = "Mute all", ButtonPressed = AudioSettings.Muted };
+        _mute = new CheckButton { Text = Loc.T("Mute all"), ButtonPressed = AudioSettings.Muted };
         _mute.AddThemeFontSizeOverride("font_size", 18);
         _mute.Toggled += on => { if (on != AudioSettings.Muted) AudioSettings.ToggleMute(); };
         page.AddChild(_mute);
@@ -569,13 +582,47 @@ public sealed partial class MainMenu : Node3D
         Label sensValue = MakeLabel($"{GameSettings.Sensitivity:0.00}x", 16, Ink);
         sens.ValueChanged += v => { GameSettings.SetSensitivity((float)v); sensValue.Text = $"{GameSettings.Sensitivity:0.00}x"; };
         page.AddChild(Row("Mouse sensitivity", sens, sensValue));
+        page.AddChild(Row("Language", LanguagePicker(), MakeLabel("", 16, Ink)));
 
         Label keys = MakeLabel("In a run:  - / =  volume   ·   9 / 0  effects   ·   [ / ]  music   ·   M  mute", 14, InkDim);
         page.AddChild(keys);
-        page.AddChild(MenuButton("GRAPHICS", () => ShowPage("graphics")));
-        page.AddChild(MenuButton("KEY BINDINGS", () => ShowPage("keys")));
+        // Side by side: with the language row added, three stacked buttons no
+        // longer fit above the window's bottom edge.
+        var pages = new HBoxContainer();
+        pages.AddThemeConstantOverride("separation", 8);
+        foreach (Button b in new[] { MenuButton("GRAPHICS", () => ShowPage("graphics")), MenuButton("KEY BINDINGS", () => ShowPage("keys")) })
+        {
+            b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            b.AddThemeFontSizeOverride("font_size", 19);
+            pages.AddChild(b);
+        }
+        page.AddChild(pages);
         page.AddChild(MenuButton("BACK", () => ShowPage("main")));
         return page;
+    }
+
+    /// <summary>English / العربية. Choosing one applies it (locale, layout
+    /// direction, font fallback) and rebuilds the title on the settings page, so
+    /// every label built in code is redone in the new language at once.</summary>
+    private OptionButton LanguagePicker()
+    {
+        var ob = new OptionButton { FocusMode = Control.FocusModeEnum.All };
+        // Native names are never translated: a player lost in the wrong
+        // language must still find their own.
+        ob.AutoTranslateMode = AutoTranslateModeEnum.Disabled;
+        ob.GetPopup().AutoTranslateMode = AutoTranslateModeEnum.Disabled;
+        for (int i = 0; i < Loc.Codes.Length; i++) ob.AddItem(Loc.NativeNames[i], i);
+        ob.Selected = Math.Max(0, Array.IndexOf(Loc.Codes, Loc.Language));
+        ob.AddThemeFontSizeOverride("font_size", 18);
+        ob.ItemSelected += index =>
+        {
+            string code = Loc.Codes[Math.Clamp((int)index, 0, Loc.Codes.Length - 1)];
+            if (code == Loc.Language) return;
+            Loc.SetLanguage(code, GetTree());
+            DevReturnPage = "settings";
+            GetTree().CallDeferred(SceneTree.MethodName.ReloadCurrentScene);
+        };
+        return ob;
     }
 
     private Control BuildKeysPage()
@@ -675,7 +722,7 @@ public sealed partial class MainMenu : Node3D
                 _leaderboardBack.GrabFocus();
                 break;
             default:
-                _pearls.Text = $"{Pearls.Name} {Pearls.Balance}   ·   difficulty {DifficultyTiers.Selected.Name}";
+                _pearls.Text = Loc.F("{0} {1}   ·   difficulty {2}", Pearls.Name, Pearls.Balance, DifficultyTiers.Selected.Name);
                 _playButton.GrabFocus();
                 break;
         }
@@ -692,7 +739,7 @@ public sealed partial class MainMenu : Node3D
         if (_root is null || DevPanel.IsOpen) return;
         if (_page == "play" && (@event.IsActionPressed("ui_left") || @event.IsActionPressed("ui_right")))
         {
-            CycleSkin(@event.IsActionPressed("ui_left") ? -1 : 1);
+            CycleSkin((@event.IsActionPressed("ui_left") ? -1 : 1) * (Loc.IsRtl ? -1 : 1));
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -725,7 +772,7 @@ public sealed partial class MainMenu : Node3D
 
     internal static Button MenuButton(string text, Action onPressed)
     {
-        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.All, Alignment = HorizontalAlignment.Left };
+        var b = new Button { Text = Loc.T(text), FocusMode = Control.FocusModeEnum.All, Alignment = HorizontalAlignment.Left };
         b.CustomMinimumSize = new Vector2(0f, 48f);
         b.AddThemeFontSizeOverride("font_size", 22);
         b.AddThemeColorOverride("font_focus_color", Gold);
@@ -767,7 +814,7 @@ public sealed partial class MainMenu : Node3D
 
     internal static Label MakeLabel(string text, int size, Color color)
     {
-        var label = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };
+        var label = new Label { Text = Loc.T(text), MouseFilter = Control.MouseFilterEnum.Ignore };
         label.AddThemeFontSizeOverride("font_size", size);
         label.AddThemeColorOverride("font_color", color);
         label.AddThemeColorOverride("font_outline_color", Outline);

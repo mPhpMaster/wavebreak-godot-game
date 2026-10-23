@@ -56,3 +56,9 @@ under CC0 1.0, like the art above. To change a track, edit the script and re-run
 
 Which track plays where, and how each unlocks in the Boombox, is
 `scripts/Audio/MusicTracks.cs`.
+
+## Fonts
+
+| File | Font | Author | Source | Licence |
+|---|---|---|---|---|
+| `fonts/NotoSansArabicUI-SemiBold.ttf` | Noto Sans Arabic UI SemiBold (Arabic fallback for the default font) | The Noto Project Authors | https://github.com/notofonts/arabic | SIL Open Font License 1.1 (`fonts/OFL.txt`) |

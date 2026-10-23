@@ -73,13 +73,13 @@ public sealed partial class UnlockToast : Control
     {
         UnlockDef? u = Unlocks.ById(e.Id);
         if (u is null) return;
-        Enqueue($"UNLOCKED: {u.Name}", Unlocks.DescribeReward(u), Gold);
+        Enqueue(Loc.F("UNLOCKED: {0}", u.Name), Loc.T(Unlocks.DescribeReward(u)), Gold);
     }
 
     private void OnSecret(SecretDiscovered e)
     {
         foreach (SecretKindDef k in SecretSpawner.Kinds)
-            if (k.Id == e.Kind) Enqueue($"SECRET FOUND: {k.DisplayName}", k.RewardText, k.Glow);
+            if (k.Id == e.Kind) Enqueue(Loc.F("SECRET FOUND: {0}", k.DisplayName), Loc.T(k.RewardText), k.Glow);
     }
 
     /// <summary>Public so other systems (or a test) can raise a banner.</summary>

@@ -225,8 +225,8 @@ public static class Unlocks
     {
         foreach (CharacterDef c in Characters.All)
             foreach (SkinDef k in c.Skins)
-                if (k.Id == skinId) return $"Skin: {k.Name} ({c.DisplayName})";
-        return $"Skin: {skinId}";
+                if (k.Id == skinId) return Loc.F("Skin: {0} ({1})", k.Name, c.DisplayName);
+        return Loc.F("Skin: {0}", skinId);
     }
 
     /// <summary>The unlock that grants this reward id, or null if no unlock
@@ -254,11 +254,11 @@ public static class Unlocks
     /// <summary>"Character: Kiln Sister" — what the codex and the toast print.</summary>
     public static string DescribeReward(UnlockDef u) => u.Reward switch
     {
-        RewardKind.Character => $"Character: {Characters.ById(u.RewardId)?.DisplayName ?? u.RewardId}",
+        RewardKind.Character => Loc.F("Character: {0}", Characters.ById(u.RewardId)?.DisplayName ?? u.RewardId),
         RewardKind.Skin => DescribeSkin(u.RewardId),
-        RewardKind.Hat => $"Hat: {Hats.ById(u.RewardId)?.Name ?? u.RewardId}",
-        RewardKind.Weapon => $"Weapon: {MetaContent.NameOf(u.RewardId)}",
-        RewardKind.Pearls => $"{u.Pearls} {Meta.Pearls.Name}",
-        _ => $"Item: {MetaContent.NameOf(u.RewardId)}",
+        RewardKind.Hat => Loc.F("Hat: {0}", Hats.ById(u.RewardId)?.Name ?? u.RewardId),
+        RewardKind.Weapon => Loc.F("Weapon: {0}", MetaContent.NameOf(u.RewardId)),
+        RewardKind.Pearls => Loc.F("{0} Pearls", u.Pearls),
+        _ => Loc.F("Item: {0}", MetaContent.NameOf(u.RewardId)),
     };
 }

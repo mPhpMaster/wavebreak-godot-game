@@ -16,8 +16,8 @@ public sealed record DifficultyTier(
     float Reward)     // Pearls multiplier
 {
     public string Summary => Reward <= 1f
-        ? "The tide as it was meant to be."
-        : $"enemies x{Health:0.##} hp, x{Damage:0.##} dmg, x{SpawnRate:0.##} spawns  ·  {Pearls.Name} x{Reward:0.##}";
+        ? Loc.T("The tide as it was meant to be.")
+        : Loc.F("enemies x{0:0.##} hp, x{1:0.##} dmg, x{2:0.##} spawns  ·  Pearls x{3:0.##}", Health, Damage, SpawnRate, Reward);
 }
 
 /// <summary>

@@ -4,6 +4,7 @@ using Wavebreak.Actors;
 using Wavebreak.Data;
 using Wavebreak.Game;
 using Wavebreak.Progression;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -25,8 +26,8 @@ public sealed partial class MicrowavePanel : ModalPanel
         Name = "MicrowavePanel";
         base._Ready();
 
-        Body.AddChild(MakeLabel("MICROWAVE", 34, Microwave.MicrowaveTint));
-        Body.AddChild(MakeLabel("Put one item in, get one more stack out. Works once.", 15, InkDim));
+        Body.AddChild(MakeLabel(Loc.T("MICROWAVE"), 34, Microwave.MicrowaveTint));
+        Body.AddChild(MakeLabel(Loc.T("Put one item in, get one more stack out. Works once."), 15, InkDim));
         _gold = MakeLabel("", 18, Gold);
         Body.AddChild(_gold);
 
@@ -37,10 +38,10 @@ public sealed partial class MicrowavePanel : ModalPanel
         _grid.AddThemeConstantOverride("v_separation", 8);
         scroll.AddChild(_grid);
 
-        _empty = MakeLabel("You have nothing to put in it.", 16, InkDim);
+        _empty = MakeLabel(Loc.T("You have nothing to put in it."), 16, InkDim);
         Body.AddChild(_empty);
 
-        Body.AddChild(MakeLabel("click an item or press 1-9      Esc / E to leave", 14, InkDim));
+        Body.AddChild(MakeLabel(Loc.T("click an item or press 1-9      Esc / E to leave"), 14, InkDim));
     }
 
     public void Open(Microwave microwave)
@@ -73,7 +74,7 @@ public sealed partial class MicrowavePanel : ModalPanel
 
         Inventory? inv = Inventory.Current;
         int gold = inv?.Gold ?? 0;
-        _gold.Text = $"Your gold: {gold}";
+        _gold.Text = Loc.F("Your gold: {0}", gold);
         if (inv is null || _microwave is null) return;
 
         Interactables? hub = Interactables.Instance;
@@ -86,8 +87,9 @@ public sealed partial class MicrowavePanel : ModalPanel
             string cap = stack.Def.MaxStacks > 0 ? $"/{stack.Def.MaxStacks}" : "";
             int n = _shown.Count + 1;
             string key = n <= 9 ? $"{n}. " : "";
-            Button b = MakeButton($"{key}{stack.DisplayName}  x{stack.Count}{cap}\n" +
-                                  (maxed ? "MAXED" : $"{price} gold"), () => Cook(captured));
+            Button b = MakeButton($"{key}{Loc.T(stack.DisplayName)}  x{stack.Count}{cap}\n" +
+                                  (maxed ? Loc.T("MAXED") : Loc.F("{0} gold", price)), () => Cook(captured));
+
             b.CustomMinimumSize = new Vector2(232f, 58f);
             b.AddThemeColorOverride("font_color", Catalog.RarityColor(stack.Rarity));
             b.AddThemeColorOverride("font_disabled_color", Catalog.RarityColor(stack.Rarity).Darkened(0.5f));

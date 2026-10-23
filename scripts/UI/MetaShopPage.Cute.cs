@@ -44,7 +44,7 @@ public sealed partial class MetaShopPage
         foreach (var (button, def) in _rows) CuteRow(button, LookOf(def));
         CuteRow(_refund, ("coin", CuteStyle.Rose));
         foreach (Button b in FindChildren("*", nameof(Button), true, false).OfType<Button>())
-            if (b.Text == "BACK") CuteRow(b, ("next", CuteStyle.Peach));
+            if (b.Text == Loc.T("BACK")) CuteRow(b, ("next", CuteStyle.Peach));
 
         foreach (PanelContainer panel in GetChildren().OfType<PanelContainer>())
         {

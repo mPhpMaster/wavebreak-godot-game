@@ -49,13 +49,13 @@ public sealed partial class MainMenu
     {
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 10);
-        Button prev = HatArrow("<", -1);
-        Button next = HatArrow(">", +1);
+        Button prev = HatArrow(Loc.IsRtl ? ">" : "<", -1);
+        Button next = HatArrow(Loc.IsRtl ? "<" : ">", +1);
         _hatLabel = MakeLabel("", 18, Ink);
         _hatLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _hatLabel.HorizontalAlignment = HorizontalAlignment.Center;
         _hatLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _hatBuy = new Button { Text = "BUY", FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(96f, 36f), Visible = false };
+        _hatBuy = new Button { Text = Loc.T("BUY"), FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(96f, 36f), Visible = false };
         _hatBuy.AddThemeFontSizeOverride("font_size", 16);
         _hatBuy.Pressed += BuyHat;
         row.AddChild(prev);
@@ -96,18 +96,18 @@ public sealed partial class MainMenu
         bool buyable = !hat.IsOwned && hat.PearlCost > 0 && hat.UnlockedBy is null;
         if (hat.IsOwned)
         {
-            _hatLabel.Text = $"hat: {hat.Name}   ({_hatIndex + 1}/{n})";
+            _hatLabel.Text = Loc.F("hat: {0}   ({1}/{2})", hat.Name, _hatIndex + 1, n);
             _hatLabel.AddThemeColorOverride("font_color", Ink);
         }
         else
         {
-            _hatLabel.Text = $"hat: {hat.Name}  ·  locked — {hat.HowToGet}   ({_hatIndex + 1}/{n})";
+            _hatLabel.Text = Loc.F("hat: {0}  ·  locked — {1}   ({2}/{3})", hat.Name, hat.HowToGet, _hatIndex + 1, n);
             _hatLabel.AddThemeColorOverride("font_color", Locked);
         }
         _hatBuy.Visible = buyable;
         if (buyable)
         {
-            _hatBuy.Text = $"BUY {hat.PearlCost}";
+            _hatBuy.Text = Loc.F("BUY {0}", hat.PearlCost);
             _hatBuy.Disabled = Pearls.Balance < hat.PearlCost;
         }
         ApplyMenuHat();

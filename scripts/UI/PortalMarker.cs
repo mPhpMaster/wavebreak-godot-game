@@ -1,6 +1,7 @@
 using Godot;
 using Wavebreak.Actors;
 using Wavebreak.Game;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -56,7 +57,8 @@ public sealed partial class PortalMarker : Control
         float distance = Player.Instance is { } p && IsInstanceValid(p)
             ? new Vector2(p.GlobalPosition.X - portal.X, p.GlobalPosition.Z - portal.Z).Length()
             : 0f;
-        string label = $"PORTAL  {distance:0}m";
+        string label = Loc.F("PORTAL  {0:0}m", distance);
+
 
         bool behind = camera.IsPositionBehind(aim);
         Vector2 screen = camera.UnprojectPosition(aim);

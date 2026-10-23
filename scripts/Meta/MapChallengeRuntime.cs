@@ -189,7 +189,7 @@ public sealed partial class MapChallengeRuntime : Node
         var col = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         col.AddThemeConstantOverride("separation", 0);
         row.AddChild(col);
-        col.AddChild(CuteStyle.Text(_def!.Name, 16, CuteStyle.OnNight));
+        col.AddChild(CuteStyle.Text(Loc.T(_def!.Name), 16, CuteStyle.OnNight));
         _status = CuteStyle.Text("", 13, CuteStyle.OnNightDim);
         _status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         col.AddChild(_status);
@@ -199,11 +199,12 @@ public sealed partial class MapChallengeRuntime : Node
     private void RefreshPill()
     {
         if (_status is null || _def is null) return;
-        string goal = _def.GoalShort;
+        string goal = Loc.T(_def.GoalShort);
         if (_def.Goal == MapGoal.Swarm && _main.Stages?.Swarm is { } swarm)
-            goal = $"Final Swarm {Mathf.Min(MapChallenges.SwarmSeconds, swarm.Seconds):0}/{MapChallenges.SwarmSeconds:0}s";
-        _status.Text = _done ? "Complete!  " + (_def.Cosmetic != CosmeticKind.None ? "Reward unlocked" : $"+{_def.Pearls} {Pearls.Name}")
-                             : $"{goal}  ·  {_def.RulesText}";
+            goal = Loc.F("Final Swarm {0:0}/{1:0}s", Mathf.Min(MapChallenges.SwarmSeconds, swarm.Seconds), MapChallenges.SwarmSeconds);
+        _status.Text = _done ? Loc.T("Complete!") + "  " + (_def.Cosmetic != CosmeticKind.None ? Loc.T("Reward unlocked") : Loc.F("+{0} {1}", _def.Pearls, Pearls.Name))
+                             : $"{goal}  ·  {Loc.T(_def.RulesText)}";
+
         _status.AddThemeColorOverride("font_color", _done ? CuteStyle.Mint : CuteStyle.OnNightDim);
     }
 

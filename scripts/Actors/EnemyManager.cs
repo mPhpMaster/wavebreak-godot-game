@@ -504,8 +504,15 @@ public sealed partial class EnemyManager : Node3D
         if (!PlayerRef.TryGet(out Node3D player, out _)) return;
         if (SpawnOne(boss, player.GlobalPosition) is null) return;
         _bossesMet.Add(_defs[boss]);
-        Announce(_defs[boss].DisplayName is { Length: > 0 } name ? name.ToUpperInvariant() : "BOSS",
-                 new Color(1f, 0.25f, 0.25f), 1.7f);
+        Announce(BossTitle(_defs[boss]), new Color(1f, 0.25f, 0.25f), 1.7f);
+    }
+
+    /// <summary>The boss's name as a banner: upper case in English, its
+    /// translated name in Arabic (which has no case).</summary>
+    private static string BossTitle(EnemyDef def)
+    {
+        if (def.DisplayName is not { Length: > 0 } name) return Meta.Loc.T("BOSS");
+        return Meta.Loc.IsArabic ? Meta.Loc.T(name) : name.ToUpperInvariant();
     }
 
     private static void Announce(string text, Color color, float scale)
@@ -1063,8 +1070,7 @@ public sealed partial class EnemyManager : Node3D
         Enemy? boss = SpawnOne(index, player.GlobalPosition);
         DifficultyHp = hp;
         if (boss is not null)
-            Announce(def.DisplayName is { Length: > 0 } name ? name.ToUpperInvariant() : "BOSS",
-                     new Color(1f, 0.25f, 0.25f), 1.7f);
+            Announce(BossTitle(def), new Color(1f, 0.25f, 0.25f), 1.7f);
         return boss;
     }
 

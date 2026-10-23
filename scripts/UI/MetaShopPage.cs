@@ -136,15 +136,15 @@ public sealed partial class MetaShopPage : Control
     public void Refresh()
     {
         if (_balance is null) return;
-        _balance.Text = $"{Pearls.Balance} {Pearls.Name}";
+        _balance.Text = Loc.F("{0} Pearls", Pearls.Balance);
         foreach (var (button, def) in _rows)
         {
             int level = MetaShop.LevelOf(def);
             bool maxed = level >= def.MaxLevel;
             int cost = maxed ? 0 : MetaShop.NextCost(def);
             button.Text = maxed
-                ? $"{def.Name}   {level}/{def.MaxLevel}   MAX"
-                : $"{def.Name}   {level}/{def.MaxLevel}   {cost}";
+                ? Loc.F("{0}   {1}/{2}   MAX", def.Name, level, def.MaxLevel)
+                : $"{Loc.T(def.Name)}   {level}/{def.MaxLevel}   {cost}";
             Color c = maxed ? Good : cost <= Pearls.Balance ? Ink : Muted;
             button.AddThemeColorOverride("font_color", c);
         }
@@ -155,7 +155,7 @@ public sealed partial class MetaShopPage : Control
     private void RefreshRefund()
     {
         long invested = MetaShop.TotalInvested();
-        _refund.Text = _refundArmed ? $"CONFIRM REFUND  (+{invested})" : "REFUND ALL";
+        _refund.Text = _refundArmed ? Loc.F("CONFIRM REFUND  (+{0})", invested) : Loc.T("REFUND ALL");
         _refund.AddThemeColorOverride("font_color", _refundArmed ? Bad : invested > 0 ? Ink : Muted);
     }
 
@@ -163,16 +163,16 @@ public sealed partial class MetaShopPage : Control
     {
         _shown = def;
         int level = MetaShop.LevelOf(def);
-        string now = level > 0 ? $"Now: {def.Describe(level * def.PerLevel)}" : "Not bought yet";
+        string now = level > 0 ? Loc.F("Now: {0}", def.Describe(level * def.PerLevel)) : "Not bought yet";
         string next;
         if (level >= def.MaxLevel) next = "Fully upgraded.";
         else
         {
             int cost = MetaShop.NextCost(def);
-            string afford = cost <= Pearls.Balance ? "" : $"  (need {cost - Pearls.Balance} more)";
-            next = $"Level {level + 1}: {def.Describe((level + 1) * def.PerLevel)}  ·  {cost} {Pearls.Name}{afford}";
+            string afford = cost <= Pearls.Balance ? "" : "  " + Loc.F("(need {0} more)", cost - Pearls.Balance);
+            next = Loc.F("Level {0}: {1}  ·  {2} Pearls", level + 1, def.Describe((level + 1) * def.PerLevel), cost) + afford;
         }
-        ShowText($"{def.Name}  {level}/{def.MaxLevel}", def.Blurb, now, next, keepStatus ? _status.Text : "");
+        ShowText($"{Loc.T(def.Name)}  {level}/{def.MaxLevel}", def.Blurb, now, next, keepStatus ? _status.Text : "");
     }
 
     private void ShowRefund()
@@ -180,22 +180,22 @@ public sealed partial class MetaShopPage : Control
         _shown = null;
         long invested = MetaShop.TotalInvested();
         ShowText("Refund", "Sell back every upgrade at the full price paid, to spend again differently.",
-                 $"Invested: {invested} {Pearls.Name}",
+                 Loc.F("Invested: {0} Pearls", invested),
                  invested > 0 ? "Press twice to confirm." : "Nothing to refund.", "");
     }
 
     private void ShowText(string name, string blurb, string now, string next, string status)
     {
-        _name.Text = name;
-        _blurb.Text = blurb;
-        _now.Text = now;
-        _next.Text = next;
-        _status.Text = status;
+        _name.Text = Loc.T(name);
+        _blurb.Text = Loc.T(blurb);
+        _now.Text = Loc.T(now);
+        _next.Text = Loc.T(next);
+        _status.Text = Loc.T(status);
     }
 
     private void SetStatus(string text, Color color)
     {
-        _status.Text = text;
+        _status.Text = Loc.T(text);
         _status.AddThemeColorOverride("font_color", color);
     }
 
@@ -214,10 +214,10 @@ public sealed partial class MetaShopPage : Control
         int cost = MetaShop.NextCost(def);
         if (!MetaShop.TryBuy(def))
         {
-            SetStatus($"Not enough {Pearls.Name}: {cost} needed, {Pearls.Balance} held.", Bad);
+            SetStatus(Loc.F("Not enough Pearls: {0} needed, {1} held.", cost, Pearls.Balance), Bad);
             return;
         }
-        SetStatus($"Bought {def.Name} level {MetaShop.LevelOf(def)} for {cost}.", Good);
+        SetStatus(Loc.F("Bought {0} level {1} for {2}.", def.Name, MetaShop.LevelOf(def), cost), Good);
         Refresh();
     }
 
@@ -240,6 +240,6 @@ public sealed partial class MetaShopPage : Control
         long back = MetaShop.RefundAll();
         Refresh();
         ShowRefund();
-        SetStatus($"Refunded {back} {Pearls.Name}.", Good);
+        SetStatus(Loc.F("Refunded {0} Pearls.", back), Good);
     }
 }

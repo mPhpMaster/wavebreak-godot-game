@@ -47,7 +47,7 @@ public sealed partial class DifficultyPicker : VBoxContainer
     {
         DifficultyTier tier = DifficultyTiers.Selected;
         int index = DifficultyTiers.IndexOf(tier);
-        Button.Text = $"DIFFICULTY  ·  {tier.Name.ToUpperInvariant()}";
+        Button.Text = Loc.F("DIFFICULTY  ·  {0}", Loc.IsArabic ? Loc.T(tier.Name) : tier.Name.ToUpperInvariant());
         Button.AddThemeColorOverride("font_color", index switch { 0 => Ink, 1 => Hard, _ => Nightmare });
 
         string note = tier.Summary;
@@ -55,9 +55,9 @@ public sealed partial class DifficultyPicker : VBoxContainer
         for (int i = 0; i < DifficultyTiers.All.Count; i++)
             if (!DifficultyTiers.IsUnlocked(i)) { next = i; break; }
         if (next > 0)
-            note += $"\n{DifficultyTiers.All[next].Name}: win a run on {DifficultyTiers.All[next - 1].Name} to unlock.";
+            note += "\n" + Loc.F("{0}: win a run on {1} to unlock.", DifficultyTiers.All[next].Name, DifficultyTiers.All[next - 1].Name);
         else if (DifficultyTiers.All.Count > 1)
-            note += "\nPress to change.";
+            note += "\n" + Loc.T("Press to change.");
         _note.Text = note;
     }
 }

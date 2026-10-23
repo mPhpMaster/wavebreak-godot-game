@@ -16,7 +16,7 @@ namespace Wavebreak.Meta;
 public sealed record ChallengeDef(string Id, string Name, string Blurb, float Reward)
 {
     /// <summary>"+25% Pearls".</summary>
-    public string RewardText => $"+{Reward * 100f:0}% {Pearls.Name}";
+    public string RewardText => Loc.F("+{0:0}% Pearls", Reward * 100f);
 }
 
 /// <summary>

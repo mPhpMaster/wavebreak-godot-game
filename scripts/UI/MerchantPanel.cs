@@ -5,6 +5,7 @@ using Wavebreak.Actors;
 using Wavebreak.Data;
 using Wavebreak.Game;
 using Wavebreak.Progression;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -23,8 +24,8 @@ public sealed partial class MerchantPanel : ModalPanel
         Name = "MerchantPanel";
         base._Ready();
 
-        Body.AddChild(MakeLabel("SHADY MERCHANT", 34, Merchant.MerchantTint));
-        Body.AddChild(MakeLabel("\"Everything must go. Mostly to you.\"", 15, InkDim));
+        Body.AddChild(MakeLabel(Loc.T("SHADY MERCHANT"), 34, Merchant.MerchantTint));
+        Body.AddChild(MakeLabel(Loc.T("\"Everything must go. Mostly to you.\""), 15, InkDim));
         _gold = MakeLabel("", 18, Gold);
         Body.AddChild(_gold);
 
@@ -62,7 +63,7 @@ public sealed partial class MerchantPanel : ModalPanel
             _cards.Add((rarity, title, effect, buy, card, icon));
         }
 
-        Body.AddChild(MakeLabel("press  1 · 2 · 3  to buy      Esc / E to leave", 14, InkDim));
+        Body.AddChild(MakeLabel(Loc.T("press  1 · 2 · 3  to buy      Esc / E to leave"), 14, InkDim));
     }
 
     public void Open(Merchant merchant)
@@ -93,7 +94,7 @@ public sealed partial class MerchantPanel : ModalPanel
     {
         if (_merchant is null) return;
         int gold = Inventory.Current?.Gold ?? 0;
-        _gold.Text = $"Your gold: {gold}";
+        _gold.Text = Loc.F("Your gold: {0}", gold);
 
         for (int i = 0; i < _cards.Count; i++)
         {
@@ -103,7 +104,7 @@ public sealed partial class MerchantPanel : ModalPanel
             {
                 c.rarity.Text = "";
                 c.icon.Visible = false;
-                c.title.Text = "SOLD";
+                c.title.Text = Loc.T("SOLD");
                 c.title.AddThemeColorOverride("font_color", InkDim);
                 c.effect.Text = "";
                 c.buy.Text = "—";
@@ -120,12 +121,12 @@ public sealed partial class MerchantPanel : ModalPanel
 
             c.icon.Visible = true;
             c.icon.Set(Icons.For(item), colour);
-            c.rarity.Text = Catalog.RarityName(item.Rarity) + (held > 0 ? $"   · held x{held}" : "   · NEW");
+            c.rarity.Text = Loc.T(Catalog.RarityName(item.Rarity)) + (held > 0 ? Loc.F("   · held x{0}", held) : Loc.T("   · NEW"));
             c.rarity.AddThemeColorOverride("font_color", colour);
-            c.title.Text = item.DisplayName;
+            c.title.Text = Loc.T(item.DisplayName);
             c.title.AddThemeColorOverride("font_color", item.Tint.Lerp(Ink, 0.35f));
             c.effect.Text = Effects(item);
-            c.buy.Text = maxed ? "MAXED" : afford ? $"Buy · {price} gold" : $"{price} gold (need {price - gold})";
+            c.buy.Text = maxed ? Loc.T("MAXED") : afford ? Loc.F("Buy · {0} gold", price) : Loc.F("{0} gold (need {1})", price, price - gold);
             c.buy.Disabled = maxed || !afford;
             c.card.AddThemeStyleboxOverride("panel", Box(new Color(0.10f, 0.11f, 0.15f, 0.98f), colour.Darkened(0.2f)));
         }
@@ -133,7 +134,8 @@ public sealed partial class MerchantPanel : ModalPanel
 
     private static string Effects(ItemDef item)
     {
-        if (item.Effects is null || item.Effects.Count == 0) return item.Description;
+        if (item.Effects is null || item.Effects.Count == 0) return Loc.T(item.Description);
+
         var sb = new StringBuilder();
         foreach (ItemEffect e in item.Effects)
         {

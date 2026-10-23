@@ -5,6 +5,7 @@ using Wavebreak.Core;
 using Wavebreak.Data;
 using Wavebreak.Game;
 using Wavebreak.Progression;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -126,7 +127,7 @@ public sealed partial class ResultsScreen : Control
         _accent.OffsetTop = 0f; _accent.OffsetBottom = 6f;
         panel.AddChild(_accent);
 
-        _title = MakeLabel("RUN OVER", 52, Defeat, HorizontalAlignment.Center);
+        _title = MakeLabel(Loc.T("RUN OVER"), 52, Defeat, HorizontalAlignment.Center);
         Inset(_title, 0f, 34f, PanelWidth, 62f);
         panel.AddChild(_title);
 
@@ -138,12 +139,14 @@ public sealed partial class ResultsScreen : Control
         // grid of a dozen: the names are left-aligned and the values right-aligned
         // in a column beside them, which is the only way the numbers line up under
         // a proportional font. Padding one string with spaces does not.
-        Label statsHeading = MakeLabel("RUN", 15, InkDim);
+        Label statsHeading = MakeLabel(Loc.T("RUN"), 15, InkDim);
         Inset(statsHeading, 56f, 148f, 300f, 20f);
         panel.AddChild(statsHeading);
 
         _statNames = MakeLabel("", 22, InkDim);
-        Inset(_statNames, 56f, 176f, 200f, 300f);
+        // Right-to-left swaps the two columns' alignment, so the names' box
+        // moves to the right end of the values' box to keep them apart.
+        Inset(_statNames, Loc.IsRtl ? 236f : 56f, 176f, 200f, 300f);
         panel.AddChild(_statNames);
 
         _statValues = MakeLabel("", 22, Ink, HorizontalAlignment.Right);
@@ -153,7 +156,7 @@ public sealed partial class ResultsScreen : Control
         // Right half: what the run was actually built out of. Scrolled, because a
         // long run genuinely does end with twenty-plus stacks and a truncated
         // list is the one thing a results screen must not do.
-        Label loadoutHeading = MakeLabel("BUILD", 15, InkDim);
+        Label loadoutHeading = MakeLabel(Loc.T("BUILD"), 15, InkDim);
         Inset(loadoutHeading, PanelWidth - 440f, 148f, 300f, 20f);
         panel.AddChild(loadoutHeading);
 
@@ -169,20 +172,20 @@ public sealed partial class ResultsScreen : Control
         // the same Space the player was hammering to jump when they died -- the
         // run restarted before the results could even be read. Keyboard restart
         // goes through _Input instead (Enter / R), the mouse still clicks it.
-        _restart = new Button { Text = "RESTART", FocusMode = FocusModeEnum.None };
+        _restart = new Button { Text = Loc.T("RESTART"), FocusMode = FocusModeEnum.None };
         _restart.AddThemeFontSizeOverride("font_size", 22);
         Inset(_restart, PanelWidth * 0.5f - 130f, PanelHeight - 74f, 260f, 46f);
         panel.AddChild(_restart);
         _restart.Pressed += Restart;
 
         // Back to the title (Meta: profile/unlocks). Same no-focus rule as Restart.
-        var menu = new Button { Text = "MAIN MENU", FocusMode = FocusModeEnum.None };
+        var menu = new Button { Text = Loc.T("MAIN MENU"), FocusMode = FocusModeEnum.None };
         menu.AddThemeFontSizeOverride("font_size", 18);
         Inset(menu, PanelWidth * 0.5f + 150f, PanelHeight - 70f, 180f, 38f);
         panel.AddChild(menu);
         menu.Pressed += ToMainMenu;
 
-        Label hint = MakeLabel("enter  ·  R   restart        esc   main menu", 14, InkDim, HorizontalAlignment.Center);
+        Label hint = MakeLabel(Loc.T("enter  ·  R   restart        esc   main menu"), 14, InkDim, HorizontalAlignment.Center);
         Inset(hint, 0f, PanelHeight - 24f, PanelWidth, 20f);
         panel.AddChild(hint);
     }
@@ -215,16 +218,16 @@ public sealed partial class ResultsScreen : Control
         FinalSwarm? swarm = Main.Instance?.Stages?.Swarm;
 
         // A death in the Final Swarm is still a won run: the last boss fell.
-        _title.Text = survived ? (swarm is not null ? "VICTORY" : "YOU SURVIVED") : "YOU DIED";
+        _title.Text = Loc.T(survived ? (swarm is not null ? "VICTORY" : "YOU SURVIVED") : "YOU DIED");
         _title.AddThemeColorOverride("font_color", accent);
         _accent.Color = accent;
 
-        _subtitle.Text = run is null ? "" : $"seed {run.Seed}";
+        _subtitle.Text = run is null ? "" : Loc.F("seed {0}", run.Seed);
         if (swarm is not null)
-            _subtitle.Text = $"Run won  ·  then held the Final Swarm for {RunState.Format(swarm.Seconds)} " +
-                             $"({swarm.Kills} kills, enemy hp +{swarm.HealthBonusPercent}%)  ·  " + _subtitle.Text;
+            _subtitle.Text = Loc.F("Run won  ·  then held the Final Swarm for {0} ({1} kills, enemy hp +{2}%)",
+                                   RunState.Format(swarm.Seconds), swarm.Kills, swarm.HealthBonusPercent) + "  ·  " + _subtitle.Text;
         if (Meta.DifficultyTiers.Active.Reward > 1f)
-            _subtitle.Text = $"{Meta.DifficultyTiers.Active.Name}  ·  " + _subtitle.Text;
+            _subtitle.Text = $"{Loc.T(Meta.DifficultyTiers.Active.Name)}  ·  " + _subtitle.Text;
 
         WriteStats(run, inventory, weapons);
         BuildLoadout();
@@ -250,11 +253,11 @@ public sealed partial class ResultsScreen : Control
         int stacks = inventory?.TotalStacks ?? 0;
         int weaponCount = weapons?.Weapons.Count ?? 0;
 
-        _statNames.Text = "Time\nLevel\nKills\nElites\nGold\nWeapons\nItems\nExperience";
+        _statNames.Text = Loc.T("Time\nLevel\nKills\nElites\nGold\nWeapons\nItems\nExperience");
         _statValues.Text = $"{clock}\n{level}\n{kills}\n{elites}\n{gold}\n{weaponCount}\n{stacks}\n{xp}";
         if (_payout is { } pay)
         {
-            _statNames.Text += $"\n{Meta.Pearls.Name}";
+            _statNames.Text += $"\n{Loc.T(Meta.Pearls.Name)}";
             _statValues.Text += $"\n+{pay.Total}";
         }
     }
@@ -274,39 +277,40 @@ public sealed partial class ResultsScreen : Control
         // Where this run's Pearls came from (Meta.RunRewards), above the build.
         if (_payout is { } pay)
         {
-            _loadout.AddChild(Heading(pay.Headline.ToUpperInvariant()));
+            _loadout.AddChild(Heading(Loc.T(pay.Headline).ToUpperInvariant()));
             foreach (Meta.RunRewards.Line line in pay.Lines)
-                if (line.Amount > 0) _loadout.AddChild(Row($"{line.Label}  ·  +{line.Amount}", PearlTint));
-            _loadout.AddChild(Row($"Balance  ·  {Meta.Pearls.Balance}", InkDim));
+                if (line.Amount > 0) _loadout.AddChild(Row($"{Loc.T(line.Label)}  ·  +{line.Amount}", PearlTint));
+            _loadout.AddChild(Row(Loc.F("Balance  ·  {0}", Meta.Pearls.Balance), InkDim));
         }
 
         if (_weaponOrder.Count > 0)
         {
-            _loadout.AddChild(Heading("WEAPONS"));
+            _loadout.AddChild(Heading(Loc.T("WEAPONS")));
             foreach (string id in _weaponOrder)
             {
                 WeaponDef? def = Catalog.WeaponById(id);
                 int level = _weaponLevels[id];
                 bool maxed = def is not null && level >= def.MaxLevel;
-                string name = def?.DisplayName ?? id;
+                string name = Loc.T(def?.DisplayName ?? id);
 
                 _loadout.AddChild(Row(
-                    maxed ? $"{name}  ·  MAX" : $"{name}  ·  Lv {level}",
+                    maxed ? Loc.F("{0}  ·  MAX", name) : Loc.F("{0}  ·  Lv {1}", name, level),
                     def is null ? Ink : Catalog.RarityColor(def.Rarity)));
             }
         }
 
         if (_itemOrder.Count == 0) return;
 
-        _loadout.AddChild(Heading("ITEMS"));
+        _loadout.AddChild(Heading(Loc.T("ITEMS")));
         foreach (string id in _itemOrder)
         {
             ItemDef? def = Catalog.ItemById(id);
             int stacks = _itemStacks[id];
-            string name = def?.DisplayName ?? id;
+            string name = Loc.T(def?.DisplayName ?? id);
 
             _loadout.AddChild(Row(
                 stacks > 1 ? $"{name}  ×{stacks}" : name,
+
                 def is null ? Ink : Catalog.RarityColor(def.Rarity)));
         }
     }

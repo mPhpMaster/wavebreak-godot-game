@@ -16,6 +16,8 @@ namespace Wavebreak.Meta;
 ///     --character=&lt;id&gt;      start the run as this character (if unlocked)
 ///     --menu-shot=&lt;png&gt;     boot the title, capture, quit
 ///     --menu-page=&lt;page&gt;    main | play | codex | codex:secrets | settings | keys | graphics | boombox  (with --menu-shot)
+///     --lang=en|ar          play in this language (menu flag; automated runs default to English)
+///     --dump-strings=&lt;txt&gt; write every content string with no Arabic translation, then quit
 ///     --secret-test         walk to every hidden secret and press interact
 ///     --offer-check         prove earned items/weapons are in the level-up pool
 /// </summary>
@@ -29,6 +31,10 @@ public static class Launch
     public static string MenuPage { get; private set; } = "main";
     public static bool SecretTest { get; private set; }
     public static bool OfferCheck { get; private set; }
+    /// <summary>--lang=&lt;code&gt;: language override (does not skip the menu).</summary>
+    public static string? Language { get; private set; }
+    /// <summary>--dump-strings=&lt;path&gt;: list untranslated content strings, quit.</summary>
+    public static string? DumpStrings { get; private set; }
     /// <summary>--devpanel-menu[=unlock]: open the developer panel on the title
     /// (with --menu-shot); "unlock" also presses Unlock everything.</summary>
     public static string? DevPanelMenu { get; private set; }
@@ -51,6 +57,8 @@ public static class Launch
             if (arg.StartsWith("--profile=")) ProfilePath = arg["--profile=".Length..];
             else if (arg.StartsWith("--menu-shot=")) MenuShot = arg["--menu-shot=".Length..];
             else if (arg.StartsWith("--menu-page=")) MenuPage = arg["--menu-page=".Length..];
+            else if (arg.StartsWith("--lang=")) Language = arg["--lang=".Length..];
+            else if (arg.StartsWith("--dump-strings=")) DumpStrings = arg["--dump-strings=".Length..];
             else if (arg.StartsWith("--devpanel-menu")) DevPanelMenu = arg.Length > "--devpanel-menu=".Length ? arg["--devpanel-menu=".Length..] : "open";
             else if (arg.StartsWith("--character="))
             {
