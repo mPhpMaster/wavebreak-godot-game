@@ -5,3 +5,5 @@ obj/
 !assets/**/*.png
 build/
 !docs/**/*.png
+shot-*.png.import
+tests/shots/
