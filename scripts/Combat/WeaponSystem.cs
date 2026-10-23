@@ -421,14 +421,23 @@ public sealed partial class WeaponSystem : Node
     /// full, is silently ignored — <see cref="CanAdd"/> is how a caller avoids
     /// offering either.
     /// </summary>
-    public void Add(WeaponDef def)
+    public void Add(WeaponDef def) => Add(def, null);
+
+    /// <summary>
+    /// Take a weapon, or level it with <paramref name="upgrade"/> (the rolled
+    /// upgrade shown on the level-up card). A null upgrade on an owned weapon
+    /// rolls one here, with the player's luck, so callers that only have a def
+    /// (chests, scripted rewards) still get a real upgrade.
+    /// </summary>
+    public void Add(WeaponDef def, WeaponUpgrade? upgrade)
     {
         if (def is null || string.IsNullOrEmpty(def.Id)) return;
 
         WeaponRuntime? owned = Find(def.Id);
         if (owned is not null)
         {
-            if (owned.LevelUp())
+            if (owned.CanLevel && upgrade is null) upgrade = RollUpgrade(def);
+            if (owned.LevelUp(upgrade))
                 EventBus.Publish(new WeaponAcquired(def.Id, owned.Level));
             return;
         }
@@ -451,6 +460,17 @@ public sealed partial class WeaponSystem : Node
     }
 
     public bool Has(string id) => Find(id) is not null;
+
+    /// <summary>The runtime of an owned weapon, or null.</summary>
+    public WeaponRuntime? Get(string id) => Find(id);
+
+    /// <summary>Roll an upgrade for <paramref name="def"/> with the player's
+    /// luck and extra-line stat.</summary>
+    public WeaponUpgrade RollUpgrade(WeaponDef def, Rng? rng = null)
+    {
+        StatSheet s = Stats;
+        return WeaponUpgrades.Roll(def, rng ?? Rng, s.Get(Stat.Luck), (int)s.Get(Stat.UpgradeStats));
+    }
 
     /// <summary>Current level of a weapon, or 0 when it is not owned.</summary>
     public int LevelOf(string id) => Find(id)?.Level ?? 0;
@@ -546,21 +566,36 @@ public sealed partial class WeaponSystem : Node
     /// Crit chance is the player's plus the weapon's own, which is what lets a
     /// weapon be characterised as "crits a lot" without an item to say so.
     /// </summary>
-    internal DamageInfo BuildDamage(WeaponDef def, int level)
+    internal DamageInfo BuildDamage(WeaponRuntime weapon)
     {
+        WeaponDef def = weapon.Def;
+        WeaponBonus bonus = weapon.Bonus;
         StatSheet stats = Stats;
 
-        float amount = def.DamageAtLevel(level) * stats.GetMultiplier(Stat.Damage);
-        bool crit = Rng.Chance(stats.Get(Stat.CritChance) + def.CritChance);
-        if (crit) amount *= 1f + stats.Get(Stat.CritDamage);
+        float amount = weapon.BaseDamage * stats.GetMultiplier(Stat.Damage);
+        if (def.Element != Element.Physical) amount *= stats.GetMultiplier(Stat.ElementalDamage);
+
+        bool crit = Rng.Chance(stats.Get(Stat.CritChance) + def.CritChance + bonus.CritChance);
+        bool mega = false;
+        if (crit)
+        {
+            amount *= 1f + stats.Get(Stat.CritDamage);
+            // Rolled only when the stat exists, so a build without it draws
+            // exactly the same crit sequence as before megacrits existed.
+            mega = Rng.Chance(stats.Get(Stat.MegacritChance));
+            if (mega) amount *= StatusEffects.MegacritMultiplier;
+        }
 
         return new DamageInfo
         {
             Amount = amount,
             Element = def.Element,
             Crit = crit,
-            Knockback = def.Knockback * stats.Get(Stat.Knockback),
+            Megacrit = mega,
+            Knockback = def.Knockback * (1f + bonus.Knockback) * stats.Get(Stat.Knockback),
             ProcCoefficient = def.ProcCoefficient,
+            StatusChance = bonus.StatusChance,
+            StatusDuration = 1f + bonus.StatusDuration,
             Source = def.Id,
         };
     }
@@ -583,19 +618,23 @@ public sealed partial class WeaponSystem : Node
         if (PublishHitEvents)
             EventBus.Publish(new EnemyDamaged(target, info));
 
+        // Statuses after the hit is announced, so a listener sees the hit
+        // before the burn it caused.
+        StatusEffects.OnHit(this, target, info);
+
         if (!PublishDamageNumbers || info.Amount < PopupThreshold) return;
 
         EventBus.Publish(new PopupRequested(
             target.Position + Vector3.Up * 0.35f,
-            Mathf.RoundToInt(Mathf.Max(1f, info.Amount)).ToString(),
-            info.Crit ? CritColor : ColorOf(info.Element),
-            info.Crit ? 1.35f : 0.95f));
+            Mathf.RoundToInt(Mathf.Max(1f, info.Amount)).ToString() + (info.Megacrit ? "!" : ""),
+            info.Megacrit ? StatusEffects.MegacritColor : info.Crit ? CritColor : ColorOf(info.Element),
+            info.Megacrit ? 1.75f : info.Crit ? 1.35f : 0.95f));
     }
 
     /// <summary>Damage numbers carry the element as colour. It is the only channel
     /// an untextured game has for telling the player which of their six weapons
     /// is doing the work.</summary>
-    private static Color ColorOf(Element element) => element switch
+    public static Color ColorOf(Element element) => element switch
     {
         Element.Fire => new Color(1.00f, 0.55f, 0.20f),
         Element.Ice => new Color(0.55f, 0.85f, 1.00f),

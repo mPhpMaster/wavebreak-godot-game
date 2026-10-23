@@ -388,6 +388,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         _flashTimer = 0f;
         Velocity = Vector3.Zero;
         _groundY = position.Y;
+        ClearStatuses();
 
         GlobalPosition = position;
 
@@ -433,6 +434,9 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         UpdateFlash(dt);
         _aliveSeconds += dt;
 
+        StepStatus(dt);                                 // burn/poison may kill
+        if (_dead) return;
+
         // Mid-leap the body is on a scripted arc, not under steering or physics.
         if (_act == Act.Leap)
         {
@@ -462,6 +466,10 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             desired = _actDir * _dashSpeed;
             acceleration = DashAcceleration;
         }
+        else if (StatusHeld)
+        {
+            desired = Vector3.Zero;                     // frozen or stunned
+        }
         else if (_act != Act.None)
         {
             // Planted while telegraphing: a wind-up that drifts toward the
@@ -470,7 +478,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         }
         else
         {
-            desired = Locomotion(heading, distance, hasTarget, separation) * (_speed * _speedScale);
+            desired = Locomotion(heading, distance, hasTarget, separation) * (_speed * _speedScale * StatusSpeedScale);
         }
 
         Vector3 velocity = Velocity;
@@ -496,6 +504,10 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             GlobalPosition = after;
             Velocity = new Vector3(Velocity.X, 0f, Velocity.Z);
         }
+
+        // Frozen or stunned: physics still applies, but no turning, no
+        // behaviour clock and no swing.
+        if (StatusHeld) return;
 
         // Face the committed direction during an action, so the body points
         // down the lane it is about to run rather than at where the player went.
@@ -670,6 +682,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     private void Deactivate()
     {
         EndBehaviour();
+        ClearStatuses();
         CollisionLayer = 0;
         CollisionMask = 0;
         Velocity = Vector3.Zero;
@@ -699,10 +712,11 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         float g = Mathf.Clamp(_glow, 0f, 1f);
         float baseEnergy = EmissionFor(_builtSilhouette) + (_phase >= 2 ? 0.7f : 0f);
 
-        Color body = _baseColor.Lerp(GlowColor, g * 0.6f).Lerp(Colors.White, t);
+        float st = _statusTintAmount;
+        Color body = _baseColor.Lerp(_statusTint, st).Lerp(GlowColor, g * 0.6f).Lerp(Colors.White, t);
         _bodyMaterial.AlbedoColor = body;
         _bodyMaterial.Emission = body;
-        _bodyMaterial.EmissionEnergyMultiplier = baseEnergy + t * 2.2f + g * 2.6f;
+        _bodyMaterial.EmissionEnergyMultiplier = baseEnergy + t * 2.2f + g * 2.6f + st * 1.2f;
 
         if (_accentMaterial is not null)
         {

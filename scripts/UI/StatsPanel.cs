@@ -49,6 +49,7 @@ public sealed partial class StatsPanel : Control
                              Stat.AreaSize, Stat.ProjectileCount, Stat.ProjectileSpeed, Stat.Knockback }),
         ("MOBILITY", new[] { Stat.MoveSpeed, Stat.JumpHeight, Stat.DashCooldown }),
         ("UTILITY",  new[] { Stat.PickupRange, Stat.XpGain, Stat.GoldGain, Stat.Luck, Stat.EnemyScaling }),
+        ("ELEMENTS", new[] { Stat.ElementalDamage, Stat.StatusChance, Stat.StatusDuration, Stat.MegacritChance }),
     };
 
     private readonly Player _player;
@@ -317,6 +318,9 @@ public sealed partial class StatsPanel : Control
         Stat.DashCooldown    => $"{v:0.00} s",
         Stat.PickupRange     => $"{v:0.0} m",
         Stat.XpGain or Stat.GoldGain or Stat.Luck => $"{(v >= 0f ? "+" : "")}{v * 100f:0}%",
+        Stat.ElementalDamage => $"x{1f + v:0.00}",
+        Stat.StatusChance or Stat.MegacritChance or Stat.IgniteChance or Stat.ChillChance
+            or Stat.ShockChance or Stat.PoisonChance => $"+{v * 100f:0.#}%",
         _                    => $"x{v:0.00}",
     };
 

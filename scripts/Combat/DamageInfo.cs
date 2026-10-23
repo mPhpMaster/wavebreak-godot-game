@@ -26,6 +26,19 @@ public sealed class DamageInfo
     public bool Crit;
     public bool CanCrit = true;
 
+    /// <summary>A crit that rolled <c>Stat.MegacritChance</c> on top. Implies
+    /// <see cref="Crit"/>; drawn in its own colour.</summary>
+    public bool Megacrit;
+
+    /// <summary>Extra chance for this hit to apply its element's status, on
+    /// top of the element's base chance and the player's StatusChance stat.
+    /// Rolled weapon upgrades put their status bonus here.</summary>
+    public float StatusChance;
+
+    /// <summary>Multiplier on the status timers this hit applies (weapon
+    /// upgrades), on top of the player's StatusDuration stat.</summary>
+    public float StatusDuration = 1f;
+
     public float Knockback;
     public Vector3 Direction = Vector3.Zero;
 

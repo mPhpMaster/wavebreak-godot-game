@@ -234,7 +234,7 @@ public sealed partial class Main : Node3D
 
     private void Choose(Progression.Offer offer)
     {
-        if (offer.Weapon is not null) _weapons.Add(offer.Weapon);
+        if (offer.Weapon is not null) _weapons.Add(offer.Weapon, offer.Upgrade);
         else if (offer.Item is not null) _inventory.Add(offer.Item);
         else if (offer.Tome is not null) Progression.TomeBook.Current?.Add(offer.Tome);
         else offer.Apply(_player, _inventory);

@@ -75,12 +75,33 @@ public sealed class WeaponRuntime
     /// <summary>Total damage this weapon puts into the air per shot volley, before
     /// crit and before target count. The honest number for a tooltip.</summary>
     public float VolleyDamage(StatSheet stats)
-        => Def.DamageAtLevel(Level) * stats.GetMultiplier(Stat.Damage) * ShotCount(stats);
+        => BaseDamage * stats.GetMultiplier(Stat.Damage) * ShotCount(stats);
 
-    internal bool LevelUp()
+    /// <summary>Everything the rolled upgrades have added. Level 1 is all zero,
+    /// so level 1 is exactly the def's numbers.</summary>
+    public WeaponBonus Bonus { get; } = new();
+
+    /// <summary>The upgrades taken, in order (for UI and logs).</summary>
+    public List<WeaponUpgrade> Upgrades { get; } = new();
+
+    /// <summary>Damage per hit before the player's stats.</summary>
+    public float BaseDamage => Def.Damage * (1f + Bonus.Damage);
+
+    /// <summary>Cooldown before the player's attack speed.</summary>
+    public float BaseCooldown => MathF.Max(0.05f, Def.Cooldown / (1f + Bonus.AttackSpeed));
+
+    /// <summary>Shots per volley before the player's bonus.</summary>
+    public int BaseProjectiles => Def.Projectiles + Bonus.Projectiles;
+
+    /// <summary>Level up with a rolled upgrade. Null applies the deterministic
+    /// reference line (a common damage roll).</summary>
+    internal bool LevelUp(WeaponUpgrade? upgrade = null)
     {
         if (!CanLevel) return false;
         Level++;
+        upgrade ??= WeaponUpgrades.Reference(Def);
+        Bonus.Add(upgrade);
+        Upgrades.Add(upgrade);
         return true;
     }
 
@@ -89,7 +110,7 @@ public sealed class WeaponRuntime
     internal void Tick(float dt, WeaponSystem system)
     {
         StatSheet stats = system.Stats;
-        _interval = stats.AttackInterval(Def.CooldownAtLevel(Level));
+        _interval = stats.AttackInterval(BaseCooldown);
         _cooldown -= dt;
 
         int fired = 0;
@@ -129,18 +150,18 @@ public sealed class WeaponRuntime
     /// <summary>Shots per volley: the weapon's own count plus the player's bonus,
     /// never below one.</summary>
     private int ShotCount(StatSheet stats)
-        => Math.Max(1, Def.ProjectilesAtLevel(Level) + (int)stats.Get(Stat.ProjectileCount));
+        => Math.Max(1, BaseProjectiles + (int)stats.Get(Stat.ProjectileCount));
 
     // ----------------------------------------------------------- projectiles
 
     private void FireProjectiles(WeaponSystem system, StatSheet stats)
     {
         int count = ShotCount(stats);
-        float area = stats.Get(Stat.AreaSize);
-        float speed = MathF.Max(0.5f, Def.ProjectileSpeed * stats.Get(Stat.ProjectileSpeed));
+        float area = stats.Get(Stat.AreaSize) * (1f + Bonus.Area);
+        float speed = MathF.Max(0.5f, Def.ProjectileSpeed * (1f + Bonus.ProjectileSpeed) * stats.Get(Stat.ProjectileSpeed));
 
         Vector3 origin = system.MuzzlePosition;
-        Vector3 heading = system.AimAt(origin, Def.Range);
+        Vector3 heading = system.AimAt(origin, Def.Range * (1f + Bonus.Range));
 
         bool explosive = Def.Shape == AttackShape.Explosive;
 
@@ -151,12 +172,12 @@ public sealed class WeaponRuntime
                  : ProjectileMode.Straight,
             Origin = origin,
             Speed = speed,
-            Range = Def.Range,
+            Range = Def.Range * (1f + Bonus.Range),
             // A shell needs a small body and a large blast; everything else uses
             // the def's radius as the width of the shot itself.
             HitRadius = explosive ? 0.45f : MathF.Max(0.2f, Def.Radius * area),
             BlastRadius = explosive ? MathF.Max(0.5f, Def.Radius * area) : 0f,
-            Pierce = Def.Pierce,
+            Pierce = Def.Pierce + Bonus.Pierce,
             Tint = Def.Tint,
         };
 
@@ -166,7 +187,7 @@ public sealed class WeaponRuntime
 
             // One roll per shot, not per volley: a shotgun where every pellet
             // crits together is a coin flip, not a damage distribution.
-            Projectile.Spawn(system, spec, system.BuildDamage(Def, Level));
+            Projectile.Spawn(system, spec, system.BuildDamage(this));
         }
 
         system.NoteShots(count);
@@ -185,8 +206,8 @@ public sealed class WeaponRuntime
 
     private void FireMelee(WeaponSystem system, StatSheet stats)
     {
-        float area = stats.Get(Stat.AreaSize);
-        float reach = MathF.Max(0.6f, Def.Range * area);
+        float area = stats.Get(Stat.AreaSize) * (1f + Bonus.Area);
+        float reach = MathF.Max(0.6f, Def.Range * (1f + Bonus.Range) * area);
 
         int extra = ShotCount(stats) - Def.Projectiles;
         float arc = MathF.Max(Def.SpreadDegrees, MinMeleeArcDegrees) + MathF.Max(0, extra) * MeleeArcPerExtraShot;
@@ -198,7 +219,7 @@ public sealed class WeaponRuntime
         // One roll for the swing. A single arc is one attack, and splitting the
         // crit per target would make a wide swing statistically safer than a
         // narrow one for no reason a player could name.
-        DamageInfo template = system.BuildDamage(Def, Level);
+        DamageInfo template = system.BuildDamage(this);
 
         // Reach is the weapon's own; the target's radius is added by the query.
         int count = Targeting.Cone(origin, heading, reach, halfArc, Targets);
@@ -220,12 +241,12 @@ public sealed class WeaponRuntime
 
     private void FireAura(WeaponSystem system, StatSheet stats)
     {
-        float radius = MathF.Max(0.5f, Def.Radius * stats.Get(Stat.AreaSize));
+        float radius = MathF.Max(0.5f, Def.Radius * stats.Get(Stat.AreaSize) * (1f + Bonus.Area));
         Vector3 centre = system.MuzzlePosition;
 
         EnsureAura(system, radius);
 
-        DamageInfo template = system.BuildDamage(Def, Level);
+        DamageInfo template = system.BuildDamage(this);
 
         int count = Targeting.Overlap(centre, radius, Targets);
         for (int i = 0; i < count; i++)

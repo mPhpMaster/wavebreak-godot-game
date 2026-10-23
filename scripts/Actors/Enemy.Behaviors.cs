@@ -755,6 +755,7 @@ public sealed partial class Enemy
         if (_rig is null || !IsInstanceValid(_rig)) return;
         _rig.Scale = pose;
         if (glow > 0f) _rig.SetGlow(GlowColor, glow);
+        else if (_statusTintAmount > 0f) _rig.SetGlow(_statusTint, _statusTintAmount * 1.4f);
         else _rig.SetGlow(EnrageColor, _phase >= 2 ? 0.3f : 0f);
     }
 
