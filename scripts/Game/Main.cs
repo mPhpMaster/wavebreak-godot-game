@@ -111,8 +111,10 @@ public sealed partial class Main : Node3D
         await Wait(0.5);
         Press(Key.Key1);
         await Wait(0.1);
-        Expect("level-up: 1 after the delay picks a card", !_levelUp.IsOpen
-               && _weapons.Weapons.Count + _inventory.TotalStacks > before);
+        int after = _weapons.Weapons.Count + _inventory.TotalStacks;
+        if (_levelUp.IsOpen || after <= before)
+            GD.Print($"GUARD info open={_levelUp.IsOpen} before={before} after={after}");
+        Expect("level-up: 1 after the delay picks a card", !_levelUp.IsOpen && after > before);
 
         _player.Health.Kill();
         await Wait(0.1);
