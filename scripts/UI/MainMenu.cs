@@ -361,10 +361,10 @@ public sealed partial class MainMenu : Node3D
         _difficulty = new DifficultyPicker();
         list.AddChild(_difficulty);
 
-        // Route & challenges (UI/ChallengePicker), under the character panel so
-        // the character list keeps its height.
+        // Route & challenges (UI/ChallengePicker), above the character panel: the
+        // panel grows with skin, hat and passive rows and would cover it below.
         _runButton = MenuButton("", () => ShowPage("run"));
-        Place(_runButton, 470f, 552f, 520f, 48f);
+        Place(_runButton, 470f, 186f, 520f, 42f);
         _runButton.MouseEntered += () => _runButton.GrabFocus();
         page.AddChild(_runButton);
         _difficulty.Button.FocusNeighborRight = _difficulty.Button.GetPathTo(_runButton);

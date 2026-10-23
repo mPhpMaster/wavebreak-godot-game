@@ -129,16 +129,19 @@ public sealed partial class Main : Node3D
             + (Progression.TomeBook.Current is { } book ? System.Linq.Enumerable.Sum(book.Held, t => book.LevelOf(t)) : 0);
         int before = Owned();
         _levelUp.Show(choices, Choose);
+        ulong shownAt = Time.GetTicksMsec();
         await Wait(0.05);
         Press(Key.Space);
         await Wait(0.1);
         Expect("level-up: Space right after opening does not pick a card", _levelUp.IsOpen);
-        await Wait(0.5);
+        // The arm delay is real milliseconds; with --fixed-fps, game-time waits
+        // can pass faster than that on a quick machine. Wait out real time.
+        while (Time.GetTicksMsec() - shownAt < 650) await Wait(0.05);
         Press(Key.Key1);
         await Wait(0.1);
         int after = Owned();
         if (_levelUp.IsOpen || after <= before)
-            GD.Print($"GUARD info open={_levelUp.IsOpen} before={before} after={after}");
+            GD.Print($"GUARD info open={_levelUp.IsOpen} before={before} after={after} {_levelUp.DebugState}");
         Expect("level-up: 1 after the delay picks a card", !_levelUp.IsOpen && after > before);
 
         _player.Health.Kill();

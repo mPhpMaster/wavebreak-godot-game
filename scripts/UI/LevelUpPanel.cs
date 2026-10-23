@@ -421,6 +421,9 @@ public sealed partial class LevelUpPanel : Control
 
     private bool Armed => Time.GetTicksMsec() - _shownAtMsec >= ArmDelayMsec;
 
+    /// <summary>For the input-guard check's failure line.</summary>
+    public string DebugState => $"armed={Armed} sinceShow={Time.GetTicksMsec() - _shownAtMsec}ms banish={_banishMode} cards={_current.Count} queued={_queue.Count}";
+
     public override void _Input(InputEvent @event)
     {
         if (!IsOpen) return;
