@@ -110,18 +110,19 @@ public static class MusicTracks
     public static string HowToUnlock(TrackDef t, bool full = true)
     {
         UnlockDef? u = Unlocks.ById(t.UnlockedBy);
-        string quest = u is null ? "" : u.Secret && !Profile.IsUnlocked(u.Id) ? $"quest: {u.Hint}"
-            : full ? $"quest \"{u.Name}\": {u.Description}" : $"quest \"{u.Name}\"";
+        // Built from translated pieces: the composite never matches one key.
+        string quest = u is null ? "" : u.Secret && !Profile.IsUnlocked(u.Id) ? Loc.F("quest: {0}", u.Hint)
+            : full ? Loc.F("quest \"{0}\": {1}", u.Name, u.Description) : Loc.F("quest \"{0}\"", u.Name);
         string heard = !t.OpensWhenHeard ? "" : t.Kind switch
         {
-            TrackKind.Map => $"Reach {t.Where}",
-            TrackKind.Boss => $"Meet the {t.Where.ToLowerInvariant()}",
-            TrackKind.Swarm => "Survive into the Final Swarm",
-            _ => $"Hear it once: {t.Where.ToLowerInvariant()}",
+            TrackKind.Map => Loc.F("Reach {0}", t.Where),
+            TrackKind.Boss => Loc.F("Meet the {0}", t.Where.ToLowerInvariant()),
+            TrackKind.Swarm => Loc.T("Survive into the Final Swarm"),
+            _ => Loc.F("Hear it once: {0}", t.Where.ToLowerInvariant()),
         };
-        if (!full && quest.Length > 0 && u is not null && heard.Length == 0) quest = $"{quest}: {u.Description}";
-        if (heard.Length > 0 && quest.Length > 0) return $"{heard}, or {quest}";
-        return heard.Length > 0 ? heard : quest.Length > 0 ? char.ToUpperInvariant(quest[0]) + quest[1..] : "Locked";
+        if (!full && quest.Length > 0 && u is not null && heard.Length == 0) quest = $"{quest}: {Loc.T(u.Description)}";
+        if (heard.Length > 0 && quest.Length > 0) return Loc.F("{0}, or {1}", heard, quest);
+        return heard.Length > 0 ? heard : quest.Length > 0 ? char.ToUpperInvariant(quest[0]) + quest[1..] : Loc.T("Locked");
     }
 
     /// <summary>Record that a track played in a real session. Returns true the

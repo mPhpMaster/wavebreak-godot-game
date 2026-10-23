@@ -369,7 +369,7 @@ public sealed partial class PauseMenu : Node
         void ShowBox()
         {
             string now = MusicTracks.ById(MusicDirector.NowPlaying)?.Title ?? "-";
-            boxLabel.Text = $"Boombox: {Boombox.Describe()}  ·  {now}";
+            boxLabel.Text = Loc.F("Boombox: {0}  ·  {1}", Boombox.Describe(), now);
         }
         Button mode = MainMenu.MenuButton("MODE", () => { Boombox.CycleMode(); MusicDirector.Reapply(); ShowBox(); });
         Button next = MainMenu.MenuButton("SKIP", () => { MusicDirector.Reapply(skip: true); ShowBox(); });

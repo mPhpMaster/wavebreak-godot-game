@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Wavebreak.Audio;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -289,14 +290,14 @@ public sealed partial class BoomboxPage : Control
 
     private void Say(string text, Color color)
     {
-        _status.Text = text;
+        _status.Text = Loc.T(text);
         _status.AddThemeColorOverride("font_color", color);
     }
 
     private void Describe(TrackDef t)
     {
         bool open = MusicTracks.IsUnlocked(t);
-        Say(open ? $"{t.Title}  ·  {t.Where}{(t.Loop ? "" : "  ·  one-shot sting")}" : $"Locked: {MusicTracks.HowToUnlock(t)}",
+        Say(open ? $"{Loc.T(t.Title)}  ·  {Loc.T(t.Where)}{(t.Loop ? "" : "  ·  " + Loc.T("one-shot sting"))}" : Loc.F("Locked: {0}", MusicTracks.HowToUnlock(t)),
             open ? CuteStyle.OnNightDim : CuteStyle.Peach);
     }
 
@@ -316,13 +317,13 @@ public sealed partial class BoomboxPage : Control
             pin.Text = pinned ? "PINNED" : "PIN";
             CuteStyle.StylePill(pin, CuteStyle.Butter, pinned);
             pin.Disabled = !open;
-            sub.Text = open ? t.Where : MusicTracks.HowToUnlock(t, full: false);
+            sub.Text = open ? Loc.T(t.Where) : MusicTracks.HowToUnlock(t, full: false);
             sub.AddThemeColorOverride("font_color", open ? CuteStyle.InkSoft : CuteStyle.Coral.Darkened(0.25f));
             row.Modulate = open ? Colors.White : new Color(1f, 1f, 1f, 0.75f);
         }
-        _counts.Text = $"tracks {owned}/{_rows.Count}   ·   mode: {Boombox.Describe()}";
+        _counts.Text = Loc.F("tracks {0}/{1}   ·   mode: {2}", owned, _rows.Count, Boombox.Describe());
         foreach (var (m, b) in _modePills) CuteStyle.StylePill(b, CuteStyle.Sky, m == Boombox.Mode);
         TrackDef? cur = MusicTracks.ById(now);
-        _now.Text = cur is null ? (MusicDirector.Active ? "nothing" : "nothing  (music is off in this launch)") : $"{cur.Title}\n{cur.Where}";
+        _now.Text = cur is null ? Loc.T(MusicDirector.Active ? "nothing" : "nothing  (music is off in this launch)") : $"{Loc.T(cur.Title)}\n{Loc.T(cur.Where)}";
     }
 }

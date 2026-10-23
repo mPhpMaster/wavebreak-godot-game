@@ -78,9 +78,9 @@ public static class Boombox
 
     public static string Describe() => Mode switch
     {
-        BoomboxMode.Shuffle => "Shuffle",
-        BoomboxMode.Pinned => $"Pinned: {MusicTracks.ById(Pinned)?.Title ?? Pinned}",
-        _ => "Map default",
+        BoomboxMode.Shuffle => Loc.T("Shuffle"),
+        BoomboxMode.Pinned => Loc.F("Pinned: {0}", MusicTracks.ById(Pinned)?.Title ?? Pinned),
+        _ => Loc.T("Map default"),
     };
 
     private static void Save()
