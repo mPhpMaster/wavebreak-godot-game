@@ -44,3 +44,15 @@ under CC0 1.0, like the art above. To change a track, edit the script and re-run
 | `swarm.ogg` | Final Swarm (loop) | D minor, 136 bpm | 56 s |
 | `victory.ogg` | win sting | C major | 7.5 s |
 | `defeat.ogg` | defeat sting | A minor | 10 s |
+| `lounge.ogg` | menu / Boombox (loop) | F major, 84 bpm | 46 s |
+| `meadow_dusk.ogg` | Thornmeadow remix (loop) | C major pentatonic, 112 bpm | 51 s |
+| `frost_aurora.ogg` | Rimeglass remix (loop) | E lydian, 92 bpm | 42 s |
+| `ashlands_forge.ogg` | Cinder Reach remix (loop) | D dorian, 108 bpm | 53 s |
+| `graveyard_waltz.ogg` | Gravemoor remix (loop) | G harmonic minor, 3/4, 138 bpm | 42 s |
+| `tidal_lagoon.ogg` | Saltglass Shallows remix (loop) | Bb major, 100 bpm | 38 s |
+| `boss_final.ogg` | final boss (loop) | E harmonic minor, 132 bpm | 44 s |
+| `shop.ogg` | merchant jingle | G major | 5.6 s |
+| `fanfare.ogg` | run won sting | F major | 10 s |
+
+Which track plays where, and how each unlocks in the Boombox, is
+`scripts/Audio/MusicTracks.cs`.

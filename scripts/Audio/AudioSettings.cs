@@ -63,6 +63,9 @@ public static class AudioSettings
 
     public static void Save()
     {
+        // Automated launches (tests, captures) never touch the player's settings.
+        Wavebreak.Meta.Launch.Parse();
+        if (Wavebreak.Meta.Launch.Automated) return;
         var cfg = new ConfigFile();
         cfg.Load(Path); // keep any other sections a future settings screen adds
         cfg.SetValue(Section, "master", Get(VolumeChannel.Master));

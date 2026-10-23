@@ -114,8 +114,12 @@ public static partial class ContentAudit
         for (int i = 0; i < 120 && EnemyAttacks.Connects == connects; i++)
         {
             // Hold them in place: the probe is about the link, not the walk.
-            a.GlobalPosition = a.GlobalPosition with { X = feet.X - 2.5f, Z = feet.Z };
-            b.GlobalPosition = b.GlobalPosition with { X = feet.X + 2.5f, Z = feet.Z };
+            // Height too: linklings hover, and out here (no floor under the
+            // probe) how far they sink in two seconds depended on unrelated
+            // timing, which decided whether the dummy was "under the knees".
+            float y = feet.Y + (a.Def?.Hover ?? 0f);
+            a.GlobalPosition = new Vector3(feet.X - 2.5f, y, feet.Z);
+            b.GlobalPosition = new Vector3(feet.X + 2.5f, y, feet.Z);
             a.Step(1f / 60f, mid, dummy, Vector3.Zero);
             b.Step(1f / 60f, mid, dummy, Vector3.Zero);
             EnemyAttacks.Tick(1f / 60f, mid, dummy);

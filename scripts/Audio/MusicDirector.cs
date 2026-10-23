@@ -13,10 +13,16 @@ namespace Wavebreak.Audio;
 ///   title screen          -> title
 ///   PhaseStarted          -> the map's track (StageDef.MusicId when present,
 ///                            otherwise matched from the stage id / theme)
-///   PhaseBossArrived      -> boss
+///   PhaseBossArrived      -> boss (boss_final on the last phase)
 ///   PortalOpened          -> back to the map's track
 ///   FinalBossDefeated     -> victory sting, then swarm (if a swarm follows)
-///   RunEnded              -> victory or defeat sting, then silence
+///   RunEnded              -> fanfare (won) or defeat sting, then silence
+///   merchant opened       -> shop jingle over the loop
+///
+/// The Boombox (<see cref="Boombox"/>, UI/BoomboxPage) sits on top: in
+/// Shuffle every loop request picks a random owned loop, in Pinned the pinned
+/// loop plays everywhere; stings are never replaced. The catalogue and unlock
+/// rules are <see cref="MusicTracks"/>.
 ///
 /// Tracks are rendered offline by <c>tools/compose_music.py</c> into
 /// <c>assets/music/*.ogg</c> and are exactly periodic, so Godot's own loop is
@@ -68,6 +74,9 @@ public sealed partial class MusicDirector : Node
     private AudioEffectAmplify? _duck;
     private bool _ducked;
     private bool _swarm;
+    private int _phaseCount;
+    private string? _wanted;
+    private Tween? _jingleDip;
     private bool _subscribed;
     private string? _pending;
     private SceneTreeTimer? _afterSting;
@@ -77,6 +86,53 @@ public sealed partial class MusicDirector : Node
     /// <summary>Title screen: start (or crossfade to) the title theme.</summary>
     public static void PlayTitle(Node from) => Ensure(from)?.Request("title", 2.0f);
 
+    /// <summary>The loop (or sting) playing now, or null.</summary>
+    public static string? NowPlaying
+    {
+        get
+        {
+            if (Instance is not { } m || !IsInstanceValid(m) || !m.IsInsideTree()) return null;
+            if (m._currentTrack is not null) return m._currentTrack;
+            return m._sting.Playing ? m._stingTrack : null;
+        }
+    }
+
+    /// <summary>Boombox: play one track now, ignoring the mode.</summary>
+    public static void Preview(Node from, string track)
+    {
+        MusicDirector? m = Ensure(from);
+        if (m is null || !m.IsInsideTree()) return;
+        if (MusicTracks.ById(track) is { Loop: false }) { m.PlaySting(track, then: null, after: 0f); return; }
+        m._sting.Stop();
+        m._stingTrack = null;
+        m.Crossfade(track, 0.8f);
+    }
+
+    /// <summary>Boombox: silence everything.</summary>
+    public static void Stop()
+    {
+        if (Instance is not { } m || !IsInstanceValid(m) || !m.IsInsideTree()) return;
+        m._sting.Stop();
+        m._stingTrack = null;
+        m.FadeOutLoop(0.6f);
+    }
+
+    /// <summary>Boombox mode changed (or Skip pressed): re-pick for the current moment.</summary>
+    public static void Reapply(bool skip = false)
+    {
+        if (Instance is not { } m || !IsInstanceValid(m) || !m.IsInsideTree()) return;
+        string want = m._wanted ?? "title";
+        string pick = m.Pick(want, avoid: skip ? m._currentTrack : null);
+        m.Crossfade(pick, 1.2f);
+    }
+
+    /// <summary>A short jingle over the loop (the merchant's "ding").</summary>
+    public static void Jingle(string track)
+    {
+        if (Instance is not { } m || !IsInstanceValid(m) || !m.IsInsideTree()) return;
+        m.PlayJingle(track);
+    }
+
     /// <summary>Run scene: listen to this run's events. Called after the run's
     /// bus is fresh; the subscription is dropped by EventBus.Reset at run end
     /// and taken again here next run.</summary>
@@ -85,6 +141,7 @@ public sealed partial class MusicDirector : Node
         MusicDirector? m = Ensure(from);
         if (m is null) return;
         m._swarm = false;
+        m._phaseCount = 0;
         m.Subscribe();
     }
 
@@ -170,11 +227,13 @@ public sealed partial class MusicDirector : Node
 
     private void OnPhaseStarted(PhaseStarted e)
     {
+        _phaseCount = e.PhaseCount;
         _stageTrack = TrackForStage(e.StageId, e.Phase);
         Request(_stageTrack, 2.5f);
     }
 
-    private void OnBoss(PhaseBossArrived e) => Request("boss", 1.5f);
+    private void OnBoss(PhaseBossArrived e)
+        => Request(_phaseCount > 0 && e.Phase >= _phaseCount ? "boss_final" : "boss", 1.5f);
 
     private void OnPortal(PortalOpened e) => Request(_stageTrack ?? "meadow", 3.0f);
 
@@ -187,14 +246,37 @@ public sealed partial class MusicDirector : Node
     }
 
     private void OnRunEnded(RunEnded e)
-        => PlaySting(e.Survived && !_swarm ? "victory" : "defeat", then: null, after: 0f);
+        => PlaySting(e.Survived && !_swarm ? "fanfare" : "defeat", then: null, after: 0f);
 
     // --------------------------------------------------------------- mechanics
 
     private void Request(string track, float seconds)
     {
-        if (!IsInsideTree()) { _pending = track; return; }
-        Crossfade(track, seconds);
+        _wanted = track;
+        string pick = Pick(track);
+        if (!IsInsideTree()) { _pending = pick; return; }
+        Crossfade(pick, seconds);
+    }
+
+    private static readonly Random Dice = new();
+
+    /// <summary>What the Boombox says to play when the game asks for
+    /// <paramref name="track"/>. Only loops reach here.</summary>
+    private string Pick(string track, string? avoid = null)
+    {
+        Boombox.Load();
+        switch (Boombox.Mode)
+        {
+            case BoomboxMode.Pinned when MusicTracks.IsUnlocked(Boombox.Pinned) && Load(Boombox.Pinned) is not null:
+                return Boombox.Pinned;
+            case BoomboxMode.Shuffle:
+                List<string> pool = MusicTracks.UnlockedLoops();
+                string? skip = avoid ?? _currentTrack;
+                pool.RemoveAll(t => t == skip || Load(t) is null);
+                if (pool.Count > 0) return pool[Dice.Next(pool.Count)];
+                break;
+        }
+        return track;
     }
 
     private void Crossfade(string track, float seconds)
@@ -202,6 +284,8 @@ public sealed partial class MusicDirector : Node
         if (track == _currentTrack && _current.Playing) return;
         AudioStream? stream = Load(track);
         if (stream is null) return;
+        Heard(track);
+        _jingleDip?.Kill();
 
         AudioStreamPlayer from = _current, to = from == _a ? _b : _a;
         _fadeIn?.Kill();
@@ -239,6 +323,8 @@ public sealed partial class MusicDirector : Node
         _currentTrack = null;
     }
 
+    private string? _stingTrack;
+
     private void PlaySting(string sting, string? then, float after)
     {
         if (!IsInsideTree()) return;
@@ -249,11 +335,38 @@ public sealed partial class MusicDirector : Node
             _sting.Stream = s;
             _sting.VolumeDb = StingDb;
             _sting.Play();
+            _stingTrack = sting;
+            Heard(sting);
         }
         if (then is null) return;
         _afterSting = GetTree().CreateTimer(after, processAlways: true);
         string next = then;
-        _afterSting.Timeout += () => { if (IsInsideTree()) Crossfade(next, 2.0f); };
+        _afterSting.Timeout += () => { if (IsInsideTree()) { _wanted = next; Crossfade(Pick(next), 2.0f); } };
+    }
+
+    /// <summary>A sting over the loop: the loop dips under it and comes back.</summary>
+    private void PlayJingle(string track)
+    {
+        AudioStream? s = Load(track);
+        if (s is null) return;
+        _sting.Stream = s;
+        _sting.VolumeDb = StingDb - 2f;
+        _sting.Play();
+        _stingTrack = track;
+        Heard(track);
+        if (_currentTrack is null || !_current.Playing || (_fadeIn is not null && _fadeIn.IsRunning())) return;
+        double len = Math.Max(1.0, s.GetLength() - 1.5);
+        _jingleDip?.Kill();
+        _jingleDip = CreateTween();
+        _jingleDip.TweenProperty(_current, "volume_db", LoopDb - 10f, 0.25);
+        _jingleDip.TweenInterval(len);
+        _jingleDip.TweenProperty(_current, "volume_db", LoopDb, 1.0);
+    }
+
+    /// <summary>First time a track plays for real: the Boombox owns it now.</summary>
+    private static void Heard(string track)
+    {
+        if (MusicTracks.MarkHeard(track)) Profile.Save();
     }
 
     /// <summary>Duck the whole Music bus a little while the tree is paused.
@@ -272,23 +385,22 @@ public sealed partial class MusicDirector : Node
     // ------------------------------------------------------------------ tracks
 
     /// <summary>
-    /// Which loop a stage plays. A <c>MusicId</c> on the StageDef wins (read by
-    /// reflection so this compiles before that field exists); it may be a track
-    /// name ("frost") or a res:// path. Otherwise the id and theme are matched
+    /// Which loop a stage plays. The StageDef's <c>MusicKey</c> wins (its
+    /// MusicId, else its id); it may be a track name ("frost") or a res:// path. Otherwise the id and theme are matched
     /// by keyword, and an unknown map gets a map track by phase.
     /// </summary>
     public static string TrackForStage(string stageId, int phase)
     {
         string theme = "";
-        foreach (StageDef s in Stages.Run)
+        foreach (StageDef s in Stages.All)
         {
             if (s.Id != stageId) continue;
             theme = s.Theme ?? "";
-            if (s.GetType().GetProperty("MusicId")?.GetValue(s) is string mid && mid.Length > 0
-                && Load(mid) is not null)
-                return mid;
+            if (s.MusicKey.Length > 0 && Load(s.MusicKey) is not null) return s.MusicKey;
             break;
         }
+        // The catalogue's own map track (MusicTracks: one per map).
+        if (MusicTracks.ForMap(stageId) is { } own && Load(own.Id) is not null) return own.Id;
 
         string key = (stageId + " " + theme).ToLowerInvariant();
         if (Has(key, "meadow", "thorn", "grass", "field")) return "meadow";
@@ -308,7 +420,7 @@ public sealed partial class MusicDirector : Node
     /// <summary>Loads a track by name or path. Uses the imported resource when
     /// there is one, and otherwise reads the .ogg directly, so a fresh checkout
     /// has music before the editor has imported anything.</summary>
-    private static AudioStream? Load(string track)
+    internal static AudioStream? Load(string track)
     {
         if (Cache.TryGetValue(track, out AudioStream? cached)) return cached;
         string path = track.StartsWith("res://") ? track : Dir + track + ".ogg";
@@ -318,7 +430,7 @@ public sealed partial class MusicDirector : Node
         else if (FileAccess.FileExists(path))
             stream = AudioStreamOggVorbis.LoadFromFile(ProjectSettings.GlobalizePath(path));
 
-        bool loop = track is not ("victory" or "defeat");
+        bool loop = MusicTracks.ById(track)?.Loop ?? true;
         if (stream is AudioStreamOggVorbis ogg) ogg.Loop = loop;
         Cache[track] = stream;
         return stream;
