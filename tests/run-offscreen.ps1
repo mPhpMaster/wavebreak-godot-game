@@ -75,6 +75,9 @@ try {
 
     $waited = [OffscreenDesktop2]::WaitForSingleObject($pi.hProcess, [uint32]($TimeoutSec * 1000))
     if ($waited -ne 0) {
+        # Kill the whole tree: terminating cmd.exe alone orphans the game under
+        # it, which keeps running on the hidden desktop and writing to -Out.
+        & taskkill.exe /PID $pi.dwProcessId /T /F 2>&1 | Out-Null
         [void][OffscreenDesktop2]::TerminateProcess($pi.hProcess, 124)
         Write-Warning "timed out after ${TimeoutSec}s"
     }
