@@ -867,7 +867,7 @@ public static partial class Catalog
         {
             Id = "skitterling",
             DisplayName = "Skitterling",
-            Health = 17f, Damage = 7f, MoveSpeed = 5.6f,
+            Health = 17f, Damage = 7f, MoveSpeed = 4.4f,
             AttackRange = 1.3f, AttackCooldown = 0.75f,
             Radius = 0.32f, Height = 0.8f, KnockbackResist = 0f,
             XpValue = 2, GoldValue = 1,
@@ -898,7 +898,7 @@ public static partial class Catalog
         {
             Id = "cinderling",
             DisplayName = "Cinderling",
-            Health = 48f, Damage = 16f, MoveSpeed = 6.4f,
+            Health = 48f, Damage = 16f, MoveSpeed = 4.9f,
             AttackRange = 1.5f, AttackCooldown = 0.9f,
             Radius = 0.38f, Height = 1.2f, KnockbackResist = 0.15f,
             XpValue = 7, GoldValue = 4,
@@ -1025,7 +1025,7 @@ public static partial class Catalog
         {
             Id = "brine_leech",
             DisplayName = "Brine Leech",
-            Health = 24f, Damage = 8f, MoveSpeed = 5.2f,
+            Health = 24f, Damage = 8f, MoveSpeed = 4.3f,
             AttackRange = 1.3f, AttackCooldown = 0.7f,
             Radius = 0.30f, Height = 0.7f, KnockbackResist = 0f,
             XpValue = 3, GoldValue = 2,
@@ -1059,7 +1059,7 @@ public static partial class Catalog
         {
             Id = "gloom_lurcher",
             DisplayName = "Gloom Lurcher",
-            Health = 120f, Damage = 25f, MoveSpeed = 6.1f,
+            Health = 120f, Damage = 25f, MoveSpeed = 4.9f,
             AttackRange = 1.7f, AttackCooldown = 0.95f,
             Radius = 0.50f, Height = 1.5f, KnockbackResist = 0.3f,
             XpValue = 16, GoldValue = 9,
@@ -1176,7 +1176,7 @@ public static partial class Catalog
         {
             Id = "bloat_polyp",
             DisplayName = "Bloat Polyp",
-            Health = 16f, Damage = 5f, MoveSpeed = 4.4f,
+            Health = 16f, Damage = 5f, MoveSpeed = 3.9f,
             AttackRange = 1.3f, AttackCooldown = 1.0f,
             Radius = 0.45f, Height = 0.9f, KnockbackResist = 0f,
             XpValue = 2, GoldValue = 1,
@@ -1249,7 +1249,7 @@ public static partial class Catalog
         {
             Id = "shoal_fry",
             DisplayName = "Shoal Fry",
-            Health = 10f, Damage = 5f, MoveSpeed = 5.3f,
+            Health = 10f, Damage = 5f, MoveSpeed = 4.2f,
             AttackRange = 1.2f, AttackCooldown = 0.8f,
             Radius = 0.26f, Height = 0.6f, KnockbackResist = 0f,
             XpValue = 1, GoldValue = 0,

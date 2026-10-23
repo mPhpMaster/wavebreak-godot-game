@@ -369,6 +369,9 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         _health = _maxHealth;
         _contactDamage = MathF.Max(0f, def.Damage * MathF.Max(0f, damageMultiplier));
         _speed = MathF.Max(0.1f, def.MoveSpeed * MathF.Max(0.05f, speedMultiplier));
+        // Nothing outwalks the player's base 6 m/s once the clock and modifiers
+        // pile on; fast fodder that cannot be kited just feels unfair.
+        _speed = MathF.Min(_speed, def.IsBoss || def.IsElite ? 5.6f : 5.2f);
         _attackRange = MathF.Max(0.2f, def.AttackRange);
         _attackCooldown = MathF.Max(0.15f, def.AttackCooldown);
         _knockbackResist = Mathf.Clamp(def.KnockbackResist, 0f, 1f);
@@ -428,6 +431,18 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     /// <param name="player">Damage target, or null when there is no player.</param>
     /// <param name="separation">Crowd-avoidance push for this frame, computed by
     /// the manager from its neighbour grid.</param>
+    private int _slideTick;
+
+    /// <summary>True on the ticks a distant, grounded, self-driven enemy skips
+    /// its collision move: every other tick past 16 m, two in three past 30 m.
+    /// Staggered by instance so the crowd's real slides spread evenly.</summary>
+    private bool CoastThisTick(float distance)
+    {
+        int every = distance > 30f ? 3 : distance > 16f ? 2 : 1;
+        if (every == 1 || IsBoss || _act != Act.None || !IsOnFloor() || _knockback.LengthSquared() > 0.01f) return false;
+        return (++_slideTick + (int)(GetInstanceId() & 7)) % every != 0;
+    }
+
     public void Step(float dt, Vector3 playerPosition, IDamageable? player, Vector3 separation)
     {
         if (_dead) return;
@@ -494,7 +509,19 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         else verticalSpeed -= Gravity * dt;
 
         Velocity = new Vector3(horizontal.X + _knockback.X, verticalSpeed, horizontal.Z + _knockback.Z);
-        using (Wavebreak.Game.Prof.Scope("Enemy.MoveAndSlide")) MoveAndSlide();
+        if (CoastThisTick(distance))
+        {
+            // Far from the player and walking on flat ground: a plain step is
+            // indistinguishable at this range, and the next real slide resolves
+            // any wall it nudged into. MoveAndSlide is ~50us an enemy, which
+            // was most of the frame once the crowd filled up.
+            Vector3 v = Velocity;
+            GlobalPosition += new Vector3(v.X, 0f, v.Z) * dt;
+        }
+        else
+        {
+            using (Wavebreak.Game.Prof.Scope("Enemy.MoveAndSlide")) MoveAndSlide();
+        }
 
         // A level without a floor collider would otherwise drop every enemy out
         // of the world. Spawn height is the floor of last resort.

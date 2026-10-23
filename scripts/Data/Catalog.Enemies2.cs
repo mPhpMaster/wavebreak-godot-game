@@ -77,7 +77,7 @@ public static partial class Catalog
         new EnemyDef
         {
             Id = "spume_mite", DisplayName = "Spume Mite",
-            Health = 11f, Damage = 5f, MoveSpeed = 5.5f,
+            Health = 11f, Damage = 5f, MoveSpeed = 4.3f,
             AttackRange = 1.2f, AttackCooldown = 0.7f,
             Radius = 0.28f, Height = 0.6f,
             XpValue = 2, GoldValue = 1,
@@ -91,7 +91,7 @@ public static partial class Catalog
         new EnemyDef
         {
             Id = "squall_gull", DisplayName = "Squall Gull",
-            Health = 16f, Damage = 7f, MoveSpeed = 5.0f,
+            Health = 16f, Damage = 7f, MoveSpeed = 4.4f,
             AttackRange = 1.4f, AttackCooldown = 0.9f,
             Radius = 0.36f, Height = 0.9f,
             XpValue = 3, GoldValue = 1,
