@@ -55,6 +55,9 @@ public sealed class ModelSpec
 
     /// <summary>Head size relative to the default (which is already chibi-large).</summary>
     public float HeadScale = 1f;
+    /// <summary>Where a hat sits on an imported model without a head bone, as a
+    /// fraction of <see cref="Height"/> (CharacterRig.Hats).</summary>
+    public float HatTop = 0.98f;
 
     public Color Primary = new(0.5f, 0.5f, 0.55f);
     public Color Secondary = new(0.3f, 0.3f, 0.35f);

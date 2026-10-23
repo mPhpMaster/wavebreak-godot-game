@@ -47,11 +47,11 @@ public sealed class HatDef
 /// choice, key <c>hat.&lt;characterId&gt;</c>), so the profile file needs no new
 /// section; buying one with Pearls sets <c>hat.&lt;id&gt;</c> in the meta table.
 /// </summary>
-public static class Hats
+public static partial class Hats
 {
     public const string NoneId = "none";
 
-    public static readonly IReadOnlyList<HatDef> All = new List<HatDef>
+    public static readonly IReadOnlyList<HatDef> All = WithCute(new List<HatDef>   // + Meta/Hats.Cute.cs
     {
         new() { Id = NoneId, Name = "No hat" },
         new() { Id = "sailor_cap", Name = "Sailor's Cap" },
@@ -69,7 +69,7 @@ public static class Hats
         new() { Id = "gull_perch", Name = "Gull Perch" },
         new() { Id = "jellyfish_cap", Name = "Jellyfish Cap" },
         new() { Id = "storm_cloud", Name = "Storm Cloud" },
-    };
+    });
 
     public static HatDef? ById(string? id)
     {

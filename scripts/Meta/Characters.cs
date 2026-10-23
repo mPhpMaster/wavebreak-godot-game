@@ -9,7 +9,9 @@ namespace Wavebreak.Meta;
 /// <see cref="CharacterPassives"/>, keyed by this.</summary>
 public enum PassiveKind { None, Momentum, Kindling, Tailwind, GildedFortune, Bulwark, Ambush, Overcharge,
     // expansion (Meta/CharacterPassives.Expansion.cs)
-    Harpoon, Beacon, Surge, BarnacleSkin, Salvage, GullsEye, LowTide, SquallStep }
+    Harpoon, Beacon, Surge, BarnacleSkin, Salvage, GullsEye, LowTide, SquallStep,
+    // cute crew (Meta/CharacterPassives.Cute.cs)
+    PocketTurret, NightLight, BubbleCharm, BellySlide, CoralBloom, NineLives }
 
 /// <summary>One stat tweak a character starts with. Same shape as an item
 /// effect, applied once at run start rather than per stack.</summary>
@@ -95,6 +97,7 @@ public sealed class CharacterDef
     {
         var list = new List<SkinDef> { new() { Id = Id + ".base", Name = "Original", LookId = LookId, Tint = Tint } };
         list.AddRange(ExtraSkins);
+        list.AddRange(Characters.BonusSkinsFor(Id));   // Meta/Characters.Cute.cs
         return list;
     }
 

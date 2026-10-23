@@ -58,8 +58,10 @@ public sealed partial class CharacterRig
         }
         else
         {
-            hr = h * 0.14f;
-            top = h * 0.98f - (_model?.HipsOffset.Y ?? 0f);
+            // HeadScale is unused by imported models otherwise; the cube pets
+            // set it, since their whole body is the head (PlayerLooks.Cute).
+            hr = h * 0.14f * Spec.HeadScale;
+            top = h * Spec.HatTop - (_model?.HipsOffset.Y ?? 0f);
         }
         var anchor = new Node3D { Name = "Hat", Position = new Vector3(0f, top, 0f) };
         mi.Scale = Vector3.One * hr;

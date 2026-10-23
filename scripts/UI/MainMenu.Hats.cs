@@ -16,9 +16,11 @@ public sealed partial class MainMenu
     private int _hatIndex;
     private CharacterDef? _hatCharacter;
 
-    private static VBoxContainer CharacterScroll(VBoxContainer column)
+    private ScrollContainer? _charScroll;
+
+    private VBoxContainer CharacterScroll(VBoxContainer column)
     {
-        var scroll = new ScrollContainer
+        var scroll = _charScroll = new ScrollContainer
         {
             CustomMinimumSize = new Vector2(340f, 320f),
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
@@ -29,6 +31,18 @@ public sealed partial class MainMenu
         scroll.AddChild(inner);
         column.AddChild(scroll);
         return inner;
+    }
+
+    /// <summary>Bring a roster button into view. FollowFocus does this for focus
+    /// moved by the player, but not for focus given while the page is first
+    /// laid out (the scroll has no size yet), so it is asked again next frame.</summary>
+    private void ScrollRosterTo(Button b)
+    {
+        if (_charScroll is null) return;
+        Callable.From(() =>
+        {
+            if (IsInstanceValid(_charScroll) && IsInstanceValid(b)) _charScroll.EnsureControlVisible(b);
+        }).CallDeferred();
     }
 
     private void BuildHatRow(VBoxContainer box)

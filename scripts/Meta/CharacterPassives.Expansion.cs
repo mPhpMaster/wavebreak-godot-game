@@ -42,12 +42,14 @@ public sealed partial class CharacterPassives
     {
         if (_kind == PassiveKind.Beacon) EventBus.Subscribe<LevelGained>(OnBeaconLevel);
         if (_kind == PassiveKind.Salvage) EventBus.Subscribe<ChestOpened>(OnSalvageChest);
+        ReadyCute();   // Meta/CharacterPassives.Cute.cs
     }
 
     private void ExitExpansion()
     {
         EventBus.Unsubscribe<LevelGained>(OnBeaconLevel);
         EventBus.Unsubscribe<ChestOpened>(OnSalvageChest);
+        ExitCute();
     }
 
     private void TickExpansion(Player p, float dt, bool alive)
@@ -91,6 +93,10 @@ public sealed partial class CharacterPassives
                     _squallLeft -= dt;
                     if (_squallLeft <= 0f) SetMod(p, Stat.Damage, ModifierOp.Additive, 0f);
                 }
+                break;
+
+            default:
+                TickCute(p, dt, alive);   // Meta/CharacterPassives.Cute.cs
                 break;
         }
     }

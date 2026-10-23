@@ -60,7 +60,13 @@ public static partial class ContentAudit
             Check(keyOk, $"quest {u.Id}: metric {u.Metric} has bad key '{u.Key}'");
         }
 
+        // The cute crew ship with three skins each (base and two earned); the
+        // rest keep the six-skin floor. AuditCute checks the crew's own wiring.
         foreach (CharacterDef c in Characters.All)
-            Check(c.Skins.Count >= 6, $"character {c.Id} has only {c.Skins.Count} skins (want 6+)");
+        {
+            int floor = Characters.IsCuteCrew(c.Id) ? 3 : 6;
+            Check(c.Skins.Count >= floor, $"character {c.Id} has only {c.Skins.Count} skins (want {floor}+)");
+        }
+        AuditCute();
     }
 }

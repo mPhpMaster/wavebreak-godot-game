@@ -19,6 +19,7 @@ public static partial class Characters
     private static IReadOnlyList<CharacterDef> WithExpansion(List<CharacterDef> baseList)
     {
         baseList.AddRange(ExpansionCrew());
+        baseList.AddRange(CuteCrew());   // Meta/Characters.Cute.cs
         return baseList;
     }
 

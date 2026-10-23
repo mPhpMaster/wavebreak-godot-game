@@ -10,7 +10,7 @@ namespace Wavebreak.Visuals;
 /// +Y up, front = -Z. A hat therefore sits from about y = -0.2 upward, and
 /// <see cref="CharacterRig.SetHat"/> scales it to the head it lands on.
 /// </summary>
-public static class HatModels
+public static partial class HatModels
 {
     private static readonly Dictionary<string, Mesh?> Cache = new();
 
@@ -226,6 +226,6 @@ public static class HatModels
                 return true;
             }
         }
-        return false;
+        return BuildCute(id, k);   // Visuals/HatModels.Cute.cs
     }
 }

@@ -622,6 +622,7 @@ public sealed partial class MainMenu : Node3D
                 _runButton.Text = ChallengePicker.Summary();
                 int i = Math.Max(0, IndexOfCharacter(arg.Length > 0 ? arg : Profile.SelectedCharacter));
                 _charButtons[i].GrabFocus();
+                ScrollRosterTo(_charButtons[i]);
                 ShowCharacter(Characters.All[i]);
                 break;
             case "codex":
