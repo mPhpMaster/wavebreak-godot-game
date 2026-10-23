@@ -210,6 +210,7 @@ public static partial class ContentAudit
             AuditElements();
             AuditExpansion(system);
             AuditIcons();
+            AuditMapChallenges();   // map challenges, Toggler, slots, cute shrines (ContentAudit.MapChallenges.cs)
         }
         catch (Exception e)
         {

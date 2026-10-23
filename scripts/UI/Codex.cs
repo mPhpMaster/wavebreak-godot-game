@@ -164,6 +164,7 @@ public sealed partial class Codex : Control
         foreach (SecretKindDef k in SecretSpawner.Kinds) AddCard(ShrineCard(k), Tab.Secrets | Tab.Lore);
         foreach (Data.TomeDef t in Data.Tomes.All) AddCard(TomeCard(t), Tab.Lore);
         foreach (ChallengeDef c in Challenges.All) AddCard(ChallengeCard(c), Tab.Challenges);
+        foreach (MapChallengeDef m in MapChallenges.All) AddCard(MapChallengeCard(m), Tab.Challenges);
 
         for (int i = 0; i < Tabs.Length; i++)
         {

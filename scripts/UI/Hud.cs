@@ -158,6 +158,7 @@ public sealed partial class Hud : Control
         BuildTopRight();
         BuildWeaponList();
         BuildTomeList();
+        BuildWeaponHeader();   // "WEAPONS n/max" (UI/Hud.Slots.cs)
         BuildDashMeter();
         BuildPhaseReadout();
         BuildTitleCard();

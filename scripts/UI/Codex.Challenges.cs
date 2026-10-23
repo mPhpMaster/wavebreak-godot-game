@@ -19,4 +19,18 @@ public sealed partial class Codex
         string status = done ? $"WON x{wins}" : $"CHALLENGE  ·  {maps.Count}/{Data.Stages.All.Count} MAPS";
         return Card(c.Name, c.Blurb, $"{c.RewardText}  ·  {cleared}", status, done ? Earned : ChallengeInk, done);
     }
+
+    private static readonly Color MapChallengeInk = new(0.74f, 0.66f, 1.00f);
+
+    /// <summary>Per-map challenge cards (Meta/MapChallenges): the map, the goal
+    /// and rules, the reward, and whether (and how often) it was completed.</summary>
+    private static Button MapChallengeCard(MapChallengeDef c)
+    {
+        long n = MapChallenges.Completions(c);
+        bool done = n > 0;
+        string map = c.Map?.DisplayName ?? c.MapId;
+        string status = done ? (n > 1 ? $"DONE x{n}" : "DONE") : map.ToUpperInvariant();
+        string body = $"{c.GoalText}. {c.RulesText}.";
+        return Card(c.Name, body, c.RewardText, status, done ? Earned : MapChallengeInk, done);
+    }
 }

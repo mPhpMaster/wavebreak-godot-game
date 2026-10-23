@@ -350,7 +350,11 @@ public sealed partial class WeaponSystem : Node
     public IReadOnlyList<WeaponRuntime> Weapons => _weapons;
 
     /// <summary>True when no new weapon can be taken — only upgrades.</summary>
-    public bool IsFull => _weapons.Count >= MaxWeapons;
+    public bool IsFull => _weapons.Count >= Slots;
+
+    /// <summary>Weapon slots this run: <see cref="MaxWeapons"/> plus the Pearl
+    /// Shop's Weapon Rack levels (Meta/ShopExtras).</summary>
+    public int Slots { get; set; } = MaxWeapons;
 
     /// <summary>The player node, when there is one. Auras parent themselves to it.</summary>
     public Node3D? Body => _player;

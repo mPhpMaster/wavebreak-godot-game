@@ -256,3 +256,22 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   Secrets / Characters / Challenges / Shrines & Tomes) by toggling visibility;
   Q/E, Page Up/Down or the shoulder buttons switch tabs. `ContentAudit.Quests`
   checks ids, rewards, keys and the six-skins-per-character floor.
+
+## Map challenges, Toggler, slots, cute shrines
+
+- `Meta/MapChallenges` holds 55 per-map challenges (11 per map): a goal
+  (reach the boss, beat it, or win and last 60 s of the Final Swarm), global
+  modifiers, a map twist (night, whiteout, high tide, lava floor ...) applied
+  to a reflection copy of that map, and a pressure tier. One is selected at a
+  time; it forces the route `start:<map>`, merges into `Challenges.BeginRun`,
+  and `MapChallengeRuntime` pays Pearls plus a hat or skin once (`mchal_<id>`).
+  `--map-challenge=<id>` forces one in automated runs.
+- `Meta/ShopExtras` appends three Pearl Shop lines (Toggler, Weapon Rack,
+  Bookshelf) and is the one run hook (`RunMeta.Attach`). Weapons now have
+  `WeaponSystem.Slots` (6 base); the HUD shows `WEAPONS n/max` (`Hud.Slots`).
+- `Meta/Toggler` filters `MetaContent.OfferItems/OfferWeapons` and
+  `OfferPool.DisabledTomes`, keeping 10 weapons / 20 items / 8 tomes on.
+- `Game/CuteShrineSpawner` places the Shrine of Balance and Wishing Well
+  (`StageDef.BalanceShrines/WishingWells`), separate from `ShrineSpawner`, so
+  the autopilot never uses them. `--cute-shrine-shot=<png>` photographs them.
+- `UI/CuteStyle` is the soft pastel look used by these pages.

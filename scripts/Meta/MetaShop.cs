@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Wavebreak.Stats;
 
@@ -96,7 +97,7 @@ public static class MetaShop
         new() { Id = "skips", Name = "Let It Pass", Blurb = "Extra level-up skips each run.",
                 PerLevel = 1f, MaxLevel = 3, BaseCost = 40,
                 Describe = v => $"+{v:0} skip{(v == 1f ? "" : "s")} per run" },
-    };
+    }.Concat(ShopExtras.Upgrades).ToList();   // Toggler and slot lines (Meta/ShopExtras)
 
     public static ShopUpgradeDef? ById(string id)
     {

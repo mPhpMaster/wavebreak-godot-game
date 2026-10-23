@@ -53,6 +53,7 @@ public static class RunMeta
         // Run modifiers picked on the play page (Meta/Challenges); none by default.
         Challenges.BeginRun();
         Challenges.Attach(main);
+        ShopExtras.Attach(main);   // slots, Toggler, map challenges, cute shrines (Meta/ShopExtras)
         // Shop charge upgrades feed the level-up panel's charge stats.
         if (MetaShop.BonusRerolls > 0) main.Player.Stats.Add(Stat.Rerolls, ModifierOp.Flat, MetaShop.BonusRerolls, MetaShop.Source);
         if (MetaShop.BonusBanishes > 0) main.Player.Stats.Add(Stat.Banishes, ModifierOp.Flat, MetaShop.BonusBanishes, MetaShop.Source);

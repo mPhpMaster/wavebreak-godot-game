@@ -38,6 +38,9 @@ public sealed partial class MetaShopPage : Control
     private bool _refundArmed;
     private ShopUpgradeDef? _shown;
 
+    /// <summary>Set by the menu: open the Toggler page (the bought Toggler line).</summary>
+    public Action? OpenToggler { get; set; }
+
     public MetaShopPage(Action back)
     {
         _back = back;
@@ -107,6 +110,7 @@ public sealed partial class MetaShopPage : Control
         foreach (Label l in new[] { _name, _blurb, _now, _next, _status }) box.AddChild(l);
 
         Refresh();
+        CutePass();   // soft pills and icons (UI/MetaShopPage.Cute.cs)
     }
 
     private static Button Compact(Button b)
@@ -197,6 +201,11 @@ public sealed partial class MetaShopPage : Control
 
     private void Buy(ShopUpgradeDef def)
     {
+        if (ShopExtras.IsToggler(def) && MetaShop.IsMaxed(def) && OpenToggler is not null)
+        {
+            OpenToggler();
+            return;
+        }
         if (MetaShop.IsMaxed(def))
         {
             SetStatus("Already at max level.", InkDim);

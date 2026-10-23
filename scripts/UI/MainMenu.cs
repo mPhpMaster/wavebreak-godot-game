@@ -66,6 +66,7 @@ public sealed partial class MainMenu : Node3D
     private MetaShopPage _shop = null!;
     private DifficultyPicker _difficulty = null!;
     private ChallengePicker _runPicker = null!;
+    private TogglerPage _toggler = null!;
     private Button _runButton = null!;
     private Label _pearls = null!;
 
@@ -296,6 +297,8 @@ public sealed partial class MainMenu : Node3D
         _pages["shop"] = _shop = new MetaShopPage(() => ShowPage("main"));
         _pages["records"] = BuildLeaderboardPage();
         _pages["run"] = _runPicker = new ChallengePicker(() => ShowPage("play"));
+        _pages["toggler"] = _toggler = new TogglerPage(() => ShowPage("shop"));   // UI/TogglerPage
+        _shop.OpenToggler = () => ShowPage("toggler");
         foreach (Control p in _pages.Values) _root.AddChild(p);
     }
 
@@ -615,8 +618,10 @@ public sealed partial class MainMenu : Node3D
         switch (name)
         {
             case "run":
-                _runPicker.Refresh();
-                _runPicker.FocusFirst();
+                _runPicker.Open(arg);
+                break;
+            case "toggler":
+                _toggler.Open(arg);
                 break;
             case "play":
                 _runButton.Text = ChallengePicker.Summary();
@@ -634,7 +639,7 @@ public sealed partial class MainMenu : Node3D
                 break;
             case "shop":
                 _shop.Refresh();
-                _shop.FocusFirst();
+                if (arg.Length > 0) _shop.FocusLine(arg); else _shop.FocusFirst();
                 break;
             case "records":
                 _leaderboard.Refresh();
@@ -666,7 +671,7 @@ public sealed partial class MainMenu : Node3D
         if (@event.IsActionPressed("ui_cancel") && _page != "main")
         {
             GetViewport().SetInputAsHandled();
-            ShowPage(_page == "run" ? "play" : "main");
+            ShowPage(_page switch { "run" => "play", "toggler" => "shop", _ => "main" });
         }
     }
 
