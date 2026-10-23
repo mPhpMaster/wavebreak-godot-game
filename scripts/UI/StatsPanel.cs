@@ -57,6 +57,8 @@ public sealed partial class StatsPanel : Control
     private readonly WeaponSystem _weapons;
     private readonly RunState _run;
 
+    private ScrollContainer _scroll = null!;
+    private HBoxContainer _columns = null!;
     private VBoxContainer _character = null!;
     private VBoxContainer _stats = null!;
     private VBoxContainer _loadout = null!;
@@ -148,7 +150,16 @@ public sealed partial class StatsPanel : Control
 
         var columns = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         columns.AddThemeConstantOverride("separation", 32);
-        outer.AddChild(columns);
+        // Scrolls once a long build outgrows the screen (180-odd items, 720p),
+        // so the sheet and the buttons under it always stay on screen.
+        _scroll = new ScrollContainer
+        {
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            MouseFilter = MouseFilterEnum.Pass,
+        };
+        _scroll.AddChild(columns);
+        _columns = columns;
+        outer.AddChild(_scroll);
 
         _character = Column(columns, 210f);
         _stats = Column(columns, 300f);
@@ -211,8 +222,11 @@ public sealed partial class StatsPanel : Control
         Clear(_stats);
         foreach ((string title, Stat[] group) in Groups)
         {
-            Section(_stats, title);
-            foreach (Stat stat in group) StatRow(stats, stat);
+            // The short first column takes the last two groups; stacked under
+            // the rest they ran off the bottom of a 720p screen.
+            VBoxContainer into = title is "UTILITY" or "ELEMENTS" ? _character : _stats;
+            Section(into, title);
+            foreach (Stat stat in group) StatRow(stats, stat, into);
         }
 
         Clear(_loadout);
@@ -243,6 +257,7 @@ public sealed partial class StatsPanel : Control
             grid.AddChild(IconView.Row(Icons.For(item.Def), l, 18f));
         }
 
+        CallDeferred(MethodName.FitScroll);
         Clear(_settings);
         Section(_settings, "SOUND");
         _settings.AddChild(Text(Loc.T(AudioSettings.Describe(VolumeChannel.Master)), 13, AudioSettings.Muted ? Worse : Ink));
@@ -283,7 +298,7 @@ public sealed partial class StatsPanel : Control
     /// <summary>One stat: name, value in its natural unit, and the change from
     /// base coloured by whether it helps. Dash cooldown and enemy strength are
     /// the two where a lower number is the good direction.</summary>
-    private void StatRow(StatSheet stats, Stat stat)
+    private void StatRow(StatSheet stats, Stat stat, VBoxContainer into)
     {
         float value = stats.Get(stat);
         float baseValue = StatSheet.BaseValue(stat);
@@ -296,7 +311,17 @@ public sealed partial class StatsPanel : Control
             colour = (diff > 0f) != lowerIsBetter ? Better : Worse;
         }
 
-        Row(_stats, Catalog.StatName(stat), Format(stats, stat, value), colour);
+        Row(into, Catalog.StatName(stat), Format(stats, stat, value), colour);
+    }
+
+    /// <summary>Show the columns at full height when they fit, else cap them
+    /// to the screen less the title, buttons and hint, and let them scroll.</summary>
+    private void FitScroll()
+    {
+        if (!IsInstanceValid(_scroll)) return;
+        float want = _columns.GetCombinedMinimumSize().Y;
+        float room = GetViewportRect().Size.Y - 190f;
+        _scroll.CustomMinimumSize = new Vector2(_columns.GetCombinedMinimumSize().X, Mathf.Max(200f, Mathf.Min(want, room)));
     }
 
     internal static string Format(StatSheet stats, Stat stat, float v) => stat switch

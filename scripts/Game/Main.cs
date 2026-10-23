@@ -239,7 +239,8 @@ public sealed partial class Main : Node3D
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--give="))
                 foreach (string id in arg["--give=".Length..].Split(','))
-                    if (Catalog.WeaponById(id) is { } def) _weapons.DevMax(def);
+                    if (id == "all_items") foreach (ItemDef item in Catalog.Items) _inventory.Add(item);
+                    else if (Catalog.WeaponById(id) is { } def) _weapons.DevMax(def);
                     else if (Tomes.ById(id) is { } tome && Progression.TomeBook.Current is { } book) while (book.Add(tome)) { }
         // Map shrines (charge, challenge, statue, greed); same lifetime as chests.
         ShrineSpawner.Attach(this, Run.Seed);
