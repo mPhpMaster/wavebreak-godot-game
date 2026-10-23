@@ -44,6 +44,7 @@ public sealed partial class UnlockTracker
         EventBus.Subscribe<PhaseStarted>(OnQuestPhaseStarted);
         EventBus.Subscribe<PortalOpened>(OnQuestPortalOpened);
         EventBus.Subscribe<SecretDiscovered>(OnQuestSecret);
+        SubscribeMastery();
     }
 
     private void UnsubscribeQuests()
@@ -55,6 +56,7 @@ public sealed partial class UnlockTracker
         EventBus.Unsubscribe<PhaseStarted>(OnQuestPhaseStarted);
         EventBus.Unsubscribe<PortalOpened>(OnQuestPortalOpened);
         EventBus.Unsubscribe<SecretDiscovered>(OnQuestSecret);
+        UnsubscribeMastery();
     }
 
     // ------------------------------------------------------------- events
@@ -136,21 +138,21 @@ public sealed partial class UnlockTracker
         switch (u.Metric)
         {
             case Metric.WeaponKills:
-                return Profile.Get(Quests.KeyWeaponKills(u.Key)) + (live ? _weaponKills.GetValueOrDefault(u.Key) : 0);
+                return Profile.Get(u.StatKey) + (live ? _weaponKills.GetValueOrDefault(u.Key) : 0);
             case Metric.RunKills: return _main.Run.Kills;
             case Metric.RunSlamKills: return _slamKills;
             case Metric.TotalSlamKills: return Profile.Get(Quests.KeySlamKills) + (live ? _slamKills : 0);
             case Metric.RunSlideMetres: return _slideMetres;
             case Metric.TotalSlideMetres: return Profile.Get(Quests.KeySlideMetres) + (live ? (long)_slideMetres : 0);
             case Metric.PhaseBossBeaten:
-                return Profile.Get(Quests.KeyPhaseBoss(u.Key)) > 0 || (int.TryParse(u.Key, out int p) && _phaseBosses.Contains(p)) ? 1 : 0;
+                return Profile.Get(u.StatKey) > 0 || (int.TryParse(u.Key, out int p) && _phaseBosses.Contains(p)) ? 1 : 0;
             case Metric.CharacterWins:
-                return Profile.Get(Quests.KeyCharacterWins(u.Key)) + (live && WonAs(u.Key) ? 1 : 0);
+                return Profile.Get(u.StatKey) + (live && WonAs(u.Key) ? 1 : 0);
             case Metric.CharactersWon:
                 return Quests.CharactersWon() + (live && _ended && _won && Profile.Get(Quests.KeyCharacterWins(RunMeta.Character.Id)) == 0 ? 1 : 0);
             case Metric.RunChests: return _chests;
             case Metric.PhaseUntouched:
-                return Profile.Get(Quests.KeyPhaseUntouched(u.Key)) > 0 || (int.TryParse(u.Key, out int c) && _cleanPhases.Contains(c)) ? 1 : 0;
+                return Profile.Get(u.StatKey) > 0 || (int.TryParse(u.Key, out int c) && _cleanPhases.Contains(c)) ? 1 : 0;
             case Metric.UntouchedPhaseWin:
                 return Profile.Get(Quests.KeyUntouchedWin) > 0 || (_ended && _won && _phase1Clean) ? 1 : 0;
             case Metric.RunShrines: return _shrinesThisRun;
@@ -160,7 +162,7 @@ public sealed partial class UnlockTracker
             case Metric.RunGoldEarned: return _goldEarned;
             case Metric.RunMaxedWeapons: return MaxedWeapons();
             case Metric.RunHealed: return _healed;
-            default: return Measure(u.Metric);
+            default: return TryMeasureMastery(u, live, out float m) ? m : Measure(u.Metric);
         }
     }
 
@@ -193,6 +195,8 @@ public sealed partial class UnlockTracker
             Profile.Add(Quests.KeyCharacterWins(RunMeta.Character.Id), 1);
             if (_phase1Clean && !Screenshot.Invulnerable) Profile.Best(Quests.KeyUntouchedWin, 1);
         }
+
+        CommitMastery();
 
         // Personal bests of every single-run metric any unlock uses, for the
         // codex's "best" line. Measured before _committed flips the totals.

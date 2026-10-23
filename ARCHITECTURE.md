@@ -231,3 +231,28 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
 `--challenges=<ids|all>` is given. `--check-boundary` walks `Stages.All`.
 `StageDef.MusicId` and `EnemyIds` are hooks for music and theme enemies
 (empty = default).
+
+## Quest book, skin recolouring, codex tabs
+
+- `Meta/Quests.Mastery.cs` (`MasteryQuests`) is joined last onto `Unlocks.All`
+  (~280 rows in all). Per-weapon (kills, max level) and per-tome rows are
+  generated from the catalogue, so new content gets quests for free. New
+  metrics are appended to `Metric`; their tracking is
+  `Meta/UnlockTracker.Mastery.cs`. Status applications are counted in
+  `Combat/StatusTally` (static ints, reset per run); merchant, microwave, pot
+  and shrine numbers are copied from `Interactables`/`ShrineSpawner` on the
+  0.2 s poll. `UnlockDef.StatKey` caches each row's profile key so the poll
+  does not build strings. `RewardKind.Pearls` rows credit `Pearls.Earn` when
+  earned and carry a unique `pearls.<id>` reward id, so `Unlocks.SourceOf`
+  (now a dictionary) never mistakes them for content gates.
+- Skins repaint the model (`Visuals/SkinRecolor`, `SkinDef.Paint`): HSV
+  adjust plus a brightness-keeping dye, with skin tones protected. Procedural
+  rigs read it from two instance uniforms on `ToonMaterials.Character`;
+  imported Kenney rigs get a surface-override stand-in material
+  (`ToonMaterials.Recolored`, one per source material, cached) with the same
+  texture and the same instance uniforms (`CharacterRig.SetRecolor`). The
+  menu preview and the run both apply it. Base skins are the identity.
+- `UI/Codex` builds every card once and filters by tab (All / Quests /
+  Secrets / Characters / Challenges / Shrines & Tomes) by toggling visibility;
+  Q/E, Page Up/Down or the shoulder buttons switch tabs. `ContentAudit.Quests`
+  checks ids, rewards, keys and the six-skins-per-character floor.

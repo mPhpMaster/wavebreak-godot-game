@@ -206,21 +206,22 @@ public sealed partial class MainMenu : Node3D
         UpdateCamera(0f);
     }
 
-    private void TintHero(CharacterDef def) => ShowHeroLook(def.SelectedSkin.LookId);
+    private void TintHero(CharacterDef def) => ShowHeroSkin(def.SelectedSkin);
 
-    /// <summary>Swap the backdrop hero to a look. Rebuilds only on change: the
-    /// focus handlers call this on every hover.</summary>
-    private void ShowHeroLook(string lookId)
+    /// <summary>Swap the backdrop hero to a skin: its model and its recolour.
+    /// Rebuilds only on change (keyed by skin id, since several skins share a
+    /// model): the focus handlers call this on every hover.</summary>
+    private void ShowHeroSkin(SkinDef skin)
     {
-        if (_heroLook == lookId) return;
-        _heroLook = lookId;
+        if (_heroLook == skin.Id) return;
+        _heroLook = skin.Id;
         foreach (Node child in _hero.GetChildren())
         {
             if (child is Light3D) continue;
             _hero.RemoveChild(child);
             child.QueueFree();
         }
-        Node3D model = Visuals.PlayerLooks.Build(lookId);
+        Node3D model = Visuals.PlayerLooks.Build(skin.LookId, skin.Paint);
         model.Scale = Vector3.One * 1.0f;
         _hero.AddChild(model);
         ApplyMenuHat();
@@ -437,7 +438,7 @@ public sealed partial class MainMenu : Node3D
             _skinLabel.AddThemeColorOverride("font_color", Locked);
         }
         _skinLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        ShowHeroLook(skin.LookId);
+        ShowHeroSkin(skin);
         ShowHat();
     }
 

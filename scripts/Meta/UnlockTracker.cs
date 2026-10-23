@@ -117,6 +117,7 @@ public sealed partial class UnlockTracker : Node
                               || _main?.Stages is { State: StageDirector.PhaseState.Victory });
         PollBosses();
         TickQuests(0);
+        PollMastery();
         Evaluate();
         if (first) Leaderboard.RecordRun(_main!, _won, _phase);
         Commit();
@@ -131,6 +132,7 @@ public sealed partial class UnlockTracker : Node
         if (_poll < PollInterval) return;
         _poll = 0;
         PollBosses();
+        PollMastery();
         Evaluate();
     }
 
@@ -199,6 +201,7 @@ public sealed partial class UnlockTracker : Node
             float value = MeasureUnlock(u);
             if (value < u.Threshold) continue;
             if (!Profile.Unlock(u.Id)) continue;
+            if (u.Reward == RewardKind.Pearls) Pearls.Earn(u.Pearls);
             Profile.Save();
             GD.Print($"META unlock {u.Id} ({Unlocks.DescribeReward(u)}) at {u.Metric}={value:0.#} t={_main.Run.Seconds:0}");
             EventBus.Publish(new UnlockEarned(u.Id));

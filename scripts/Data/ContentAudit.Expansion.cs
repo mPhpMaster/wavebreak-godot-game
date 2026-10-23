@@ -58,6 +58,8 @@ public static partial class ContentAudit
             Check(Unlocks.SourceOf(u.RewardId) == u.Id, $"gate {u.Id}: reward {u.RewardId} is granted by {Unlocks.SourceOf(u.RewardId)}");
         }
 
+        AuditQuests();
+
         OfferPool? runPool = OfferPool.Current;
         try { AuditOfferMix(system); }
         finally

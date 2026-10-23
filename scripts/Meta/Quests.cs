@@ -18,7 +18,7 @@ namespace Wavebreak.Meta;
 /// stat keys (prefix <c>q.</c>) through <see cref="Profile.Add"/>/<see cref="Profile.Best"/>;
 /// the profile file stays one flat [stats] table and needs no migration.
 /// </summary>
-public static class Quests
+public static partial class Quests
 {
     public const int PhaseCount = 3;
 
@@ -144,7 +144,8 @@ public static class Quests
     public static bool IsRunMetric(Metric m) => m is Metric.RunSeconds or Metric.RunElites or Metric.RunSlams
         or Metric.RunAirJumps or Metric.RunLevel or Metric.RunItemStacks or Metric.RunGoldHeld or Metric.PeakSpeed
         or Metric.LevelUntouched or Metric.RunKills or Metric.RunSlamKills or Metric.RunSlideMetres or Metric.RunChests
-        or Metric.RunShrines or Metric.RunPhase or Metric.RunGoldEarned or Metric.RunMaxedWeapons or Metric.RunHealed;
+        or Metric.RunShrines or Metric.RunPhase or Metric.RunGoldEarned or Metric.RunMaxedWeapons or Metric.RunHealed
+        || IsMasteryRunMetric(m);
 
     public static int CharactersWon()
     {
@@ -183,7 +184,7 @@ public static class Quests
             Metric.RunLevel => System.Math.Max(best, Profile.Get(Profile.BestLevel)),
             Metric.RunKills => System.Math.Max(best, Profile.Get(Profile.BestKills)),
             _ when IsRunMetric(u.Metric) => best,
-            _ => -1,
+            _ => MasteryStored(u),
         };
     }
 }

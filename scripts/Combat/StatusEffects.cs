@@ -123,19 +123,26 @@ public static class StatusEffects
         switch (element)
         {
             case Element.Fire:
+                if (!enemy.IsBurning) StatusTally.Burns++;
                 enemy.ApplyBurn(hit * BurnFraction, BurnSeconds * duration);
                 break;
             case Element.Poison:
+                StatusTally.Poisons++;
                 enemy.ApplyPoison(hit * PoisonPerStack, PoisonSeconds * duration);
                 break;
             case Element.Ice:
             {
                 float power = stats?.Get(Stat.FreezePower) ?? 0f;
                 int freezeAt = Math.Max(2, FreezeStacks - (int)power);
-                enemy.ApplyChill(ChillSeconds * duration, freezeAt, FreezeSeconds * duration * (1f + 0.2f * power));
+                if (enemy.ApplyChill(ChillSeconds * duration, freezeAt, FreezeSeconds * duration * (1f + 0.2f * power)))
+                {
+                    StatusTally.Freezes++;
+                    if (enemy.IsBoss) StatusTally.BossFreezes++;
+                }
                 break;
             }
             case Element.Lightning:
+                StatusTally.Shocks++;
                 enemy.ApplyStun(StunSeconds * duration);
                 Chain(system, enemy, hit * ChainFraction);
                 break;
@@ -271,4 +278,17 @@ internal sealed partial class StatusFx : Node
             arc.Transparency = _age[i] / Life;
         }
     }
+}
+
+/// <summary>
+/// Run counters of status applications, for the quest tracker. Plain static
+/// ints rather than bus events: statuses land many times a frame in a big
+/// crowd, and a counter bump is the cheapest thing that can be measured.
+/// <see cref="Meta.UnlockTracker"/> resets them when a run starts.
+/// </summary>
+public static class StatusTally
+{
+    public static int Burns, Freezes, Shocks, Poisons, BossFreezes;
+
+    public static void Reset() => Burns = Freezes = Shocks = Poisons = BossFreezes = 0;
 }

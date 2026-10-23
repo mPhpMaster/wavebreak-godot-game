@@ -46,6 +46,49 @@ float wb_noise(vec3 x) {
 }
 ";
 
+    /// <summary>
+    /// Skin recolouring (see <see cref="SkinRecolor"/>): HSV adjust, then a dye
+    /// that keeps each pixel's brightness, with warm mid-saturation pixels
+    /// (skin) protected. Shared by the procedural character shader (on vertex
+    /// colour) and the imported-model replacement (on the texture). Instance
+    /// uniforms, so every skin shares one material.
+    /// </summary>
+    private const string RecolorFn = @"
+instance uniform vec4 recolor = vec4(0.0, 1.0, 1.0, 0.0);
+instance uniform vec4 recolor_tint : source_color = vec4(1.0, 1.0, 1.0, 0.85);
+vec3 wb_rgb2hsv(vec3 c) {
+	vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+	vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+	vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+	float d = q.x - min(q.w, q.y);
+	float e = 1.0e-10;
+	return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+vec3 wb_hsv2rgb(vec3 c) {
+	vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+	return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+bool wb_recolor_on() {
+	return recolor.w > 0.0 || abs(recolor.x) > 0.0001 || abs(recolor.y - 1.0) > 0.0001 || abs(recolor.z - 1.0) > 0.0001;
+}
+vec3 wb_recolor(vec3 c) {
+	vec3 hsv = wb_rgb2hsv(c);
+	float skin = smoothstep(0.0, 0.02, hsv.x) * (1.0 - smoothstep(0.11, 0.15, hsv.x))
+	           * smoothstep(0.10, 0.20, hsv.y) * (1.0 - smoothstep(0.78, 0.92, hsv.y))
+	           * smoothstep(0.04, 0.12, hsv.z);
+	vec3 o = vec3(fract(hsv.x + recolor.x), clamp(hsv.y * recolor.y, 0.0, 1.0), clamp(hsv.z * recolor.z, 0.0, 1.0));
+	vec3 rgb = wb_hsv2rgb(o);
+	if (recolor.w > 0.0) {
+		vec3 d = wb_rgb2hsv(recolor_tint.rgb);
+		float chroma = mix(0.35, 1.0, smoothstep(0.05, 0.25, hsv.y));
+		vec3 dyed = wb_hsv2rgb(vec3(d.x, mix(o.y, d.y, 0.85), clamp(o.z * mix(1.0, 0.4 + d.z, 0.6), 0.0, 1.0)));
+		rgb = mix(rgb, dyed, clamp(recolor.w * chroma, 0.0, 1.0));
+	}
+	return mix(rgb, c, skin * recolor_tint.a);
+}
+";
+
     private const string ToonLight = @"
 uniform vec3 shadow_tint : source_color = vec3(0.42, 0.40, 0.62);
 void light() {
@@ -58,7 +101,7 @@ void light() {
 }
 ";
 
-    private const string CharacterCode = "shader_type spatial;\nrender_mode cull_back, specular_disabled;\n" + Common + ToonLight + @"
+    private const string CharacterCode = "shader_type spatial;\nrender_mode cull_back, specular_disabled;\n" + Common + RecolorFn + ToonLight + @"
 uniform float rim_strength = 0.55;
 uniform float sway_amount = 0.0;
 void vertex() {
@@ -73,6 +116,7 @@ void vertex() {
 }
 void fragment() {
 	vec3 base = COLOR.rgb;
+	if (wb_recolor_on()) base = wb_recolor(base);
 	float edge = 0.0;
 	if (dissolve > 0.0) {
 		float n = wb_noise(v_obj * 7.0) * 0.7 + wb_noise(v_obj * 19.0) * 0.3;
@@ -273,6 +317,59 @@ void fragment() {
             _outline ??= new ShaderMaterial { Shader = new Shader { Code = OutlineCode } };
             m.NextPass = _outline;
         }
+        return m;
+    }
+
+    // Imported models: a stand-in for their own StandardMaterial3D that reads
+    // the same texture and colour and adds the recolour. Lit by Godot's default
+    // model, like the original, so an identity recolour looks the same.
+    private const string ImportedRecolorCode = "shader_type spatial;\nrender_mode cull_back;\n" + RecolorFn + @"
+uniform sampler2D albedo_tex : source_color, hint_default_white, FILTER, repeat_enable;
+uniform vec4 albedo_color : source_color = vec4(1.0);
+uniform bool use_vertex_color = false;
+uniform float roughness = 1.0;
+uniform float metallic = 0.0;
+uniform float specular = 0.5;
+void fragment() {
+	vec4 t = texture(albedo_tex, UV) * albedo_color;
+	if (use_vertex_color) t *= COLOR;
+	ALBEDO = wb_recolor_on() ? wb_recolor(t.rgb) : t.rgb;
+	ROUGHNESS = roughness;
+	METALLIC = metallic;
+	SPECULAR = specular;
+}
+";
+
+    private static Shader? _recolorLinear, _recolorNearest;
+    private static readonly System.Collections.Generic.Dictionary<ulong, ShaderMaterial> RecolorCache = new();
+
+    /// <summary>
+    /// The recolourable stand-in for an imported model's material: one per
+    /// source material (cached), shared by every skin of every hero, because
+    /// the recolour itself is per instance (<c>recolor</c>, <c>recolor_tint</c>
+    /// instance uniforms, set by <see cref="CharacterRig.SetRecolor"/>).
+    /// Null when the source cannot be stood in for (not a BaseMaterial3D, or
+    /// transparent); the original is then left alone.
+    /// </summary>
+    public static ShaderMaterial? Recolored(Material? source)
+    {
+        if (source is not BaseMaterial3D b || b.Transparency != BaseMaterial3D.TransparencyEnum.Disabled) return null;
+        ulong key = source.GetInstanceId();
+        if (RecolorCache.TryGetValue(key, out ShaderMaterial? m) && GodotObject.IsInstanceValid(m)) return m;
+
+        bool nearest = b.TextureFilter is BaseMaterial3D.TextureFilterEnum.Nearest
+            or BaseMaterial3D.TextureFilterEnum.NearestWithMipmaps or BaseMaterial3D.TextureFilterEnum.NearestWithMipmapsAnisotropic;
+        Shader shader = nearest
+            ? _recolorNearest ??= new Shader { Code = ImportedRecolorCode.Replace("FILTER", "filter_nearest_mipmap") }
+            : _recolorLinear ??= new Shader { Code = ImportedRecolorCode.Replace("FILTER", "filter_linear_mipmap") };
+        m = new ShaderMaterial { Shader = shader };
+        if (b.AlbedoTexture is not null) m.SetShaderParameter("albedo_tex", b.AlbedoTexture);
+        m.SetShaderParameter("albedo_color", b.AlbedoColor);
+        m.SetShaderParameter("use_vertex_color", b.VertexColorUseAsAlbedo);
+        m.SetShaderParameter("roughness", b.Roughness);
+        m.SetShaderParameter("metallic", b.Metallic);
+        m.SetShaderParameter("specular", b.MetallicSpecular);
+        RecolorCache[key] = m;
         return m;
     }
 

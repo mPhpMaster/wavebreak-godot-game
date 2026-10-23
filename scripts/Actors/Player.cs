@@ -135,11 +135,18 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     /// the body colour (it drives the i-frame shimmer, and is the whole body
     /// colour for looks that fall back to a procedural model). Safe before or
     /// after <see cref="_Ready"/>.</summary>
-    public void ApplySkin(Color tint, string lookId)
+    public void ApplySkin(Color tint, string lookId) => ApplySkin(tint, lookId, Visuals.SkinRecolor.None);
+
+    /// <summary>As above, plus the skin's recolour of the model's own colours
+    /// (<see cref="Visuals.SkinRecolor"/>); kept across later <see cref="SetLook"/> calls.</summary>
+    public void ApplySkin(Color tint, string lookId, Visuals.SkinRecolor recolor)
     {
         _bodyColor = tint;
+        _recolor = recolor;
         SetLook(lookId);
     }
+
+    private Visuals.SkinRecolor _recolor = Visuals.SkinRecolor.None;
     private static readonly Color DashColor = new(0.55f, 0.90f, 1.00f);
     private static readonly Color SlamColor = new(1.00f, 0.72f, 0.30f);
 
@@ -363,6 +370,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         _rig.ManualMotion = true;
         _pose.AddChild(_rig);
         _rig.EnableShadow();
+        _rig.SetRecolor(_recolor);
         ApplyHat();
     }
 

@@ -30,6 +30,21 @@ public sealed class SkinDef
     /// <summary>Body colour, also used wherever a model is not available yet.</summary>
     public required Color Tint { get; init; }
 
+    /// <summary>Explicit repaint of the model's own colours. Null means
+    /// "derive one from <see cref="Tint"/>" (see <see cref="Paint"/>).</summary>
+    public Visuals.SkinRecolor? Recolor { get; init; }
+
+    /// <summary>
+    /// What the model is actually repainted with. A base skin is the model as
+    /// authored; any other skin without an explicit <see cref="Recolor"/> takes
+    /// a moderate dye of its <see cref="Tint"/>, so even the older skins that
+    /// only named a tint now look the colour they claim. (Imported models
+    /// ignore a tint on its own: their colours live in a texture.)
+    /// </summary>
+    public Visuals.SkinRecolor Paint => Recolor ?? (Id.EndsWith(".base")
+        ? Visuals.SkinRecolor.None
+        : Visuals.SkinRecolor.Dyed(Tint, 0.45f));
+
     public bool IsAvailable => Unlocks.IsContentUnlocked(Id);
 }
 
@@ -138,6 +153,8 @@ public static partial class Characters
                 new() { Id = "drifter.saltrunner", Name = "Saltrunner", LookId = "rogue", Tint = new Color(0.85f, 0.88f, 0.92f) },
                 new() { Id = "drifter.lighthouse", Name = "Lighthouse Keeper", LookId = "vanguard", Tint = new Color(1.00f, 0.92f, 0.55f) },
                 new() { Id = "drifter.foam", Name = "Seafoam", LookId = "wildling", Tint = new Color(0.70f, 0.95f, 0.90f) },
+                new() { Id = "drifter.stormglass", Name = "Stormglass", LookId = "default", Tint = new Color(0.30f, 0.38f, 0.62f),
+                        Recolor = Visuals.SkinRecolor.Dyed(new Color(0.30f, 0.38f, 0.62f), 0.85f, 0.85f, 1.00f) },
             },
             Passive = PassiveKind.Momentum,
             PassiveName = "Momentum",
@@ -161,6 +178,8 @@ public static partial class Characters
                 new() { Id = "kiln_sister.cinder", Name = "Cinderwork", LookId = "proc-golem", Tint = new Color(1.00f, 0.40f, 0.10f) },
                 new() { Id = "kiln_sister.lamplighter", Name = "Lamplighter", LookId = "scout", Tint = new Color(1.00f, 0.80f, 0.45f) },
                 new() { Id = "kiln_sister.glassblower", Name = "Glassblower", LookId = "arcanist", Tint = new Color(0.55f, 0.85f, 0.95f) },
+                new() { Id = "kiln_sister.blackglass", Name = "Blackglass", LookId = "ember", Tint = new Color(0.20f, 0.16f, 0.25f),
+                        Recolor = Visuals.SkinRecolor.Dyed(new Color(0.20f, 0.16f, 0.25f), 0.80f, 0.70f, 1.00f) },
             },
             Passive = PassiveKind.Kindling,
             PassiveName = "Kindling",
@@ -190,6 +209,8 @@ public static partial class Characters
                 new() { Id = "gale_courier.postrider", Name = "Postrider", LookId = "rogue", Tint = new Color(0.40f, 0.55f, 0.80f) },
                 new() { Id = "gale_courier.squall", Name = "Squall", LookId = "proc-wildling", Tint = new Color(0.50f, 0.60f, 0.70f) },
                 new() { Id = "gale_courier.dawn", Name = "Dawnrunner", LookId = "medic", Tint = new Color(1.00f, 0.75f, 0.70f) },
+                new() { Id = "gale_courier.nightpost", Name = "Night Post", LookId = "gale", Tint = new Color(0.20f, 0.25f, 0.45f),
+                        Recolor = Visuals.SkinRecolor.Dyed(new Color(0.20f, 0.25f, 0.45f), 0.85f, 0.80f, 1.00f) },
             },
             Passive = PassiveKind.Tailwind,
             PassiveName = "Tailwind",
@@ -219,6 +240,8 @@ public static partial class Characters
                 new() { Id = "gilded_augur.seer", Name = "Tideseer", LookId = "medic", Tint = new Color(0.60f, 0.80f, 1.00f) },
                 new() { Id = "gilded_augur.gilt", Name = "All That Glitters", LookId = "golem", Tint = new Color(1.00f, 0.80f, 0.20f) },
                 new() { Id = "gilded_augur.moth", Name = "Mothlight", LookId = "default_tidecaller", Tint = new Color(0.80f, 0.75f, 0.55f) },
+                new() { Id = "gilded_augur.verdigris", Name = "Verdigris", LookId = "augur", Tint = new Color(0.35f, 0.75f, 0.60f),
+                        Recolor = Visuals.SkinRecolor.Dyed(new Color(0.35f, 0.75f, 0.60f), 0.85f, 1.00f, 1.00f) },
             },
             Passive = PassiveKind.GildedFortune,
             PassiveName = "Gilded Fortune",
@@ -251,6 +274,8 @@ public static partial class Characters
                 new() { Id = "breakwater_warden.ironwake", Name = "Ironwake", LookId = "augur_eclipse", Tint = new Color(0.30f, 0.32f, 0.40f) },
                 new() { Id = "breakwater_warden.seawall", Name = "Seawall", LookId = "ember_forgeborn", Tint = new Color(0.50f, 0.60f, 0.65f) },
                 new() { Id = "breakwater_warden.tidewall", Name = "Tidewall", LookId = "proc-golem", Tint = new Color(0.35f, 0.55f, 0.65f) },
+                new() { Id = "breakwater_warden.deepwatch", Name = "Deepwatch", LookId = "vanguard", Tint = new Color(0.15f, 0.35f, 0.45f),
+                        Recolor = Visuals.SkinRecolor.Dyed(new Color(0.15f, 0.35f, 0.45f), 0.80f, 1.00f, 1.00f) },
             },
             Stats = new[]
             {
@@ -278,6 +303,10 @@ public static partial class Characters
                 new() { Id = "wreckers_knave.inkblot", Name = "Inkblot", LookId = "proc-default", Tint = new Color(0.12f, 0.12f, 0.18f) },
                 new() { Id = "wreckers_knave.cutpurse", Name = "Cutpurse", LookId = "gale_stormchaser", Tint = new Color(0.55f, 0.35f, 0.60f) },
                 new() { Id = "wreckers_knave.wreckling", Name = "Wreckling", LookId = "wildling", Tint = new Color(0.55f, 0.45f, 0.30f) },
+                new() { Id = "wreckers_knave.bilge", Name = "Bilgewater", LookId = "rogue", Tint = new Color(0.40f, 0.45f, 0.25f),
+                        Recolor = Visuals.SkinRecolor.Dyed(new Color(0.40f, 0.45f, 0.25f), 0.80f, 0.85f, 1.00f) },
+                new() { Id = "wreckers_knave.redtide", Name = "Red Tide", LookId = "rogue", Tint = new Color(0.75f, 0.18f, 0.20f),
+                        Recolor = Visuals.SkinRecolor.Dyed(new Color(0.75f, 0.18f, 0.20f), 0.85f, 1.00f, 1.00f) },
             },
             Stats = new[]
             {
@@ -305,6 +334,10 @@ public static partial class Characters
                 new() { Id = "stormwright.tempest", Name = "Tempest", LookId = "gale_stormchaser", Tint = new Color(0.55f, 0.50f, 1.00f) },
                 new() { Id = "stormwright.calm", Name = "Eye of Calm", LookId = "medic", Tint = new Color(0.80f, 0.90f, 1.00f) },
                 new() { Id = "stormwright.overcast", Name = "Overcast", LookId = "golem", Tint = new Color(0.55f, 0.58f, 0.62f) },
+                new() { Id = "stormwright.squallglass", Name = "Squallglass", LookId = "arcanist", Tint = new Color(0.60f, 0.80f, 0.95f),
+                        Recolor = Visuals.SkinRecolor.Dyed(new Color(0.60f, 0.80f, 0.95f), 0.80f, 1.10f, 1.00f) },
+                new() { Id = "stormwright.aurora", Name = "Aurora", LookId = "arcanist", Tint = new Color(0.40f, 0.95f, 0.70f),
+                        Recolor = Visuals.SkinRecolor.Shifted(0.33f, 1.20f, 1.10f) },
             },
             Stats = new[]
             {

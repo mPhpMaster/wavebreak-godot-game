@@ -66,12 +66,18 @@ public static partial class PlayerLooks
     /// unlock toasts. Origin at the feet, facing -Z; it animates itself (turn it
     /// with the returned node's rotation). Wraps a <see cref="CharacterRig"/>.
     /// </summary>
-    public static Node3D Build(string? lookId)
+    public static Node3D Build(string? lookId) => Build(lookId, SkinRecolor.None);
+
+    /// <summary><see cref="Build(string?)"/> in a skin's colours (see
+    /// <see cref="SkinRecolor"/>) — the menu preview uses this, so what the
+    /// skin picker shows is what the run wears.</summary>
+    public static Node3D Build(string? lookId, SkinRecolor recolor)
     {
         CharacterRig rig = CharacterRig.Create(Get(lookId));
         rig.ManualMotion = true; // stands still: idle breathing / idle clip
         var holder = new Node3D { Name = "Look_" + (lookId ?? Default) };
         holder.AddChild(rig);
+        rig.SetRecolor(recolor);
         return holder;
     }
 

@@ -69,7 +69,7 @@ public static class RunMeta
             if (Profile.HasFoundSecret(kind.Id))
                 foreach (CharacterStat b in kind.LastingBoons) main.Player.Stats.Add(b.Stat, b.Op, b.Value, kind);
         SkinDef skin = Launch.Automated ? Character.Skins[0] : Character.SelectedSkin;
-        main.Player.ApplySkin(skin.Tint, skin.LookId);
+        main.Player.ApplySkin(skin.Tint, skin.LookId, skin.Paint);
         main.Player.WearHat(Launch.Automated ? null : Hats.SelectedFor(Character.Id).Id);
 
         // Mouse sensitivity is read live by PlayerCamera from GameSettings, so a

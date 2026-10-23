@@ -55,9 +55,48 @@ public enum Metric
     RunGoldEarned,
     RunMaxedWeapons,
     RunHealed,
+
+    // ---- mastery quests (Meta/Quests.Mastery.cs, tracked in
+    // UnlockTracker.Mastery.cs). Appended: the enum is never persisted by
+    // number, but keeping old members in place keeps diffs honest.
+    WeaponMaxed,        // 1 once the weapon in Key has reached its max level in any run
+    TomeMaxed,          // 1 once the tome in Key has reached its max level in any run
+    CharacterKills,     // lifetime kills as the character in Key
+    CharacterHardWins,  // lifetime wins as the character in Key on Hard or above
+    DifficultyWins,     // lifetime wins on the tier in Key (exactly that tier)
+    MapClears,          // lifetime phase bosses beaten on the map in Key
+    MapsCleared,        // distinct maps with at least one clear
+    ChallengeWins,      // lifetime wins with the challenge in Key active
+    ChallengesWon,      // distinct challenges with at least one win
+    TotalBurns,         // enemies set alight (a fresh ignition, not a refresh)
+    TotalFreezes,
+    TotalShocks,
+    TotalPoisons,       // poison stacks applied
+    TotalMegacrits,
+    RunFreezes,
+    RunMegacrits,
+    TotalMerchantGold,  // gold spent at merchants
+    RunMerchantBuys,
+    TotalMicrowaves,
+    TotalPots,
+    RunPots,
+    TotalCharges,       // map charge shrines filled
+    TotalShrineChallenges, // map challenge shrines won
+    RunGreed,           // greed stacks taken this run
+    TotalGreed,
+    TotalJumps,
+    TotalAirJumps,
+    TotalDashes,
+    RunDashes,
+    TotalSlams,
+    SwarmSeconds,       // seconds survived in the Final Swarm this run
+    TotalElites,
+    TotalGoldEarned,
+    RunTomesMaxed,
+    Feat,               // 1 once the one-off feat in Key has happened (see Quests.Feat*)
 }
 
-public enum RewardKind { Character, Weapon, Item, Skin, Hat }
+public enum RewardKind { Character, Weapon, Item, Skin, Hat, Pearls }
 
 public sealed class UnlockDef
 {
@@ -83,6 +122,16 @@ public sealed class UnlockDef
     /// <summary>Parameter for keyed metrics (weapon id, character id, phase
     /// number). Empty for the rest.</summary>
     public string Key { get; init; } = "";
+
+    /// <summary>Pearls credited when earned, for <see cref="RewardKind.Pearls"/>
+    /// rows (their <see cref="RewardId"/> is a unique "pearls.&lt;id&gt;" tag).</summary>
+    public int Pearls { get; init; }
+
+    /// <summary>The profile stat key a keyed metric reads, built once: the
+    /// tracker measures every locked row five times a second, and a string
+    /// concatenation there would allocate on every poll.</summary>
+    internal string StatKey => _statKey ??= Quests.StatKeyFor(this);
+    private string? _statKey;
 }
 
 /// <summary>
@@ -152,12 +201,23 @@ public static class Unlocks
         new() { Id = "all_shrines", Name = "The Augur's Path", Description = "Find every kind of hidden shrine.",
                 Metric = Metric.SecretsAll, Threshold = 1, Reward = RewardKind.Skin, RewardId = "gilded_augur.eclipse",
                 Secret = true, Hint = "Three lights hide where the arena thins. Greet them all." },
-    }.Concat(Quests.All).Concat(ExpansionUnlocks.All).Concat(ExpansionQuests.All).ToList();
+    }.Concat(Quests.All).Concat(ExpansionUnlocks.All).Concat(ExpansionQuests.All).Concat(MasteryQuests.All).ToList();
+
+    private static Dictionary<string, UnlockDef>? _byId;
+    private static Dictionary<string, string>? _sourceOf;
 
     public static UnlockDef? ById(string? id)
     {
-        foreach (UnlockDef u in All) if (u.Id == id) return u;
-        return null;
+        if (id is null) return null;
+        _byId ??= BuildById();
+        return _byId.TryGetValue(id, out UnlockDef? u) ? u : null;
+    }
+
+    private static Dictionary<string, UnlockDef> BuildById()
+    {
+        var map = new Dictionary<string, UnlockDef>(All.Count);
+        foreach (UnlockDef u in All) map.TryAdd(u.Id, u);
+        return map;
     }
 
     /// <summary>"Skin: Forgeborn (Kiln Sister)".</summary>
@@ -173,8 +233,15 @@ public static class Unlocks
     /// does — meaning the content is free.</summary>
     public static string? SourceOf(string rewardId)
     {
-        foreach (UnlockDef u in All) if (u.RewardId == rewardId) return u.Id;
-        return null;
+        if (_sourceOf is null)
+        {
+            // First row wins, as the linear scan did; with ~270 rows and the
+            // offer pool asking once per catalogue entry, a map is worth it.
+            var map = new Dictionary<string, string>(All.Count);
+            foreach (UnlockDef u in All) map.TryAdd(u.RewardId, u.Id);
+            _sourceOf = map;
+        }
+        return _sourceOf.TryGetValue(rewardId, out string? id) ? id : null;
     }
 
     /// <summary>True if this content id is unlocked (or was never locked).</summary>
@@ -191,6 +258,7 @@ public static class Unlocks
         RewardKind.Skin => DescribeSkin(u.RewardId),
         RewardKind.Hat => $"Hat: {Hats.ById(u.RewardId)?.Name ?? u.RewardId}",
         RewardKind.Weapon => $"Weapon: {MetaContent.NameOf(u.RewardId)}",
+        RewardKind.Pearls => $"{u.Pearls} {Meta.Pearls.Name}",
         _ => $"Item: {MetaContent.NameOf(u.RewardId)}",
     };
 }
