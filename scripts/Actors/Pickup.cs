@@ -228,6 +228,7 @@ public sealed partial class Pickup : Node3D, IPooled
 
         p.Activate(kind, position, value, launch);
         Live.Add(p);
+        if (Net.Coop.IsHost && !Personal) HostSpawned(p, launch);   // Pickup.Coop.cs
         return p;
     }
 
@@ -255,6 +256,7 @@ public sealed partial class Pickup : Node3D, IPooled
 
     private void Activate(PickupKind kind, Vector3 position, float value, Vector3 launch)
     {
+        ResetNetState();   // Pickup.Coop.cs; nothing to reset in single-player
         _kind = kind;
         _value = value;
         _age = 0f;
@@ -317,6 +319,14 @@ public sealed partial class Pickup : Node3D, IPooled
     /// </summary>
     public static void UpdateAll(float dt)
     {
+        // Co-op (Pickup.Coop.cs): the host decides who collects; a client only animates.
+        if (Net.Coop.InRun)
+        {
+            if (Net.Coop.IsHost) UpdateAllHost(dt);
+            else UpdateAllClient(dt);
+            return;
+        }
+
         Player? player = Player.Instance;
         bool live = player is not null && IsInstanceValid(player) && player.IsAlive;
 
@@ -575,6 +585,8 @@ public sealed partial class PickupField : Node3D
 
     private void OnEnemyKilled(EnemyKilled e)
     {
+        // Co-op client: the host rolls the drops and sends them.
+        if (Net.Coop.IsClient) return;
         if (e.XpValue > 0) DropXp(e.Position, e.XpValue);
         if (e.GoldValue > 0) DropGold(e.Position, e.GoldValue, e.WasElite);
         DropHealth(e.Position, e.WasElite);
@@ -610,9 +622,17 @@ public sealed partial class PickupField : Node3D
 
     private void DropHealth(Vector3 position, bool elite)
     {
-        if (Player.Instance is not { } player || !IsInstanceValid(player)) return;
-        if (player.Health is not { } health || !health.IsAlive) return;
-        if (health.Fraction >= HealthDropBelowFraction) return;
+        if (Net.Coop.IsHost)
+        {
+            // Anyone on the team who could use it.
+            if (Net.NetSession.Instance?.AnyPlayerBelow(HealthDropBelowFraction) != true) return;
+        }
+        else
+        {
+            if (Player.Instance is not { } player || !IsInstanceValid(player)) return;
+            if (player.Health is not { } health || !health.IsAlive) return;
+            if (health.Fraction >= HealthDropBelowFraction) return;
+        }
 
         float chance = elite ? EliteHealthDropChance : HealthDropChance;
         if (!_rng.Chance(chance)) return;

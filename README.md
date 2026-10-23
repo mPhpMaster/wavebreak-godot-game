@@ -32,8 +32,60 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; merchant; microwave; pots; chests |
 | Level-up | Three cards with icons; reroll (R), banish (B) and skip (X) |
 | Music | 19 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
+| Co-op | Online, 2-4 players, direct IP (see [Co-op](#co-op-2-4-players)) |
 | Languages | English and Arabic (full right-to-left layout) |
 | Settings | Full graphics page (presets, display, scaling/FSR, AA, shadows, effects, FOV, shake, UI scale, weapon-effect opacity, FPS counter), audio, key bindings |
+
+## Co-op (2-4 players)
+
+Title screen → **CO-OP**.
+
+1. **Host:** pick your character and skin with the arrows, enter a port
+   (default `7777`) and press **HOST**. Tell the others your address.
+2. **Join:** enter the host's address as `IP:port` (for example
+   `192.168.1.20:7777`) and press **JOIN**, then **READY**.
+3. The lobby lists everyone with their character and skin. When all are
+   ready, the host presses **START**.
+
+**Where to connect.** It is a direct connection, with no account and no
+server in between:
+
+- **Same network (LAN):** join the host's local IP (`ipconfig` on the host
+  shows it, usually `192.168.x.x`).
+- **Over the internet:** the host forwards the port (UDP, default 7777) on
+  their router to their PC and gives out their public IP, **or** everyone
+  installs the same free virtual LAN, such as [ZeroTier](https://www.zerotier.com/)
+  or [Tailscale](https://tailscale.com/), and joins the host's address on it.
+  No port forwarding is needed then.
+- Windows may ask the host to allow Wavebreak through the firewall the first
+  time. Allow it on private networks.
+
+**How it plays.**
+
+- Everyone keeps their own character, weapons, level-ups, tomes and items.
+- Experience is shared: every orb anyone picks up fills everyone's bar.
+  Gold and med-packs go to whoever picks them up.
+- Chests are shared. The first player to open one gets it, and pays with
+  their own gold.
+- Shrines, merchants, the microwave and pots are each player's own.
+- A level-up or the pause menu does not stop the game for the others. Your
+  character stands still while it is open, and you cannot be hurt for the
+  first 8 seconds.
+- At 0 health you go **down**. A teammate who stands next to you for 4
+  seconds revives you with 40% health. The run ends when everyone is down.
+- Enemies chase the nearest player who is still up. The camera follows you,
+  and names show over the other players' heads.
+- If the host leaves, everyone returns to the CO-OP page with a message. If
+  someone else leaves, their character is removed and the run goes on.
+- You cannot join a run that has already started. Co-op always uses the
+  Classic route, with no challenges. The host's difficulty applies to everyone.
+
+| | |
+|---|---|
+| ![Co-op lobby](docs/screenshots/coop-lobby.png) | ![Co-op run](docs/screenshots/coop-run.png) |
+| Lobby: players, characters, skins, ready | Two players in a run, name tags and team panel |
+| ![Revive](docs/screenshots/coop-revive.png) | ![Arabic co-op lobby](docs/screenshots/arabic-coop-lobby.png) |
+| A downed teammate and their revive ring | Arabic: co-op lobby |
 
 ## Screenshots
 
@@ -65,7 +117,7 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Ctrl | slide; in the air, slam |
 | E, left mouse | interact |
 | Tab | hold for the character sheet |
-| Esc / P | pause menu (Resume, Settings, End Run, Restart, Main menu, Quit) |
+| Esc / P | pause menu (Resume, Settings, End Run, Restart, Main menu, Quit; in co-op, Leave Game instead of End Run and Restart) |
 | M, `[` `]`, `-` `=`, `9` `0` | mute, music volume, master volume, effects volume |
 
 All keys can be rebound in Settings → Key bindings. The game pauses itself

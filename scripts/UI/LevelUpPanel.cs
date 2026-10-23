@@ -327,7 +327,7 @@ public sealed partial class LevelUpPanel : Control
         IsOpen = true;
         Visible = true;
         _autoPickLeft = AutoPickSeconds;
-        GetTree().Paused = true;
+        Net.Coop.SetPaused(GetTree(), true);   // co-op: the world keeps running
 
         // Focus the first card so that the keyboard and a gamepad have somewhere
         // to start; the number keys work regardless. Painted explicitly because a
@@ -369,7 +369,7 @@ public sealed partial class LevelUpPanel : Control
         {
             // Still make sure the tree is not left paused by a panel that never
             // opened — cheap, and the failure it prevents is a frozen game.
-            if (IsInsideTree()) GetTree().Paused = false;
+            if (IsInsideTree()) Net.Coop.SetPaused(GetTree(), false);
             return;
         }
 
@@ -385,7 +385,7 @@ public sealed partial class LevelUpPanel : Control
         if (_mouseWasCaptured) Actors.PlayerCamera.TryCaptureMouse();
         _mouseWasCaptured = false;
 
-        if (IsInsideTree()) GetTree().Paused = false;
+        if (IsInsideTree()) Net.Coop.SetPaused(GetTree(), false);
     }
 
     private void OnRunEnded(RunEnded e) => Cancel();

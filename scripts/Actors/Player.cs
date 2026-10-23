@@ -542,7 +542,8 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
     private bool Pressed(string action, bool available, ref bool requested)
     {
-        bool pressed = requested || (_inputAvailable && available && Input.IsActionJustPressed(action));
+        // Net.Coop.LocalHold: a co-op menu is open; the world runs, this player waits.
+        bool pressed = requested || (!Net.Coop.LocalHold && _inputAvailable && available && Input.IsActionJustPressed(action));
         requested = false;
         return pressed;
     }
@@ -758,7 +759,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         _coyote = grounded ? CoyoteTime : Mathf.Max(0f, _coyote - dt);
 
         bool pressed = _requestedJump
-                       || (_inputAvailable && _hasJump && Input.IsActionJustPressed("jump"));
+                       || (!Net.Coop.LocalHold && _inputAvailable && _hasJump && Input.IsActionJustPressed("jump"));
         _requestedJump = false;
         _jumpBuffer = pressed ? JumpBufferTime : Mathf.Max(0f, _jumpBuffer - dt);
 
@@ -844,7 +845,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
             return driven.LengthSquared() > 1f ? driven.Normalized() : driven;
         }
 
-        if (!_inputAvailable) return Vector3.Zero;
+        if (!_inputAvailable || Net.Coop.LocalHold) return Vector3.Zero;
 
         Vector2 input = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
         if (input.LengthSquared() < 0.0001f) return Vector3.Zero;
@@ -1013,6 +1014,9 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         else
         {
             _lamp.LightEnergy = 1.5f + _flash * 2.5f;
+            // Only a co-op revive ever brings a fallen player back up; in
+            // single-player this is already 0 and stays 0.
+            _deathTilt = Mathf.MoveToward(_deathTilt, 0f, dt * 3f);
         }
     }
 

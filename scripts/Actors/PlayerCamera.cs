@@ -358,7 +358,7 @@ public partial class PlayerCamera : Node3D
         }
 
         // Re-grab after Escape — but never while paused, where the click belongs to a menu.
-        if (RecaptureOnClick && button.ButtonIndex == MouseButton.Left && !GetTree().Paused)
+        if (RecaptureOnClick && button.ButtonIndex == MouseButton.Left && !Net.Coop.IsPaused(GetTree()))
         {
             TryCaptureMouse();
             GetViewport().SetInputAsHandled();

@@ -138,8 +138,10 @@ Useful test flags (all after `--`):
 | `--perf` | every 5 s: FPS, CPU/GPU render ms, draw calls, nodes, live enemies, per-system ms (`Game/Prof`), and a node census every 30 s |
 | `--levelup-shot=x.png`, `--menu-shot=x.png --menu-page=<page>`, `--panel-shot=<prefix>` | capture screens |
 | `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL |
+| `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session printing `COOP PASS/FAIL` (see "Online co-op") |
 
-`tests/smoke.ps1` runs three seeded 30-second runs. Automated launches run
+`tests/smoke.ps1` runs three seeded 30-second runs; `tests/coop.ps1` runs the
+two-process co-op test. Automated launches run
 through `D:\tools\megabonk\run-offscreen.ps1`, which keeps the window on a hidden
 desktop.
 
@@ -205,18 +207,19 @@ scripts/
   Audio/       AudioDirector, SfxSynth, MusicDirector, MusicTracks, Boombox, AudioSettings
   Progression/ XpCurve, Inventory, OfferPool, TomeBook, LevelUpChoices
   UI/          Hud, LevelUpPanel, PauseMenu, StatsPanel, ResultsScreen, BossBar, MainMenu
-               pages (Codex, MetaShop, Boombox, Graphics), DevPanel, CuteStyle, Icons
+               pages (Codex, MetaShop, Boombox, Graphics, CoopPage), CoopHud, DevPanel, CuteStyle, Icons
   Data/        Definitions, Catalog*, Stages*, Tomes*, MapShrines, ContentAudit*  <- all content
   Game/        Main, Arena, StageDirector, FinalSwarm, Portal, RunState, spawners,
                Autopilot, Screenshot, PerfProbe/Prof
   Meta/        Profile, Unlocks, Quests, Characters, Hats, Pearls, MetaShop, Difficulty,
                Routes, Challenges, Leaderboard, Launch, Loc + ArabicText/, Graphics/Game settings
+  Net/         Coop (session facts), NetSession (+ .Run, .World, .Test), RemotePlayer
   Visuals/     ModelSpec, ModelBuilder, CharacterRig, PlayerLooks, EnemyVisuals,
                PropTheme, PropFactory, ToonMaterials, ArtAssets, showcase/stress
 assets/        imported CC0 models, icons, music, fonts (see assets/CREDITS.md)
 tools/         compose_music.py and other generators
 installer/     Inno Setup script, icon generator
-tests/         smoke.ps1, run-offscreen.ps1
+tests/         smoke.ps1, coop.ps1, run-offscreen.ps1
 docs/          screenshots used by README.md
 ```
 
@@ -329,6 +332,126 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   (`StageDef.BalanceShrines/WishingWells`), separate from `ShrineSpawner`, so
   the autopilot never uses them. `--cute-shrine-shot=<png>` photographs them.
 - `UI/CuteStyle` is the soft pastel look used by these pages.
+## Online co-op (2-4 players)
+
+`scripts/Net/` plus small `*.Coop.cs` partials next to the code they extend
+(`Enemy.Coop`, `EnemyManager.Coop`, `Pickup.Coop`, `Player.Coop`,
+`PlayerHealth.Coop`, `ChestSpawner.Coop`, `StageDirector.Coop`). It is built on
+Godot's high-level multiplayer: one `ENetMultiplayerPeer` and RPCs on a single
+node, `/root/NetSession`, which has the same path on every peer and survives
+scene changes. No Steam, no relay, nothing to install: direct IP, with LAN,
+port forwarding or a free virtual LAN (ZeroTier, Tailscale) to reach the host.
+The design follows what the Megabonk mod *Bonk With Friends* chose to sync
+(lobby, players, enemies, damage, XP, pickups, chests, run start and end) and
+how. None of its code is used.
+
+**Single-player has no network code path.** A `NetSession` exists only while a
+session does. Every hook in the game is behind `Net.Coop.Active`, `IsHost`,
+`IsClient` or `InRun`, and all of these are false without one. The one hook
+that runs in single-player is `Coop.SetPaused`, which is then exactly
+`tree.Paused = x`. The self-checks and the smoke test pass unchanged.
+
+### Who owns what
+
+The split is by ownership, chosen as the simplest approach that stays
+responsive and cannot desync where it matters:
+
+| Thing | Owner | Others see |
+|---|---|---|
+| A player's body, movement, health, weapons, level-ups, inventory, tomes | that player's machine | `RemotePlayer` puppets from 20 Hz unreliable state: position, facing, velocity, pose, health, down flag, pickup range |
+| Enemies (director, spawns, AI, health, death) | host | `Enemy` puppets: spawn and death are reliable events; position, facing and health come in 15 Hz unreliable snapshots, with smoothing and a short look-ahead |
+| Damage *to* enemies | host applies it | Clients' weapons fire locally at puppets. A hit is predicted (number, flash, health bar), batched and sent to the host, which applies it to the real enemy. Crowd control (stun, chill/freeze) is forwarded the same way. Burn and poison tick on the client's puppet and forward each tick |
+| Damage *to* players | the victim | The host's contact swings at a remote player become a `Hurt` RPC. The owner applies it through their own i-frames, dodge, armour and shield. Enemy shots, blasts, shockwaves and flashes are mirrored, and each machine tests them against its own player |
+| Drops (XP, gold, med-packs) | host | The host rolls drops and decides who collects each orb: the first player whose magnet range it enters, or the nearest living player if that one goes down or leaves. Clients animate the magnet and wait for the host's word |
+| Chests | host places; first to ask gets it | `E` sends a request, and the host grants it to the first asker. The winner pays from their own gold and price ladder and rolls from their own pool. Everyone else sees it open with the winner's name |
+| Phase flow (waves → boss → portal → next map, win, Final Swarm) | host | Reliable `Phase`, `Boss` and `BossDown` messages replay the steps. A client's `StageDirector.Tick` only guards falls. The run clock is synced twice a second |
+| Shrines, merchant, microwave, pots, secrets | each player | Each player has their own set, built from the shared seed, and their own rewards. Pot drops are personal (`Pickup.Personal`) |
+
+Why clients fire their own weapons instead of sending input to the host:
+the weapon code depends on the player's whole build (stat sheet, item procs,
+character passive, tomes, upgrade rolls). Running a second copy of every
+client's build on the host would double the state that has to agree. Moving
+the *result* (a hit on enemy N for X) keeps the host authoritative over the
+only thing that matters to everyone, the enemy's health, while each player's
+shots feel instant. This is a co-op game, so a cheating client is out of
+scope.
+
+Messages are ordered by sending them all on the reliable channel: enemy and
+pickup events are batched per frame into one `Ev` float array (typed
+fixed-length records), and every other reliable RPC flushes that batch
+first. So a boss's `Boss` message never arrives before the boss's spawn, and
+`Phase` never arrives after the new map's chests.
+
+### Decisions the brief left open
+
+- **Level-ups and menus do not pause.** The world keeps running in co-op.
+  `Coop.SetPaused` replaces `tree.Paused` in the level-up panel, the pause
+  menu and the shrine and modal panels. In co-op it sets `Coop.LocalHold`,
+  which freezes only the local player's movement and interact keys, and
+  shields them for at most 8 s per opening (`Coop.MenuGraceSeconds`). Pausing
+  everyone for each player's level-up would stop the game every few seconds
+  with four players; freezing the others' input would be worse. The grace
+  matches what Bonk With Friends does for the same reason.
+- **XP is shared.** The mod mirrors every XP gain to every player, and so
+  does this: every XP orb anyone collects is granted to every player
+  (`ShareXp`), and each applies their own XP-gain stat. Everyone levels
+  together, so nobody falls behind for playing support, and each still picks
+  their own cards. Gold and med-packs are per player.
+- **Down, not dead.** At 0 health in co-op, `PlayerHealth` goes down instead
+  of ending the run. The downed machine counts its own revive: a living
+  teammate within 2.6 m for 4 s (progress drains slowly when they step away)
+  brings it back with 40% health and 2 s of immunity. The host ends the run
+  when every connected player is down.
+- **Enemies chase the nearest living player.** The host's `EnemyManager`
+  picks the nearest target per enemy. Spawn bursts ring each living player in
+  turn, and strays are culled by distance to the nearest player.
+- **Run settings:** co-op forces the Classic route and no challenges, so the
+  host's seed builds the same maps everywhere. The host's difficulty tier is
+  used by everyone.
+- **Starting together.** Every machine loads the run scene and holds the
+  tree paused until the host has heard "loaded" from everyone (30 s cap).
+  Then one `Go` starts the clocks.
+- **Leaving.** A client leaving removes their avatar, and the run goes on.
+  Their orbs go to the next nearest player. The host leaving sends every
+  client to the title's CO-OP page with "The host left the game", unless
+  their run was already over, in which case the results screen stays.
+  Joining a run in progress is refused.
+
+### Testing
+
+`tests/coop.ps1` launches two game processes on localhost, through the
+hidden-desktop wrapper:
+
+```
+host:   -- --coop-host=7777 --coop-players=2 --auto --invulnerable --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 ...
+client: -- --coop-join=127.0.0.1:7777 --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 ...
+```
+
+Both bots play about 60 s. The host spawns three ranged enemies at 10 s to
+test the mirrored shots. The client goes down on purpose at 20 s, and the
+host's bot walks over and revives it. The boss arrives and the portal opens,
+then both reach map 2. Both bots huddle for a screenshot, the client leaves,
+and the host checks the run survived that. Each side prints
+`COOP PASS|FAIL role=... players=... enemies_synced=... hits=... ...` with the
+reason on failure. A second scenario has the host quit at 15 s
+(`--coop-quit-at`); the client must land on the CO-OP page with the message
+(`--coop-expect-host-leave`). Screenshots go to `tests/shots/coop-*.png`.
+`--coop-lobby-only` with `--menu-shot=x.png --menu-page=coop` photographs a
+filled lobby.
+
+### Known limits
+
+- Direct IP only: no server browser, no NAT punch-through, no relay.
+- No late joining, and no reconnecting to a run after a disconnect.
+- Enemy wind-up telegraphs, burrowing and auras are not mirrored, only their
+  attacks are. Cute-enemy special hazards (bubbles, puddles, pinches) hit the
+  host only. Thorns use the host's stat.
+- Enemy count and health are not scaled up for more players, so co-op is
+  easier than solo at the same tier.
+- Quests, Pearls and unlocks are counted on each machine for its own player
+  and profile. Kills are counted for everyone, since every machine sees every
+  kill.
+
 ## Developer panel
 
 `UI/DevPanel*.cs` (widgets in `UI/DevUi.cs`). Ctrl+Shift+Alt+F12 toggles it

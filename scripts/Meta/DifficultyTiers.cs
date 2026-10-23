@@ -106,6 +106,9 @@ public static partial class DifficultyTiers
     {
         Profile.EnsureLoaded();
         Active = Selected;
+        // Co-op: the host's tier for everyone (enemies are the host's anyway;
+        // this keeps every player's rewards and banner in step).
+        if (Net.Coop.InRun && ById(Net.Coop.DifficultyId) is { } host) Active = host;
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--difficulty=") && ById(arg["--difficulty=".Length..]) is { } forced)
                 Active = forced;

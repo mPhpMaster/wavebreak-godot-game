@@ -120,6 +120,15 @@ public sealed class RunState
         Survived = survived;
     }
 
+    /// <summary>Co-op client: adopt the host's clock (sent twice a second), so
+    /// the HUD's timers agree across the team.</summary>
+    public void SyncClock(float seconds, float phaseSeconds)
+    {
+        if (Over) return;
+        Seconds = seconds;
+        PhaseSeconds = phaseSeconds;
+    }
+
     public float Minutes => Seconds / 60f;
 
     /// <summary>mm:ss of the current phase.</summary>

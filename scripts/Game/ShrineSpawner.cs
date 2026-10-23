@@ -298,7 +298,7 @@ public sealed partial class ShrineSpawner : Node
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (!_hasAction || e is InputEventKey { Echo: true }) return;
+        if (!_hasAction || e is InputEventKey { Echo: true } || Net.Coop.LocalHold) return;
         if (!e.IsActionPressed(InteractAction)) return;
         if (_focus is null || _focus.Kind == MapShrineKind.Charge) return;
         _interactRequested = true;

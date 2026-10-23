@@ -71,6 +71,7 @@ public sealed partial class MainMenu : Node3D
     private ChallengePicker _runPicker = null!;
     private TogglerPage _toggler = null!;
     private BoomboxPage _boombox = null!;
+    private CoopPage _coop = null!;
     private Button _runButton = null!;
     private Label _pearls = null!;
 
@@ -84,7 +85,17 @@ public sealed partial class MainMenu : Node3D
             GetTree().Quit();
             return;
         }
-        if (Launch.SkipsMenu)
+        // --coop-host / --coop-join: the automated co-op test. No menu; the
+        // session starts the run when everyone is in (Net/NetSession.Test.cs).
+        // With --menu-shot the menu is built too, to photograph the lobby.
+        bool coopArgs = Net.NetSession.AutoRequested();
+        bool coopAuto = coopArgs && !Net.NetSession.AutoStarted;   // false when the session already ended
+        if (coopAuto && Launch.MenuShot is null)
+        {
+            Net.NetSession.StartAuto(GetTree());
+            return;
+        }
+        if (Launch.SkipsMenu && !coopArgs)
         {
             // Deferred: changing scene from inside the outgoing scene's _Ready is
             // the case deferred calls exist for.
@@ -109,11 +120,13 @@ public sealed partial class MainMenu : Node3D
         BuildBackdrop();
         BuildUi();
         GraphicsSettings.ApplyAll(this);
-        ShowPage(DevReturnPage ?? (Launch.MenuShot is not null ? Launch.MenuPage : "main"));
+        ShowPage(DevReturnPage ?? (Launch.MenuShot is not null ? Launch.MenuPage : CoopPage.OpenOnTitle ? "coop" : "main"));
         DevReturnPage = null;
         DevPanel.Install(this);
 
-        if (Launch.MenuShot is not null) _ = CaptureAndQuit();
+        if (coopAuto) Net.NetSession.StartAuto(GetTree());
+        else if (coopArgs) Net.NetSession.TitleShown(this, _page);   // the host-leaves test lands here
+        if (Launch.MenuShot is not null) _ = CaptureAndQuit(coopAuto ? 7.0 : 2.5);
     }
 
     private void TintHero(CharacterDef def) => ShowHeroSkin(def.SelectedSkin);
@@ -173,6 +186,7 @@ public sealed partial class MainMenu : Node3D
         _pages["toggler"] = _toggler = new TogglerPage(() => ShowPage("shop"));   // UI/TogglerPage
         _shop.OpenToggler = () => ShowPage("toggler");
         _pages["boombox"] = _boombox = new BoomboxPage(() => ShowPage("main"));   // UI/BoomboxPage
+        _pages["coop"] = _coop = new CoopPage(() => ShowPage("main"));   // UI/CoopPage
         foreach (Control p in _pages.Values) _root.AddChild(p);
     }
 
@@ -184,12 +198,18 @@ public sealed partial class MainMenu : Node3D
 
         _playButton = MenuButton("PLAY", () => ShowPage("play"));
         page.AddChild(_playButton);
+        page.AddChild(MenuButton("CO-OP", () => ShowPage("coop")));
         page.AddChild(MenuButton("PEARL SHOP", () => ShowPage("shop")));
         page.AddChild(MenuButton("UNLOCKS & SECRETS", () => ShowPage("codex")));
         page.AddChild(MenuButton("LEADERBOARD", () => ShowPage("records")));
         page.AddChild(MenuButton("BOOMBOX", () => ShowPage("boombox")));
         page.AddChild(MenuButton("SETTINGS", () => ShowPage("settings")));
         page.AddChild(MenuButton("QUIT", () => GetTree().Quit()));
+        // Eight buttons since CO-OP joined: a little tighter, so the stats
+        // lines below still fit above the window's bottom edge.
+        page.AddThemeConstantOverride("separation", 7);
+        foreach (Node n in page.GetChildren())
+            if (n is Button b) b.CustomMinimumSize = new Vector2(0f, 44f);
 
         long best = Profile.Get(Profile.BestSeconds);
         Label stats = MakeLabel(
@@ -561,6 +581,9 @@ public sealed partial class MainMenu : Node3D
             case "boombox":
                 _boombox.Open(arg);
                 break;
+            case "coop":
+                _coop.Open();
+                break;
             case "play":
                 _runButton.Text = ChallengePicker.Summary();
                 int i = Math.Max(0, IndexOfCharacter(arg.Length > 0 ? arg : Profile.SelectedCharacter));
@@ -615,16 +638,18 @@ public sealed partial class MainMenu : Node3D
         if (@event.IsActionPressed("ui_cancel") && _page != "main")
         {
             GetViewport().SetInputAsHandled();
+            if (_page == "coop" && !Net.Coop.InRun) Net.NetSession.Instance?.Leave();   // same as BACK
             ShowPage(_page switch { "run" => "play", "toggler" => "shop", "keys" or "graphics" => "settings", _ => "main" });
         }
     }
 
     // ------------------------------------------------------------- capture
 
-    private async System.Threading.Tasks.Task CaptureAndQuit()
+    private async System.Threading.Tasks.Task CaptureAndQuit(double after)
     {
         SceneTree tree = GetTree();
-        await ToSignal(tree.CreateTimer(2.5), SceneTreeTimer.SignalName.Timeout);
+        await ToSignal(tree.CreateTimer(after), SceneTreeTimer.SignalName.Timeout);
+        if (_page == "coop") ShowPage("coop");   // redraw with whoever joined
         await Game.Screenshot.Capture(tree, this, Launch.MenuShot!);
         GD.Print($"MENU page={_page} unlocks={Profile.UnlockedIds.Count}/{Unlocks.All.Count} secrets={Profile.FoundSecrets.Count} " +
                  $"characters={string.Join(",", CharacterStates())}");

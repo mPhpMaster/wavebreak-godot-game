@@ -283,6 +283,8 @@ public static class EnemyAttacks
         s.Scale = Vector3.One * s.Radius;
         LiveShots.Add(s);
         ShotsFired++;
+        // Co-op host: the same shot flies on every client, at that client's player.
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.MirrorAttack(0, origin, dir, speed, damage, radius, range, 0f, Colors.White);
         return true;
     }
 
@@ -295,6 +297,7 @@ public static class EnemyAttacks
         h.Delay = MathF.Max(0f, delay);
         h.Damage = damage;
         LiveHazards.Add(h);   // a zero delay resolves on the next tick
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.MirrorAttack(1, centre, Vector3.Zero, radius, delay, damage, 0f, 0f, tint);
     }
 
     /// <summary>A ring rolling outward along the floor from
@@ -309,6 +312,7 @@ public static class EnemyAttacks
         h.Age = -MathF.Max(0f, delay);
         h.Damage = damage;
         LiveHazards.Add(h);
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.MirrorAttack(2, centre, Vector3.Zero, reach, speed, width, delay, damage, Colors.White);
     }
 
     /// <summary>Purely visual pop at a detonation, so a hit and a miss both
@@ -318,6 +322,7 @@ public static class EnemyAttacks
         Hazard h = NewHazard(Kind.Flash, centre, "", tint);
         h.Radius = radius;
         LiveHazards.Add(h);
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.MirrorAttack(3, centre, Vector3.Zero, radius, 0f, 0f, 0f, 0f, tint);
     }
 
     /// <summary>A decal for an enemy to drive itself (wind-up lanes, leap

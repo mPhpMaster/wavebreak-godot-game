@@ -94,6 +94,7 @@ public sealed partial class Enemy
     public bool ApplyChill(float seconds, int freezeAt, float freezeSeconds)
     {
         if (!IsAlive || seconds <= 0f) return false;
+        if (NetId > 0 && Net.Coop.IsClient) Net.NetSession.Instance?.QueueCc(NetId, 0f, seconds, freezeAt, freezeSeconds);
         _chillLeft = MathF.Max(_chillLeft, seconds);
         if (_freezeLeft > 0f) return false;
 
@@ -120,6 +121,7 @@ public sealed partial class Enemy
     public void ApplyStun(float seconds)
     {
         if (!IsAlive || seconds <= 0f || _ccImmune > 0f) return;
+        if (NetId > 0 && Net.Coop.IsClient) Net.NetSession.Instance?.QueueCc(NetId, seconds, 0f, 0, 0f);
         _stunLeft = MathF.Max(_stunLeft, seconds * CcResist);
         if (IsBoss) _ccImmune = _stunLeft + 2.5f;
         else if (IsElite) _ccImmune = _stunLeft + 1f;

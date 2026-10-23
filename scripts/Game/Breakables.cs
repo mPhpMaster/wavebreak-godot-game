@@ -271,14 +271,21 @@ public sealed partial class Breakables : Node3D
     /// </summary>
     private void Drop(Vector3 at)
     {
-        int gold = _rng.RangeInt(1, 4) + (_phase - 1) * 2;
-        Pickup.Spawn(PickupKind.Gold, at, gold, Launch());
+        // Co-op: pots are each player's own (every machine has its set), so
+        // their drops are too; nothing here is sent to the others.
+        Pickup.Personal = true;
+        try
+        {
+            int gold = _rng.RangeInt(1, 4) + (_phase - 1) * 2;
+            Pickup.Spawn(PickupKind.Gold, at, gold, Launch());
 
-        if (_rng.Chance(XpChance))
-            Pickup.Spawn(PickupKind.Xp, at, 3 + 3 * (_phase - 1) + _rng.RangeInt(0, 3), Launch());
+            if (_rng.Chance(XpChance))
+                Pickup.Spawn(PickupKind.Xp, at, 3 + 3 * (_phase - 1) + _rng.RangeInt(0, 3), Launch());
 
-        if (_rng.Chance(HealChance))
-            Pickup.Spawn(PickupKind.Health, at, HealFraction, Launch());
+            if (_rng.Chance(HealChance))
+                Pickup.Spawn(PickupKind.Health, at, HealFraction, Launch());
+        }
+        finally { Pickup.Personal = false; }
     }
 
     private Vector3 Launch()
