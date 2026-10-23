@@ -71,7 +71,7 @@ public sealed partial class RunRewards : Node
         // the swarm never publishes RunEnded, so its win is counted here.
         if (_settled is null && Valid && _main.Run.Seconds >= 1f)
         {
-            if (!_ended && _main.Stages is { Won: true }) Profile.Add(Profile.Wins, 1);
+            if (!_ended && _main.Stages is { Won: true } && !UI.DevPanel.UsedThisRun) Profile.Add(Profile.Wins, 1);
             Settle();
         }
         if (Current == this) Current = null;
@@ -87,6 +87,7 @@ public sealed partial class RunRewards : Node
 
     private void OnFinalBoss(FinalBossDefeated e)
     {
+        if (UI.DevPanel.UsedThisRun) return;   // dev runs do not unlock tiers
         DifficultyTier tier = DifficultyTiers.Active;
         DifficultyTier? opened = DifficultyTiers.RecordWin();
         Profile.Save();

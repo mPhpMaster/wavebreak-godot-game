@@ -96,12 +96,13 @@ public sealed partial class ChallengeRuntime : Node
     private void OnPortalOpened(PortalOpened e)
     {
         _bossDeadline = -1f;
-        Challenges.RecordClear(_main.Run.StageId);
+        if (!UI.DevPanel.UsedThisRun) Challenges.RecordClear(_main.Run.StageId);
     }
 
     private void OnFinalBoss(FinalBossDefeated e)
     {
         _bossDeadline = -1f;
+        if (UI.DevPanel.UsedThisRun) return;
         Challenges.RecordClear(_main.Run.StageId);
         Challenges.RecordWin();
     }

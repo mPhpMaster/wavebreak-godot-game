@@ -256,3 +256,51 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   Secrets / Characters / Challenges / Shrines & Tomes) by toggling visibility;
   Q/E, Page Up/Down or the shoulder buttons switch tabs. `ContentAudit.Quests`
   checks ids, rewards, keys and the six-skins-per-character floor.
+
+## Developer panel
+
+`UI/DevPanel*.cs` (widgets in `UI/DevUi.cs`). Ctrl+Shift+Alt+F12 toggles it
+on the title and in a run; nothing else opens it and no normal UI mentions
+it. It is a CanvasLayer under the tree root, installed by `MainMenu._Ready`
+and `Main._Ready`, so it survives scene changes; it keeps itself the root's
+last child so its `_Input` sees the chord first. While open, the other
+panels' `_Input` return early on `DevPanel.IsOpen` (so a digit typed in a
+search box never picks a card), the mouse is free, and with "Pause game
+while open" (default on) the run stays paused: the pause is re-asserted each
+frame because the level-up panel unpauses on close.
+
+Tabs: Profile (unlock all or single rows, tiers, shrines, Pearls, shop,
+reset; saved at once and the title reloads to show it), Player, Build, Spawn,
+Stage, Info. Game-side entry points live in `*.Dev.cs` partials next to the
+code they drive (`StageDirector.Dev`, `Spawners.Dev`, `WeaponSystem.Dev`,
+`Inventory.Dev`, `Hud.Dev`, `Profile.Dev`, `Meta.Dev`, `Meta/DevCheats`).
+
+Any run-side action sets `DevPanel.UsedThisRun`; such a run skips the
+unlock tracker, lifetime stats, the leaderboard and tier/challenge wins.
+`-- --check-devpanel` drives every control (real chord, click and typing)
+and prints `DEVPANEL PASS/FAIL`; `--devpanel-shot=<prefix>` saves one PNG
+per tab; `--menu-shot=x.png --devpanel-menu[=unlock]` shows it on the title.
+
+## Developer panel
+
+`UI/DevPanel*.cs` (widgets in `UI/DevUi.cs`). Ctrl+Shift+Alt+F12 toggles it
+on the title and in a run; nothing else opens it and no normal UI mentions
+it. It is a CanvasLayer under the tree root, installed by `MainMenu._Ready`
+and `Main._Ready`, so it survives scene changes; it keeps itself the root's
+last child so its `_Input` sees the chord first. While open, the other
+panels' `_Input` return early on `DevPanel.IsOpen` (so a digit typed in a
+search box never picks a card), the mouse is free, and with "Pause game
+while open" (default on) the run stays paused: the pause is re-asserted each
+frame because the level-up panel unpauses on close.
+
+Tabs: Profile (unlock all or single rows, tiers, shrines, Pearls, shop,
+reset; saved at once and the title reloads to show it), Player, Build, Spawn,
+Stage, Info. Game-side entry points live in `*.Dev.cs` partials next to the
+code they drive (`StageDirector.Dev`, `Spawners.Dev`, `WeaponSystem.Dev`,
+`Inventory.Dev`, `Hud.Dev`, `Profile.Dev`, `Meta.Dev`, `Meta/DevCheats`).
+
+Any run-side action sets `DevPanel.UsedThisRun`; such a run skips the
+unlock tracker, lifetime stats, the leaderboard and tier/challenge wins.
+`-- --check-devpanel` drives every control (real chord, click and typing)
+and prints `DEVPANEL PASS/FAIL`; `--devpanel-shot=<prefix>` saves one PNG
+per tab; `--menu-shot=x.png --devpanel-menu[=unlock]` shows it on the title.

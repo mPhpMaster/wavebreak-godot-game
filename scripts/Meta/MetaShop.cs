@@ -43,7 +43,7 @@ public sealed class ShopUpgradeDef
 /// Costs rise with level as base x (n+1)^1.5, rounded to 5: a base-30 line
 /// costs 30, 85, 155, 240, 335 (845 to max).
 /// </summary>
-public static class MetaShop
+public static partial class MetaShop
 {
     /// <summary>The source tag on every modifier the shop adds.</summary>
     public static readonly object Source = new ShopSource();

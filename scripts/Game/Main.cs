@@ -39,6 +39,9 @@ public sealed partial class Main : Node3D
     public Progression.Inventory Inventory => _inventory;
     public Actors.EnemyManager Enemies => _enemies;
     public StageDirector Stages => _stages;
+    public UI.LevelUpPanel LevelUp => _levelUp;
+    public UI.Hud Hud => _hud;
+    public UI.ResultsScreen Results => _results;
 
     public override void _Ready()
     {
@@ -61,6 +64,8 @@ public sealed partial class Main : Node3D
 
         EventBus.Subscribe<LevelGained>(OnLevelGained);
         EventBus.Subscribe<RunEnded>(OnRunEnded);
+        // Ctrl+Shift+Alt+F12 (UI/DevPanel); also runs --check-devpanel.
+        UI.DevPanel.Install(this);
 
         if (Screenshot.Requested)
             _ = RunScreenshot();

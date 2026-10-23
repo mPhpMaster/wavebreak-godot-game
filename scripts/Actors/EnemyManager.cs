@@ -315,6 +315,7 @@ public sealed partial class EnemyManager : Node3D
         if (_credits > bank) _credits = bank;
 
         UpdateWaves(runSeconds);
+        if (DevFrozen) return;   // developer panel: no spawns while AI is frozen
 
         if (!PlayerRef.TryGet(out Node3D player, out _)) return;
         Vector3 origin = player.GlobalPosition;
@@ -404,6 +405,7 @@ public sealed partial class EnemyManager : Node3D
 
         Sweep();
         RebuildGrid();
+        if (DevFrozen) return;   // developer panel: freeze AI
 
         bool hasPlayer = PlayerRef.TryGet(out Node3D playerNode, out IDamageable? playerHit);
         Vector3 playerPosition = hasPlayer ? playerNode.GlobalPosition : Vector3.Zero;
@@ -1020,6 +1022,9 @@ public sealed partial class EnemyManager : Node3D
     /// <summary>When false the director never spawns a boss on its own timer;
     /// whoever cleared it is expected to call <see cref="SpawnBoss"/>.</summary>
     public bool TimedBosses { get; set; } = true;
+
+    /// <summary>Developer panel "freeze AI": enemies hold still and the director stops spawning.</summary>
+    public static bool DevFrozen { get; set; }
 
     /// <summary>Per-phase multipliers on top of the time curve. 1 = no change.</summary>
     public float PhaseHealthScale { get; set; } = 1f;

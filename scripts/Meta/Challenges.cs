@@ -36,7 +36,7 @@ public sealed record ChallengeDef(string Id, string Name, string Blurb, float Re
 /// static multipliers below every tick. Every one of them is exactly 1 (or
 /// false) with no challenge active, so the hooks are no-ops by default.
 /// </summary>
-public static class Challenges
+public static partial class Challenges
 {
     public static readonly IReadOnlyList<ChallengeDef> All = new List<ChallengeDef>
     {

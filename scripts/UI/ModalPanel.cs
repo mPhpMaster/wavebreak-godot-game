@@ -98,7 +98,7 @@ public partial class ModalPanel : Control
 
     public override void _Input(InputEvent @event)
     {
-        if (!IsOpen) return;
+        if (!IsOpen || DevPanel.IsOpen) return;
         if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
 
         bool escape = key.Keycode == Key.Escape;

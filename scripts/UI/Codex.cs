@@ -128,7 +128,7 @@ public sealed partial class Codex : Control
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (!IsVisibleInTree() || !e.IsPressed() || e.IsEcho()) return;
+        if (!IsVisibleInTree() || !e.IsPressed() || e.IsEcho() || DevPanel.IsOpen) return;
         int step = 0;
         if (e.IsActionPressed("ui_page_up")) step = -1;
         else if (e.IsActionPressed("ui_page_down")) step = 1;
