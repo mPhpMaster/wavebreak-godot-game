@@ -342,8 +342,16 @@ void fragment() {
 
         if (_hero is not null)
         {
-            // Standing on the sand at the front of the island, facing the camera.
-            _hero.Position = new Vector3(6.0f * side, 1.0f, 13.0f);
+            // On the sand, in the middle of the open strip right of the panels
+            // (990 px wide UI), whatever the window size: cast a ray through
+            // that screen point and stand where it meets the beach.
+            Vector2 view = GetViewport().GetVisibleRect().Size;
+            float sx = 990f + (view.X - 990f) * 0.5f;
+            if (side < 0f) sx = view.X - sx;
+            var screen = new Vector2(sx, view.Y * 0.74f);
+            Vector3 from = _camera.ProjectRayOrigin(screen), dir = _camera.ProjectRayNormal(screen);
+            float tHit = Mathf.Abs(dir.Y) > 1e-4f ? (1.0f - from.Y) / dir.Y : 15f;
+            _hero.Position = from + dir * Mathf.Clamp(tHit, 6f, 40f);
             _hero.Scale = Vector3.One * 1.9f;
             Vector3 toCam = (pos - _hero.Position) with { Y = 0f };
             if (toCam.LengthSquared() > 0.01f)

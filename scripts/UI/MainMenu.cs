@@ -58,6 +58,7 @@ public sealed partial class MainMenu : Node3D
     private CharacterDef? _shownCharacter;
     private int _skinIndex;
     private readonly List<Button> _charButtons = new();
+    private Button _startButton = null!;
 
     // settings page
     private readonly List<(HSlider slider, VolumeChannel channel)> _volumeSliders = new();
@@ -229,9 +230,10 @@ public sealed partial class MainMenu : Node3D
             bool open = c.IsAvailable;
             bool hidden = !open && Unlocks.ById(c.UnlockedBy) is { Secret: true };
             string label = open ? Loc.T(c.DisplayName) : hidden ? "???" : Loc.F("{0}  ·  locked", c.DisplayName);
-            Button b = MenuButton(label, () => StartRun(c));
+            // Clicking picks the character; the run starts only from START RUN,
+            // so the skin and hat can be chosen first.
+            Button b = MenuButton(label, () => PickCharacter(c));
             if (!open) b.AddThemeColorOverride("font_color", Locked);
-            b.FocusEntered += () => ShowCharacter(c);
             b.MouseEntered += () => b.GrabFocus();
             _charButtons.Add(b);
             charList.AddChild(b);
@@ -246,6 +248,10 @@ public sealed partial class MainMenu : Node3D
         _runButton.MouseEntered += () => _runButton.GrabFocus();
         page.AddChild(_runButton);
         _difficulty.Button.FocusNeighborRight = _difficulty.Button.GetPathTo(_runButton);
+        _startButton = MenuButton("START RUN", () => { if (_shownCharacter is { } sel) StartRun(sel); });
+        _startButton.AddThemeColorOverride("font_color", Gold);
+        _startButton.AddThemeColorOverride("font_focus_color", Gold);
+        _startButton.AddThemeColorOverride("font_hover_color", Gold);
         list.AddChild(MenuButton("BACK", () => ShowPage("main")));
 
         var panel = Panel(470f, 236f, 520f, 300f);
@@ -280,6 +286,9 @@ public sealed partial class MainMenu : Node3D
         skinRow.AddChild(next);
         box.AddChild(skinRow);
         BuildHatRow(box);
+        // Last in the panel, under the skin and hat it applies to.
+        _startButton.CustomMinimumSize = new Vector2(0f, 46f);
+        box.AddChild(_startButton);
         return page;
     }
 
@@ -334,7 +343,7 @@ public sealed partial class MainMenu : Node3D
         _charStats.Text = hidden ? "" :
             Loc.F("Starts with {0}", c.StartingWeaponDef.DisplayName) + "\n" + Characters.Describe(c);
         _charPassive.Text = hidden || c.PassiveName.Length == 0 ? "" : Loc.F("Passive — {0}: {1}", c.PassiveName, c.PassiveText);
-        _charLock.Text = open ? Loc.T("Press to begin the run")
+        _charLock.Text = open ? Loc.T("Pick a skin and a hat, then press START RUN")
             : hidden ? Loc.F("Secret — {0}", source!.Hint)
             : Loc.F("Locked — {0}", source?.Description ?? "");
         if (open) TintHero(c);
@@ -347,6 +356,22 @@ public sealed partial class MainMenu : Node3D
             for (int i = 0; i < c.Skins.Count; i++) if (c.Skins[i].Id == chosen.Id) _skinIndex = i;
         }
         ShowSkin();
+    }
+
+    /// <summary>Make <paramref name="c"/> the selection: the panel, hero, skin
+    /// and hat rows follow it, its button turns gold, and START RUN is enabled
+    /// when it is unlocked. Focus moves to START RUN so Enter twice still plays.</summary>
+    private void PickCharacter(CharacterDef c, bool focusStart = true)
+    {
+        ShowCharacter(c);
+        for (int i = 0; i < _charButtons.Count; i++)
+        {
+            CharacterDef each = Characters.All[i];
+            Color colour = each == c ? Gold : each.IsAvailable ? Ink : Locked;
+            _charButtons[i].AddThemeColorOverride("font_color", colour);
+        }
+        _startButton.Disabled = !c.IsAvailable;
+        if (focusStart && c.IsAvailable) _startButton.GrabFocus();
     }
 
     private void StartRun(CharacterDef c)
@@ -566,7 +591,7 @@ public sealed partial class MainMenu : Node3D
                 int i = Math.Max(0, IndexOfCharacter(arg.Length > 0 ? arg : Profile.SelectedCharacter));
                 _charButtons[i].GrabFocus();
                 ScrollRosterTo(_charButtons[i]);
-                ShowCharacter(Characters.All[i]);
+                PickCharacter(Characters.All[i], focusStart: false);
                 break;
             case "codex":
                 _codex.Refresh();

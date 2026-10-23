@@ -190,6 +190,7 @@ public sealed partial class PlayerHealth : Node, IDamageable
     public void TakeDamage(DamageInfo info)
     {
         if (info is null) return;
+        if (DamageLog) LogHit(info);
 
         if (Game.Screenshot.Invulnerable)
         {
@@ -408,4 +409,17 @@ public sealed partial class PlayerHealth : Node, IDamageable
         : Vector3.Zero;
 
     private Vector3 PopupAnchor => Position + Vector3.Up * 0.55f;
+
+    /// <summary>--damage-log: one line per incoming hit with its source and the
+    /// distance to the nearest enemy, to track down damage that seems to come
+    /// from nowhere.</summary>
+    private static readonly bool DamageLog = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--damage-log") >= 0;
+
+    private void LogHit(DamageInfo info)
+    {
+        Vector3 at = _owner is not null && IsInstanceValid(_owner) ? _owner.GlobalPosition : Vector3.Zero;
+        Enemy? near = EnemyManager.Instance?.NearestTo(at, 500f);
+        float d = near is null ? -1f : near.GlobalPosition.DistanceTo(at);
+        GD.Print($"HIT src=\"{info.Source}\" amt={info.Amount:0.0} nearest={d:0.0}m by={near?.Def?.Id ?? "-"} t={Game.Main.Instance?.Run.Seconds ?? 0:0.0}");
+    }
 }

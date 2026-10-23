@@ -555,10 +555,22 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             && _act == Act.None
             && _attackTimer <= 0f
             && player.IsAlive
-            && distance <= ContactDistance)
+            && distance <= ContactDistance
+            && WithinReachVertically(playerPosition.Y))
         {
             Strike(player, heading);
         }
+    }
+
+    /// <summary>Contact range was measured flat, so a player jumping or gliding
+    /// metres above a crowd was still "touched" by everything under them. The
+    /// player's feet must be no higher than just over this body's top, and no
+    /// lower than a little under its feet.</summary>
+    private bool WithinReachVertically(float playerFeetY)
+    {
+        float feet = GlobalPosition.Y - (_def?.Hover ?? 0f);
+        float top = GlobalPosition.Y + _halfHeight * 2f;
+        return playerFeetY <= top + 0.6f && playerFeetY >= feet - 1.0f;
     }
 
     private void Strike(IDamageable player, Vector3 heading)
