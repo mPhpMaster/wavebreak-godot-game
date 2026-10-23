@@ -47,7 +47,9 @@ public sealed partial class UnlockToast : Control
         _panel.AddThemeStyleboxOverride("panel", _style);
         _panel.AnchorLeft = 0.5f; _panel.AnchorRight = 0.5f;
         _panel.OffsetLeft = -Width / 2f; _panel.OffsetRight = Width / 2f;
-        _panel.OffsetTop = 92f;
+        // Top edge: at 92 px it landed on the results screen's title ("YOU
+        // SURVIVED"), which is exactly when the end-of-run unlocks arrive.
+        _panel.OffsetTop = 8f;
         AddChild(_panel);
 
         var box = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };

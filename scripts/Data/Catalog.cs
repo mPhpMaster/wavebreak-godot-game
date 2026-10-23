@@ -1811,6 +1811,20 @@ public static class Catalog
     private static ItemEffect Effect(Stat stat, ModifierOp op, float perStack)
         => new() { Stat = stat, Op = op, PerStack = perStack };
 
+    /// <summary>
+    /// Stack cap for items that did not set one. "0 = unlimited" let a single
+    /// +30%-gold item be taken a dozen times; with real income bonuses that ran
+    /// the economy away. Rarer items stack less because each copy is stronger.
+    /// </summary>
+    public static int DefaultStackCap(Rarity rarity) => rarity switch
+    {
+        Rarity.Common => 8,
+        Rarity.Uncommon => 6,
+        Rarity.Rare => 4,
+        Rarity.Epic => 3,
+        _ => 1,
+    };
+
     private static ItemDef Item(
         string id, string name, Rarity rarity, float weight, int maxStacks,
         string description, Color tint, params ItemEffect[] effects)
@@ -1825,7 +1839,7 @@ public static class Catalog
             Description = description,
             Rarity = rarity,
             Effects = array,
-            MaxStacks = maxStacks,
+            MaxStacks = maxStacks > 0 ? maxStacks : DefaultStackCap(rarity),
             Weight = weight,
             Tint = tint,
         };

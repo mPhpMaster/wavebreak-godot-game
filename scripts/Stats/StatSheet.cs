@@ -129,6 +129,12 @@ public sealed class StatSheet
             }
         }
 
+        // Stacked penalties stop at -75%. Items without a stack cap each take a
+        // slice off (max health -10..-25% apiece); summed without a floor, a few
+        // copies reached -100% and left a level-60 build on 1 max health. The
+        // trade-off items still bite, they just cannot erase the stat.
+        if (!IsBonusStat(stat)) additive = Math.Max(additive, -MaxPenalty);
+
         float raw = IsBonusStat(stat)
             // A bonus stat is read as the multiplier 1 + value, with base 0. Run
             // through the general formula, (0 + flat) * (1 + additive) is still 0,
@@ -142,8 +148,14 @@ public sealed class StatSheet
         return value;
     }
 
+    /// <summary>Floor on summed additive penalties for regular stats.</summary>
+    public const float MaxPenalty = 0.75f;
+
     /// <summary>Stats stored as a bonus over x1 and read through
     /// <see cref="GetMultiplier"/>.</summary>
+    /// <summary>Asymptote of the XP and gold bonus: at most x3 income.</summary>
+    public const float IncomeCap = 2f;
+
     public static bool IsBonusStat(Stat stat) => stat is Stat.Damage or Stat.XpGain or Stat.GoldGain;
 
     /// <summary>Damage multiplier form of a "bonus" stat: 0 reads as x1.</summary>
@@ -166,6 +178,11 @@ public sealed class StatSheet
         Stat.CritChance      => Math.Clamp(v, 0f, 1f),
         Stat.Armor           => Math.Max(0f, v),
         Stat.Evasion         => Math.Max(0f, v),
+        // Diminishing returns on income. Once +% items actually applied, stacking
+        // them had no ceiling: a 15-minute run ended at level 103 with 193k gold
+        // and 200 items. v / (1 + v/2): +50% -> +40%, +100% -> +67%,
+        // +300% -> +120%, never past +200%. Penalties pass through unchanged.
+        Stat.XpGain or Stat.GoldGain => v > 0f ? v / (1f + v / IncomeCap) : Math.Max(-0.9f, v),
         _ => v,
     };
 
