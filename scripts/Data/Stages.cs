@@ -110,6 +110,19 @@ public partial class StageDef : Resource
     /// <summary>World chests placed when the map is built.</summary>
     [Export] public int Chests { get; set; } = 5;
 
+    /// <summary>Shady merchants: a stall selling three items for gold. One per
+    /// map is the design; zero turns the shop off for a map.</summary>
+    [Export] public int Merchants { get; set; } = 1;
+
+    /// <summary>Microwaves: pay once to duplicate one held item (+1 stack).
+    /// Each one works once.</summary>
+    [Export] public int Microwaves { get; set; } = 1;
+
+    /// <summary>Breakable pots, vases and crates scattered in small clusters.
+    /// Weapons and slams break them for a little gold, sometimes xp, rarely a
+    /// heal. See <see cref="Game.Breakables"/>.</summary>
+    [Export] public int Breakables { get; set; } = 30;
+
     // ---------------------------------------------------------------- phase
 
     /// <summary>Seconds of ordinary waves before the phase boss arrives.</summary>
@@ -176,6 +189,7 @@ public static class Stages
             Ridges = 4, RidgeHeight = 2.2f,
             Landmarks = 10,
             Chests = 6,
+            Merchants = 1, Microwaves = 1, Breakables = 28,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
         },
 
@@ -197,6 +211,7 @@ public static class Stages
             Ridges = 6, RidgeHeight = 2.4f,
             Landmarks = 14,
             Chests = 7,
+            Merchants = 1, Microwaves = 1, Breakables = 36,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             EnemyHealthScale = 1.25f, EnemyDamageScale = 1.12f, EnemySpeedScale = 1.04f,
         },
@@ -220,6 +235,7 @@ public static class Stages
             Ridges = 18, RidgeHeight = 2.8f,
             Landmarks = 12,
             Chests = 7,
+            Merchants = 1, Microwaves = 1, Breakables = 32,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             // The last boss meets the steepest part of the clock curve; at 0.55
             // the first full run's final boss had 82,000 hp.
