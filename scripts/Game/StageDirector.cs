@@ -317,6 +317,10 @@ public sealed class StageDirector
         StageDef stage = Stage;
         ulong salt = (ulong)(index + 1) * 0x9E3779B97F4A7C15UL;
 
+        // Map shrines first, so the chest spawner sees them as obstacles and
+        // keeps chests out of the charge rings.
+        ShrineSpawner.Populate(_arena, new Rng(_run.Seed ^ 0x5A1E5D00UL ^ salt), stage.InRadius - 6f, stage);
+
         int chests = Mathf.Min(stage.Chests, ChestSpawner.MaxWorldChests);
         ChestSpawner.Instance?.Populate(_arena, new Rng(_run.Seed ^ salt), stage.InRadius - 6f, chests);
         Interactables.Instance?.Populate(_arena, new Rng(_run.Seed ^ 0x5A0D5A0DUL ^ salt), stage.InRadius - 6f, stage, index + 1);

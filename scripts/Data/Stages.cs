@@ -122,6 +122,13 @@ public partial class StageDef : Resource
     /// Weapons and slams break them for a little gold, sometimes xp, rarely a
     /// heal. See <see cref="Game.Breakables"/>.</summary>
     [Export] public int Breakables { get; set; } = 30;
+    /// <summary>Map shrines placed when the map is built (see
+    /// <see cref="Game.ShrineSpawner"/>): charge rings, timed challenges, gold
+    /// statues and greed altars. The hidden secret shrines are separate.</summary>
+    [Export] public int ChargeShrines { get; set; } = 3;
+    [Export] public int ChallengeShrines { get; set; } = 1;
+    [Export] public int StatueShrines { get; set; } = 1;
+    [Export] public int GreedShrines { get; set; } = 1;
 
     // ---------------------------------------------------------------- phase
 
@@ -190,6 +197,7 @@ public static class Stages
             Landmarks = 10,
             Chests = 6,
             Merchants = 1, Microwaves = 1, Breakables = 28,
+            ChargeShrines = 3, ChallengeShrines = 1, StatueShrines = 1, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
         },
 
@@ -212,6 +220,7 @@ public static class Stages
             Landmarks = 14,
             Chests = 7,
             Merchants = 1, Microwaves = 1, Breakables = 36,
+            ChargeShrines = 4, ChallengeShrines = 2, StatueShrines = 1, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             EnemyHealthScale = 1.25f, EnemyDamageScale = 1.12f, EnemySpeedScale = 1.04f,
         },
@@ -236,6 +245,7 @@ public static class Stages
             Landmarks = 12,
             Chests = 7,
             Merchants = 1, Microwaves = 1, Breakables = 32,
+            ChargeShrines = 4, ChallengeShrines = 2, StatueShrines = 2, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             // The last boss meets the steepest part of the clock curve; at 0.55
             // the first full run's final boss had 82,000 hp.

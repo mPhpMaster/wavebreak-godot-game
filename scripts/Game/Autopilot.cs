@@ -78,6 +78,7 @@ public sealed partial class Autopilot
         wish += SeekPickup(me, nearest);
         wish += SeekChest(me, nearest);
         wish += Interactables.Instance?.AutopilotSteer(me, nearest, (float)_player.GetPhysicsProcessDeltaTime()) ?? Vector3.Zero;
+        wish += ShrineAutopilot.Steer(me, nearest);
 
         // Bias back toward the middle. Without this the bot backs itself into
         // the arena wall and dies there every time, which measures the wall

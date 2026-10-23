@@ -192,6 +192,8 @@ public sealed partial class Main : Node3D
         ChestSpawner.Attach(this, Run.Seed);
         // Merchant, microwave and breakable pots: same lifetime and populate hook.
         Interactables.Attach(this, Run.Seed);
+        // Map shrines (charge, challenge, statue, greed); same lifetime as chests.
+        ShrineSpawner.Attach(this, Run.Seed);
 
         if (Screenshot.Auto)
         {
@@ -260,7 +262,8 @@ public sealed partial class Main : Node3D
         $"peakspeed={_player.PeakSpeed:0.0} {ChestSpawner.Instance?.SummaryFields} " +
         $"phase={Run.Phase} phases={Run.PhaseCount} stage={Run.StageId} phasestate={_stages.State} " +
         $"{Meta.RunRewards.SummaryFields} " +
-        $"{Interactables.Instance?.SummaryFields}";
+        $"{Interactables.Instance?.SummaryFields} " +
+        $"{ShrineSpawner.Instance?.SummaryFields}";
 
     private async System.Threading.Tasks.Task RunScreenshot()
     {

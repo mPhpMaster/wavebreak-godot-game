@@ -1,0 +1,652 @@
+using System;
+using System.Collections.Generic;
+using Godot;
+using Wavebreak.Actors;
+using Wavebreak.Core;
+using Wavebreak.Data;
+using Wavebreak.Progression;
+using Wavebreak.Stats;
+using Wavebreak.UI;
+
+namespace Wavebreak.Game;
+
+/// <summary>
+/// Owns the map shrines: where they stand, who is in reach, and what each does.
+///
+///     ShrineSpawner.Populate(map, rng, arenaRadius, stage);
+///
+/// Four kinds, counts per map in <see cref="StageDef"/>, numbers in
+/// <see cref="MapShrines"/>:
+///
+/// <b>Charge</b> — stand in the ring for <see cref="MapShrines.ChargeSeconds"/>;
+/// leaving drains it. Full: pick one of three stat blessings for the run.
+///
+/// <b>Challenge</b> — E starts a timed trial (kill N in 30 s, or slay the
+/// guardian elites in 40 s). Success pays like a gilded chest; failure pays
+/// nothing. One trial at a time.
+///
+/// <b>Statue</b> — E buys a random blessing for gold; the price climbs with every
+/// purchase in the run. A statue gives <see cref="MapShrines.StatueUsesPerShrine"/>.
+///
+/// <b>Greed</b> — E accepts a curse stack: enemies stronger and more numerous
+/// (<see cref="Stat.EnemyScaling"/>) for more gold, XP and luck. Stacks.
+///
+/// Every stat change is a <see cref="StatSheet"/> modifier with a source object of
+/// its own, so a grant can be inspected or removed exactly.
+///
+/// Like the chest spawner, it lives for the whole run (the statue price and greed
+/// stacks belong to the run) and the shrines are children of the map, so a map
+/// that frees itself frees its shrines.
+/// </summary>
+public sealed partial class ShrineSpawner : Node
+{
+    private const string InteractAction = "interact";
+
+    /// <summary>The run's spawner, or null between runs.</summary>
+    public static ShrineSpawner? Instance { get; private set; }
+
+    /// <summary>Boon and challenge rolls. Forked from the run seed so shrines
+    /// never shift the run's main stream.</summary>
+    public Rng Rng { get; private set; }
+
+    private readonly List<MapShrine> _shrines = new();
+    private ShrinePrompt _prompt = null!;
+    private ShrinePanel _panel = null!;
+    private string _keyName = "E";
+    private bool _hasAction;
+    private bool _interactRequested;
+    private MapShrine? _focus;
+
+    // Run state.
+    private int _statueBought;
+    private readonly List<object> _greedSources = new();
+
+    // Challenge.
+    private enum Trial { None, Slaughter, Guardians }
+    private Trial _trial;
+    private MapShrine? _trialShrine;
+    private float _trialLeft;
+    private int _trialTarget;
+    private int _trialKillsAt;
+    private readonly List<Enemy> _guardians = new();
+    private int _guardiansDown;
+
+    // Run totals, for SUMMARY and the audit.
+    public int Placed { get; private set; }
+    public int Charged { get; private set; }
+    public int Blessings { get; private set; }
+    public int ChallengesWon { get; private set; }
+    public int ChallengesFailed { get; private set; }
+    public int StatueGoldSpent { get; private set; }
+    public int StatueBought => _statueBought;
+    public int GreedStacks => _greedSources.Count;
+
+    public IReadOnlyList<MapShrine> Shrines => _shrines;
+
+    public string SummaryFields =>
+        $"shrines={Placed} shrinecharged={Charged} shrineblessings={Blessings} " +
+        $"challengewon={ChallengesWon} challengefailed={ChallengesFailed} " +
+        $"statues={_statueBought} statuegold={StatueGoldSpent} greed={GreedStacks}";
+
+    /// <summary>What the challenge banner says, or null when no trial runs.</summary>
+    public string? ChallengeText => _trial switch
+    {
+        Trial.Slaughter => $"CHALLENGE  ·  KILL {Math.Min(KillsSinceStart, _trialTarget)}/{_trialTarget}  ·  {Mathf.CeilToInt(_trialLeft)}s",
+        Trial.Guardians => $"CHALLENGE  ·  SLAY THE GUARDIANS {_guardiansDown}/{_trialTarget}  ·  {Mathf.CeilToInt(_trialLeft)}s",
+        _ => null,
+    };
+
+    public float ChallengeSecondsLeft => _trial == Trial.None ? 0f : _trialLeft;
+
+    public bool ChallengeRunning => _trial != Trial.None;
+
+    private int KillsSinceStart => (Main.Instance?.Run.Kills ?? 0) - _trialKillsAt;
+
+    public ShrineSpawner() => Rng = new Rng(0x5A1E5UL);
+
+    public ShrineSpawner(Rng rng) => Rng = rng;
+
+    /// <summary>Creates the run's spawner. Call once per run, then
+    /// <see cref="Populate"/> per map.</summary>
+    public static ShrineSpawner Attach(Node parent, ulong runSeed)
+    {
+        var spawner = new ShrineSpawner(new Rng(runSeed ^ 0x51A7E5C0FFEEUL));
+        parent.AddChild(spawner);
+        return spawner;
+    }
+
+    public override void _Ready()
+    {
+        Name = "Shrines";
+        Instance = this;
+
+        _prompt = new ShrinePrompt();
+        AddChild(_prompt);
+
+        // Own layer, so the shared HUD is not edited; drawn over it.
+        var layer = new CanvasLayer { Name = "ShrineUI", Layer = 2 };
+        AddChild(layer);
+        layer.AddChild(new ShrineHud());
+        _panel = new ShrinePanel();
+        layer.AddChild(_panel);
+
+        _hasAction = InputMap.HasAction(InteractAction);
+        _keyName = KeyName();
+
+        EventBus.Subscribe<RunEnded>(OnRunEnded);
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Unsubscribe<RunEnded>(OnRunEnded);
+        if (Instance == this) Instance = null;
+    }
+
+    // ------------------------------------------------------------ placement
+
+    /// <summary>
+    /// Places the stage's shrines under <paramref name="map"/>, scattered inside
+    /// <paramref name="arenaRadius"/> on open floor. Uses the arena's terrain
+    /// footprints (<see cref="Arena.ClearSpotNear"/>) to stay off mounds,
+    /// platforms and ridges, keeps <see cref="MapShrines.MinSpacing"/> between
+    /// shrines and stays inside the band the hidden secrets use (80–90%).
+    /// Call it before the chest spawner populates, so chests treat the shrines
+    /// as obstacles and stay out of the charge rings.
+    /// </summary>
+    public static IReadOnlyList<MapShrine> Populate(Node3D map, Rng rng, float arenaRadius, StageDef stage)
+    {
+        var placed = new List<MapShrine>();
+        if (map is null || !GodotObject.IsInstanceValid(map)) return placed;
+        ShrineSpawner? self = Instance;
+        self?.ForgetMap();
+
+        var kinds = new List<MapShrineKind>();
+        void AddKind(MapShrineKind k, int n) { for (int i = 0; i < Math.Max(0, n); i++) kinds.Add(k); }
+        AddKind(MapShrineKind.Charge, stage.ChargeShrines);
+        AddKind(MapShrineKind.Challenge, stage.ChallengeShrines);
+        AddKind(MapShrineKind.Statue, stage.StatueShrines);
+        AddKind(MapShrineKind.Greed, stage.GreedShrines);
+
+        Arena? arena = map as Arena;
+        float outer = arenaRadius * 0.76f;
+        float inner = Math.Max(stage.ClearRadius + 8f, 18f);
+        var spots = new List<Vector3>();
+
+        foreach (MapShrineKind kind in kinds)
+        {
+            Vector3? found = null;
+            for (int attempt = 0; attempt < 60 && found is null; attempt++)
+            {
+                float d = Mathf.Lerp(inner, outer, MathF.Sqrt(rng.Float()));
+                Vector3 c = rng.OnUnitCircleXZ() * d;
+                if (arena is not null) c = arena.ClearSpotNear(c, kind == MapShrineKind.Charge ? MapShrines.ChargeRadius + 0.5f : 2f);
+                c.Y = 0f;
+                float flat = new Vector2(c.X, c.Z).Length();
+                if (flat < inner * 0.8f || flat > arenaRadius * 0.8f) continue;
+                float spacing = attempt < 40 ? MapShrines.MinSpacing : MapShrines.MinSpacing * 0.5f;
+                bool crowded = false;
+                foreach (Vector3 s in spots)
+                    if (new Vector2(s.X - c.X, s.Z - c.Z).Length() < spacing) { crowded = true; break; }
+                if (!crowded) found = c;
+            }
+            if (found is not { } at)
+            {
+                GD.Print($"[shrine] no spot for {kind}; skipped");
+                continue;
+            }
+
+            spots.Add(at);
+            var shrine = new MapShrine(kind)
+            {
+                Position = at,
+                Rotation = new Vector3(0f, rng.Range(0f, Mathf.Tau), 0f),
+            };
+            map.AddChild(shrine);
+            placed.Add(shrine);
+            GD.Print($"[shrine] placed {kind} at=({at.X:0.0},{at.Z:0.0})");
+        }
+
+        if (self is not null)
+        {
+            self._shrines.AddRange(placed);
+            self.Placed += placed.Count;
+        }
+        return placed;
+    }
+
+    /// <summary>A map change: drop the old shrines and end any running trial
+    /// (its guardians are cleared with the field).</summary>
+    private void ForgetMap()
+    {
+        if (_trial != Trial.None) EndTrial(false, quiet: true);
+        _shrines.Clear();
+        _focus = null;
+        _prompt?.HideNow();
+    }
+
+    // ------------------------------------------------------------- API
+
+    /// <summary>Press interact on the next frame, for the autopilot.</summary>
+    public void RequestInteract() => _interactRequested = true;
+
+    /// <summary>Nearest unspent shrine within range, optionally of one kind.</summary>
+    public MapShrine? Nearest(Vector3 from, float maxDistance, MapShrineKind? kind = null)
+    {
+        MapShrine? best = null;
+        float bestSq = maxDistance * maxDistance;
+        foreach (MapShrine s in _shrines)
+        {
+            if (!Usable(s) || (kind is { } k && s.Kind != k)) continue;
+            Vector3 d = s.GlobalPosition - from; d.Y = 0f;
+            float sq = d.LengthSquared();
+            if (sq >= bestSq) continue;
+            best = s; bestSq = sq;
+        }
+        return best;
+    }
+
+    public static bool InRing(MapShrine s, Vector3 at)
+    {
+        Vector3 d = s.GlobalPosition - at;
+        float dy = MathF.Abs(d.Y); d.Y = 0f;
+        return d.LengthSquared() <= MapShrines.ChargeRadius * MapShrines.ChargeRadius && dy <= 2.5f;
+    }
+
+    public static bool InReach(MapShrine s, Vector3 at)
+    {
+        if (s.Kind == MapShrineKind.Charge) return InRing(s, at);
+        Vector3 d = s.GlobalPosition - at;
+        float dy = MathF.Abs(d.Y); d.Y = 0f;
+        return d.LengthSquared() <= MapShrines.InteractRadius * MapShrines.InteractRadius && dy <= MapShrines.InteractHeight;
+    }
+
+    // ---------------------------------------------------------------- frame
+
+    public override void _Process(double delta)
+    {
+        float dt = (float)delta;
+        _shrines.RemoveAll(s => !IsInstanceValid(s) || s.IsQueuedForDeletion());
+
+        bool pressed = _interactRequested;
+        _interactRequested = false;
+
+        Player? player = Player.Instance;
+        bool live = player is not null && IsInstanceValid(player) && player.IsAlive && Main.Instance?.Run.Over != true;
+        Vector3 me = live ? player!.GlobalPosition : Vector3.Zero;
+
+        if (_trial != Trial.None) TickTrial(dt);
+
+        // Charge rings fill and drain, and the names show within 16 m.
+        foreach (MapShrine s in _shrines)
+        {
+            if (s.Spent) continue;
+            Vector3 d = s.GlobalPosition - me; d.Y = 0f;
+            s.ShowName(live && d.LengthSquared() < 16f * 16f && !InReach(s, me));
+            if (s.Kind != MapShrineKind.Charge) continue;
+            bool inside = live && InRing(s, me);
+            float rate = inside ? 1f / MapShrines.ChargeSeconds : -1f / MapShrines.ChargeDrainSeconds;
+            if (inside || s.Charge > 0f) s.SetCharge(s.Charge + rate * dt);
+            if (s.Charge >= 1f) CompleteCharge(s);
+        }
+
+        _focus = live ? Focus(me) : null;
+        if (_focus is null) { _prompt.HideNow(); return; }
+
+        ShowPrompt(_focus);
+        if (pressed && _focus.Kind != MapShrineKind.Charge) Interact(_focus);
+    }
+
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (!_hasAction || e is InputEventKey { Echo: true }) return;
+        if (!e.IsActionPressed(InteractAction)) return;
+        if (_focus is null || _focus.Kind == MapShrineKind.Charge) return;
+        _interactRequested = true;
+        GetViewport().SetInputAsHandled();
+    }
+
+    private void ShowPrompt(MapShrine s)
+    {
+        int gold = Inventory.Current?.Gold ?? 0;
+        string name = MapShrines.Name(s.Kind);
+        switch (s.Kind)
+        {
+            case MapShrineKind.Charge:
+                _prompt.ShowText(s.Top, $"{name}\ncharging  {s.Charge * 100f:0}%", MapShrines.Tint(s.Kind).Lightened(0.4f));
+                break;
+            case MapShrineKind.Challenge:
+                _prompt.ShowText(s.Top, s.Active
+                        ? $"{name}\n{ChallengeText}"
+                        : ChallengeRunning
+                            ? $"{name}\nanother challenge is running"
+                            : $"{_keyName} — start challenge\nwin: gilded reward · lose: nothing",
+                    ChallengeRunning && !s.Active ? ShrinePrompt.TooPoor : ShrinePrompt.Neutral);
+                break;
+            case MapShrineKind.Statue:
+            {
+                int price = MapShrines.StatuePrice(_statueBought);
+                bool ok = gold >= price;
+                int left = MapShrines.StatueUsesPerShrine - s.Uses;
+                _prompt.ShowText(s.Top,
+                    ok ? $"{_keyName} — offer {price} gold for a blessing\n{left} left"
+                       : $"{_keyName} — offer {price} gold  (need {price - gold} more)",
+                    ok ? ShrinePrompt.Neutral : ShrinePrompt.TooPoor);
+                break;
+            }
+            default:
+            {
+                int left = MapShrines.GreedUsesPerShrine - s.Uses;
+                _prompt.ShowText(s.Top, $"{_keyName} — accept a curse  ({left} left)\n{MapShrines.DescribeGreed()}",
+                    MapShrines.Tint(s.Kind).Lightened(0.45f));
+                break;
+            }
+        }
+    }
+
+    private void Interact(MapShrine s)
+    {
+        switch (s.Kind)
+        {
+            case MapShrineKind.Challenge: StartTrial(s); break;
+            case MapShrineKind.Statue: BuyStatue(s); break;
+            case MapShrineKind.Greed: AcceptCurse(s); break;
+        }
+    }
+
+    // --------------------------------------------------------------- charge
+
+    private void CompleteCharge(MapShrine s)
+    {
+        s.SetCharge(1f);
+        s.MarkSpent();
+        s.Celebrate();
+        Charged++;
+        Publish(s, ShrineOutcome.Charged);
+
+        Player? player = Player.Instance;
+        float luck = player?.Stats.Get(Stat.Luck) ?? 0f;
+        List<ShrineBoon> boons = MapShrines.RollBoons(Rng, MapShrines.ChargeChoices, luck);
+        GD.Print($"[shrine] charge full t={Main.Instance?.Run.Seconds ?? 0f:0}s offers: " +
+                 string.Join(" | ", boons.ConvertAll(b => $"{b.Title} {b.Effect} ({b.Rarity})")));
+
+        Vector3 at = s.Top;
+        if (Screenshot.Auto)
+        {
+            // Never pause an unattended run; pick from the shrine's own stream.
+            Grant(boons[Rng.RangeInt(0, boons.Count)], MapShrineKind.Charge, at);
+            return;
+        }
+        _panel.Show(boons, b => Grant(b, MapShrineKind.Charge, at));
+    }
+
+    /// <summary>Apply a blessing with a source tag of its own.</summary>
+    private void Grant(ShrineBoon boon, MapShrineKind from, Vector3 at)
+    {
+        Player? player = Player.Instance;
+        if (player is null || !IsInstanceValid(player)) return;
+        var source = new ShrineGrant(from, boon);
+        player.Stats.Add(boon.Stat, boon.Op, boon.Value, source);
+        Blessings++;
+        EventBus.Publish(new PopupRequested(at, $"{boon.Title} {boon.Effect}", boon.Color, 1.4f));
+        EventBus.Publish(new MapShrineUsed(from, ShrineOutcome.Blessed, at, $"{boon.Title} {boon.Effect}"));
+        GD.Print($"[shrine] blessing {from}: {boon.Title} {boon.Effect} ({boon.Rarity})");
+    }
+
+    /// <summary>Source tag for one shrine grant. A class, so every grant is a
+    /// distinct reference and <see cref="StatSheet.RemoveAllFrom"/> is exact.</summary>
+    public sealed class ShrineGrant
+    {
+        public MapShrineKind From { get; }
+        public ShrineBoon Boon { get; }
+        public ShrineGrant(MapShrineKind from, ShrineBoon boon) { From = from; Boon = boon; }
+        public override string ToString() => $"{MapShrines.Name(From)}: {Boon.Title}";
+    }
+
+    // --------------------------------------------------------------- statue
+
+    private void BuyStatue(MapShrine s)
+    {
+        Inventory? inv = Inventory.Current;
+        Player? player = Player.Instance;
+        if (inv is null || player is null) return;
+
+        int price = MapShrines.StatuePrice(_statueBought);
+        if (!inv.SpendGold(price))
+        {
+            s.Deny();
+            _prompt.Deny();
+            Publish(s, ShrineOutcome.Denied, $"need {price}");
+            return;
+        }
+
+        _statueBought++;
+        StatueGoldSpent += price;
+        s.Uses++;
+        ShrineBoon boon = MapShrines.RollBoons(Rng, 1, player.Stats.Get(Stat.Luck), Rarity.Uncommon)[0];
+        EventBus.Publish(new PopupRequested(s.Top + Vector3.Down * 0.6f, $"-{price} gold", new Color(1f, 0.78f, 0.25f)));
+        Grant(boon, MapShrineKind.Statue, s.Top);
+        s.Celebrate();
+        if (s.Uses >= MapShrines.StatueUsesPerShrine) s.MarkSpent();
+        GD.Print($"[shrine] statue bought price={price} next={MapShrines.StatuePrice(_statueBought)}");
+    }
+
+    // ---------------------------------------------------------------- greed
+
+    private void AcceptCurse(MapShrine s)
+    {
+        Player? player = Player.Instance;
+        if (player is null) return;
+        var source = new GreedStack(_greedSources.Count + 1);
+        foreach (var (stat, op, value) in MapShrines.GreedStack) player.Stats.Add(stat, op, value, source);
+        _greedSources.Add(source);
+        s.Uses++;
+        s.Celebrate();
+        if (s.Uses >= MapShrines.GreedUsesPerShrine) s.MarkSpent();
+
+        Color tint = MapShrines.Tint(MapShrineKind.Greed);
+        EventBus.Publish(new PopupRequested(s.Top, $"CURSED  x{GreedStacks}", tint.Lightened(0.3f), 1.6f));
+        EventBus.Publish(new PopupRequested(s.Top + Vector3.Down * 0.7f, MapShrines.DescribeGreed(), tint, 1f));
+        Publish(s, ShrineOutcome.Cursed, $"x{GreedStacks}");
+        GD.Print($"[shrine] greed stack {GreedStacks}: enemy x{player.Stats.Get(Stat.EnemyScaling):0.00} " +
+                 $"gold +{player.Stats.Get(Stat.GoldGain) * 100f:0}% luck {player.Stats.Get(Stat.Luck):0.00}");
+    }
+
+    /// <summary>Source tag for one greed stack.</summary>
+    public sealed class GreedStack
+    {
+        public int Index { get; }
+        public GreedStack(int index) => Index = index;
+        public override string ToString() => $"Greed Altar x{Index}";
+    }
+
+    // ------------------------------------------------------------ challenge
+
+    private void StartTrial(MapShrine s)
+    {
+        if (_trial != Trial.None)
+        {
+            s.Deny();
+            _prompt.Deny();
+            Publish(s, ShrineOutcome.Denied, "busy");
+            return;
+        }
+
+        RunState? run = Main.Instance?.Run;
+        EnemyDef? elite = PickElite(run?.Seconds ?? 0f);
+        bool guardians = elite is not null && EnemyManager.Instance is not null && Rng.Chance(0.5f);
+
+        _trialShrine = s;
+        s.Active = true;
+        _guardians.Clear();
+        _guardiansDown = 0;
+
+        if (guardians)
+        {
+            _trial = Trial.Guardians;
+            _trialLeft = MapShrines.GuardianSeconds;
+            int want = MapShrines.GuardianCount(run?.Phase ?? 1);
+            float start = Rng.Range(0f, Mathf.Tau);
+            for (int i = 0; i < want; i++)
+            {
+                float a = start + Mathf.Tau * i / want;
+                Vector3 at = s.GlobalPosition + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * MapShrines.GuardianRing;
+                if (s.GetParent() is Arena arena) at = arena.ClearSpotNear(at, 1.2f);
+                at.Y = s.GlobalPosition.Y + 0.3f;
+                Enemy? e = EnemyManager.Instance!.SpawnAt(elite!, at);
+                if (e is not null) _guardians.Add(e);
+            }
+            _trialTarget = _guardians.Count;
+            if (_trialTarget == 0)
+            {
+                // No room in the pool: fall back to the kill count.
+                guardians = false;
+            }
+        }
+        if (!guardians)
+        {
+            _trial = Trial.Slaughter;
+            _trialLeft = MapShrines.SlaughterSeconds;
+            _trialTarget = MapShrines.SlaughterTarget(run?.Seconds ?? 0f);
+            _trialKillsAt = run?.Kills ?? 0;
+        }
+
+        string what = _trial == Trial.Slaughter ? $"KILL {_trialTarget} IN {MapShrines.SlaughterSeconds:0}s"
+                                                : $"SLAY {_trialTarget} GUARDIANS";
+        EventBus.Publish(new PopupRequested(s.Top, "CHALLENGE!", MapShrines.Tint(MapShrineKind.Challenge).Lightened(0.2f), 1.8f));
+        EventBus.Publish(new PopupRequested(s.Top + Vector3.Down * 0.7f, what, ShrinePrompt.Neutral, 1.1f));
+        Publish(s, ShrineOutcome.ChallengeStarted, what);
+        GD.Print($"[shrine] challenge {_trial} target={_trialTarget} t={run?.Seconds ?? 0f:0}s");
+    }
+
+    /// <summary>The strongest elite unlocked by now, else the earliest one.</summary>
+    private static EnemyDef? PickElite(float runSeconds)
+    {
+        EnemyDef? best = null, earliest = null;
+        foreach (EnemyDef def in Catalog.Enemies)
+        {
+            if (def is null || !def.IsElite || def.IsBoss) continue;
+            if (earliest is null || def.UnlockAtSeconds < earliest.UnlockAtSeconds) earliest = def;
+            if (def.UnlockAtSeconds <= runSeconds && (best is null || def.Cost > best.Cost)) best = def;
+        }
+        return best ?? earliest;
+    }
+
+    private void TickTrial(float dt)
+    {
+        _trialLeft -= dt;
+
+        if (_trial == Trial.Guardians)
+        {
+            // A guardian is done once it is no longer alive. Checked every frame,
+            // before the pool could hand the node to a new spawn.
+            for (int i = _guardians.Count - 1; i >= 0; i--)
+            {
+                Enemy e = _guardians[i];
+                if (IsInstanceValid(e) && e.IsAlive) continue;
+                _guardians.RemoveAt(i);
+                _guardiansDown++;
+            }
+            if (_guardiansDown >= _trialTarget) { EndTrial(true); return; }
+        }
+        else if (KillsSinceStart >= _trialTarget) { EndTrial(true); return; }
+
+        if (_trialLeft <= 0f) EndTrial(false);
+    }
+
+    private void EndTrial(bool won, bool quiet = false)
+    {
+        MapShrine? s = _trialShrine;
+        Trial trial = _trial;
+        _trial = Trial.None;
+        _trialShrine = null;
+        _guardians.Clear();
+
+        bool shrineOk = s is not null && IsInstanceValid(s);
+        if (shrineOk) { s!.Active = false; s.MarkSpent(); }
+        if (quiet) return;
+
+        Vector3 at = shrineOk ? s!.Top : (Player.Instance is { } pl ? pl.GlobalPosition + Vector3.Up * 2.5f : Vector3.Zero);
+        if (!won)
+        {
+            ChallengesFailed++;
+            EventBus.Publish(new PopupRequested(at, "CHALLENGE FAILED", new Color(1f, 0.35f, 0.3f), 1.5f));
+            Publish(MapShrineKind.Challenge, ShrineOutcome.ChallengeFailed, at, trial.ToString());
+            GD.Print($"[shrine] challenge {trial} failed");
+            return;
+        }
+
+        ChallengesWon++;
+        if (shrineOk) s!.Celebrate();
+        string reward = PayReward(at);
+        EventBus.Publish(new PopupRequested(at + Vector3.Up * 0.8f, "CHALLENGE COMPLETE", new Color(0.55f, 1f, 0.65f), 1.6f));
+        Publish(MapShrineKind.Challenge, ShrineOutcome.ChallengeWon, at, reward);
+        GD.Print($"[shrine] challenge {trial} won reward=\"{reward}\"");
+    }
+
+    /// <summary>A gilded chest's roll (same luck bonus and rarity floor) plus
+    /// gold scaled by phase. Granted here, not through a chest, so the chest
+    /// economy's counters and price ladder are untouched.</summary>
+    private string PayReward(Vector3 at)
+    {
+        Inventory? inv = Inventory.Current;
+        Player? player = Player.Instance;
+        if (inv is null || player is null) return "nothing";
+
+        int gold = MapShrines.RewardGoldBase + MapShrines.RewardGoldPerPhase * Math.Max(0, (Main.Instance?.Run.Phase ?? 1) - 1);
+        inv.GrantGold(gold);
+
+        Offer? offer = OfferPool.Current?.RollChest(inv, player.Stats, MapShrines.RewardLuckBonus, MapShrines.RewardFloor, Rng);
+        if (offer is null)
+        {
+            inv.GrantGold(gold);
+            EventBus.Publish(new PopupRequested(at, $"+{gold * 2} gold", new Color(1f, 0.78f, 0.25f), 1.4f));
+            return "gold";
+        }
+        if (offer.Item is not null) inv.Add(offer.Item);
+        else offer.Apply(player, inv);
+        Color c = offer.IsBonus ? offer.Tint : Catalog.RarityColor(offer.Rarity);
+        EventBus.Publish(new PopupRequested(at, offer.Title, c, 1.8f));
+        EventBus.Publish(new PopupRequested(at + Vector3.Down * 0.7f, $"+{gold} gold", new Color(1f, 0.78f, 0.25f)));
+        return offer.Title;
+    }
+
+    private void OnRunEnded(RunEnded e)
+    {
+        if (_trial != Trial.None) EndTrial(false, quiet: true);
+    }
+
+    // -------------------------------------------------------------- helpers
+
+    private static bool Usable(MapShrine s) => IsInstanceValid(s) && !s.IsQueuedForDeletion() && !s.Spent;
+
+    private MapShrine? Focus(Vector3 at)
+    {
+        MapShrine? best = null;
+        float bestSq = float.MaxValue;
+        foreach (MapShrine s in _shrines)
+        {
+            if (!Usable(s) || !InReach(s, at)) continue;
+            float sq = (s.GlobalPosition - at).LengthSquared();
+            if (sq < bestSq) { best = s; bestSq = sq; }
+        }
+        return best;
+    }
+
+    private static void Publish(MapShrine s, ShrineOutcome outcome, string detail = "")
+        => EventBus.Publish(new MapShrineUsed(s.Kind, outcome, s.GlobalPosition, detail));
+
+    private static void Publish(MapShrineKind kind, ShrineOutcome outcome, Vector3 at, string detail)
+        => EventBus.Publish(new MapShrineUsed(kind, outcome, at, detail));
+
+    private static string KeyName()
+    {
+        if (!InputMap.HasAction(InteractAction)) return "E";
+        foreach (InputEvent ev in InputMap.ActionGetEvents(InteractAction))
+        {
+            if (ev is not InputEventKey k) continue;
+            Key code = k.PhysicalKeycode != Key.None ? k.PhysicalKeycode : k.Keycode;
+            if (code != Key.None) return OS.GetKeycodeString(code);
+        }
+        return "E";
+    }
+}
