@@ -216,7 +216,7 @@ public sealed partial class StatsPanel : Control
         }
 
         Clear(_loadout);
-        Section(_loadout, $"WEAPONS  {_weapons.Weapons.Count}/{WeaponSystem.MaxWeapons}");
+        Section(_loadout, $"WEAPONS  {_weapons.Weapons.Count}/{_weapons.Slots}");
         foreach (WeaponRuntime w in _weapons.Weapons)
         {
             Color c = Catalog.RarityColor(w.Def.Rarity);

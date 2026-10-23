@@ -97,6 +97,7 @@ public static class Routes
         Profile.EnsureLoaded();
         Launch.Parse();
         RouteDef route = Launch.SkipsMenu ? All[0] : Selected;
+        if (MapChallenges.RouteOverride is { } forcedRoute && ById(forcedRoute) is { } mr) route = mr;   // map challenge
         string[]? explicitMaps = null;
         foreach (string arg in OS.GetCmdlineUserArgs())
         {
@@ -114,6 +115,7 @@ public static class Routes
         }
         else stages = route.Id == "classic" ? Stages.Run : Build(route, seed);
 
+        stages = MapChallenges.Twist(stages);   // map challenge twist, on a copy of its map
         Active = route;
         GD.Print($"META route={route.Id} maps={string.Join(",", stages.Select(s => s.Id))}");
         return stages;

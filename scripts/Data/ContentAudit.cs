@@ -211,6 +211,7 @@ public static partial class ContentAudit
             AuditExpansion(system);
             AuditIcons();
             AuditCute(system);              // ContentAudit.CuteEnemies.cs
+            AuditMapChallenges();   // map challenges, Toggler, slots, cute shrines (ContentAudit.MapChallenges.cs)
         }
         catch (Exception e)
         {

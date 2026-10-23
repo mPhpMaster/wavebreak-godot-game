@@ -129,6 +129,10 @@ public partial class StageDef : Resource
     [Export] public int ChallengeShrines { get; set; } = 1;
     [Export] public int StatueShrines { get; set; } = 1;
     [Export] public int GreedShrines { get; set; } = 1;
+    /// <summary>The friendly encounters (<see cref="Game.CuteShrineSpawner"/>):
+    /// a Shrine of Balance and a Wishing Well per map by default.</summary>
+    [Export] public int BalanceShrines { get; set; } = 1;
+    [Export] public int WishingWells { get; set; } = 1;
 
     // ---------------------------------------------------------------- phase
 

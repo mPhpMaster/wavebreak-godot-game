@@ -38,23 +38,23 @@ public static class MetaContent
     /// The item list a run's offer pool should draw from: the whole base catalogue
     /// plus whatever locked items this profile has earned.
     /// </summary>
-    public static List<ItemDef> OfferItems(IReadOnlyList<ItemDef> catalogue)
+    public static List<ItemDef> OfferItems(IReadOnlyList<ItemDef> catalogue, bool toggled = true)
     {
         var list = new List<ItemDef>(catalogue);
         list.RemoveAll(d => !Unlocks.IsContentUnlocked(d.Id));   // gated expansion entries, see ExpansionUnlocks
         foreach (ItemDef def in Items)
             if (Unlocks.IsContentUnlocked(def.Id)) list.Add(def);
-        return list;
+        return toggled ? Toggler.Filter(list, d => d.Id, ToggleKind.Item) : list;   // Meta/Toggler
     }
 
     /// <summary>Weapon counterpart of <see cref="OfferItems"/>.</summary>
-    public static List<WeaponDef> OfferWeapons(IReadOnlyList<WeaponDef> catalogue)
+    public static List<WeaponDef> OfferWeapons(IReadOnlyList<WeaponDef> catalogue, bool toggled = true)
     {
         var list = new List<WeaponDef>(catalogue);
         list.RemoveAll(d => !Unlocks.IsContentUnlocked(d.Id));   // gated expansion entries, see ExpansionUnlocks
         foreach (WeaponDef def in Weapons)
             if (Unlocks.IsContentUnlocked(def.Id)) list.Add(def);
-        return list;
+        return toggled ? Toggler.Filter(list, d => d.Id, ToggleKind.Weapon) : list;   // Meta/Toggler
     }
 
     /// <summary>Display name for any id this layer can grant, base or locked.</summary>

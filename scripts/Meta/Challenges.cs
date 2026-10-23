@@ -172,6 +172,7 @@ public static class Challenges
                 : list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                       .Select(ById).Where(c => c is not null).Cast<ChallengeDef>().Distinct().ToList();
         }
+        set = MapChallenges.Merge(set);   // the selected map challenge's modifiers (Meta/MapChallenges)
         Apply(set.OrderBy(IndexOf).ToList());
     }
 
@@ -190,6 +191,7 @@ public static class Challenges
         if (IsActive("speed")) phase *= 0.75f;
         if (IsActive("chonk")) { hp *= 2.2f; dmg *= 1.3f; speed *= 0.75f; crowd *= 0.6f; size = 1.45f; }
 
+        hp *= MapChallenges.HealthScale; dmg *= MapChallenges.DamageScale;   // map challenge tier
         EnemyHealth = hp; EnemyDamage = dmg; _enemySpeed = speed; _spawnRate = spawn;
         Crowd = crowd; EnemyVisualScale = size; PhaseTimeScale = phase;
         RewardMultiplier = RewardFor(set);

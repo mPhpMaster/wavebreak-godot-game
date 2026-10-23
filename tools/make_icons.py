@@ -1,6 +1,7 @@
 """Builds the white-glyph icon set in assets/icons/.
 
     python tools/make_icons.py <kenney-download-root> [<out-dir>]
+    python tools/make_icons.py --procedural [<name> ...]   (original glyphs only, no download)
 
 Every icon is a white silhouette with a dark outline on a transparent 128x128
 canvas. The game tints the white at draw time (Control modulate multiplies, so
@@ -587,6 +588,66 @@ def g_tome():
     return im
 
 
+
+# ---- map challenges, Toggler, slots and the cute shrines
+
+def g_scales():
+    im = canvas(); d = ImageDraw.Draw(im)
+    d.rounded_rectangle((236, 110, 276, 420), 16, fill=255)        # post
+    d.rounded_rectangle((150, 410, 362, 456), 20, fill=255)        # foot
+    circle(d, 256, 96, 34)                                          # knob
+    thick_line(d, [(92, 150), (420, 150)], 30)                      # beam
+    for cx in (110, 402):
+        thick_line(d, [(cx, 150), (cx - 62, 290)], 10)
+        thick_line(d, [(cx, 150), (cx + 62, 290)], 10)
+        d.pieslice((cx - 92, 220, cx + 92, 350), 0, 180, fill=255)   # pan
+    return im
+
+
+def g_well():
+    im = canvas(); d = ImageDraw.Draw(im)
+    d.polygon([(70, 190), (256, 50), (442, 190)], fill=255)          # roof
+    d.rectangle((110, 180, 140, 330), fill=255)                      # posts
+    d.rectangle((372, 180, 402, 330), fill=255)
+    thick_line(d, [(256, 190), (256, 270)], 10)                      # rope
+    d.rounded_rectangle((222, 262, 290, 318), 10, fill=255)          # bucket
+    d.rounded_rectangle((80, 320, 432, 470), 40, fill=255)           # stone ring
+    for x in (170, 256, 342):
+        d.rectangle((x - 4, 330, x + 4, 460), fill=0)                # stone joints
+    d.rectangle((80, 392, 432, 400), fill=0)
+    return im
+
+
+def g_toggle():
+    im = canvas(); d = ImageDraw.Draw(im)
+    d.rounded_rectangle((40, 150, 472, 362), 106, fill=255)
+    circle(d, 366, 256, 80, 0)
+    circle(d, 366, 256, 62, 255)
+    return im
+
+
+def g_flag():
+    im = canvas(); d = ImageDraw.Draw(im)
+    d.rounded_rectangle((110, 50, 146, 470), 16, fill=255)           # pole
+    circle(d, 128, 52, 28)
+    pts = [(146, 80)]
+    for x in range(146, 450, 8):
+        pts.append((x, 90 + 26 * math.sin((x - 146) / 304 * 2 * math.pi)))
+    for x in range(450, 145, -8):
+        pts.append((x, 280 + 26 * math.sin((x - 146) / 304 * 2 * math.pi)))
+    d.polygon(pts, fill=255)
+    return im
+
+
+def g_slot():
+    im = canvas(); d = ImageDraw.Draw(im)
+    d.rounded_rectangle((60, 60, 452, 452), 70, fill=255)
+    d.rounded_rectangle((110, 110, 402, 402), 44, fill=0)
+    d.rounded_rectangle((232, 150, 280, 362), 16, fill=255)         # plus
+    d.rounded_rectangle((150, 232, 362, 280), 16, fill=255)
+    return im
+
+
 PROCEDURAL = {
     "boot": g_boot, "dash": g_dash, "magnet": g_magnet, "snowflake": g_snowflake,
     "bolt": g_bolt, "drop": g_drop, "spring": g_spring, "feather": g_feather, "coin": g_coin,
@@ -598,6 +659,7 @@ PROCEDURAL = {
     "lance": g_lance, "lantern": g_lantern, "regen": g_regen, "swords": g_swords,
     "fang": g_fang, "anchor": g_anchor, "gem": g_gem, "spark": g_spark, "comet": g_comet,
     "moon": g_moon, "medkit": g_medkit, "bubble": g_bubble, "buoy": g_buoy, "tome": g_tome,
+    "scales": g_scales, "well": g_well, "toggle": g_toggle, "flag": g_flag, "slot": g_slot,
 }
 
 
@@ -646,8 +708,18 @@ def main():
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(2)
+    out_dir_default = os.path.join(os.path.dirname(__file__), "..", "assets", "icons")
+    if sys.argv[1] == "--procedural":
+        # Redraw only the original glyphs (all, or the names given); the
+        # Kenney-derived icons already in the folder are left alone.
+        wanted = sys.argv[2:] or list(PROCEDURAL)
+        os.makedirs(out_dir_default, exist_ok=True)
+        for name in wanted:
+            render(PROCEDURAL[name]()).save(os.path.join(out_dir_default, name + ".png"))
+        print(f"{len(wanted)} procedural icons -> {os.path.abspath(out_dir_default)}")
+        return
     ROOT = sys.argv[1]
-    out_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(__file__), "..", "assets", "icons")
+    out_dir = sys.argv[2] if len(sys.argv) > 2 else out_dir_default
     os.makedirs(out_dir, exist_ok=True)
     names = []
     for name in KENNEY:

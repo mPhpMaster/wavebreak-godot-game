@@ -280,6 +280,9 @@ public sealed class OfferPool
     /// out of every level-up roll and chest roll.</summary>
     public HashSet<object> Banished { get; } = new(ReferenceEqualityComparer.Instance);
 
+    /// <summary>Tome ids switched off in the Toggler (Meta/Toggler). Never offered.</summary>
+    public HashSet<string> DisabledTomes { get; } = new();
+
     public OfferPool(IReadOnlyList<ItemDef>? items, IReadOnlyList<WeaponDef>? weapons, Rng rng)
     {
         _rng = rng ?? throw new ArgumentNullException(nameof(rng));
@@ -460,6 +463,7 @@ public sealed class OfferPool
             TomeDef def = all[i];
             if (!book.CanTake(def)) continue;
             if (Banished.Count > 0 && Banished.Contains(def)) continue;
+            if (DisabledTomes.Count > 0 && DisabledTomes.Contains(def.Id)) continue;
 
             int level = book.LevelOf(def);
             float weight = def.Weight <= 0f ? 0f
