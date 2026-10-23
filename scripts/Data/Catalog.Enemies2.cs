@@ -34,6 +34,7 @@ public static partial class Catalog
         foreach (EnemyDef e in baseList)
             if (e.Themes.Length == 0 && themes.TryGetValue(e.Id, out string[]? t)) e.Themes = t;
         baseList.AddRange(BuildExpansionEnemies());
+        baseList.AddRange(BuildCuteEnemies());   // Data/Catalog.Enemies3.cs
         return baseList;
     }
 

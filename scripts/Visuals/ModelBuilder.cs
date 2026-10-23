@@ -69,7 +69,8 @@ public static class ModelBuilder
         var c = new Ctx { S = s, H = Mathf.Max(0.2f, s.Height) };
         c.Out.Height = c.H;
 
-        switch (s.Body)
+        if (s.Custom is not null) CustomBuild(c);   // CuteModels and friends
+        else switch (s.Body)
         {
             case BodyType.Quadruped: Quadruped(c); break;
             case BodyType.Blob: Blob(c); break;
@@ -99,6 +100,16 @@ public static class ModelBuilder
         }
         if (s.Aura || s.Crown) c.Out.AuraRadius = Mathf.Max(0.8f, c.H * 0.45f * s.Bulk);
         return c.Out;
+    }
+
+    private static void CustomBuild(Ctx c)
+    {
+        var b = new CustomBody(c.S, c.H, c.Body);
+        c.S.Custom!(b);
+        c.Out.HipsOffset = b.HipsOffset;
+        c.Out.StrideLength = b.StrideLength;
+        foreach (var (role, side, pivot, kit) in b.Parts)
+            c.Parts.Add((new PartDef { Role = role, Side = side, Pivot = pivot }, kit, null));
     }
 
     // ================================================================= biped

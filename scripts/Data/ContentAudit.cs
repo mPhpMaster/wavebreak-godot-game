@@ -210,6 +210,7 @@ public static partial class ContentAudit
             AuditElements();
             AuditExpansion(system);
             AuditIcons();
+            AuditCute(system);              // ContentAudit.Cute.cs
         }
         catch (Exception e)
         {
@@ -245,7 +246,7 @@ public static partial class ContentAudit
         _showcase = false;
         _log = true;
 
-        string[] enemies = { "brinespitter", "bloat_polyp", "reefhorn", "surge_leaper", "shoalmother", "deepcaller" };
+        string[] enemies = ShowcaseEnemyIds() ?? new[] { "brinespitter", "bloat_polyp", "reefhorn", "surge_leaper", "shoalmother", "deepcaller" };
         if (Main.Instance?.Player is not { } player || EnemyManager.Instance is not { } em) return;
 
         Vector3 origin = player.GlobalPosition;
