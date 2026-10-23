@@ -363,37 +363,6 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     // ------------------------------------------------------------------ loop
 
     private float _animProbeAt = -1f;
-    private int _boundaryCheck = -1;   // -1 unknown, 0 off, 1 on
-    private float _boundaryMax, _boundaryNext;
-
-    /// <summary>--check-boundary: run straight at the wall jumping, double
-    /// jumping and dashing; report the furthest point reached.</summary>
-    private void CheckBoundary()
-    {
-        if (_boundaryCheck < 0)
-        {
-            _boundaryCheck = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-boundary") >= 0 ? 1 : 0;
-            if (_boundaryCheck == 1) MoveOverride = () => Vector3.Right;
-        }
-        if (_boundaryCheck != 1) return;
-        float d = new Vector2(GlobalPosition.X, GlobalPosition.Z).Length();
-        _boundaryMax = Mathf.Max(_boundaryMax, d);
-        if (_time >= _boundaryNext)
-        {
-            _boundaryNext = _time + 0.45f;
-            RequestJump();
-            if ((int)(_time * 2f) % 3 == 0) RequestDash();
-        }
-        if (_time > 10f)
-        {
-            float limit = Game.Arena.Radius - BodyRadius - 0.6f;
-            GD.Print($"BOUNDARY max={_boundaryMax:0.00} limit={limit:0.00} radius={Game.Arena.Radius} " +
-                     $"{(_boundaryMax <= limit + 0.05f ? "PASS" : "FAIL")}");
-            _boundaryCheck = 0;
-            GetTree().Quit();
-        }
-    }
-
     /// <summary>--check-walk: print the rig's clip state a few times while the
     /// autopilot moves, proving locomotion clips keep cycling.</summary>
     private void ProbeAnimation()
@@ -415,7 +384,6 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
         UpdateAim();
         ProbeAnimation();
-        CheckBoundary();
 
         bool alive = Health is null || Health.IsAlive;
         bool grounded = IsOnFloor();
@@ -532,14 +500,13 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     /// </summary>
     private void KeepInsideArena()
     {
-        float limit = Game.Arena.Radius - BodyRadius - 0.6f;
-        var flat = new Vector2(GlobalPosition.X, GlobalPosition.Z);
-        float d = flat.Length();
-        if (d <= limit || d < 0.001f) return;
+        // The current map's own polygon, not a circle: maps change shape per
+        // phase, and a circle either loses a hexagon's corners or leaks them.
+        // (--check-boundary, run per map, lives in Game.StageDirector.)
+        Vector3 at = Game.Arena.ClampInside(GlobalPosition, BodyRadius + 0.6f, out Vector3 normal);
+        if (normal == Vector3.Zero) return;
 
-        Vector2 n = flat / d;
-        GlobalPosition = new Vector3(n.X * limit, GlobalPosition.Y, n.Y * limit);
-        var normal = new Vector3(n.X, 0f, n.Y);
+        GlobalPosition = at;
         float outMove = _moveVelocity.Dot(normal);
         if (outMove > 0f) _moveVelocity -= normal * outMove;
         float outPush = _externalVelocity.Dot(normal);

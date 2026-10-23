@@ -960,14 +960,15 @@ public static class Catalog
             Tint = new Color(0.42f, 0.80f, 1.00f),
         },
 
-        // ---- Boss. Spawned on its own timer at 4, 8 and 12 minutes (never on top
-        // of a living boss), and announced. Health rides EnemyManager.
-        // DifficultyBossHp (x3.2 at four minutes, x6.6 at eight, x12 at twelve):
-        // 1900 is about 6,000 at its intended four-minute slot, a one-minute
-        // fight for the bot's typical build there (~100 dps against a boss).
-        // Bosses written for later tiers carry more base health on purpose —
-        // the bot is far weaker than a practised player, so later fights lean
-        // hard rather than soft.
+        // ---- Boss, tier 1. Ends the first phase (Game.StageDirector), or comes
+        // on the old timer when no stage director runs. Health rides the crowd's
+        // curve (x2.9 at 3:30, x6.6 at 8:00, x12 at 12:00) times the phase's own
+        // boss scale. 1900 was tuned unscaled at four minutes to about a 70s
+        // fight for the bot's typical build there (measured 70s and 184s on two
+        // seeds); the phase scale trims that for the phase fight, where the
+        // crowd is capped and overtime hardens it. Bosses written for later
+        // tiers carry more base health on purpose — the bot is far weaker than
+        // a practised player, so later fights lean hard rather than soft.
         //
         // Reach 3.2m and a 1.6s swing: readable, avoidable, and lethal if
         // ignored. The gold value alone is worth more than the preceding minute.

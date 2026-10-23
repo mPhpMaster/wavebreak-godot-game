@@ -63,9 +63,8 @@ public static class RunMeta
         main.AddChild(layer);
         layer.AddChild(new UI.UnlockToast());
 
-        // Until maps call this themselves: once, on the run root. A separate Rng
-        // derived from the seed keeps the run's own stream untouched.
-        SecretSpawner.Populate(main, new Rng(main.Run.Seed ^ 0x5EC2E75UL), Arena.Radius);
+        // Shrines are placed per map by Game.StageDirector, under each arena, so
+        // every phase has its own to find and they leave with the map.
 
         int earnedItems = MetaContent.Items.Count(i => Unlocks.IsContentUnlocked(i.Id));
         int earnedWeapons = MetaContent.Weapons.Count(w => Unlocks.IsContentUnlocked(w.Id));

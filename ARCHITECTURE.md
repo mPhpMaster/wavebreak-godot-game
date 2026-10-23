@@ -90,7 +90,12 @@ classes, and lets someone tune them without touching C#.
 | `StatSheet.EvasionHalfPoint` | 40 | same shape, separate curve |
 | `EnemyDef.Cost` | per enemy | how the director's budget converts into threat — swarm vs. squad |
 | `EnemyDef.UnlockAtSeconds` | per enemy | paces which threats appear when |
-| `RunState.TargetSeconds` | 900 | run length; 15 min is long enough for a build to form, short enough to retry |
+| `RunState.TargetSeconds` | 900 | nominal run length; the stage table is tuned to land near it |
+| `StageDef.PhaseSeconds` | 210 | waves per map before its boss arrives; 3 maps x (3:30 + ~2 min boss) ~ 15 min |
+| `StageDef.Radius` | 130-165 m | maps are 2-3x the old 60 m disc; spawns stay on a ring around the player, so density near the player is unchanged |
+| `StageDef.Enemy*Scale` | 1 / 1.25 / 1.55 hp | per-map step on top of the clock curve; phase 1 is exactly 1 so the opening is untouched |
+| `StageDef.BossHealthScale` | 0.55 (0.45 last) | phase bosses are mandatory gates and weapons aim at the nearest enemy, so they carry less than the full time-curve health |
+| `StageDef.BossGraceSeconds` | 120 | boss lifetime before overtime adds +12% enemy hp/damage per 30 s |
 
 `HealthRegen` is stored **per minute** because that is the readable unit on a
 tooltip; `StatSheet.RegenPerSecond()` is the only place that conversion happens.
@@ -151,8 +156,8 @@ scripts/
   Actors/      Player, PlayerHealth, PlayerCamera, Enemy, EnemyManager, Pickup
   Progression/ XpCurve, Inventory, OfferPool
   UI/          Hud, LevelUpPanel, ResultsScreen, DamagePopup
-  Data/        Definitions, Catalog     <- all content
-  Game/        Main, Arena, RunState, Screenshot
+  Data/        Definitions, Catalog, Stages   <- all content (Stages = maps + phases)
+  Game/        Main, Arena, StageDirector, Portal, RunState, Screenshot
   Meta/        Profile, Unlocks, Characters, MetaContent, SecretSpawner, UnlockTracker
   Visuals/     ModelSpec, ModelBuilder, CharacterRig, PlayerLooks, EnemyVisuals,
                PropTheme, PropFactory, ToonMaterials, ArtAssets, showcase/stress
