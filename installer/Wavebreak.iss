@@ -3,7 +3,7 @@
 ; Output: build\installer\Wavebreak-Setup-<version>.exe
 
 #define AppName "Wavebreak"
-#define AppVersion "1.0.0"
+#define AppVersion "1.1.0"
 #define AppPublisher "mPhpMaster"
 #define AppExe "Wavebreak.exe"
 #define Source "..\build\windows"
