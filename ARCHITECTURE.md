@@ -118,6 +118,29 @@ Godot_v4.7.1-stable_mono_win64_console.exe --path . --resolution 1280x720 -- --s
 Seeded runs are reproducible (`Core/Rng.cs`), which is what makes a balance bug
 re-testable and lets captures be compared across changes.
 
+## Visuals: imported first, procedural always there
+
+`Visuals/` owns how things look; gameplay code never builds a mesh.
+
+- **Imported models are the primary look** (CC0 Kenney and Quaternius packs,
+  `assets/CREDITS.md`), wrapped as a `ModelSpec` with a clip map
+  (`ArtAssets`). **Procedural models are the fallback** (`ModelBuilder`): any
+  enemy without a mapping, or whose file is missing, still gets a body built
+  from its numbers. A new `EnemyDef` therefore never renders as nothing.
+- **One `CharacterRig` per character** is both model and animator. It plays
+  clips for imported models and poses parts for procedural ones, and layers the
+  same procedural squash, lean, flip and death on top of both. Gameplay talks
+  to it through four hooks: `PlayAttackWindup`, `PlayAttack`, `PlayHit`,
+  `PlayDeath` (enemies: `EnemyVisuals.SpawnCorpse`, because the pooled node
+  vanishes the instant it dies).
+- **Cost is per kind, not per instance.** Procedural meshes are built once per
+  spec and share one material (colour in vertices, flash/dissolve as instance
+  uniforms); imported clips advance at a reduced rate far from the camera; far
+  procedural enemies swap to a merged mesh via engine visibility ranges; props
+  go through MultiMesh. Measure with `--art-stress=N` against `--art-off`.
+- **Biomes are data** (`PropTheme`), consumed by `PropFactory` (floor shader,
+  scatter, sky, sun). A theme can mix kit and procedural props per kind.
+
 ## Layout
 
 ```
@@ -130,7 +153,22 @@ scripts/
   UI/          Hud, LevelUpPanel, ResultsScreen, DamagePopup
   Data/        Definitions, Catalog     <- all content
   Game/        Main, Arena, RunState, Screenshot
+  Meta/        Profile, Unlocks, Characters, MetaContent, SecretSpawner, UnlockTracker
+  Visuals/     ModelSpec, ModelBuilder, CharacterRig, PlayerLooks, EnemyVisuals,
+               PropTheme, PropFactory, ToonMaterials, ArtAssets, showcase/stress
+assets/        imported CC0 models (see assets/CREDITS.md)
 ```
+
+The project boots into `scenes/Title.tscn` (`UI/MainMenu`). Any game argument
+other than the menu's own (`--profile`, `--menu-shot`, `--menu-page`) skips it
+straight into the run, so every automated launch behaves as before. Automated
+runs never touch the real profile unless `--profile=<path>` is given. Unlocks
+only *add* content (`Meta/MetaContent`); the base catalogue is never locked.
+
+Art checks: `-- --art-showcase=hero|enemies|closeup|props-<theme> --shot=x.png`
+stages a scene; `--art-theme=<theme>` plays a run in a biome;
+`--art-stress=150` (with `--art-off` / `--art-procedural` for A/B) prints a
+`STRESS` line with wall-clock frame times.
 
 `Game/Main.cs` constructs the systems and ticks them **in one place** rather than
 letting each run its own `_Process`. That ordering is deliberate: with

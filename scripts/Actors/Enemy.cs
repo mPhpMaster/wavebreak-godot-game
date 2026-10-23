@@ -231,7 +231,6 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     private const float MaxKnockbackSpeed = 22f;
     private const float FlashDuration = 0.11f;
     private const float TurnSpeed = 9f;             // radians/second
-    private const float AssumedPlayerRadius = 0.55f;
     private const float DashAcceleration = 220f;    // a charge is at speed within a few frames
 
     // ---------------------------------------------------------- identity
@@ -247,6 +246,22 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     private float _contactDamage;
     private float _speed;
     private float _attackRange = 1.6f;
+    private float _bodyRadius = 0.5f;
+
+    /// <summary>
+    /// Gap between the two bodies at which a melee swing lands, metres.
+    ///
+    /// Reach is measured from the enemy's edge to the player's edge, not centre to
+    /// centre. The old centre-based test (AttackRange + 0.55) let a small enemy
+    /// hit from well over a metre away — with real models that read as being
+    /// damaged by something that had not reached you yet. A big enemy still hits
+    /// from further off, because its own radius is part of the distance.
+    /// </summary>
+    private float ContactDistance => _bodyRadius + Player.BodyRadius + MeleeReach;
+
+    /// <summary>Edge-to-edge melee reach: AttackRange beyond the old baseline of
+    /// 1.3 lengthens it slightly (long-armed brutes), but never past 0.8 m.</summary>
+    private float MeleeReach => Mathf.Clamp(0.3f + (_attackRange - 1.3f) * 0.25f, 0.2f, 0.8f);
     private float _attackCooldown = 1f;
     private float _knockbackResist;
 
@@ -270,6 +285,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     private StandardMaterial3D? _accentMaterial;
     private Color _baseColor = Colors.White;
     private Color _accentColor = Colors.White;
+    private Visuals.CharacterRig? _rig; // the model; see Visuals.EnemyVisuals
 
     // ------------------------------------------------- manager bookkeeping
 
@@ -345,6 +361,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         _def = def;
 
         float radius = MathF.Max(0.12f, def.Radius);
+        _bodyRadius = radius;
         float height = MathF.Max(radius * 2f + 0.02f, def.Height);
         _halfHeight = height * 0.5f;
 
@@ -497,7 +514,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             && _act == Act.None
             && _attackTimer <= 0f
             && player.IsAlive
-            && distance <= _attackRange + AssumedPlayerRadius)
+            && distance <= ContactDistance)
         {
             Strike(player, heading);
         }
@@ -523,6 +540,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             Source = _def?.Id ?? "enemy",
         };
         player.TakeDamage(hit);
+        _rig?.PlayAttack();
 
         // Recoil, so a hit reads as a lunge and the attacker briefly breaks
         // contact instead of grinding against the player at zero distance.
@@ -601,6 +619,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
 
         _health -= amount;
         _flashTimer = FlashDuration;
+        _rig?.PlayHit();
 
         if (info.Knockback > 0f && _act != Act.Dash) AddKnockback(info.Direction, info.Knockback);
 
@@ -632,6 +651,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         int gold = _def?.GoldValue ?? 0;
         Data.ContentAudit.NoteKill(_def);
         if (IsBoss) Data.ContentAudit.NoteBossDeath(_def, _aliveSeconds);
+        Visuals.EnemyVisuals.SpawnCorpse(_rig);
         Split();
 
         // Slightly above the feet: drops read better when they are not embedded
@@ -737,6 +757,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
 
     private void BuildBody(EnemyDef def, float radius, float height)
     {
+        _rig = Visuals.EnemyVisuals.Attach(this, def, _rig);
         Silhouette wanted = Classify(def);
         bool sameShape = wanted == _builtSilhouette
                       && Mathf.IsEqualApprox(radius, _builtRadius)
@@ -792,6 +813,9 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             _accentMesh.RotationDegrees = horn ? new Vector3(90f, 0f, 0f) : Vector3.Zero;
             _accentMesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         }
+
+        _bodyMesh.Visible = _rig is null; // the rig draws the body when there is one
+        if (_accentMesh is not null) _accentMesh.Visible = _rig is null && accent is not null;
 
         // Only the things worth noticing get a light. Hundreds of OmniLight3Ds
         // is the fastest way to melt the forward+ renderer.

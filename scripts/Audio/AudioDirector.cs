@@ -208,6 +208,7 @@ public sealed partial class AudioDirector : Node
         EventBus.Subscribe<LevelGained>(OnLevelGained);
         EventBus.Subscribe<PlayerMoved>(OnPlayerMoved);
         EventBus.Subscribe<RunEnded>(OnRunEnded);
+        SubscribeChestSounds();
         _subscribed = true;
     }
 
@@ -228,6 +229,7 @@ public sealed partial class AudioDirector : Node
         EventBus.Unsubscribe<LevelGained>(OnLevelGained);
         EventBus.Unsubscribe<PlayerMoved>(OnPlayerMoved);
         EventBus.Unsubscribe<RunEnded>(OnRunEnded);
+        UnsubscribeChestSounds();
     }
 
     private static void EnsureStreams()
@@ -600,6 +602,7 @@ public sealed partial class AudioDirector : Node
         sb.Append(" slam=").Append(P(Sfx.SlamImpact));
         sb.Append(" land=").Append(P(Sfx.Land));
         sb.Append(" runend=").Append(P(Sfx.RunWin) + P(Sfx.RunLose));
+        sb.Append(" chest=").Append(_chestPlayed);
         sb.Append(" dropped=").Append(_dropped);
         sb.Append(" stolen=").Append(_stolen);
         sb.Append(" ambient=").Append(_ambient is not null && _ambient.Playing ? 1 : 0);

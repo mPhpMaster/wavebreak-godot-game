@@ -121,8 +121,21 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
     // ---------------------------------------------------------------- palette
 
-    private static readonly Color BodyColor = new(0.28f, 0.76f, 1.00f);
-    private static readonly Color NoseColor = new(1.00f, 0.84f, 0.25f);
+    private Color _bodyColor = new(0.28f, 0.76f, 1.00f);
+
+    /// <summary>The look id of the chosen character skin, resolved into a model
+    /// by <see cref="Visuals.PlayerLooks"/>.</summary>
+    public string LookId { get; private set; } = Visuals.PlayerLooks.Default;
+
+    /// <summary>Applies a character skin: the model by look id, and the tint as
+    /// the body colour (it drives the i-frame shimmer, and is the whole body
+    /// colour for looks that fall back to a procedural model). Safe before or
+    /// after <see cref="_Ready"/>.</summary>
+    public void ApplySkin(Color tint, string lookId)
+    {
+        _bodyColor = tint;
+        SetLook(lookId);
+    }
     private static readonly Color DashColor = new(0.55f, 0.90f, 1.00f);
     private static readonly Color SlamColor = new(1.00f, 0.72f, 0.30f);
 
@@ -178,9 +191,8 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     // ----------------------------------------------------------------- fields
 
     private Node3D _visual = null!;
-    private Node3D _pose = null!;        // squash/lean/bob live here, under the yaw
-    private MeshInstance3D _torso = null!;
-    private StandardMaterial3D _torsoMaterial = null!;
+    private Node3D _pose = null!;        // squash/lean live here, under the yaw
+    private Visuals.CharacterRig _rig = null!; // the model and its procedural animator
     private OmniLight3D _lamp = null!;
 
     private Camera3D? _camera;
@@ -214,7 +226,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     private float _squash;              // + = stretched tall, - = squashed flat
     private float _squashVelocity;
     private Vector3 _lean;              // x = pitch, z = roll, in radians
-    private float _bobPhase;
+    private CapsuleMesh? _ghostCapsule;
     private Vector3 _lastPlanar;
 
     private float _flash;
@@ -284,9 +296,10 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     // ------------------------------------------------------------------ body
 
     /// <summary>
-    /// Builds the avatar from primitives. The body hangs under two nodes: the yaw
-    /// node turns it to face the heading, and the pose node underneath bends it
-    /// — squash, stretch, lean and bob — so pose never fights with facing.
+    /// Builds the avatar. The model (a <see cref="Visuals.CharacterRig"/>, which
+    /// animates its own limbs) hangs under two nodes: the yaw node turns it to
+    /// face the heading, and the pose node underneath bends it — squash, stretch
+    /// and lean — so neither pose nor limb animation ever fights with facing.
     /// </summary>
     private void BuildBody()
     {
@@ -303,58 +316,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         _pose = new Node3D { Name = "Pose" };
         _visual.AddChild(_pose);
 
-        _torsoMaterial = new StandardMaterial3D
-        {
-            AlbedoColor = BodyColor,
-            Metallic = 0.15f,
-            Roughness = 0.4f,
-            EmissionEnabled = true,
-            Emission = BodyColor,
-            EmissionEnergyMultiplier = 0.35f,
-        };
-
-        _torso = new MeshInstance3D
-        {
-            Name = "Torso",
-            Mesh = new CapsuleMesh { Radius = BodyRadius, Height = BodyHeight, RadialSegments = 16, Rings = 6 },
-            Position = new Vector3(0f, BodyHeight * 0.5f, 0f),
-            MaterialOverride = _torsoMaterial,
-        };
-        _pose.AddChild(_torso);
-
-        var noseMaterial = new StandardMaterial3D
-        {
-            AlbedoColor = NoseColor,
-            Roughness = 0.3f,
-            EmissionEnabled = true,
-            Emission = NoseColor,
-            EmissionEnergyMultiplier = 1.3f,
-        };
-
-        // -Z is forward in Godot, so the nose pushes out along negative Z.
-        _pose.AddChild(new MeshInstance3D
-        {
-            Name = "Nose",
-            Mesh = new BoxMesh { Size = new Vector3(0.22f, 0.22f, 0.55f) },
-            Position = new Vector3(0f, BodyHeight * 0.62f, -(BodyRadius + 0.16f)),
-            MaterialOverride = noseMaterial,
-        });
-
-        var bootMaterial = new StandardMaterial3D
-        {
-            AlbedoColor = new Color(0.10f, 0.16f, 0.26f),
-            Roughness = 0.8f,
-        };
-        for (int side = -1; side <= 1; side += 2)
-        {
-            _pose.AddChild(new MeshInstance3D
-            {
-                Name = side < 0 ? "BootL" : "BootR",
-                Mesh = new BoxMesh { Size = new Vector3(0.24f, 0.16f, 0.42f) },
-                Position = new Vector3(side * 0.19f, 0.08f, -0.04f),
-                MaterialOverride = bootMaterial,
-            });
-        }
+        SetLook(LookId);
 
         _lamp = new OmniLight3D
         {
@@ -367,6 +329,24 @@ public sealed partial class Player : CharacterBody3D, IDamageable
             ShadowEnabled = false,
         };
         AddChild(_lamp);
+    }
+
+    /// <summary>
+    /// Wear a different look (character select, unlocks). Only the model under
+    /// the pose node is replaced; collision, facing and the pose springs stay, so
+    /// this is safe mid-run.
+    /// </summary>
+    public void SetLook(string lookId)
+    {
+        LookId = lookId;
+        if (_pose is null) return; // applied in BuildBody
+        if (_rig is not null && IsInstanceValid(_rig)) _rig.QueueFree();
+        _rig = Visuals.CharacterRig.Create(Visuals.PlayerLooks.Get(lookId));
+        // The controller knows its state better than position deltas could tell
+        // it (a dash and a knockback move the body the same way).
+        _rig.ManualMotion = true;
+        _pose.AddChild(_rig);
+        _rig.EnableShadow();
     }
 
     // ---------------------------------------------------------- code requests
@@ -382,12 +362,29 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
     // ------------------------------------------------------------------ loop
 
+    private float _animProbeAt = -1f;
+
+    /// <summary>--check-walk: print the rig's clip state a few times while the
+    /// autopilot moves, proving locomotion clips keep cycling.</summary>
+    private void ProbeAnimation()
+    {
+        if (_animProbeAt < 0f)
+        {
+            _animProbeAt = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-walk") >= 0 ? 2f : float.MaxValue;
+            return;
+        }
+        if (_time < _animProbeAt || _rig is null) return;
+        _animProbeAt += 0.7f;
+        GD.Print($"WALK t={_time:0.0} v={_moveVelocity.Length():0.0} {_rig.DebugClip}");
+    }
+
     public override void _PhysicsProcess(double delta)
     {
         float dt = (float)delta;
         _time += dt;
 
         UpdateAim();
+        ProbeAnimation();
 
         bool alive = Health is null || Health.IsAlive;
         bool grounded = IsOnFloor();
@@ -755,6 +752,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
             _squash = 0.22f;
             _squashVelocity = 0f;
+            _rig.PlayFlip(); // the double jump reads as a somersault
             SpawnRing(GlobalPosition, 1.1f, DashColor, 0.25f);
             EventBus.Publish(new PlayerMoved(MoveVerb.AirJump, GlobalPosition));
         }
@@ -886,15 +884,20 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
     /// <summary>
     /// The body bends to explain the motion: it stretches leaving the ground and
-    /// squashes landing (a damped spring, so it overshoots a little and settles),
-    /// leans into acceleration, crouches into a slide, tucks into a slam, and
-    /// bobs while running. None of it touches collision — it is all on the pose
-    /// node, under the yaw.
+    /// squashes landing (a damped spring, so it overshoots a little and settles)
+    /// and leans into acceleration. None of it touches collision — it is all on
+    /// the pose node, under the yaw.
+    ///
+    /// Two layers share the work. This one is whole-body and physical (springs,
+    /// lean); the rig underneath does the limbs and the verb poses — running
+    /// stride, slide crouch, slam tuck, dash stretch, double-jump flip. The verb
+    /// leans here are therefore gentler than they were for the capsule: the rig
+    /// already folds the body, and the two would otherwise add up to a faceplant.
     /// </summary>
     private void UpdatePose(bool grounded, float walk, float dt)
     {
-        // Spring toward the rest pose (0), or toward the crouch while sliding.
-        float rest = _sliding ? -0.42f : _slamming ? 0.18f : 0f;
+        // Spring toward the rest pose (0); the rig crouches for the slide itself.
+        float rest = _sliding ? -0.12f : _slamming ? 0.1f : 0f;
         const float stiffness = 260f, damping = 18f;
         _squashVelocity += (stiffness * (rest - _squash) - damping * _squashVelocity) * dt;
         _squash += _squashVelocity * dt;
@@ -913,26 +916,27 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         // negative local Z is "speeding up").
         float pitch = Mathf.Clamp(local.Z * 0.012f, -0.35f, 0.35f) - speed01 * 0.05f;
         float roll = Mathf.Clamp(-local.X * 0.012f, -0.35f, 0.35f);
-        if (_sliding) pitch = 0.55f;          // lean back into the slide
-        if (_dashTime > 0f) pitch = -0.45f;   // dive forward
-        if (_slamming) pitch = -0.2f;
+        if (_sliding) pitch = 0.15f;          // the rig leans back into the slide
+        if (_dashTime > 0f) pitch = -0.25f;   // and throws the chest into the dash
+        if (_slamming) pitch = -0.15f;
 
         Vector3 targetLean = new(pitch, 0f, roll);
         _lean = _lean.Lerp(targetLean, 1f - Mathf.Exp(-12f * dt));
-
-        // Footstep bob, only while actually running on the ground.
-        float bob = 0f;
-        if (grounded && !_sliding && planar.Length() > 0.5f)
-        {
-            _bobPhase += dt * (6f + planar.Length() * 1.1f);
-            bob = Mathf.Abs(Mathf.Sin(_bobPhase)) * 0.08f * Mathf.Min(1f, speed01);
-        }
 
         float stretch = 1f + _squash;
         float widen = 1f / Mathf.Sqrt(Mathf.Max(0.3f, stretch));
         _pose.Scale = new Vector3(widen, stretch, widen);
         _pose.Rotation = new Vector3(_lean.X, 0f, _lean.Z);
-        _pose.Position = new Vector3(0f, bob, 0f);
+
+        // Footsteps and stride come from the rig, which is told what the
+        // controller is doing rather than guessing from position changes.
+        _rig.Velocity = new Vector3(_moveVelocity.X, Velocity.Y, _moveVelocity.Z);
+        _rig.Grounded = grounded && !_slamming;
+        _rig.Pose = _dashTime > 0f ? Visuals.RigPose.Dash
+                  : _slamming ? Visuals.RigPose.Slam
+                  : _sliding ? Visuals.RigPose.Slide
+                  : !grounded ? Visuals.RigPose.Air
+                  : Visuals.RigPose.Locomotion;
     }
 
     private void UpdateVisuals(bool alive, float dt)
@@ -943,11 +947,14 @@ public sealed partial class Player : CharacterBody3D, IDamageable
             ? 0.5f + 0.5f * Mathf.Sin(_time * 26f)
             : 0f;
 
-        Color tint = _dashTime > 0f ? DashColor : _slamming ? SlamColor : BodyColor;
-        _torsoMaterial.AlbedoColor = tint.Lerp(Colors.White, Mathf.Min(1f, _flash));
-        _torsoMaterial.Emission = tint;
-        _torsoMaterial.EmissionEnergyMultiplier = 0.35f + _flash * 4.5f + iframes * 0.9f
-                                                  + (_dashTime > 0f ? 2.5f : 0f);
+        // Verb tints as a glow on the model (dash streak, slam heat), the i-frame
+        // shimmer as a pulsing glow in the skin's colour, and hits as the rig's
+        // white flash.
+        if (_dashTime > 0f) _rig.SetGlow(DashColor, 1.6f);
+        else if (_slamming) _rig.SetGlow(SlamColor, 1.2f);
+        else if (iframes > 0f) _rig.SetGlow(_bodyColor, iframes * 0.9f);
+        else _rig.SetGlow(_bodyColor, 0f);
+        if (_flash > 0.05f) _rig.SetFlash(Mathf.Min(1f, _flash));
 
         if (!alive)
         {
@@ -985,14 +992,20 @@ public sealed partial class Player : CharacterBody3D, IDamageable
             EmissionEnabled = true,
             Emission = DashColor,
         };
+        // The ghost is the hero's own silhouette when the model has one (the
+        // procedural looks bake it), and a capsule for imported models.
+        Mesh? silhouette = _rig.SilhouetteMesh;
+        _ghostCapsule ??= new CapsuleMesh { Radius = BodyRadius, Height = BodyHeight, RadialSegments = 10, Rings = 3 };
         var ghost = new MeshInstance3D
         {
-            Mesh = new CapsuleMesh { Radius = BodyRadius, Height = BodyHeight, RadialSegments = 10, Rings = 3 },
+            Mesh = silhouette ?? _ghostCapsule,
             MaterialOverride = mat,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         FxParent.AddChild(ghost);
-        ghost.GlobalTransform = _torso.GlobalTransform;
+        ghost.GlobalTransform = silhouette is not null
+            ? _rig.GlobalTransform
+            : _pose.GlobalTransform.TranslatedLocal(Vector3.Up * (BodyHeight * 0.5f));
         Fade(ghost, mat, 0.22f, 0.85f);
     }
 

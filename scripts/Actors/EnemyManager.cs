@@ -268,6 +268,9 @@ public sealed partial class EnemyManager : Node3D
             }
         }
 
+        // Before the prewarm below builds any models.
+        Visuals.BehaviourModels.EnsureRegistered();
+
         for (int i = 0; i < _defs.Count; i++)
         {
             EnemyDef def = _defs[i];

@@ -146,7 +146,7 @@ public sealed partial class Enemy
         EnemyAttacks.ReleaseDecal(_tele);
         _tele = null;
         _glow = 0f;
-        if (_posed && _bodyMesh is not null) _bodyMesh.Scale = _bodyScale;
+        if (_posed) WritePose(Vector3.One, 0f);
         _posed = false;
     }
 
@@ -176,8 +176,9 @@ public sealed partial class Enemy
         }
         else
         {
-            // Ease off inside striking distance (see Step).
-            seek = distance > _attackRange * 0.9f ? 1f : 0.2f;
+            // Ease off inside striking distance (see Step). Edge-to-edge, the
+            // same rule the swing itself uses.
+            seek = distance > ContactDistance * 0.95f ? 1f : 0.2f;
             if (HasMoves) seek *= 1f + CatchUpBoost * Mathf.Clamp((distance - CatchUpFrom) / CatchUpFrom, 0f, 1f);
         }
 
@@ -259,6 +260,7 @@ public sealed partial class Enemy
         _actDir = heading.LengthSquared() > 1e-6f ? heading : _actDir;
         _actHit = false;
         _tag = _move is null ? (_def?.Id ?? "enemy") : MoveTag(_def!.Id, _move.Move);
+        _rig?.PlayAttackWindup(_actLength);
         if (ContentAudit.Logging)
             ContentAudit.NoteAbility(_def, _move is null ? _def!.Behavior.ToString() : _move.Move.ToString());
     }
@@ -284,6 +286,7 @@ public sealed partial class Enemy
                 else WindUpBasic(t, heading);
                 if (t >= 1f)
                 {
+                    _rig?.PlayAttack();
                     if (_move is not null) ReleaseBoss(playerFeet, heading);
                     else ReleaseBasic(playerFeet);
                 }
@@ -291,7 +294,7 @@ public sealed partial class Enemy
 
             case Act.Dash:
                 _tele?.SetLane(_actFrom, _actDir, _actLaneLength, LaneHalfWidth, 1f, LaneColor);
-                if (!_actHit && player is not null && distance <= _builtRadius + AssumedPlayerRadius + 0.35f)
+                if (!_actHit && player is not null && distance <= ContactDistance + 0.2f)
                 {
                     _actHit = true;
                     float scale = _move?.DamageScale ?? 1f;
@@ -691,15 +694,11 @@ public sealed partial class Enemy
     /// is happening, so idle enemies cost nothing here.</summary>
     private void Pose()
     {
-        if (_bodyMesh is null) return;
-
         if (_act == Act.None)
         {
             if (!_posed) return;
             _posed = false;
-            _glow = 0f;
-            _bodyMesh.Scale = _bodyScale;
-            ApplyFlash(_flashTimer > 0f ? _flashTimer / FlashDuration : 0f);
+            WritePose(Vector3.One, 0f);
             return;
         }
 
@@ -740,9 +739,23 @@ public sealed partial class Enemy
             glow = 0.7f;
         }
 
+        WritePose(pose, glow);
+    }
+
+    /// <summary>Apply a pose to whichever body the enemy wears: the primitive
+    /// (scale + material glow) or, when the visuals layer gave it a model, the
+    /// rig (scale + the rig's own emission glow). An enraged boss keeps a low
+    /// red glow between moves, so phase two is visible without the bar.</summary>
+    private void WritePose(Vector3 pose, float glow)
+    {
         _glow = glow;
-        _bodyMesh.Scale = _bodyScale * pose;
+        if (_bodyMesh is not null) _bodyMesh.Scale = _bodyScale * pose;
         ApplyFlash(_flashTimer > 0f ? _flashTimer / FlashDuration : 0f);
+
+        if (_rig is null || !IsInstanceValid(_rig)) return;
+        _rig.Scale = pose;
+        if (glow > 0f) _rig.SetGlow(GlowColor, glow);
+        else _rig.SetGlow(EnrageColor, _phase >= 2 ? 0.3f : 0f);
     }
 
     private static Vector3 Flat(Vector3 v) => new(v.X, 0f, v.Z);

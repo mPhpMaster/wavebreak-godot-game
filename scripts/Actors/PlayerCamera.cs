@@ -212,7 +212,7 @@ public partial class PlayerCamera : Node3D
         Rotation = new Vector3(0f, _yaw, 0f);
         _arm.Rotation = new Vector3(_pitch, 0f, 0f);
 
-        if (CaptureMouseOnStart) Input.MouseMode = Input.MouseModeEnum.Captured;
+        if (CaptureMouseOnStart) TryCaptureMouse();
 
         ResolveTarget(0f);
         SnapToTarget();
@@ -277,6 +277,22 @@ public partial class PlayerCamera : Node3D
         _yaw = Mathf.Atan2(-flat.X, -flat.Y);
     }
 
+    /// <summary>
+    /// Captures the mouse for steering, but only when that is what the person at
+    /// the keyboard wants: never in an automated run (tests and captures open
+    /// windows while the user is working in something else), and never while the
+    /// game window is not the focused one. A captured mouse is clipped and hidden
+    /// system-wide on Windows, so capturing from an unfocused or background window
+    /// takes the user's pointer away from whatever they were actually doing.
+    /// </summary>
+    public static bool TryCaptureMouse()
+    {
+        if (Game.Screenshot.Requested || Game.Screenshot.Auto) return false;
+        if (!DisplayServer.WindowIsFocused()) return false;
+        Input.MouseMode = Input.MouseModeEnum.Captured;
+        return true;
+    }
+
     public override void _Notification(int what)
     {
         // Alt-Tab or clicking another monitor does not release a captured mouse
@@ -300,9 +316,12 @@ public partial class PlayerCamera : Node3D
         {
             // Right/down on the mouse turns right/looks down, so both axes subtract:
             // Godot's +Y yaw turns left, and negative pitch aims the camera downward.
-            _yaw = Mathf.Wrap(_yaw - motion.Relative.X * MouseSensitivity, -Mathf.Pi, Mathf.Pi);
+            // The user's setting scales the camera's own default, read every
+            // event so a change in the pause menu takes effect at once.
+            float sensitivity = MouseSensitivity * Meta.GameSettings.Sensitivity;
+            _yaw = Mathf.Wrap(_yaw - motion.Relative.X * sensitivity, -Mathf.Pi, Mathf.Pi);
             _pitch = Mathf.Clamp(
-                _pitch - motion.Relative.Y * MouseSensitivity,
+                _pitch - motion.Relative.Y * sensitivity,
                 Mathf.DegToRad(MinPitchDegrees),
                 Mathf.DegToRad(MaxPitchDegrees));
             return;
@@ -339,7 +358,7 @@ public partial class PlayerCamera : Node3D
         // Re-grab after Escape — but never while paused, where the click belongs to a menu.
         if (RecaptureOnClick && button.ButtonIndex == MouseButton.Left && !GetTree().Paused)
         {
-            Input.MouseMode = Input.MouseModeEnum.Captured;
+            TryCaptureMouse();
             GetViewport().SetInputAsHandled();
         }
     }
