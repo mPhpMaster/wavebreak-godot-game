@@ -71,6 +71,7 @@ public sealed partial class MainMenu : Node3D
     private DifficultyPicker _difficulty = null!;
     private ChallengePicker _runPicker = null!;
     private TogglerPage _toggler = null!;
+    private BoomboxPage _boombox = null!;
     private Button _runButton = null!;
     private Label _pearls = null!;
 
@@ -308,6 +309,7 @@ public sealed partial class MainMenu : Node3D
         _pages["run"] = _runPicker = new ChallengePicker(() => ShowPage("play"));
         _pages["toggler"] = _toggler = new TogglerPage(() => ShowPage("shop"));   // UI/TogglerPage
         _shop.OpenToggler = () => ShowPage("toggler");
+        _pages["boombox"] = _boombox = new BoomboxPage(() => ShowPage("main"));   // UI/BoomboxPage
         foreach (Control p in _pages.Values) _root.AddChild(p);
     }
 
@@ -322,6 +324,7 @@ public sealed partial class MainMenu : Node3D
         page.AddChild(MenuButton("PEARL SHOP", () => ShowPage("shop")));
         page.AddChild(MenuButton("UNLOCKS & SECRETS", () => ShowPage("codex")));
         page.AddChild(MenuButton("LEADERBOARD", () => ShowPage("records")));
+        page.AddChild(MenuButton("BOOMBOX", () => ShowPage("boombox")));
         page.AddChild(MenuButton("SETTINGS", () => ShowPage("settings")));
         page.AddChild(MenuButton("QUIT", () => GetTree().Quit()));
 
@@ -329,7 +332,7 @@ public sealed partial class MainMenu : Node3D
         Label stats = MakeLabel(
             $"runs {Profile.Get(Profile.Runs)}   ·   best {best / 60:00}:{best % 60:00}   ·   " +
             $"unlocks {Profile.UnlockedIds.Count}/{Unlocks.All.Count}", 15, InkDim);
-        stats.CustomMinimumSize = new Vector2(0f, 60f);
+        stats.CustomMinimumSize = new Vector2(0f, 30f);
         stats.VerticalAlignment = VerticalAlignment.Bottom;
         page.AddChild(stats);
         _pearls = MakeLabel("", 15, Gold);
@@ -626,6 +629,7 @@ public sealed partial class MainMenu : Node3D
         if (colon >= 0) { arg = name[(colon + 1)..]; name = name[..colon]; }
         bool secrets = arg == "secrets";
         if (!_pages.ContainsKey(name)) name = "main";
+        if (_page == "boombox" && name != "boombox") _boombox.Closing();
         _page = name;
         foreach (var (key, page) in _pages) page.Visible = key == name;
 
@@ -638,6 +642,9 @@ public sealed partial class MainMenu : Node3D
                 break;
             case "toggler":
                 _toggler.Open(arg);
+                break;
+            case "boombox":
+                _boombox.Open(arg);
                 break;
             case "play":
                 _runButton.Text = ChallengePicker.Summary();

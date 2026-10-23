@@ -359,6 +359,32 @@ public sealed partial class PauseMenu : Node
         mute.Toggled += on => { if (on != AudioSettings.Muted) AudioSettings.ToggleMute(); };
         page.AddChild(mute);
 
+        // Boombox (UI/BoomboxPage on the title screen has the full list).
+        Boombox.Load();
+        var box = new HBoxContainer();
+        box.AddThemeConstantOverride("separation", 8);
+        Label boxLabel = MainMenu.MakeLabel("", 16, new Color(0.75f, 0.80f, 0.88f));
+        boxLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        boxLabel.ClipText = true;
+        void ShowBox()
+        {
+            string now = MusicTracks.ById(MusicDirector.NowPlaying)?.Title ?? "-";
+            boxLabel.Text = $"Boombox: {Boombox.Describe()}  ·  {now}";
+        }
+        Button mode = MainMenu.MenuButton("MODE", () => { Boombox.CycleMode(); MusicDirector.Reapply(); ShowBox(); });
+        Button next = MainMenu.MenuButton("SKIP", () => { MusicDirector.Reapply(skip: true); ShowBox(); });
+        foreach (Button b in new[] { mode, next })
+        {
+            b.CustomMinimumSize = new Vector2(84f, 36f);
+            b.AddThemeFontSizeOverride("font_size", 16);
+        }
+        box.AddChild(boxLabel);
+        box.AddChild(mode);
+        box.AddChild(next);
+        box.VisibilityChanged += ShowBox;
+        ShowBox();
+        page.AddChild(box);
+
         var sens = new HSlider { MinValue = GameSettings.MinSensitivity, MaxValue = GameSettings.MaxSensitivity,
                                  Step = GameSettings.SensitivityStep, Value = GameSettings.Sensitivity,
                                  SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(200f, 24f) };

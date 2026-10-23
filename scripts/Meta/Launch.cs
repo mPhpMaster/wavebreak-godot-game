@@ -15,7 +15,7 @@ namespace Wavebreak.Meta;
 ///     --profile=&lt;path&gt;      read/write this profile instead of user://profile.cfg
 ///     --character=&lt;id&gt;      start the run as this character (if unlocked)
 ///     --menu-shot=&lt;png&gt;     boot the title, capture, quit
-///     --menu-page=&lt;page&gt;    main | play | codex | codex:secrets | settings | keys | graphics  (with --menu-shot)
+///     --menu-page=&lt;page&gt;    main | play | codex | codex:secrets | settings | keys | graphics | boombox  (with --menu-shot)
 ///     --secret-test         walk to every hidden secret and press interact
 ///     --offer-check         prove earned items/weapons are in the level-up pool
 /// </summary>

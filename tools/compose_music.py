@@ -635,10 +635,184 @@ def t_defeat():
     return tr, dict(reverb_seconds=3.2, target_rms_db=-21, master_lp=6000)
 
 
+# ------------------------------------------------------------- boombox set
+# The second batch: one "remix" per map (unlocked by that map's quests and
+# picked in the Boombox), a cosy menu loop, a final-boss theme distinct from the
+# phase boss, and two short stingers. Same rules as above: soft timbres,
+# diatonic, quiet master, circular loops. Rendered at a lower OGG quality ("q")
+# since they are mostly soft pads and bells and the files should stay small.
+
+def swing(step, i, amt=0.08):
+    """Late off-beats for a lazy shuffle feel."""
+    return amt if i % 2 else 0.0
+
+
+def t_lounge():
+    prog = ["Fmaj7", "Em7", "Dm7", "Cmaj7", "Bbmaj7", "Am7", "Gm7", "Csus4",
+            "Fmaj7", "Am7", "Bbmaj7", "C", "Dm7", "Gm7", "Bbmaj7", "Csus4"]
+    tr = Track("lounge", 84, len(prog), seed=111)
+    play_pads(tr, prog, lo=53, gain=0.45, bright=0.5, send=0.5)
+    # Lazy two-handed e-piano: chord on 1 and the "and" of 2.
+    for bar, name in enumerate(prog):
+        for b, g in ((0, 0.5), (1.6, 0.32), (3.0, 0.25)):
+            for m in voicing(name, 60):
+                tr.add(epiano(mtof(m), tr.beats(0.9), tr.rng), bar * 4 + b, pan=-0.15, gain=g * 0.55, send=0.4)
+    play_bass(tr, prog, [(0, 1.4), (2.5, 1.2)], octave=29, gain=0.7)
+    drums = {"kick": [(0, 0.45), (2.5, 0.35)], "shaker": [(i * 0.5 + swing(0.5, i), 0.35 if i % 2 else 0.25) for i in range(8)],
+             "snare": [(3, 0.18)]}
+    play_drums(tr, len(prog), drums, gain=0.55)
+    mel = melody(tr.rng, prog, pcs(5, MAJOR), 69, 84)
+    play_melody(tr, mel, bell, gain=0.38, pan=0.2, send=0.55)
+    return tr, dict(reverb_seconds=2.8, target_rms_db=-21, master_lp=7000, q=2)
+
+
+def t_meadow_dusk():
+    prog = ["C", "G", "Am", "F", "C", "G", "F", "G",
+            "Am", "F", "C", "G", "F", "G", "C", "Csus4"] + \
+           ["F", "G", "Em", "Am", "F", "G", "Csus4", "C"]
+    tr = Track("meadow_dusk", 112, len(prog), seed=121)
+    play_pads(tr, prog, lo=55, gain=0.45, bright=0.8)
+    play_bass(tr, prog, [(0, 0.45), (1, 0.45), (2, 0.45), (2.5, 0.4), (3, 0.45)], octave=36, gain=0.7, fifths=True)
+    play_arp(tr, prog, musicbox, 72, step=0.5, order=(0, 1, 2, 1, 0, 2, 1, 2), gain=0.32, send=0.4)
+    drums = {"kick": [(0, 0.75), (2, 0.6)], "snare": [(1, 0.32), (3, 0.38)], "hat": eighths(0.28), "shaker": [(1.75, 0.3), (3.75, 0.3)]}
+    play_drums(tr, len(prog), drums, gain=0.65, skip_bars=(0, 1))
+    mel = melody(tr.rng, prog, (0, 2, 4, 7, 9), 67, 84)  # C major pentatonic
+    play_melody(tr, [n for n in mel if n[0] >= 4 * 4], pluck, gain=0.62, pan=0.1, send=0.3)
+    play_melody(tr, [n for n in mel if n[0] >= 16 * 4], lead, gain=0.3, pan=-0.2, send=0.4, octave=-12)
+    return tr, dict(reverb_seconds=2.0, q=2)
+
+
+def t_frost_aurora():
+    prog = ["Emaj7", "F#m7", "G#m7", "Amaj7", "Emaj7", "C#m7", "Amaj7", "Bsus4",
+            "Amaj7", "B", "G#m7", "C#m7", "F#m7", "Amaj7", "Bsus4", "B"]
+    tr = Track("frost_aurora", 92, len(prog) * 1, seed=131)
+    play_pads(tr, prog, lo=52, gain=0.65, bright=0.5, send=0.65)
+    play_bass(tr, prog, [(0, 1.8), (2.5, 1.2)], octave=28, gain=0.65)
+    play_arp(tr, prog, bell, 76, step=0.25, order=(0, 1, 2, 3, 2, 1), gain=0.16, send=0.65)
+    drums = {"kick": [(0, 0.5), (2.5, 0.35)], "hat": [(1, 0.18), (3, 0.22)], "shaker": eighths(0.25)}
+    play_drums(tr, len(prog), drums, gain=0.55, skip_bars=(0, 1, 2, 3))
+    mel = melody(tr.rng, prog, pcs(4, LYDIAN), 68, 85)
+    play_melody(tr, [n for n in mel if n[0] >= 4 * 4], musicbox, gain=0.5, pan=-0.2, send=0.6)
+    return tr, dict(reverb_seconds=3.6, target_rms_db=-21, master_lp=7500, q=2)
+
+
+def t_ashlands_forge():
+    prog = ["Dm7", "G", "Dm7", "G", "Am7", "C", "Dm7", "Esus4",
+            "F", "G", "Am7", "Dm7", "Bbmaj7", "C", "Dm7", "Dm7"] + \
+           ["Dm7", "G", "Am7", "C", "Bbmaj7", "C", "Esus4", "A"]
+    tr = Track("ashlands_forge", 108, len(prog), seed=141)
+    # Organ stabs on the off-beats: bouncy, not heavy.
+    for bar, name in enumerate(prog):
+        for b in (0.5, 1.5, 2.5, 3.5):
+            for m in voicing(name, 57):
+                tr.add(organ(mtof(m), tr.beats(0.3), tr.rng), bar * 4 + b, pan=0.25, gain=0.22, send=0.25)
+    play_pads(tr, prog, lo=50, gain=0.35, bright=0.6)
+    play_bass(tr, prog, [(0, 0.8), (1, 0.4), (1.5, 0.4), (2, 0.8), (3, 0.4), (3.5, 0.4)], octave=38, gain=0.7)
+    drums = {"kick": [(0, 0.85), (2, 0.75), (2.75, 0.4)], "snare": [(1, 0.45), (3, 0.5)],
+             "hat": eighths(0.28), "tomhi": [(3.5, 0.3)]}
+    play_drums(tr, len(prog), drums, gain=0.7)
+    mel = melody(tr.rng, prog, pcs(2, DORIAN), 62, 79)
+    play_melody(tr, [n for n in mel if n[0] >= 8 * 4], lead, gain=0.55, pan=-0.1, send=0.3)
+    play_melody(tr, [n for n in mel if n[0] < 8 * 4], pluck, gain=0.55, pan=-0.1, send=0.3, octave=12)
+    return tr, dict(reverb_seconds=1.8, master_lp=7500, q=2)
+
+
+def t_graveyard_waltz():
+    prog = ["Gm", "D7", "Gm", "Eb", "Cm", "Gm", "D7", "D7",
+            "Bb", "F", "Gm", "Eb", "Cm", "D7", "Gm", "Gm"] * 2
+    tr = Track("graveyard_waltz", 138, len(prog), beats_per_bar=3, seed=151)
+    play_pads(tr, prog, lo=55, gain=0.35, bright=0.4, send=0.6)
+    play_bass(tr, prog, [(0, 0.9)], octave=31, gain=0.75)
+    for bar, name in enumerate(prog):
+        for b in (1, 2):
+            for m in voicing(name, 62):
+                tr.add(pluck(mtof(m), 0.3, tr.rng, bright=0.7), bar * 3 + b, pan=-0.2, gain=0.17, send=0.35)
+    mel = melody(tr.rng, prog, pcs(7, HARM_MINOR), 67, 84, beats_per_bar=3)
+    play_melody(tr, mel, musicbox, gain=0.5, pan=0.15, send=0.55)
+    play_melody(tr, [n for n in mel if n[0] >= 16 * 3], bell, gain=0.18, pan=-0.3, send=0.6, octave=12)
+    drums = {"kick": [(0, 0.45)], "hat": [(1, 0.18), (2, 0.18)]}
+    play_drums(tr, len(prog), drums, gain=0.6, skip_bars=range(0, 4))
+    return tr, dict(reverb_seconds=3.0, target_rms_db=-21, master_lp=7500, q=2)
+
+
+def t_tidal_lagoon():
+    prog = ["Bbmaj7", "Gm7", "Cm7", "F", "Bbmaj7", "Dm7", "Ebmaj7", "Fsus4",
+            "Ebmaj7", "F", "Dm7", "Gm7", "Cm7", "F", "Bbmaj7", "Bbmaj7"]
+    tr = Track("tidal_lagoon", 100, len(prog), seed=161)
+    play_pads(tr, prog, lo=53, gain=0.45, send=0.5)
+    # Bossa-ish: bass on 1 and the "and" of 2, chords on the syncopations.
+    play_bass(tr, prog, [(0, 1.3), (1.5, 0.4), (2, 1.3), (3.5, 0.4)], octave=34, gain=0.7, fifths=True)
+    for bar, name in enumerate(prog):
+        for b in (0.5, 1.5, 2.5, 3.0):
+            for m in voicing(name, 60):
+                tr.add(epiano(mtof(m), tr.beats(0.4), tr.rng), bar * 4 + b, pan=0.2, gain=0.14, send=0.4)
+    for bar in range(0, len(prog), 4):
+        tr.add(swell(tr.beats(8), tr.rng), bar * 4, pan=0.3 if bar % 8 else -0.3, gain=0.6, send=0.3, humanise=False)
+    drums = {"kick": [(0, 0.5), (2.5, 0.4)], "shaker": eighths(0.35), "tomhi": [(1.5, 0.2)], "tomlo": [(3.5, 0.22)]}
+    play_drums(tr, len(prog), drums, gain=0.6, skip_bars=(0, 1))
+    mel = melody(tr.rng, prog, pcs(10, MAJOR), 65, 82)
+    play_melody(tr, [n for n in mel if n[0] >= 4 * 4], lead, gain=0.5, pan=-0.15, send=0.45)
+    return tr, dict(reverb_seconds=2.6, target_rms_db=-21, q=2)
+
+
+def t_boss_final():
+    prog = ["Em", "C", "D", "Em", "Em", "C", "Am", "B7",
+            "C", "D", "Em", "Em", "Am", "C", "B7", "B7"] + \
+           ["G", "D", "Em", "C", "Am", "C", "B7", "B7"]
+    tr = Track("boss_final", 132, len(prog), seed=171)
+    play_pads(tr, prog, lo=52, gain=0.45, bright=0.9)
+    play_bass(tr, prog, [(i * 0.5, 0.42) for i in range(8)], octave=40, gain=0.65, fifths=True)
+    drums = {"kick": [(0, 0.9), (1, 0.7), (2, 0.85), (2.5, 0.5), (3, 0.7)], "snare": [(1, 0.5), (3, 0.55)],
+             "hat": [(i * 0.25, 0.3 if i % 2 else 0.38) for i in range(16)]}
+    play_drums(tr, len(prog), drums, gain=0.72)
+    for bar in range(7, len(prog), 8):
+        for k, b in enumerate((2.0, 2.5, 3.0, 3.25, 3.5, 3.75)):
+            sig = tom(140 if k < 3 else 90, tr.rng, 0.55)
+            tr.add(sig, bar * 4 + b, pan=0.2 if k < 3 else -0.2, gain=0.7, send=0.2)
+    mel = melody(tr.rng, prog, pcs(4, HARM_MINOR), 64, 81)
+    play_melody(tr, mel, brass, gain=0.7, pan=0.0, send=0.3)
+    play_arp(tr, prog, bell, 76, step=0.5, order=(0, 2, 1, 2), gain=0.16, send=0.4, skip_bars=range(0, 8))
+    return tr, dict(reverb_seconds=1.8, target_rms_db=-19, master_lp=7500, q=2)
+
+
+def t_shop():
+    tr = Track("shop", 132, 2, loop=False, tail=2.0, seed=181)
+    # "Ding-ding!" up a G major arpeggio, a little turn, and a soft chord.
+    for i, (b, m) in enumerate(((0, 67), (0.5, 71), (1, 74), (1.5, 79), (2.25, 78), (2.5, 79), (3, 83))):
+        tr.add(musicbox(mtof(m), 0.3, tr.rng), b, pan=-0.25 + 0.08 * i, gain=0.6, send=0.45)
+    for m in voicing("Gmaj7", 55):
+        tr.add(epiano(mtof(m), tr.beats(3), tr.rng), 3, gain=0.35, send=0.4)
+    tr.add(bass(mtof(43), tr.beats(2.5), tr.rng), 3, gain=0.6, send=0.05)
+    tr.add(shaker(tr.rng, 0.5), 2.5, pan=0.3, gain=0.6)
+    tr.add(shaker(tr.rng, 0.6), 3, pan=0.3, gain=0.6)
+    return tr, dict(reverb_seconds=2.0, target_rms_db=-20, q=2)
+
+
+def t_fanfare():
+    tr = Track("fanfare", 112, 3, loop=False, tail=3.5, seed=191)
+    # A full-run win: brass call, a bell flourish, and a big warm F major.
+    for b, d, m in ((0, 0.5, 65), (0.5, 0.5, 65), (1, 0.5, 65), (1.5, 1.5, 72), (3, 0.5, 70), (3.5, 0.5, 72), (4, 3.5, 77)):
+        tr.add(brass(mtof(m), tr.beats(d), tr.rng), b, gain=0.8, send=0.35)
+        tr.add(brass(mtof(m - 12), tr.beats(d), tr.rng), b, pan=-0.2, gain=0.35, send=0.35)
+    for i, m in enumerate([77, 81, 84, 89, 93]):
+        tr.add(bell(mtof(m), 0.3, tr.rng), 4 + i * 0.25, pan=-0.3 + 0.15 * i, gain=0.4, send=0.5)
+    for m in voicing("Fadd9", 53):
+        tr.add(pad(mtof(m), tr.beats(6), tr.rng, 1.0), 4, gain=0.85, send=0.5, humanise=False)
+    tr.add(bass(mtof(41), tr.beats(5), tr.rng), 4, gain=0.8, send=0.05)
+    for b, v in ((0, 0.6), (1, 0.5), (1.5, 0.6), (3, 0.5), (3.5, 0.6)):
+        tr.add(tom(110, tr.rng, v), b, gain=0.5, send=0.2)
+    tr.add(kick(tr.rng, 0.8), 4, gain=0.8, send=0.1)
+    return tr, dict(reverb_seconds=2.8, target_rms_db=-19, q=2)
+
+
 TRACKS = {
     "title": t_title, "meadow": t_meadow, "frost": t_frost, "ashlands": t_ashlands,
     "graveyard": t_graveyard, "tidal": t_tidal, "boss": t_boss, "swarm": t_swarm,
     "victory": t_victory, "defeat": t_defeat,
+    # boombox set
+    "lounge": t_lounge, "meadow_dusk": t_meadow_dusk, "frost_aurora": t_frost_aurora,
+    "ashlands_forge": t_ashlands_forge, "graveyard_waltz": t_graveyard_waltz,
+    "tidal_lagoon": t_tidal_lagoon, "boss_final": t_boss_final, "shop": t_shop, "fanfare": t_fanfare,
 }
 
 
@@ -669,12 +843,13 @@ def main():
         if args.only and name not in args.only:
             continue
         tr, opts = fn()
+        quality = str(opts.pop("q", args.quality))
         mix = tr.render(**opts)
         wav = os.path.join(args.wav_dir, f"{name}.wav")
         write_wav(wav, mix)
         ogg = os.path.join(args.out, f"{name}.ogg")
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav, "-c:a", "libvorbis",
-                        "-q:a", args.quality, ogg], check=True)
+                        "-q:a", quality, ogg], check=True)
         peak = float(np.max(np.abs(mix)))
         rms = 20 * math.log10(math.sqrt(float(np.mean(mix ** 2))) + 1e-12)
         seam = float(np.max(np.abs(mix[:, 0] - mix[:, -1])))

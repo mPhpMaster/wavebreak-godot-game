@@ -70,6 +70,7 @@ public sealed partial class MerchantPanel : ModalPanel
         _merchant = merchant;
         Fill();
         OpenPanel();
+        Audio.MusicDirector.Jingle("shop");   // no-op without music (automated runs)
     }
 
     protected override void OnClosed() => _merchant = null;
