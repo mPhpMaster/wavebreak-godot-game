@@ -75,7 +75,11 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     private const float ShortHopCut = 0.45f;
 
     /// <summary>Jumps available after leaving the ground.</summary>
-    private const int AirJumps = 1;
+    private const int BaseAirJumps = 1;
+
+    /// <summary>Air jumps per airtime: the base one plus any granted by a
+    /// character passive (<see cref="ExtraAirJumps"/>).</summary>
+    private int AirJumps => BaseAirJumps + ExtraAirJumps;
 
     /// <summary>The air jump is a little weaker than the first, so it extends a
     /// jump rather than doubling it.</summary>
@@ -180,6 +184,14 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     public int Slams { get; private set; }
     public int SlamHits { get; private set; }
     public float PeakSpeed { get; private set; }
+
+    /// <summary>Extra air jumps on top of the base one. Set by a character
+    /// passive (Meta/CharacterPassives); 0 for everyone else.</summary>
+    public int ExtraAirJumps { get; set; }
+
+    /// <summary>Take <paramref name="seconds"/> off the dash cooldown, e.g. a
+    /// passive refunding it on kills. Never below zero.</summary>
+    public void RefundDash(float seconds) => _dashCooldown = Mathf.Max(0f, _dashCooldown - Mathf.Max(0f, seconds));
 
     /// <summary>
     /// When set, replaces the keyboard as the movement source: a normalised XZ

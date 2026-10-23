@@ -62,6 +62,8 @@ public static class RunMeta
         var layer = new CanvasLayer { Name = "MetaUI", Layer = 20 };
         main.AddChild(layer);
         layer.AddChild(new UI.UnlockToast());
+        layer.AddChild(new UI.LeaderboardBanner());   // quests/passives/leaderboard
+        CharacterPassives.Attach(main, Character);
 
         // Shrines are placed per map by Game.StageDirector, under each arena, so
         // every phase has its own to find and they leave with the map.

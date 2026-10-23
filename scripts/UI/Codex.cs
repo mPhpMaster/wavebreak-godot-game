@@ -143,20 +143,15 @@ public sealed partial class Codex : Control
     }
 
     /// <summary>Progress text for conditions the profile can measure between
-    /// runs. Single-run feats only say "locked": a best-ever value would imply
-    /// the bar carries over, and it does not.</summary>
+    /// runs: a running total for lifetime ladders, and for single-run feats the
+    /// best attempt so far, labelled "best" so it does not read as a bar that
+    /// carries over between runs.</summary>
     private static string Progress(UnlockDef u)
     {
-        long have = u.Metric switch
-        {
-            Metric.TotalKills => Profile.Get(Profile.TotalKills),
-            Metric.TotalRuns => Profile.Get(Profile.Runs),
-            Metric.TotalWins => Profile.Get(Profile.Wins),
-            Metric.TotalBosses => Profile.Get(Profile.BossesKilled),
-            Metric.TotalChests => Profile.Get(Profile.ChestsOpened),
-            _ => -1,
-        };
-        return have < 0 ? "LOCKED" : $"LOCKED  {System.Math.Min(have, (long)u.Threshold)} / {u.Threshold:0}";
+        long have = Quests.StoredProgress(u);
+        if (have < 0) return "LOCKED";
+        string amount = $"{System.Math.Min(have, (long)u.Threshold):N0} / {u.Threshold:N0}";
+        return Quests.IsRunMetric(u.Metric) ? $"BEST  {amount}" : amount;
     }
 
     private static Button Card(string title, string body, string reward, string status, Color accent, bool done)
