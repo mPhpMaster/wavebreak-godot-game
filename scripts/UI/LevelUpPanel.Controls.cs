@@ -45,7 +45,7 @@ public sealed partial class LevelUpPanel
 
         var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
         row.AddThemeConstantOverride("separation", 18);
-        Band(row, 720f, 214f, 40f);
+        Band(row, 720f, 232f, 40f);
         AddChild(row);
 
         _rerollButton = ControlButton(row);

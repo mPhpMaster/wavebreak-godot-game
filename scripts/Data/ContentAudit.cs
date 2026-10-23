@@ -209,6 +209,7 @@ public static partial class ContentAudit
             AuditUpgrades(system);
             AuditElements();
             AuditExpansion(system);
+            AuditIcons();
         }
         catch (Exception e)
         {

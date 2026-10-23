@@ -68,6 +68,8 @@ public sealed partial class Main : Node3D
             _ = CheckInputGuards();
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--levelup-shot=")) is { } shotArg)
             _ = LevelUpShot(shotArg["--levelup-shot=".Length..]);
+        else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--icon-sheet=")) is { } sheetArg)
+            _ = UI.IconSheet.Capture(GetTree(), this, sheetArg["--icon-sheet=".Length..]);
     }
 
     /// <summary>--levelup-shot=&lt;png&gt;: open a real level-up hand (after a

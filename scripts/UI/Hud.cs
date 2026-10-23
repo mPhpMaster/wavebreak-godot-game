@@ -452,7 +452,7 @@ public sealed partial class Hud : Control
             // Tinted to the weapon's own colour so the list matches what the
             // player sees coming out of themselves.
             if (def is not null) row.AddThemeColorOverride("font_color", def.Tint);
-            _weaponList.AddChild(row);
+            _weaponList.AddChild(def is not null ? IconView.Row(Icons.For(def), row, RowHeight) : row);
             _weaponRows[e.Id] = row;
             _weaponOrder.Add(e.Id);
         }

@@ -92,6 +92,12 @@ public sealed partial class MicrowavePanel : ModalPanel
             b.AddThemeColorOverride("font_color", Catalog.RarityColor(stack.Rarity));
             b.AddThemeColorOverride("font_disabled_color", Catalog.RarityColor(stack.Rarity).Darkened(0.5f));
             b.Disabled = maxed || gold < price;
+            IconSpec icon = Icons.For(stack.Def);
+            b.Icon = Icons.Texture(icon.Glyph);
+            b.AddThemeConstantOverride("icon_max_width", 34);
+            foreach (string state in new[] { "icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color", "icon_hover_pressed_color" })
+                b.AddThemeColorOverride(state, icon.Color);
+            b.AddThemeColorOverride("icon_disabled_color", icon.Color.Darkened(0.5f));
             _grid.AddChild(b);
             _shown.Add(stack);
         }

@@ -33,7 +33,8 @@ public sealed partial class LevelUpPanel : Control
 {
     private const int MaxCards = 4;
     private const float CardWidth = 300f;
-    private const float CardHeight = 330f;
+    private const float CardHeight = 376f;
+    private const float IconSize = 100f;
     private const float CardGap = 24f;
 
     private static readonly Color Dim = new(0.02f, 0.03f, 0.05f, 0.74f);
@@ -127,15 +128,15 @@ public sealed partial class LevelUpPanel : Control
         AddChild(dim);
 
         _heading = MakeLabel("LEVEL UP", 44, Ink, HorizontalAlignment.Center);
-        Band(_heading, 720f, -258f, 64f);
+        Band(_heading, 720f, -264f, 60f);
         AddChild(_heading);
 
         _subheading = MakeLabel("Choose one", 18, InkDim, HorizontalAlignment.Center);
-        Band(_subheading, 720f, -196f, 28f);
+        Band(_subheading, 720f, -208f, 28f);
         AddChild(_subheading);
 
         Label hint = MakeLabel("press  1  ·  2  ·  3", 15, new Color(0.50f, 0.55f, 0.64f), HorizontalAlignment.Center);
-        Band(hint, 720f, 186f, 24f);
+        Band(hint, 720f, 204f, 22f);
         AddChild(hint);
     }
 
@@ -151,7 +152,7 @@ public sealed partial class LevelUpPanel : Control
     private Card BuildCard(int index)
     {
         var root = new Control { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
-        Band(root, CardWidth, -CardHeight * 0.5f + 24f, CardHeight);
+        Band(root, CardWidth, -176f, CardHeight);
         AddChild(root);
 
         var back = new ColorRect { Color = CardBack, MouseFilter = MouseFilterEnum.Ignore };
@@ -175,24 +176,36 @@ public sealed partial class LevelUpPanel : Control
         Inset(rarity, 0f, 16f, CardWidth, 20f);
         root.AddChild(rarity);
 
-        Label title = MakeLabel("", 23, Ink, HorizontalAlignment.Center);
+        // The picture comes first: it is what tells three cards apart at a
+        // glance, before any of the text is read.
+        IconView icon = IconView.Make(IconSize);
+        Inset(icon, (CardWidth - IconSize) * 0.5f, 34f, IconSize, IconSize);
+        root.AddChild(icon);
+
+        Label title = MakeLabel("", 22, Ink, HorizontalAlignment.Center);
         title.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        Inset(title, 12f, 42f, CardWidth - 24f, 62f);
+        title.VerticalAlignment = VerticalAlignment.Center;
+        Inset(title, 12f, 136f, CardWidth - 24f, 54f);
         root.AddChild(title);
 
         var rule = new ColorRect { Color = new Color(1f, 1f, 1f, 0.12f), MouseFilter = MouseFilterEnum.Ignore };
-        Inset(rule, 22f, 108f, CardWidth - 44f, 1f);
+        Inset(rule, 22f, 193f, CardWidth - 44f, 1f);
         root.AddChild(rule);
 
         Label stats = MakeLabel("", 15, Ink, HorizontalAlignment.Center);
         stats.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        Inset(stats, 16f, 120f, CardWidth - 32f, 92f);
+        stats.VerticalAlignment = VerticalAlignment.Center;
+        Inset(stats, 16f, 180f, CardWidth - 32f, 94f);
         root.AddChild(stats);
 
+        // Stats and flavour are re-flowed per offer (FlowText); the flavour is
+        // capped in lines and trimmed with an ellipsis rather than overflowing.
         Label flavour = MakeLabel("", 14, InkDim, HorizontalAlignment.Center);
         flavour.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         flavour.VerticalAlignment = VerticalAlignment.Top;
-        Inset(flavour, 16f, 216f, CardWidth - 32f, 78f);
+        flavour.MaxLinesVisible = 2;
+        flavour.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        Inset(flavour, 16f, 280f, CardWidth - 32f, 42f);
         root.AddChild(flavour);
 
         Label kind = MakeLabel("", 13, InkDim, HorizontalAlignment.Center);
@@ -209,7 +222,7 @@ public sealed partial class LevelUpPanel : Control
         button.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         root.AddChild(button);
 
-        var card = new Card(root, back, stripe, rarity, title, stats, flavour, kind, button);
+        var card = new Card(root, back, stripe, icon, rarity, title, stats, flavour, kind, button);
 
         int captured = index;
         button.Pressed += () => { if (Armed) Pick(captured); };
@@ -519,11 +532,14 @@ public sealed partial class LevelUpPanel : Control
         card.Rarity.Text = $"{Catalog.RarityName(rarity)}   {KindOf(offer)}";
         card.Rarity.AddThemeColorOverride("font_color", colour);
 
+        card.Icon.Set(Icons.For(offer), colour);
+
         card.Title.Text = offer.Title;
         card.Title.AddThemeColorOverride("font_color", offer.Tint.Lerp(Ink, 0.35f));
 
         card.Stats.Text = EffectText(offer);
         card.Flavour.Text = offer.Description;
+        FlowText(card);
         card.Kind.Text = offer.Detail;
 
         // Epics and legendaries get a visibly warmer body. When one appears the
@@ -537,6 +553,30 @@ public sealed partial class LevelUpPanel : Control
         Paint(card, card.Button.HasFocus());
 
         card.Button.TooltipText = $"{index + 1}. {offer.Title} — {offer.Effect}";
+    }
+
+    /// <summary>
+    /// Stacks the stats and the flavour under the rule. The stats box is sized to
+    /// its own lines and the flavour takes what is left, up to four lines: an
+    /// item whose real effect is a rule ("hits have a 5% chance to burst ...")
+    /// keeps that rule in its description, and a fixed two-line box cut it off
+    /// mid-sentence exactly on the cards that needed it most.
+    /// </summary>
+    private static void FlowText(Card card)
+    {
+        const float top = 200f;
+        const float lineH = 21f;
+        int lines = 0;
+        foreach (string line in card.Stats.Text.Split('\n'))
+            lines += 1 + line.Length / 34;
+
+        float statsH = Mathf.Clamp(lines * lineH + 4f, 26f, 116f);
+        Inset(card.Stats, 16f, top, CardWidth - 32f, statsH);
+
+        float flavourTop = top + statsH + 12f;
+        float flavourH = CardHeight - 30f - flavourTop;
+        Inset(card.Flavour, 16f, flavourTop, CardWidth - 32f, flavourH);
+        card.Flavour.MaxLinesVisible = Mathf.Clamp((int)(flavourH / 19f), 1, 4);
     }
 
     /// <summary>
@@ -603,6 +643,7 @@ public sealed partial class LevelUpPanel : Control
         public readonly Control Root;
         public readonly ColorRect Back;
         public readonly ColorRect Stripe;
+        public readonly IconView Icon;
         public readonly Label Rarity;
         public readonly Label Title;
         public readonly Label Stats;
@@ -614,10 +655,10 @@ public sealed partial class LevelUpPanel : Control
         /// rarity. Hover and focus lighten this rather than replacing it.</summary>
         public Color Base = new(0.09f, 0.10f, 0.14f, 0.98f);
 
-        public Card(Control root, ColorRect back, ColorRect stripe, Label rarity, Label title,
+        public Card(Control root, ColorRect back, ColorRect stripe, IconView icon, Label rarity, Label title,
                     Label stats, Label flavour, Label kind, Button button)
         {
-            Root = root; Back = back; Stripe = stripe; Rarity = rarity; Title = title;
+            Root = root; Back = back; Stripe = stripe; Icon = icon; Rarity = rarity; Title = title;
             Stats = stats; Flavour = flavour; Kind = kind; Button = button;
         }
     }
