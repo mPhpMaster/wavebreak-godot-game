@@ -57,7 +57,7 @@ public enum Metric
     RunHealed,
 }
 
-public enum RewardKind { Character, Weapon, Item, Skin }
+public enum RewardKind { Character, Weapon, Item, Skin, Hat }
 
 public sealed class UnlockDef
 {
@@ -152,7 +152,7 @@ public static class Unlocks
         new() { Id = "all_shrines", Name = "The Augur's Path", Description = "Find every kind of hidden shrine.",
                 Metric = Metric.SecretsAll, Threshold = 1, Reward = RewardKind.Skin, RewardId = "gilded_augur.eclipse",
                 Secret = true, Hint = "Three lights hide where the arena thins. Greet them all." },
-    }.Concat(Quests.All).Concat(ExpansionUnlocks.All).ToList();
+    }.Concat(Quests.All).Concat(ExpansionUnlocks.All).Concat(ExpansionQuests.All).ToList();
 
     public static UnlockDef? ById(string? id)
     {
@@ -189,6 +189,7 @@ public static class Unlocks
     {
         RewardKind.Character => $"Character: {Characters.ById(u.RewardId)?.DisplayName ?? u.RewardId}",
         RewardKind.Skin => DescribeSkin(u.RewardId),
+        RewardKind.Hat => $"Hat: {Hats.ById(u.RewardId)?.Name ?? u.RewardId}",
         RewardKind.Weapon => $"Weapon: {MetaContent.NameOf(u.RewardId)}",
         _ => $"Item: {MetaContent.NameOf(u.RewardId)}",
     };

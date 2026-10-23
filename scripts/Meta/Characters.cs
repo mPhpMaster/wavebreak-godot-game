@@ -7,7 +7,9 @@ namespace Wavebreak.Meta;
 
 /// <summary>Which unique rule a character plays with. Behaviour lives in
 /// <see cref="CharacterPassives"/>, keyed by this.</summary>
-public enum PassiveKind { None, Momentum, Kindling, Tailwind, GildedFortune, Bulwark, Ambush, Overcharge }
+public enum PassiveKind { None, Momentum, Kindling, Tailwind, GildedFortune, Bulwark, Ambush, Overcharge,
+    // expansion (Meta/CharacterPassives.Expansion.cs)
+    Harpoon, Beacon, Surge, BarnacleSkin, Salvage, GullsEye, LowTide, SquallStep }
 
 /// <summary>One stat tweak a character starts with. Same shape as an item
 /// effect, applied once at run start rather than per stack.</summary>
@@ -114,11 +116,11 @@ public sealed class CharacterDef
 /// modifiers, the catalogue's starting weapon — so a fresh profile plays as it
 /// always has, and every automated run (which never picks one) is unchanged.
 /// </summary>
-public static class Characters
+public static partial class Characters
 {
     public const string DefaultId = "drifter";
 
-    public static readonly IReadOnlyList<CharacterDef> All = new List<CharacterDef>
+    public static readonly IReadOnlyList<CharacterDef> All = WithExpansion(new List<CharacterDef>
     {
         new()
         {
@@ -311,7 +313,7 @@ public static class Characters
                 new CharacterStat(Stat.MaxHealth, ModifierOp.Flat, -10f),
             },
         },
-    };
+    });
 
     public static CharacterDef Default => All[0];
 

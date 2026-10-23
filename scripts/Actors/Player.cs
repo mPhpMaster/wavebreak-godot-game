@@ -363,6 +363,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         _rig.ManualMotion = true;
         _pose.AddChild(_rig);
         _rig.EnableShadow();
+        ApplyHat();
     }
 
     // ---------------------------------------------------------- code requests

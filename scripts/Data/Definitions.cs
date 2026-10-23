@@ -95,6 +95,16 @@ public enum EnemyBehavior
     /// <summary>Marks where the player stands, then jumps there and lands with
     /// a blast.</summary>
     Leaper,
+    // ---- expansion behaviours (Actors/Enemy.Expansion.cs)
+    /// <summary>Travels underground (untouchable, a ripple on the floor), then
+    /// surfaces under the player with a telegraphed blast.</summary>
+    Burrower,
+    /// <summary>Hangs back and pulses heal into injured allies nearby.</summary>
+    Healer,
+    /// <summary>Hangs back and lobs shells that land as delayed blast circles.</summary>
+    Artillery,
+    /// <summary>Marks a spot beside the player, then teleports there.</summary>
+    Blinker,
 }
 
 /// <summary>One verb in a boss's moveset. See <see cref="BossAttack"/>.</summary>
@@ -113,6 +123,14 @@ public enum BossMove
     Barrage,
     /// <summary>Delayed blast circles dropped on and around the player.</summary>
     MeteorRain,
+    // ---- expansion moves (Actors/Enemy.Expansion.cs)
+    /// <summary>A lane is painted toward the player, then blasts roll down it.</summary>
+    Riptide,
+    /// <summary>A marker under the player fills; the boss sinks, then erupts there.</summary>
+    Surface,
+    /// <summary>A disc on the player, then a ring of blasts around where it was:
+    /// step out, but not far.</summary>
+    Maelstrom,
 }
 
 /// <summary>

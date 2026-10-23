@@ -100,6 +100,7 @@ public static partial class Stages
             EnemyHealthScale = 1.25f, EnemyDamageScale = 1.12f, EnemySpeedScale = 1.04f,
             HazardPools = 12, HazardRadius = 4.2f, HazardSlow = 0.7f, HazardDamage = 0.02f,
             HazardColor = new Color(0.55f, 0.95f, 0.45f), HazardName = "sunken grave",
+            BossId = "gyre_matron",
         },
 
         // ---- Saltglass Shallows. A wide twelve-sided beach at low tide: long
@@ -127,6 +128,7 @@ public static partial class Stages
             EnemyHealthScale = 1.25f, EnemyDamageScale = 1.12f, EnemySpeedScale = 1.04f,
             HazardPools = 16, HazardRadius = 6.5f, HazardSlow = 0.6f, HazardDamage = 0f,
             HazardColor = new Color(0.25f, 0.75f, 0.85f), HazardName = "tide pool",
+            BossId = "squall_tyrant",
         },
     };
 }

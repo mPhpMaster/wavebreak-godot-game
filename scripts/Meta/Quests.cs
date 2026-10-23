@@ -53,8 +53,8 @@ public static class Quests
                 Metric = Metric.CharacterWins, Key = "wreckers_knave", Threshold = 1, Reward = RewardKind.Skin, RewardId = "wreckers_knave.smuggler" },
         new() { Id = "q_win_storm", Name = "Fair Weather", Description = "Win a run as the Stormwright.",
                 Metric = Metric.CharacterWins, Key = "stormwright", Threshold = 1, Reward = RewardKind.Skin, RewardId = "stormwright.thunderhead" },
-        // 7 = the full roster; keep in step with Characters.All.
-        new() { Id = "q_win_all", Name = "Full Crew", Description = "Win a run with every character.",
+        // 7 = the original roster; the expansion crew is not required.
+        new() { Id = "q_win_all", Name = "Full Crew", Description = "Win a run with 7 different characters.",
                 Metric = Metric.CharactersWon, Threshold = 7, Reward = RewardKind.Skin, RewardId = "gilded_augur.gilt" },
 
         // ---- weapon mastery: lifetime kills with one weapon

@@ -28,5 +28,6 @@ public static class BehaviourModels
         EnemyVisuals.MapImported("shoalmother", "quaternius/blob/Mushnub_Evolved.gltf");
         EnemyVisuals.MapImported("undertow_oracle", "quaternius/flying/Ghost_Skull.gltf");
         EnemyVisuals.MapImported("knell_leviathan", "quaternius/flying/Dragon_Evolved.gltf");
+        ExpansionModels.EnsureRegistered();
     }
 }

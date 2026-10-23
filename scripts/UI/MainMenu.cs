@@ -223,6 +223,7 @@ public sealed partial class MainMenu : Node3D
         Node3D model = Visuals.PlayerLooks.Build(lookId);
         model.Scale = Vector3.One * 1.0f;
         _hero.AddChild(model);
+        ApplyMenuHat();
     }
 
     public override void _Process(double delta)
@@ -340,6 +341,9 @@ public sealed partial class MainMenu : Node3D
         list.AddThemeConstantOverride("separation", 6);
         page.AddChild(list);
 
+        // The roster outgrew the column: it scrolls, and follows keyboard focus.
+        VBoxContainer charList = CharacterScroll(list);
+
         foreach (CharacterDef def in Characters.All)
         {
             CharacterDef c = def;
@@ -351,7 +355,7 @@ public sealed partial class MainMenu : Node3D
             b.FocusEntered += () => ShowCharacter(c);
             b.MouseEntered += () => b.GrabFocus();
             _charButtons.Add(b);
-            list.AddChild(b);
+            charList.AddChild(b);
         }
         _difficulty = new DifficultyPicker();
         list.AddChild(_difficulty);
@@ -395,6 +399,7 @@ public sealed partial class MainMenu : Node3D
         skinRow.AddChild(_skinLabel);
         skinRow.AddChild(next);
         box.AddChild(skinRow);
+        BuildHatRow(box);
         return page;
     }
 
@@ -433,6 +438,7 @@ public sealed partial class MainMenu : Node3D
         }
         _skinLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         ShowHeroLook(skin.LookId);
+        ShowHat();
     }
 
     private void ShowCharacter(CharacterDef c)
@@ -470,6 +476,7 @@ public sealed partial class MainMenu : Node3D
         // previews it but runs in the last owned choice.
         if (_shownCharacter == c && c.Skins[_skinIndex] is { IsAvailable: true } skin)
             Profile.SelectSkin(c.Id, skin.Id);
+        SaveHatChoice(c);
         Profile.Save();
         GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile, RunScene);
     }
