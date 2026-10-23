@@ -4,7 +4,8 @@ using Godot;
 namespace Wavebreak.Meta;
 
 /// <summary>
-/// The non-audio settings the menu exposes: mouse sensitivity and fullscreen.
+/// The non-audio settings the menu exposes: mouse sensitivity. Display and
+/// graphics options live in <see cref="GraphicsSettings"/>.
 ///
 /// Stored in the same <c>user://settings.cfg</c> as
 /// <see cref="Audio.AudioSettings"/>, in their own sections. AudioSettings
@@ -26,7 +27,6 @@ public static class GameSettings
     private static bool _loaded;
 
     public static float Sensitivity { get; private set; } = 1f;
-    public static bool Fullscreen { get; private set; }
 
     public static void Load()
     {
@@ -39,7 +39,6 @@ public static class GameSettings
         Variant s = cfg.GetValue("input", "mouse_sensitivity", 1f);
         if (s.VariantType is Variant.Type.Float or Variant.Type.Int)
             Sensitivity = Math.Clamp(s.AsSingle(), MinSensitivity, MaxSensitivity);
-        Fullscreen = cfg.GetValue("video", "fullscreen", false).AsBool();
     }
 
     public static void SetSensitivity(float value)
@@ -48,31 +47,12 @@ public static class GameSettings
         Save();
     }
 
-    public static void SetFullscreen(bool on)
-    {
-        Fullscreen = on;
-        ApplyWindow();
-        Save();
-    }
-
-    /// <summary>Push the window mode. Skipped for automated launches: a capture
-    /// must render at the resolution it was asked for, and a smoke run that
-    /// went fullscreen on a developer's desk would be rude.</summary>
-    public static void ApplyWindow()
-    {
-        if (Launch.Automated || DisplayServer.GetName() == "headless") return;
-        DisplayServer.WindowSetMode(Fullscreen
-            ? DisplayServer.WindowMode.Fullscreen
-            : DisplayServer.WindowMode.Windowed);
-    }
-
     private static void Save()
     {
         if (Launch.Automated) return;
         var cfg = new ConfigFile();
         cfg.Load(Path); // keep the audio section
         cfg.SetValue("input", "mouse_sensitivity", Sensitivity);
-        cfg.SetValue("video", "fullscreen", Fullscreen);
         Error err = cfg.Save(Path);
         if (err != Error.Ok) GD.PushWarning($"[settings] could not save {Path}: {err}");
     }

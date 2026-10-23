@@ -44,6 +44,9 @@ public sealed partial class Main : Node3D
     {
         Instance = this;
         Screenshot.ParseArgs();
+        // Graphics settings at run start (automated runs: the fixed defaults).
+        Meta.GraphicsSettings.Load();
+        Meta.GraphicsSettings.ApplyAll(this);
         if (Visuals.ArtShowcase.Intercept(this)) return;
 
         Run = new RunState(Screenshot.Requested ? Screenshot.Seed : (ulong)GD.Randi());
@@ -64,6 +67,8 @@ public sealed partial class Main : Node3D
 
         if (Screenshot.Requested)
             _ = RunScreenshot();
+        else if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-graphics") >= 0)
+            _ = GraphicsCheck.Run(this);
         else if (!_guardsChecked && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-input-guards") >= 0)
             _ = CheckInputGuards();
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--levelup-shot=")) is { } shotArg)

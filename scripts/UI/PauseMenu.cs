@@ -28,6 +28,8 @@ public sealed partial class PauseMenu : Node
 
     private Control _settings = null!;
     private Control _keys = null!;
+    private Control _graphics = null!;
+    private GraphicsPanel _graphicsPanel = null!;
     private Button _resume = null!;
     private bool _open;
     private bool _mouseWasCaptured;
@@ -61,6 +63,10 @@ public sealed partial class PauseMenu : Node
         _keys = BuildKeys();
         _sheet.AddChild(_keys);
         _keys.Visible = false;
+        _graphicsPanel = new GraphicsPanel(() => ShowGraphics(false), 430f);
+        _graphics = Framed(_graphicsPanel);
+        _sheet.AddChild(_graphics);
+        _graphics.Visible = false;
 
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--check-pause="))
@@ -137,6 +143,15 @@ public sealed partial class PauseMenu : Node
         ShowKeys(false);
         await Wait(0.2);
 
+        // Graphics page: open from settings, capture, Esc back to settings.
+        ShowGraphics(true);
+        await Wait(0.4);
+        Expect("graphics page opens over the paused run", _graphics.Visible && !_settings.Visible && tree.Paused);
+        await Screenshot.Capture(tree, this, System.IO.Path.Combine(dir, "pause-graphics.png"));
+        Esc();
+        await Wait(0.3);
+        Expect("Esc on graphics returns to settings", !_graphics.Visible && _settings.Visible && _open && tree.Paused);
+
         Esc();
         await Wait(0.3);
         Expect("Esc closes settings first, menu stays", _open && !_settings.Visible && tree.Paused);
@@ -155,12 +170,13 @@ public sealed partial class PauseMenu : Node
                       || (InputMap.HasAction("pause") && @event.IsActionPressed("pause"));
         if (!toggle) return;
         // That Esc belongs to the key-binding row waiting for a key.
-        if (KeybindPanel.AnyListening) return;
+        if (KeybindPanel.AnyListening || GraphicsPanel.Blocking) return;
 
         if (_open)
         {
             // Esc backs out of settings first, then out of the pause menu.
-            if (_keys.Visible) ShowKeys(false);
+            if (_graphics.Visible) ShowGraphics(false);
+            else if (_keys.Visible) ShowKeys(false);
             else if (_settings.Visible) ShowSettings(false);
             else Close();
             GetViewport().SetInputAsHandled();
@@ -235,6 +251,7 @@ public sealed partial class PauseMenu : Node
     {
         _settings.Visible = show;
         if (show) _keys.Visible = false;
+        if (show || !_open) _graphics.Visible = false;
         _sheet.ActionRow.Visible = _open && !show && !_keys.Visible;
     }
 
@@ -243,6 +260,38 @@ public sealed partial class PauseMenu : Node
         _keys.Visible = show;
         _settings.Visible = !show && _open;
         _sheet.ActionRow.Visible = false;
+    }
+
+    private void ShowGraphics(bool show)
+    {
+        _graphics.Visible = show;
+        _keys.Visible = false;
+        _settings.Visible = !show && _open;
+        _sheet.ActionRow.Visible = false;
+        if (show)
+        {
+            _graphicsPanel.Refresh();
+            _graphicsPanel.FocusFirst();
+        }
+    }
+
+    private static Control Framed(Control content)
+    {
+        var centre = new CenterContainer { MouseFilter = Control.MouseFilterEnum.Stop };
+        centre.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        var frame = new PanelContainer();
+        var style = new StyleBoxFlat
+        {
+            BgColor = new Color(0.06f, 0.07f, 0.11f, 0.98f),
+            BorderColor = new Color(0.30f, 0.55f, 0.70f, 0.9f),
+            ContentMarginLeft = 26, ContentMarginRight = 26, ContentMarginTop = 18, ContentMarginBottom = 18,
+        };
+        style.SetBorderWidthAll(2);
+        style.SetCornerRadiusAll(10);
+        frame.AddThemeStyleboxOverride("panel", style);
+        centre.AddChild(frame);
+        frame.AddChild(content);
+        return centre;
     }
 
     private Control BuildKeys()
@@ -317,11 +366,7 @@ public sealed partial class PauseMenu : Node
         sens.ValueChanged += v => { GameSettings.SetSensitivity((float)v); sensValue.Text = $"{GameSettings.Sensitivity:0.00}x"; };
         page.AddChild(Row("Mouse", sens, sensValue));
 
-        var full = new CheckButton { Text = "Fullscreen", ButtonPressed = GameSettings.Fullscreen };
-        full.AddThemeFontSizeOverride("font_size", 18);
-        full.Toggled += GameSettings.SetFullscreen;
-        page.AddChild(full);
-
+        page.AddChild(MainMenu.MenuButton("GRAPHICS", () => ShowGraphics(true)));
         page.AddChild(MainMenu.MenuButton("KEY BINDINGS", () => ShowKeys(true)));
         page.AddChild(MainMenu.MenuButton("BACK", () => ShowSettings(false)));
         return centre;

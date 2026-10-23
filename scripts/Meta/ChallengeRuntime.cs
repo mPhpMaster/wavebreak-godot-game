@@ -200,8 +200,9 @@ public sealed partial class ChallengeRuntime : Node
         foreach (Node child in arena.GetChildren())
             if (child is WorldEnvironment { Environment: { } env })
             {
-                env.FogEnabled = true;
-                env.FogDensity = Mathf.Max(env.FogDensity, FogDensity);
+                // Gameplay fog: GraphicsSettings keeps it (thinner) even with fog off.
+                env.SetMeta(GraphicsSettings.GameplayFogMeta, FogDensity);
+                GraphicsSettings.ApplyEnvironment(env);
             }
     }
 

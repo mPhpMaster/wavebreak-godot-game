@@ -256,3 +256,21 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   Secrets / Characters / Challenges / Shrines & Tomes) by toggling visibility;
   Q/E, Page Up/Down or the shoulder buttons switch tabs. `ContentAudit.Quests`
   checks ids, rewards, keys and the six-skins-per-character floor.
+
+## Graphics settings
+
+`Meta/GraphicsSettings` holds every graphics option (`GraphicsConfig`) and
+pushes it into the engine: the root viewport (MSAA/FXAA/TAA, 3D scale and
+FSR 1/2.2), the directional shadow atlas and soft-shadow quality, every
+`WorldEnvironment` and `DirectionalLight3D` under a node (`ApplyScene`, which
+`Arena` and `ThemeDresser` call when they build a sky), `Engine.MaxFps`, vsync,
+window mode, UI scale (`ContentScaleFactor`), and the camera's FOV. The camera
+reads shake and "speed & dash zoom" scales, `DamagePopup` the number cap, and
+`Arena` the prop-density multiplier (next map). Environments and suns keep their
+authored values as metadata, so switching an effect back on restores the map's
+look; Sea Fret marks its fog as gameplay fog, which "fog off" keeps at 60%.
+The default is the High preset, which equals the pre-settings look; automated
+launches never load or save it. `UI/GraphicsPanel` is the shared page (title
+settings and pause menu); window mode, size and monitor wait for APPLY and
+revert after 10 s unless kept. `--check-graphics` drives every option and
+prints GRAPHICS PASS/FAIL; `--menu-page=graphics[:bottom]` captures the page.
