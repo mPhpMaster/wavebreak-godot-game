@@ -961,11 +961,13 @@ public static class Catalog
         },
 
         // ---- Boss. Spawned on its own timer at 4, 8 and 12 minutes (never on top
-        // of a living boss), and announced. Health scales on the boss curve —
-        // EnemyManager.DifficultyBossHp, linear in minutes — not the crowd's:
-        // 1100 is about 2,100 at four minutes and 3,000 at eight, which the bot's
-        // build kills in one to two minutes. At the old 1800 on the crowd curve
-        // (5,700 / 12,000+) a level-24 build left three of them alive at 78-98%.
+        // of a living boss), and announced. Health rides EnemyManager.
+        // DifficultyBossHp (x3.2 at four minutes, x6.6 at eight, x12 at twelve):
+        // 1900 is about 6,000 at its intended four-minute slot, a one-minute
+        // fight for the bot's typical build there (~100 dps against a boss).
+        // Bosses written for later tiers carry more base health on purpose —
+        // the bot is far weaker than a practised player, so later fights lean
+        // hard rather than soft.
         //
         // Reach 3.2m and a 1.6s swing: readable, avoidable, and lethal if
         // ignored. The gold value alone is worth more than the preceding minute.
@@ -973,7 +975,7 @@ public static class Catalog
         {
             Id = "thresher_prime",
             DisplayName = "Thresher Prime",
-            Health = 1100f, Damage = 46f, MoveSpeed = 2.95f,
+            Health = 1900f, Damage = 46f, MoveSpeed = 2.95f,
             AttackRange = 3.2f, AttackCooldown = 1.6f,
             Radius = 1.5f, Height = 4.2f, KnockbackResist = 0.95f,
             XpValue = 400, GoldValue = 260,
@@ -1104,7 +1106,7 @@ public static class Catalog
         {
             Id = "breaker_matriarch",
             DisplayName = "Breaker Matriarch",
-            Health = 1500f, Damage = 50f, MoveSpeed = 3.5f,
+            Health = 3400f, Damage = 50f, MoveSpeed = 3.5f,
             AttackRange = 3.6f, AttackCooldown = 1.3f,
             Radius = 1.65f, Height = 4.8f, KnockbackResist = 0.97f,
             XpValue = 550, GoldValue = 360,
@@ -1273,7 +1275,7 @@ public static class Catalog
         {
             Id = "undertow_oracle",
             DisplayName = "Undertow Oracle",
-            Health = 1300f, Damage = 40f, MoveSpeed = 2.4f,
+            Health = 3200f, Damage = 40f, MoveSpeed = 2.4f,
             AttackRange = 3.0f, AttackCooldown = 1.5f,
             Radius = 1.4f, Height = 4.4f, KnockbackResist = 0.95f,
             XpValue = 500, GoldValue = 320,
@@ -1297,7 +1299,7 @@ public static class Catalog
         {
             Id = "knell_leviathan",
             DisplayName = "Knell Leviathan",
-            Health = 1900f, Damage = 55f, MoveSpeed = 3.2f,
+            Health = 4600f, Damage = 55f, MoveSpeed = 3.2f,
             AttackRange = 3.8f, AttackCooldown = 1.4f,
             Radius = 1.85f, Height = 5.0f, KnockbackResist = 0.98f,
             XpValue = 700, GoldValue = 450,

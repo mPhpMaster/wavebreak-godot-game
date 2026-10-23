@@ -138,12 +138,15 @@ public sealed partial class EnemyManager : Node3D
     public float DifficultyDamage { get; private set; } = 1f;
 
     /// <summary>
-    /// Health multiplier for bosses. Linear only, without the exponential the
-    /// rank and file get: a boss is a duel against the build's *single-target*
-    /// damage, which grows far slower than its crowd-clearing, so scaling a boss
-    /// like a crowd made every boss after the first an unkillable wall (measured:
-    /// three Threshers alive at 78-98% after a level-24 build had nine minutes
-    /// to work on them).
+    /// Health multiplier for bosses. Its own knob so a boss schedule (the timer
+    /// today, a phase system later) can be tuned apart from the crowd, but on
+    /// the same curve for now: measured on the bot, a build's damage against a
+    /// boss grows about as fast as the crowd's health does (roughly 100 dps at
+    /// four minutes, 400 at eight, 900 at twelve once "+% damage" items work).
+    /// A linear-only curve was tried while those items were broken and bosses
+    /// melted in 4-20s as soon as they were fixed. Unkillable bosses were never
+    /// a health problem; they were a reach problem (see Enemy catch-up and the
+    /// boss targeting priority in <see cref="PriorityFactor"/>).
     /// </summary>
     public float DifficultyBossHp { get; private set; } = 1f;
 
@@ -470,7 +473,7 @@ public sealed partial class EnemyManager : Node3D
         DifficultyHp = (1f + minutes * 0.34f) * MathF.Pow(1.075f, minutes) * scaling;
         DifficultyDamage = (1f + minutes * 0.16f) * scaling;
         DifficultySpeed = MathF.Min(1f + minutes * 0.022f, 1.45f);
-        DifficultyBossHp = (1f + minutes * 0.22f) * scaling;
+        DifficultyBossHp = DifficultyHp;
     }
 
     private void UpdateWaves(float runSeconds)
