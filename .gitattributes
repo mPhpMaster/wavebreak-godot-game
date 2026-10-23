@@ -1,0 +1,7 @@
+# Godot rewrites these with LF; keep them LF so imports do not show as changes.
+*.import text eol=lf
+*.uid text eol=lf
+*.godot text eol=lf
+*.tscn text eol=lf
+*.tres text eol=lf
+*.cfg text eol=lf
