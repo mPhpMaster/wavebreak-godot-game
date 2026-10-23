@@ -130,6 +130,9 @@ public sealed partial class Autopilot
             }
         }
 
+        // Co-op: revive a downed teammate, stay near the team (Net/NetSession.Test.cs).
+        if (Net.Coop.InRun && Net.NetSession.Instance is { } net) wish = net.AutopilotSteer(me, wish);
+
         wish = wish.LengthSquared() > 0.0001f ? wish.Normalized() : Vector3.Zero;
         UseVerbs(nearest);
         return wish;

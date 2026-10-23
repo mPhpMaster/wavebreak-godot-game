@@ -300,6 +300,8 @@ public sealed partial class EnemyManager : Node3D
         if (!_bossBarInstalled) _bossBarInstalled = UI.BossBar.Install(this);
 
         Sweep();
+        // Co-op client: the host's director decides every spawn (EnemyManager.Coop.cs).
+        if (Net.Coop.IsClient) return;
         UpdateDifficulty(runSeconds);
         RefreshNavigation(runSeconds);
 
@@ -319,12 +321,14 @@ public sealed partial class EnemyManager : Node3D
 
         if (!PlayerRef.TryGet(out Node3D player, out _)) return;
         Vector3 origin = player.GlobalPosition;
+        bool coop = Net.Coop.IsHost && _targets.Count > 0;
 
         _cullTimer -= dt;
         if (_cullTimer <= 0f)
         {
             _cullTimer = CullInterval;
-            CullStrays(origin);
+            if (coop) CullStraysCoop();
+            else CullStrays(origin);
         }
 
         _spawnTimer -= dt;
@@ -333,6 +337,7 @@ public sealed partial class EnemyManager : Node3D
 
         int cap = LiveCap(minutes);
         int spawned = 0;
+        if (coop) origin = SpawnAnchor(origin);
         while (spawned < MaxSpawnsPerBurst && _living < cap)
         {
             int index = PickAffordable(runSeconds, minutes);
@@ -408,6 +413,16 @@ public sealed partial class EnemyManager : Node3D
         RebuildGrid();
         if (DevFrozen) return;   // developer panel: freeze AI
 
+        // Co-op (EnemyManager.Coop.cs): a client only moves puppets; the host
+        // sends each enemy after the nearest living player.
+        if (Net.Coop.IsClient)
+        {
+            PuppetPhysics(dt);
+            return;
+        }
+        bool coop = Net.Coop.IsHost;
+        if (coop) RefreshTargets();
+
         bool hasPlayer = PlayerRef.TryGet(out Node3D playerNode, out IDamageable? playerHit);
         Vector3 playerPosition = hasPlayer ? playerNode.GlobalPosition : Vector3.Zero;
 
@@ -417,6 +432,13 @@ public sealed partial class EnemyManager : Node3D
             Enemy e = _alive[i];
             if (!e.IsAlive) continue;
             Vector3 separation = SeparationFor(i, e.GlobalPosition);
+            if (coop)
+            {
+                // Everyone down: nobody to chase; the host is about to end the run.
+                if (NearestTarget(e.GlobalPosition, out Vector3 feet, out IDamageable? hit)) e.Step(dt, feet, hit, separation);
+                else e.Step(dt, playerPosition, null, separation);
+                continue;
+            }
             e.Step(dt, playerPosition, hasPlayer ? playerHit : null, separation);
         }
 
@@ -517,6 +539,7 @@ public sealed partial class EnemyManager : Node3D
 
     private static void Announce(string text, Color color, float scale)
     {
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.SendBanner(text, color, scale);
         if (!PlayerRef.TryGet(out Node3D player, out _)) return;
         EventBus.Publish(new PopupRequested(player.GlobalPosition + new Vector3(0f, 3.2f, 0f), text, color, scale));
     }
@@ -608,7 +631,7 @@ public sealed partial class EnemyManager : Node3D
 
     private Enemy? SpawnOne(int defIndex, Vector3 around)
     {
-        if (defIndex < 0 || defIndex >= _pools.Count) return null;
+        if (defIndex < 0 || defIndex >= _pools.Count || Net.Coop.IsClient) return null;
 
         Pool<Enemy> pool = _pools[defIndex];
         Enemy? enemy = pool.Get();
@@ -633,7 +656,8 @@ public sealed partial class EnemyManager : Node3D
     public Enemy? SpawnAt(EnemyDef def, Vector3 position)
     {
         int index = _defs.IndexOf(def);
-        if (index < 0 || _living >= MaxAlive) return null;
+        // Co-op client: only the host puts enemies on the field.
+        if (index < 0 || _living >= MaxAlive || Net.Coop.IsClient) return null;
 
         Enemy? enemy = _pools[index].Get();
         if (enemy is null) return null;
@@ -663,6 +687,7 @@ public sealed partial class EnemyManager : Node3D
         Meta.Challenges.DressEnemy(enemy);
 
         Register(enemy);
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.OnEnemySpawned(enemy);
     }
 
     /// <summary>Despawn every live enemy below <paramref name="y"/>. The content

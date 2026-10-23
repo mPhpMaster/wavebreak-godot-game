@@ -163,7 +163,7 @@ public static partial class Challenges
     {
         Profile.EnsureLoaded();
         Launch.Parse();
-        IEnumerable<ChallengeDef> set = Launch.SkipsMenu ? Array.Empty<ChallengeDef>() : Selected;
+        IEnumerable<ChallengeDef> set = Launch.SkipsMenu || Net.Coop.InRun ? Array.Empty<ChallengeDef>() : Selected;   // co-op: none
         foreach (string arg in OS.GetCmdlineUserArgs())
         {
             if (!arg.StartsWith("--challenges=")) continue;

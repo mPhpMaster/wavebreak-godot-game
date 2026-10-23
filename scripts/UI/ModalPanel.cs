@@ -77,7 +77,7 @@ public partial class ModalPanel : Control
         Input.MouseMode = Input.MouseModeEnum.Visible;
         IsOpen = true;
         Visible = true;
-        if (IsInsideTree()) GetTree().Paused = true;
+        if (IsInsideTree()) Net.Coop.SetPaused(GetTree(), true);
     }
 
     public void Close()
@@ -87,7 +87,7 @@ public partial class ModalPanel : Control
         Visible = false;
         if (_mouseWasCaptured) Actors.PlayerCamera.TryCaptureMouse();
         _mouseWasCaptured = false;
-        if (IsInsideTree()) GetTree().Paused = false;
+        if (IsInsideTree()) Net.Coop.SetPaused(GetTree(), false);
         OnClosed();
     }
 

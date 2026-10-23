@@ -71,6 +71,11 @@ public sealed partial class Chest : Node3D
     /// fresh drops and prefer culling the oldest.</summary>
     public float SpawnedAt { get; set; }
 
+    /// <summary>Co-op: session-wide id the host gave this chest (0 = not
+    /// networked), and whether an open request is waiting on the host.</summary>
+    public int NetId { get; set; }
+    public bool NetPending { get; set; }
+
     /// <summary>Where prompts and reward text are anchored.</summary>
     public Vector3 Top => GlobalPosition + Vector3.Up * (_bodyHeight * VisualScale + 0.6f);
 

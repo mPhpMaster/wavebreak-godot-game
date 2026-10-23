@@ -308,7 +308,7 @@ public static class MapChallenges
     public static IEnumerable<ChallengeDef> Merge(IEnumerable<ChallengeDef> set)
     {
         Launch.Parse();
-        Active = Launch.SkipsMenu ? null : Selected;
+        Active = Launch.SkipsMenu || Net.Coop.InRun ? null : Selected;   // co-op: none
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--map-challenge=")) Active = ById(arg["--map-challenge=".Length..]);
         if (Active is null) return set;

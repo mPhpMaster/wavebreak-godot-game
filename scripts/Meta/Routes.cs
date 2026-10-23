@@ -96,7 +96,7 @@ public static class Routes
     {
         Profile.EnsureLoaded();
         Launch.Parse();
-        RouteDef route = Launch.SkipsMenu ? All[0] : Selected;
+        RouteDef route = Launch.SkipsMenu || Net.Coop.InRun ? All[0] : Selected;   // co-op: every machine plays Classic
         if (MapChallenges.RouteOverride is { } forcedRoute && ById(forcedRoute) is { } mr) route = mr;   // map challenge
         string[]? explicitMaps = null;
         foreach (string arg in OS.GetCmdlineUserArgs())

@@ -53,7 +53,8 @@ public sealed partial class Main : Node3D
         Meta.GraphicsSettings.ApplyAll(this);
         if (Visuals.ArtShowcase.Intercept(this)) return;
 
-        Run = new RunState(Screenshot.Requested ? Screenshot.Seed : (ulong)GD.Randi());
+        // Co-op: the host's seed, so every machine builds the same maps.
+        Run = new RunState(Net.Coop.InRun ? Net.Coop.Seed : Screenshot.Requested ? Screenshot.Seed : (ulong)GD.Randi());
         GD.Print($"[wavebreak] seed {Run.Seed}");
 
         BuildWorld();
@@ -70,6 +71,10 @@ public sealed partial class Main : Node3D
         EventBus.Subscribe<RunEnded>(OnRunEnded);
         // Ctrl+Shift+Alt+F12 (UI/DevPanel); also runs --check-devpanel.
         UI.DevPanel.Install(this);
+
+        // Co-op: remote players, the team panel, and a held start until every
+        // machine has loaded (Net/NetSession.Run.cs).
+        if (Net.Coop.InRun) Net.NetSession.Instance?.BeginRun(this);
 
         if (Screenshot.Requested)
             _ = RunScreenshot();
@@ -338,6 +343,7 @@ public sealed partial class Main : Node3D
     {
         EventBus.Unsubscribe<LevelGained>(OnLevelGained);
         EventBus.Unsubscribe<RunEnded>(OnRunEnded);
+        if (Net.Coop.Active) Net.NetSession.Instance?.RunSceneExited();
         Run?.Dispose();
         EventBus.Reset();
         Instance = null;

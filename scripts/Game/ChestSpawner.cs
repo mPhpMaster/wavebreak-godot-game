@@ -236,6 +236,8 @@ public sealed partial class ChestSpawner : Node
         _centre = centre;
         _radius = MathF.Max(6f, arenaRadius);
         _nextTopUp = _clock + TopUpInterval;
+        // Co-op client: the host places every chest and sends it.
+        if (Net.Coop.IsClient) return this;
 
         CollectObstacles(map);
 
@@ -314,6 +316,8 @@ public sealed partial class ChestSpawner : Node
     public bool TryOpen(Chest chest)
     {
         if (!Usable(chest)) return false;
+        // Co-op: the host decides who gets a chest first (ChestSpawner.Coop.cs).
+        if (chest.NetId > 0 && Net.Coop.InRun && !_netApproved) return AskHost(chest);
         Inventory? inv = Inventory.Current;
         Player? player = Player.Instance;
         if (inv is null || player is null) return false;
@@ -382,7 +386,7 @@ public sealed partial class ChestSpawner : Node
         if (_map is not null && !IsInstanceValid(_map)) Clear();
         TopUp();
 
-        bool pressed = _interactRequested;
+        bool pressed = _interactRequested && !Net.Coop.LocalHold;
         _interactRequested = false;
 
         Player? player = Player.Instance;
@@ -436,7 +440,7 @@ public sealed partial class ChestSpawner : Node
     {
         if (_clock < _nextTopUp) return;
         _nextTopUp = _clock + TopUpInterval;
-        if (_map is null) return;
+        if (_map is null || Net.Coop.IsClient) return;
 
         int paid = 0;
         foreach (Chest c in _chests) if (Usable(c) && !c.IsFree) paid++;
@@ -446,7 +450,7 @@ public sealed partial class ChestSpawner : Node
 
     private void OnEnemyKilled(EnemyKilled e)
     {
-        if (!e.WasElite || _map is null) return;
+        if (!e.WasElite || _map is null || Net.Coop.IsClient) return;
 
         bool boss = e.GoldValue >= BossGoldThreshold;
         if (!boss)
@@ -552,6 +556,7 @@ public sealed partial class ChestSpawner : Node
 
         _chests.Add(chest);
         Spawned++;
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.OnChestSpawned(chest);
         EventBus.Publish(new ChestSpawned(at, r.Tier, r.Free));
         if (r.Free)
             EventBus.Publish(new PopupRequested(at + Vector3.Up * 2.4f, "FREE CHEST", new Color(0.55f, 1f, 0.65f), 1.4f));

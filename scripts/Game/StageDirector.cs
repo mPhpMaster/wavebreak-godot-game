@@ -206,6 +206,9 @@ public sealed partial class StageDirector
         if (_run.Over || _index < 0) return;
 
         GuardFall();
+        // Co-op client: the host runs the phase flow and sends each step
+        // (StageDirector.Coop.cs).
+        if (Net.Coop.IsClient) return;
 
         // --open-portal-at=N: skip the boss and open the portal at run time N.
         // For captures only -- a frame of the open portal otherwise depends on
@@ -243,7 +246,8 @@ public sealed partial class StageDirector
                 break;
 
             case PhaseState.PortalOpen:
-                if (_portal is not null && _portal.Contains(_player.GlobalPosition))
+                if (_portal is not null && (_portal.Contains(_player.GlobalPosition)
+                                            || Net.Coop.IsHost && Net.NetSession.Instance?.AnyRemoteInside(_portal) == true))
                 {
                     Log($"portal entered -> phase {_index + 2}/{_stages.Count}");
                     EnterPhase(_index + 1);
@@ -301,7 +305,7 @@ public sealed partial class StageDirector
 
         PopulateFinds(index);
 
-        _player.Teleport(Arena.Centre + Vector3.Up * 0.3f);
+        _player.Teleport(Arena.Centre + Vector3.Up * 0.3f + Net.Coop.SpawnOffset);
         _camera.SnapToTarget();
 
         _run.BeginPhase(index + 1, _stages.Count, stage.Id, stage.DisplayName);
@@ -309,6 +313,8 @@ public sealed partial class StageDirector
         Log($"phase {index + 1}/{_stages.Count} '{stage.DisplayName}' begins (boss in {PhaseLength:0}s, " +
             $"hp x{stage.EnemyHealthScale:0.00} dmg x{stage.EnemyDamageScale:0.00} spd x{stage.EnemySpeedScale:0.00})");
         EventBus.Publish(new PhaseStarted(index + 1, _stages.Count, stage.Id, stage.DisplayName, stage.Tagline));
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.SendPhase(index);
+        if (Net.Coop.InRun) Net.NetSession.Instance?.PlaceRemotes();
     }
 
     /// <summary>
@@ -407,6 +413,7 @@ public sealed partial class StageDirector
         _fought.Add(_bossDef.Id);
         Log($"phase {_index + 1} boss '{_bossDef.DisplayName}' arrives ({_boss.MaxHealth:0} hp)");
         EventBus.Publish(new PhaseBossArrived(_index + 1, _bossDef.DisplayName));
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.SendBoss(_boss);
     }
 
     /// <summary>
@@ -448,6 +455,7 @@ public sealed partial class StageDirector
     private void OnBossKilled()
     {
         Log($"phase {_index + 1} boss down");
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.SendBossDown();
         _boss = null;
         BossesDefeated++;
         ApplyScaling(1f);

@@ -51,8 +51,9 @@ public sealed partial class PauseMenu : Node
         _resume = MainMenu.MenuButton(Loc.T("RESUME"), Close);
         _sheet.ActionRow.AddChild(_resume);
         _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("SETTINGS"), () => ShowSettings(true)));
-        _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("END RUN"), EndRun));
-        _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("RESTART"), Restart));
+        // Co-op: no restart (it is everyone's run), and ending it means leaving it.
+        _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T(Net.Coop.InRun ? "LEAVE GAME" : "END RUN"), EndRun));
+        if (!Net.Coop.InRun) _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("RESTART"), Restart));
         _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("MAIN MENU"), ToMainMenu));
         _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("QUIT"), () => GetTree().Quit()));
         foreach (Node child in _sheet.ActionRow.GetChildren())
@@ -206,7 +207,7 @@ public sealed partial class PauseMenu : Node
         if (Screenshot.Requested || DevPanel.IsOpen) return false;
         if (_levelUp.IsOpen || _results.Visible) return false;
         if (Main.Instance?.Run is { Over: true }) return false;
-        return !GetTree().Paused;
+        return !Net.Coop.IsPaused(GetTree());
     }
 
     // ------------------------------------------------------------ open/close
@@ -216,7 +217,8 @@ public sealed partial class PauseMenu : Node
         _open = true;
         _mouseWasCaptured = Input.MouseMode == Input.MouseModeEnum.Captured;
         Input.MouseMode = Input.MouseModeEnum.Visible;
-        GetTree().Paused = true;
+        // Co-op: the world keeps running for the others; only this player waits.
+        Net.Coop.SetPaused(GetTree(), true);
         _sheet.Pinned = true;
         ShowSettings(false);
         _resume.GrabFocus();
@@ -228,7 +230,7 @@ public sealed partial class PauseMenu : Node
         _open = false;
         ShowSettings(false);
         _sheet.Pinned = false;
-        GetTree().Paused = false;
+        Net.Coop.SetPaused(GetTree(), false);
         if (_mouseWasCaptured) PlayerCamera.TryCaptureMouse();
     }
 
@@ -245,6 +247,11 @@ public sealed partial class PauseMenu : Node
     private void EndRun()
     {
         if (Main.Instance is not { } main || main.Run.Over) return;
+        if (Net.Coop.InRun)
+        {
+            ToMainMenu();   // leaving the scene closes the session (Main._ExitTree)
+            return;
+        }
         Close();
         main.Run.Finish(survived: main.Stages.Won);
     }

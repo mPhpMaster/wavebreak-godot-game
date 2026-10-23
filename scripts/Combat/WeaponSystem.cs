@@ -511,7 +511,8 @@ public sealed partial class WeaponSystem : Node
 
         // Pacifist challenge: weapons hold fire for a while on each map; shots
         // already in flight still land.
-        if (!Meta.Challenges.WeaponsSilenced)
+        // Co-op: a downed player's weapons are silent until a teammate revives them.
+        if (!Meta.Challenges.WeaponsSilenced && !(Net.Coop.InRun && _player is { IsAlive: false }))
             for (int i = 0; i < _weapons.Count; i++)
                 _weapons[i].Tick(dt, this);
 

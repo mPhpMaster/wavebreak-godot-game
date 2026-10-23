@@ -278,7 +278,7 @@ public sealed partial class Shrine : Node3D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (!_inRange || Spent) return;
+        if (!_inRange || Spent || Net.Coop.LocalHold) return;
         bool pressed = (InputMap.HasAction("interact") && @event.IsActionPressed("interact"))
                        || @event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.E }
                        || @event is InputEventJoypadButton { Pressed: true, ButtonIndex: JoyButton.X };

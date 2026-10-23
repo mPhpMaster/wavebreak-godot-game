@@ -199,7 +199,7 @@ public sealed partial class PlayerHealth : Node, IDamageable
             return;
         }
 
-        if (_dead || info.Nullified)
+        if (_dead || info.Nullified || Net.Coop.HoldShielded)
         {
             info.Nullified = true;
             info.Amount = 0f;
@@ -339,6 +339,14 @@ public sealed partial class PlayerHealth : Node, IDamageable
         Shield = 0f;
         _invulnerable = 0f;
         _pendingHealEvent = 0f;
+
+        // Co-op: down, not dead. A teammate can revive; the host ends the run
+        // when everyone is down (PlayerHealth.Coop.cs, Net/NetSession.Run.cs).
+        if (Net.Coop.InRun)
+        {
+            GoDown();
+            return;
+        }
 
         // A death after the last boss fell (in the Final Swarm) still ends a won run.
         bool won = Game.Main.Instance is { } main && main.Stages is { Won: true };

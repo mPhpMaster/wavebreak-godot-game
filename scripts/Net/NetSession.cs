@@ -1,0 +1,462 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Godot;
+using Wavebreak.Meta;
+
+namespace Wavebreak.Net;
+
+/// <summary>
+/// The co-op session: one node at <c>/root/NetSession</c> on every peer, so
+/// every RPC has the same path everywhere. It outlives scene changes (title ->
+/// run -> title) and exists only while a session does — single-player never
+/// creates it.
+///
+/// Built on Godot's high-level multiplayer (ENet + RPCs). This file is the
+/// connection and the lobby; the run's traffic is in the other partials:
+///   NetSession.Run.cs    players, down/revive, start/end, clock
+///   NetSession.World.cs  enemies, hits, enemy attacks, pickups, chests, stage
+///   NetSession.Test.cs   the automated two-process test
+/// </summary>
+public sealed partial class NetSession : Node
+{
+    public static NetSession? Instance { get; private set; }
+
+    /// <summary>Lobby or session state changed; the CO-OP page redraws.</summary>
+    public static event Action? Changed;
+
+    /// <summary>Human-readable state line for the CO-OP page ("Hosting on port
+    /// 7777", "Connecting...").</summary>
+    public string Status { get; private set; } = "";
+
+    private ENetMultiplayerPeer? _peer;
+    private double _connectStarted = -1;
+    private const double ConnectTimeout = 8.0;
+
+    // ------------------------------------------------------------ lifecycle
+
+    /// <summary>The live session node, created on demand under the tree root.
+    /// Added deferred: the caller is usually a scene's _Ready, when the root
+    /// refuses new children.</summary>
+    public static NetSession Ensure(SceneTree tree)
+    {
+        if (Instance is not null && IsInstanceValid(Instance)) return Instance;
+        var s = new NetSession { Name = "NetSession" };
+        Instance = s;
+        tree.Root.CallDeferred(Node.MethodName.AddChild, s);
+        return s;
+    }
+
+    public override void _Ready()
+    {
+        ProcessMode = ProcessModeEnum.Always;
+        Multiplayer.PeerConnected += OnPeerConnected;
+        Multiplayer.PeerDisconnected += OnPeerDisconnected;
+        Multiplayer.ConnectedToServer += OnConnected;
+        Multiplayer.ConnectionFailed += OnConnectionFailed;
+        Multiplayer.ServerDisconnected += OnServerDisconnected;
+        _pendingStart?.Invoke();
+        _pendingStart = null;
+    }
+
+    public override void _ExitTree()
+    {
+        Multiplayer.PeerConnected -= OnPeerConnected;
+        Multiplayer.PeerDisconnected -= OnPeerDisconnected;
+        Multiplayer.ConnectedToServer -= OnConnected;
+        Multiplayer.ConnectionFailed -= OnConnectionFailed;
+        Multiplayer.ServerDisconnected -= OnServerDisconnected;
+        if (ReferenceEquals(Instance, this)) Instance = null;
+    }
+
+    private Action? _pendingStart;
+
+    /// <summary>Run <paramref name="a"/> once the node is in the tree (now, if it is).</summary>
+    private void WhenReady(Action a)
+    {
+        if (IsInsideTree()) a();
+        else _pendingStart += a;
+    }
+
+    // ------------------------------------------------------------ host / join
+
+    /// <summary>Open a lobby on <paramref name="port"/>. The host is player 1.</summary>
+    public void Host(int port)
+    {
+        WhenReady(() =>
+        {
+            CloseSocket();
+            _peer = new ENetMultiplayerPeer();
+            Error err = _peer.CreateServer(port, Coop.MaxPlayers - 1);
+            if (err != Error.Ok)
+            {
+                Fail(Loc.F("Could not host on port {0} ({1}).", port, err.ToString()));
+                return;
+            }
+            Multiplayer.MultiplayerPeer = _peer;
+            Coop.Mode = CoopMode.Host;
+            Coop.LocalId = 1;
+            Coop.Roster.Clear();
+            CoopPeer me = LocalProfile();
+            me.Id = 1;
+            me.Slot = 0;
+            me.Ready = true;
+            Coop.Roster.Add(me);
+            Status = Loc.F("Hosting on port {0}. Waiting for players...", port);
+            GD.Print($"[coop] hosting on port {port}");
+            Changed?.Invoke();
+        });
+    }
+
+    /// <summary>Connect to a host at "ip:port" (port defaults to 7777).</summary>
+    public void Join(string address)
+    {
+        WhenReady(() =>
+        {
+            if (!ParseAddress(address, out string host, out int port))
+            {
+                Fail(Loc.T("Enter an address like 192.168.1.20:7777."));
+                return;
+            }
+            CloseSocket();
+            _peer = new ENetMultiplayerPeer();
+            Error err = _peer.CreateClient(host, port);
+            if (err != Error.Ok)
+            {
+                Fail(Loc.F("Could not connect to {0} ({1}).", $"{host}:{port}", err.ToString()));
+                return;
+            }
+            Multiplayer.MultiplayerPeer = _peer;
+            Coop.Mode = CoopMode.Client;
+            Coop.Roster.Clear();
+            _connectStarted = Time.GetTicksMsec() / 1000.0;
+            Status = Loc.F("Connecting to {0}...", $"{host}:{port}");
+            GD.Print($"[coop] joining {host}:{port}");
+            Changed?.Invoke();
+        });
+    }
+
+    public static bool ParseAddress(string text, out string host, out int port)
+    {
+        host = "";
+        port = Coop.DefaultPort;
+        text = (text ?? "").Trim();
+        if (text.Length == 0) return false;
+        int colon = text.LastIndexOf(':');
+        if (colon > 0 && text.IndexOf(':') == colon)
+        {
+            if (!int.TryParse(text[(colon + 1)..], out port) || port is < 1 or > 65535) return false;
+            text = text[..colon];
+        }
+        host = text.Trim();
+        return host.Length > 0;
+    }
+
+    /// <summary>Leave the session (both roles) and go back to single-player
+    /// state. Safe to call twice.</summary>
+    public void Leave()
+    {
+        bool wasActive = Coop.Active;
+        EndRunState();
+        CloseSocket();
+        Coop.Reset();
+        Status = "";
+        if (wasActive) GD.Print("[coop] session closed");
+        Changed?.Invoke();
+        QueueFree();
+        if (ReferenceEquals(Instance, this)) Instance = null;
+    }
+
+    private void CloseSocket()
+    {
+        if (_peer is not null)
+        {
+            _peer.Close();
+            _peer = null;
+        }
+        if (IsInsideTree()) Multiplayer.MultiplayerPeer = new OfflineMultiplayerPeer();
+        _connectStarted = -1;
+    }
+
+    private void Fail(string message)
+    {
+        GD.Print($"[coop] {message}");
+        Coop.Notice = message;
+        CloseSocket();
+        Coop.Reset();
+        Status = message;
+        Changed?.Invoke();
+        TestFail(message);
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_connectStarted > 0 && Time.GetTicksMsec() / 1000.0 - _connectStarted > ConnectTimeout)
+        {
+            _connectStarted = -1;
+            Fail(Loc.T("No answer from the host. Check the address, the port and the firewall."));
+        }
+        ProcessRun((float)delta);
+        ProcessTest((float)delta);
+    }
+
+    // ------------------------------------------------------------ connection events
+
+    private void OnPeerConnected(long id)
+    {
+        GD.Print($"[coop] peer {id} connected");
+    }
+
+    private void OnPeerDisconnected(long id)
+    {
+        GD.Print($"[coop] peer {id} disconnected");
+        if (!Coop.IsHost) return;
+        string name = Coop.NameOf(id);
+        Coop.Roster.RemoveAll(p => p.Id == id);
+        BroadcastRoster();
+        PeerLeftRun(id, name);
+        Changed?.Invoke();
+    }
+
+    private void OnConnected()
+    {
+        _connectStarted = -1;
+        Coop.LocalId = Multiplayer.GetUniqueId();
+        CoopPeer me = LocalProfile();
+        Status = Loc.T("Connected. Waiting for the host...");
+        GD.Print($"[coop] connected as {Coop.LocalId}");
+        RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId);
+        Changed?.Invoke();
+    }
+
+    private void OnConnectionFailed()
+    {
+        _connectStarted = -1;
+        Fail(Loc.T("Could not reach the host."));
+    }
+
+    private void OnServerDisconnected()
+    {
+        GD.Print("[coop] host disconnected");
+        bool inRun = Coop.InRun;
+        bool runOver = Game.Main.Instance?.Run is { Over: true };
+        string message = Loc.T("The host left the game.");
+        TestHostLeft();
+        CloseSocket();
+        Coop.Reset();
+        Coop.Notice = message;
+        Status = message;
+        Changed?.Invoke();
+        if (inRun && !runOver && IsInsideTree())
+        {
+            UI.CoopPage.OpenOnTitle = true;
+            GetTree().Paused = false;
+            GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile, UI.MainMenu.TitleScene);
+        }
+        QueueFree();
+        if (ReferenceEquals(Instance, this)) Instance = null;
+    }
+
+    // ------------------------------------------------------------ lobby
+
+    /// <summary>This machine's player as the lobby shows it: the name typed on
+    /// the CO-OP page and the character and skin chosen on the PLAY page.</summary>
+    public static CoopPeer LocalProfile()
+    {
+        Profile.EnsureLoaded();
+        CharacterDef c = Characters.ForThisRun();
+        SkinDef skin = Launch.Automated ? c.Skins[0] : c.SelectedSkin;
+        return new CoopPeer
+        {
+            Id = Coop.LocalId,
+            Name = CleanName(PlayerName),
+            CharacterId = c.Id,
+            SkinId = skin.Id,
+        };
+    }
+
+    /// <summary>The name this machine plays under.</summary>
+    public static string PlayerName { get; set; } = DefaultName();
+
+    private static string DefaultName()
+    {
+        string n = OS.GetEnvironment("USERNAME");
+        if (string.IsNullOrWhiteSpace(n)) n = OS.GetEnvironment("USER");
+        return CleanName(string.IsNullOrWhiteSpace(n) ? "Player" : n);
+    }
+
+    public static string CleanName(string? name)
+    {
+        var sb = new StringBuilder();
+        foreach (char ch in (name ?? "").Trim())
+            if (!char.IsControl(ch) && ch != '|' && ch != '\n') sb.Append(ch);
+        string s = sb.ToString().Trim();
+        if (s.Length > 16) s = s[..16];
+        return s.Length == 0 ? "Player" : s;
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void Hello(string protocol, string name, string characterId, string skinId)
+    {
+        if (!Coop.IsHost) return;
+        long id = Multiplayer.GetRemoteSenderId();
+        if (protocol != Coop.Protocol)
+        {
+            RefusePeer(id, Loc.T("Different game version."));
+            return;
+        }
+        CoopPeer? p = Coop.Peer(id);
+        if (p is null)
+        {
+            if (Coop.InRun)
+            {
+                RefusePeer(id, Loc.T("That game has already started."));
+                return;
+            }
+            if (Coop.Roster.Count >= Coop.MaxPlayers)
+            {
+                RefusePeer(id, Loc.T("That game is full."));
+                return;
+            }
+            p = new CoopPeer { Id = id, Slot = FreeSlot() };
+            Coop.Roster.Add(p);
+            GD.Print($"[coop] {CleanName(name)} joined as slot {p.Slot}");
+        }
+        p.Name = UniqueName(CleanName(name), id);
+        p.CharacterId = characterId;
+        p.SkinId = skinId;
+        BroadcastRoster();
+        Changed?.Invoke();
+    }
+
+    private static string UniqueName(string name, long id)
+    {
+        foreach (CoopPeer o in Coop.Roster)
+            if (o.Id != id && o.Name == name) return $"{name} {id % 100}";
+        return name;
+    }
+
+    private static int FreeSlot()
+    {
+        for (int s = 0; s < Coop.MaxPlayers; s++)
+            if (!Coop.Roster.Exists(p => p.Slot == s)) return s;
+        return Coop.Roster.Count;
+    }
+
+    private void RefusePeer(long id, string reason)
+    {
+        GD.Print($"[coop] refused peer {id}: {reason}");
+        RpcId(id, MethodName.Refused, reason);
+        // Let the message leave before the socket does.
+        GetTree().CreateTimer(0.5, processAlways: true).Timeout += () =>
+        {
+            if (_peer is not null && IsInstanceValid(_peer)) _peer.DisconnectPeer((int)id);
+        };
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void Refused(string reason)
+    {
+        Fail(reason);
+    }
+
+    /// <summary>The character or skin changed on the CO-OP page: tell the lobby.</summary>
+    public void SendLook()
+    {
+        if (Coop.InRun) return;
+        CoopPeer me = LocalProfile();
+        if (Coop.IsClient && Coop.LocalPeer is not null)
+            RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId);
+        else if (Coop.IsHost && Coop.LocalPeer is { } host)
+        {
+            host.CharacterId = me.CharacterId;
+            host.SkinId = me.SkinId;
+            BroadcastRoster();
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>Ready toggle from the CO-OP page (clients only; the host is
+    /// always ready and starts the game).</summary>
+    public void SetReady(bool ready)
+    {
+        if (Coop.IsClient) RpcId(1, MethodName.ReadyChanged, ready);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void ReadyChanged(bool ready)
+    {
+        if (!Coop.IsHost) return;
+        if (Coop.Peer(Multiplayer.GetRemoteSenderId()) is not { } p) return;
+        p.Ready = ready;
+        BroadcastRoster();
+        Changed?.Invoke();
+    }
+
+    /// <summary>The host's Start button: enabled with 2-4 players, all ready.</summary>
+    public bool CanStart => Coop.IsHost && !Coop.InRun && Coop.Roster.Count >= 2
+                            && Coop.Roster.TrueForAll(p => p.Ready);
+
+    private void BroadcastRoster()
+    {
+        if (!Coop.IsHost) return;
+        Rpc(MethodName.RosterChanged, PackRoster());
+    }
+
+    private static string PackRoster()
+    {
+        var sb = new StringBuilder();
+        foreach (CoopPeer p in Coop.Roster)
+            sb.Append(p.Id).Append('|').Append(p.Slot).Append('|').Append(p.Ready ? 1 : 0).Append('|')
+              .Append(p.CharacterId).Append('|').Append(p.SkinId).Append('|').Append(p.Name).Append('\n');
+        return sb.ToString();
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void RosterChanged(string packed)
+    {
+        if (!Coop.IsClient) return;
+        Coop.Roster.Clear();
+        foreach (string line in packed.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string[] f = line.Split('|');
+            if (f.Length < 6) continue;
+            Coop.Roster.Add(new CoopPeer
+            {
+                Id = long.Parse(f[0]),
+                Slot = int.Parse(f[1]),
+                Ready = f[2] == "1",
+                CharacterId = f[3],
+                SkinId = f[4],
+                Name = f[5],
+            });
+        }
+        if (Coop.LocalPeer is not null && !Coop.InRun) Status = Loc.T("In the lobby. Press READY when you are set.");
+        SyncRemotes();
+        Changed?.Invoke();
+    }
+
+    /// <summary>Host: start the run for everyone.</summary>
+    public void StartGame()
+    {
+        if (!CanStart && !_testMode) return;
+        ulong seed = ((ulong)GD.Randi() << 16) ^ GD.Randi();
+        string difficulty = DifficultyTiers.Selected.Id;
+        foreach (string arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--seed=")) seed = (ulong)arg["--seed=".Length..].ToInt();
+        GD.Print($"[coop] starting run seed={seed} players={Coop.Roster.Count}");
+        Rpc(MethodName.StartRun, (long)seed, difficulty);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void StartRun(long seed, string difficultyId)
+    {
+        Coop.Seed = (ulong)seed;
+        Coop.DifficultyId = difficultyId;
+        Coop.InRun = true;
+        Coop.ClearHold();
+        BeginLoading();
+        GetTree().Paused = false;
+        GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile, UI.MainMenu.RunScene);
+    }
+}

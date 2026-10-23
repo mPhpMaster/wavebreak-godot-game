@@ -233,6 +233,7 @@ public sealed partial class ResultsScreen : Control
         BuildLoadout();
 
         Visible = true;
+        _coopRun = Net.Coop.InRun;
         GetTree().Paused = true;
 
         // Release the camera's mouse capture so Restart can be clicked. The
@@ -355,6 +356,8 @@ public sealed partial class ResultsScreen : Control
     /// meant for the game, not for this screen, and is ignored.</summary>
     private const ulong ArmDelayMsec = 1000;
 
+    private bool _coopRun;
+
     private ulong _shownAtMsec;
 
     /// <summary>
@@ -368,6 +371,12 @@ public sealed partial class ResultsScreen : Control
     private void Restart()
     {
         if (!Armed) return;
+        // A co-op run cannot be restarted alone: back to the title instead.
+        if (_coopRun)
+        {
+            ToMainMenu();
+            return;
+        }
 
         // Unpause first. The paused flag lives on the SceneTree, not on the
         // scene, so reloading while paused hands the fresh run a frozen tree and

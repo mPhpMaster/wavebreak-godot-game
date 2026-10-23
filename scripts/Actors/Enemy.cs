@@ -418,6 +418,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     {
         if (_dead) return;
         _dead = true;
+        if (NetId > 0 && Net.Coop.IsHost) Net.NetSession.Instance?.OnEnemyGone(this, killed: false);
         Deactivate();
         Despawned?.Invoke(this);
     }
@@ -657,6 +658,14 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
             return;
         }
 
+        // Co-op client: this body is the host's enemy; the hit is predicted
+        // here and sent to the host, which owns the health (Enemy.Coop.cs).
+        if (NetId > 0 && Net.Coop.IsClient)
+        {
+            PuppetHit(info);
+            return;
+        }
+
         if (InterceptHit(info)) return;
         float amount = MathF.Max(0f, info.Amount);
         if (amount <= 0f)
@@ -711,6 +720,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         // Slightly above the feet: drops read better when they are not embedded
         // in the floor, and the pickup layer spawns from this point.
         EventBus.Publish(new EnemyKilled(GlobalPosition + new Vector3(0f, 0.35f, 0f), xp, gold, IsElite || IsBoss));
+        if (NetId > 0 && Net.Coop.IsHost) Net.NetSession.Instance?.OnEnemyGone(this, killed: true);
 
         Deactivate();
         Despawned?.Invoke(this);
@@ -730,6 +740,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         Velocity = Vector3.Zero;
         _knockback = Vector3.Zero;
         AliveIndex = -1;
+        NetId = 0;
     }
 
     // ------------------------------------------------------------- visuals

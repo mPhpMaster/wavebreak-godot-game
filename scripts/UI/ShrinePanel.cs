@@ -190,7 +190,7 @@ public sealed partial class ShrinePanel : Control
         _autoPickLeft = _autoPick;
         IsOpen = true;
         Visible = true;
-        GetTree().Paused = true;
+        Net.Coop.SetPaused(GetTree(), true);
         _cards[0].Button.GrabFocus();
     }
 
@@ -204,7 +204,7 @@ public sealed partial class ShrinePanel : Control
         if (_mouseWasCaptured) Actors.PlayerCamera.TryCaptureMouse();
         _mouseWasCaptured = false;
         // Leave the tree paused if the level-up panel is up underneath.
-        if (IsInsideTree() && LevelUp is not { IsOpen: true }) GetTree().Paused = false;
+        if (IsInsideTree() && LevelUp is not { IsOpen: true }) Net.Coop.SetPaused(GetTree(), false);
     }
 
     private void Pick(int index)
@@ -233,7 +233,7 @@ public sealed partial class ShrinePanel : Control
 
         // Another panel closing underneath (level-up, pause menu) unpauses the
         // tree; this choice is still owed, so hold the pause.
-        if (!GetTree().Paused) GetTree().Paused = true;
+        if (!Net.Coop.IsPaused(GetTree())) Net.Coop.SetPaused(GetTree(), true);
 
         if (_autoPick > 0f)
         {
