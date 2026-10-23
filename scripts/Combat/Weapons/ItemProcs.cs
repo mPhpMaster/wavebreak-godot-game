@@ -119,11 +119,14 @@ public sealed partial class ItemProcs : Node
     {
         if (amount <= 0f) return;
         int n = Targeting.Overlap(at, radius, Buffer);
+        // Snapshot: a kill below can set off another blast (on-kill items),
+        // which refills the shared buffer mid-loop.
+        IDamageable[] targets = Buffer.GetRange(0, Mathf.Min(n, Buffer.Count)).ToArray();
         int hit = 0;
         WeaponSystem? ws = _main.Weapons is { } w && IsInstanceValid(w) ? w : null;
-        for (int i = 0; i < n && hit < max; i++)
+        for (int i = 0; i < targets.Length && hit < max; i++)
         {
-            IDamageable t = Buffer[i];
+            IDamageable t = targets[i];
             if (ReferenceEquals(t, skip) || !t.IsAlive) continue;
             var info = new DamageInfo
             {

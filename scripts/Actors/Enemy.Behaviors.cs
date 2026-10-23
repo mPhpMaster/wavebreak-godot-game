@@ -647,7 +647,10 @@ public sealed partial class Enemy
 
     private void FireFan(Vector3 aim, int count, float spreadDegrees, float speed, float damage, float radius)
     {
-        Vector3 muzzle = GlobalPosition + new Vector3(0f, ShotHeight, 0f) + aim * (_builtRadius + 0.2f);
+        // Shots travel flat, so a hovering shooter fires from the ground level
+        // under it; from its hover height every shot would pass overhead.
+        float hover = _def?.Hover ?? 0f;
+        Vector3 muzzle = GlobalPosition + new Vector3(0f, ShotHeight - hover, 0f) + aim * (_builtRadius + 0.2f);
         float spread = Mathf.DegToRad(spreadDegrees);
         for (int i = 0; i < count; i++)
         {

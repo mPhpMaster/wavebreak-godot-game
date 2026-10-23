@@ -625,7 +625,10 @@ public static partial class ContentAudit
                 for (int i = 0; i < def.BossMoves.Count; i++) ProbeMove(system, def, i, feet);
                 ProbePhase(system, def, feet);
             }
-            else if (def.Behavior != EnemyBehavior.Chaser)
+            // Healers never attack; burrowers and blinkers hit by contact, which
+            // the director and kill audits cover. The probe counts ranged hits only.
+            else if (def.Behavior is not (EnemyBehavior.Chaser or EnemyBehavior.Healer
+                                          or EnemyBehavior.Burrower or EnemyBehavior.Blinker))
             {
                 ProbeMove(system, def, -1, feet);
             }

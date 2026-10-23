@@ -103,7 +103,10 @@ public sealed partial class Main : Node3D
 
         await Wait(1.0);
         var choices = _offers.Roll(3, _weapons, _inventory, _player.Stats);
-        int before = _weapons.Weapons.Count + _inventory.TotalStacks;
+        // Everything a card can change: a new weapon or item, a weapon level, a tome level.
+        int Owned() => _inventory.TotalStacks + System.Linq.Enumerable.Sum(_weapons.Weapons, w => w.Level)
+            + (Progression.TomeBook.Current is { } book ? System.Linq.Enumerable.Sum(book.Held, t => book.LevelOf(t)) : 0);
+        int before = Owned();
         _levelUp.Show(choices, Choose);
         await Wait(0.05);
         Press(Key.Space);
@@ -112,7 +115,7 @@ public sealed partial class Main : Node3D
         await Wait(0.5);
         Press(Key.Key1);
         await Wait(0.1);
-        int after = _weapons.Weapons.Count + _inventory.TotalStacks;
+        int after = Owned();
         if (_levelUp.IsOpen || after <= before)
             GD.Print($"GUARD info open={_levelUp.IsOpen} before={before} after={after}");
         Expect("level-up: 1 after the delay picks a card", !_levelUp.IsOpen && after > before);
