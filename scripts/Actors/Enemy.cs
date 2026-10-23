@@ -494,7 +494,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         else verticalSpeed -= Gravity * dt;
 
         Velocity = new Vector3(horizontal.X + _knockback.X, verticalSpeed, horizontal.Z + _knockback.Z);
-        MoveAndSlide();
+        using (Wavebreak.Game.Prof.Scope("Enemy.MoveAndSlide")) MoveAndSlide();
 
         // A level without a floor collider would otherwise drop every enemy out
         // of the world. Spawn height is the floor of last resort.

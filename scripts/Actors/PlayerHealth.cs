@@ -136,6 +136,7 @@ public sealed partial class PlayerHealth : Node, IDamageable
 
     public override void _PhysicsProcess(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("PlayerHealth.phys");
         float dt = (float)delta;
         if (_dead) return;
 

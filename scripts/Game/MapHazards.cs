@@ -69,6 +69,7 @@ public sealed partial class MapHazards : Node3D
 
     public override void _PhysicsProcess(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("MapHazards.phys");
         Player? p = Player.Instance;
         bool inside = p is not null && IsInstanceValid(p) && p.Health.IsAlive && Inside(p.GlobalPosition);
         PlayerInside = inside;

@@ -374,6 +374,7 @@ public sealed partial class ChestSpawner : Node
 
     public override void _Process(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("ChestSpawner.proc");
         float dt = (float)delta;
         _clock += dt;
         _chests.RemoveAll(c => !IsInstanceValid(c) || c.IsQueuedForDeletion());
@@ -411,6 +412,7 @@ public sealed partial class ChestSpawner : Node
 
     public override void _PhysicsProcess(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("ChestSpawner.phys");
         if (_pending.Count == 0) return;
         if (_map is null || !IsInstanceValid(_map) || !_map.IsInsideTree()) { _pending.Clear(); return; }
 

@@ -240,6 +240,7 @@ public sealed partial class Breakables : Node3D
 
     public override void _PhysicsProcess(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("Breakables.phys");
         if (_alive == 0) return;
         if (Player.Instance is not { } p || !IsInstanceValid(p) || !p.IsAlive) return;
         if (p.IsDashing || p.IsSliding) Probe(p.GlobalPosition, BodyReach);

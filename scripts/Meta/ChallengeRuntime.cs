@@ -111,6 +111,7 @@ public sealed partial class ChallengeRuntime : Node
 
     public override void _Process(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("ChallengeRuntime.proc");
         if (Challenges.Active.Count == 0 || _main.Run is null || _main.Run.Over) return;
         Player? p = _main.Player;
         if (p is null || !IsInstanceValid(p)) return;
@@ -168,6 +169,7 @@ public sealed partial class ChallengeRuntime : Node
 
     public override void _PhysicsProcess(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("ChallengeRuntime.phys");
         if (!Challenges.IsActive("molten") || _main.Run is null || _main.Run.Over) return;
         Player? p = _main.Player;
         if (p is null || !IsInstanceValid(p) || !p.Health.IsAlive) return;

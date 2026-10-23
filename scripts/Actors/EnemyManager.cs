@@ -400,6 +400,7 @@ public sealed partial class EnemyManager : Node3D
     /// </summary>
     public override void _PhysicsProcess(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("EnemyManager.phys");
         float dt = (float)delta;
         if (dt <= 0f) return;
 
@@ -410,6 +411,7 @@ public sealed partial class EnemyManager : Node3D
         bool hasPlayer = PlayerRef.TryGet(out Node3D playerNode, out IDamageable? playerHit);
         Vector3 playerPosition = hasPlayer ? playerNode.GlobalPosition : Vector3.Zero;
 
+        using (Wavebreak.Game.Prof.Scope("Enemies.step"))
         for (int i = 0; i < _alive.Count; i++)
         {
             Enemy e = _alive[i];
@@ -419,6 +421,7 @@ public sealed partial class EnemyManager : Node3D
         }
 
         // After the enemies, so a shot fired this step moves this step.
+        using (Wavebreak.Game.Prof.Scope("EnemyAttacks"))
         EnemyAttacks.Tick(dt, playerPosition, hasPlayer ? playerHit : null);
     }
 

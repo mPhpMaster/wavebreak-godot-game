@@ -233,6 +233,7 @@ public sealed partial class Main : Node3D
         ChestSpawner.Attach(this, Run.Seed);
         // Merchant, microwave and breakable pots: same lifetime and populate hook.
         Interactables.Attach(this, Run.Seed);
+        PerfProbe.Attach(this);
         // Map shrines (charge, challenge, statue, greed); same lifetime as chests.
         ShrineSpawner.Attach(this, Run.Seed);
 
@@ -253,8 +254,8 @@ public sealed partial class Main : Node3D
         // the new multipliers, and the spawns this frame should already see them.
         _stages.Tick(dt);
         if (Run.Over) return;
-        _enemies.Tick(dt, Run.Seconds);
-        _weapons.Tick(dt);
+        using (Prof.Scope("Director")) _enemies.Tick(dt, Run.Seconds);
+        using (Prof.Scope("Weapons")) _weapons.Tick(dt);
     }
 
     private void OnLevelGained(LevelGained e)

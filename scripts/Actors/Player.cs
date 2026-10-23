@@ -404,6 +404,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
 
     public override void _PhysicsProcess(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("Player.phys");
         float dt = (float)delta;
         _time += dt;
 

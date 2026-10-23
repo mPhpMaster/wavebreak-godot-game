@@ -515,7 +515,7 @@ public sealed partial class WeaponSystem : Node
             for (int i = 0; i < _weapons.Count; i++)
                 _weapons[i].Tick(dt, this);
 
-        Projectile.UpdateAll(dt);
+        using (Wavebreak.Game.Prof.Scope("Projectiles")) Projectile.UpdateAll(dt);
     }
 
     /// <summary>Re-reads the player once per tick. Doing it per shot would mean an

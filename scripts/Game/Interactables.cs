@@ -289,6 +289,7 @@ public sealed partial class Interactables : Node
 
     public override void _Process(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("Interactables.proc");
         _stations.RemoveAll(s => !IsInstanceValid(s) || s.IsQueuedForDeletion());
         if (_map is not null && !IsInstanceValid(_map)) Clear();
 
@@ -364,6 +365,7 @@ public sealed partial class Interactables : Node
 
     public override void _PhysicsProcess(double delta)
     {
+        using var __prof = Wavebreak.Game.Prof.Scope("Interactables.phys");
         if (_placeIn < 0) return;
         if (_placeIn-- > 0) return;
         _placeIn = -1;
