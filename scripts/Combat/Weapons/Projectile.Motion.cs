@@ -217,14 +217,14 @@ public sealed partial class Projectile
 
         // Shrink away over the last fifth of its life so the set ending is visible.
         float left = _life - _age;
-        if (left < _life * 0.2f) _mesh.Transparency = 1f - left / (_life * 0.2f);
+        if (left < _life * 0.2f) _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(1f - left / (_life * 0.2f));
     }
 
     private void StepPuddle(float dt)
     {
         _tickTimer -= dt;
         float left = _life - _age;
-        _mesh.Transparency = left < 0.5f ? 1f - left / 0.5f : 0.15f;
+        _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(left < 0.5f ? 1f - left / 0.5f : 0.15f);
         if (_tickTimer > 0f) return;
         _tickTimer = _tick;
 
@@ -384,9 +384,11 @@ public sealed partial class Projectile
     {
         float r = MathF.Max(0.3f, _p0 * _age);
         GlobalPosition = _anchor;
-        _mesh.Scale = new Vector3(r, _p1, r);
+        // Knee-high and already see-through: several of these rolling out at
+        // once used to stack into a wall across the whole screen.
+        _mesh.Scale = new Vector3(r, MathF.Min(_p1, 1.6f) * 0.35f, r);
         float t = _age / MathF.Max(0.01f, _life);
-        _mesh.Transparency = t * t;
+        _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.4f + 0.6f * t * t);
         SweepOnce(_anchor, r);
     }
 }

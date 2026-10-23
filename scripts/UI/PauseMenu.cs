@@ -51,6 +51,7 @@ public sealed partial class PauseMenu : Node
         _resume = MainMenu.MenuButton(Loc.T("RESUME"), Close);
         _sheet.ActionRow.AddChild(_resume);
         _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("SETTINGS"), () => ShowSettings(true)));
+        _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("END RUN"), EndRun));
         _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("RESTART"), Restart));
         _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("MAIN MENU"), ToMainMenu));
         _sheet.ActionRow.AddChild(MainMenu.MenuButton(Loc.T("QUIT"), () => GetTree().Quit()));
@@ -236,6 +237,16 @@ public sealed partial class PauseMenu : Node
         _open = false;
         GetTree().Paused = false;
         GetTree().CallDeferred(SceneTree.MethodName.ReloadCurrentScene);
+    }
+
+    /// <summary>Close the run here and go to the results screen. After the
+    /// final boss it counts as the win it already is (and pays the swarm
+    /// bonus so far); before that it is a forfeit.</summary>
+    private void EndRun()
+    {
+        if (Main.Instance is not { } main || main.Run.Over) return;
+        Close();
+        main.Run.Finish(survived: main.Stages.Won);
     }
 
     private void ToMainMenu()

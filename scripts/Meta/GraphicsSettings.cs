@@ -33,6 +33,7 @@ public sealed class GraphicsConfig
     public float Fov = 70f;
     public float Shake = 1f;
     public float ScreenFx = 1f;
+    public float WeaponFx = 0.75f;  // opacity of weapon/projectile effects
     public float UiScale = 1f;
     public float Brightness = 1f;
     public bool ShowFps;
@@ -98,6 +99,10 @@ public static class GraphicsSettings
 
     public static float ShakeScale => Current.Shake;
     public static float ScreenFxScale => Current.ScreenFx;
+
+    /// <summary>An effect's own fade (0 solid .. 1 gone) pushed toward clear by
+    /// the "Weapon effects" opacity, so a full build cannot wall off the screen.</summary>
+    public static float FxFade(float own) => 1f - (1f - Mathf.Clamp(own, 0f, 1f)) * Current.WeaponFx;
     public static int MaxDamageNumbers => Current.MaxPopups;
     public static float PropDensityScale => Current.PropDensity;
 
@@ -196,6 +201,7 @@ public static class GraphicsSettings
         c.Fov = F("fov", c.Fov, 50f, 100f);
         c.Shake = F("shake", c.Shake, 0f, 1f);
         c.ScreenFx = F("screen_fx", c.ScreenFx, 0f, 1f);
+        c.WeaponFx = F("weapon_fx", c.WeaponFx, 0.1f, 1f);
         c.UiScale = F("ui_scale", c.UiScale, 0.8f, 1.5f);
         c.Brightness = F("brightness", c.Brightness, 0.5f, 1.5f);
         c.ShowFps = B("show_fps", c.ShowFps);
@@ -228,6 +234,7 @@ public static class GraphicsSettings
         cfg.SetValue(Section, "fov", c.Fov);
         cfg.SetValue(Section, "shake", c.Shake);
         cfg.SetValue(Section, "screen_fx", c.ScreenFx);
+        cfg.SetValue(Section, "weapon_fx", c.WeaponFx);
         cfg.SetValue(Section, "ui_scale", c.UiScale);
         cfg.SetValue(Section, "brightness", c.Brightness);
         cfg.SetValue(Section, "show_fps", c.ShowFps);

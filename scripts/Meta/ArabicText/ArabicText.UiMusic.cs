@@ -44,6 +44,10 @@ public static partial class ArabicText
         ("Pinned: {0} everywhere.", "مثبّت: {0} في كل مكان."),
         ("Map default: each map, boss and the swarm play their own music.", "حسب الخريطة: كل خريطة وزعيم والسرب لهم موسيقاهم."),
 
+        // ---- graphics page
+        ("Weapon effects opacity", "وضوح مؤثرات الأسلحة"),
+        ("END RUN", "أنهِ الجولة"),
+
         // ---- how to unlock
         ("Reach {0}", "وصّل إلى {0}"),
         ("Meet the {0}", "قابل {0}"),

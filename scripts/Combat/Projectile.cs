@@ -205,6 +205,11 @@ public sealed partial class Projectile : Node3D, IPooled
         Projectile? p = _pool?.Get();
         if (p is null) return;
 
+        // Level, always: a sheet tilted up at a flying target swings through
+        // the camera and whites out the screen.
+        Vector3 flat = new(direction.X, 0f, direction.Z);
+        if (flat.LengthSquared() > 1e-6f) direction = flat.Normalized();
+
         ProjectileSpec spec = new()
         {
             Mode = ProjectileMode.Cosmetic,
@@ -223,7 +228,9 @@ public sealed partial class Projectile : Node3D, IPooled
         p._cosmeticScale = new Vector3(width, 0.18f, reach);
 
         p.Launch(null, spec, null);
-        p._mesh.Position = new Vector3(0f, 0f, -reach * 0.5f);   // -Z is forward
+        // -Z is forward; dropped to knee height so the sheet sits under the
+        // camera's line of sight instead of across it.
+        p._mesh.Position = new Vector3(0f, -0.6f, -reach * 0.5f);
         Live.Add(p);
     }
 
@@ -349,7 +356,7 @@ public sealed partial class Projectile : Node3D, IPooled
         }
 
         _mesh.MaterialOverride = CombatVisuals.Glow(_tint, additive: _mode == ProjectileMode.Cosmetic);
-        _mesh.Transparency = 0f;
+        _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0f);
         Visible = true;
     }
 
@@ -395,7 +402,9 @@ public sealed partial class Projectile : Node3D, IPooled
     {
         float t = Mathf.Clamp(_age / _life, 0f, 1f);
         _mesh.Scale = _cosmeticScale * (0.7f + 0.3f * t);
-        _mesh.Transparency = t * t;      // hangs bright, then leaves quickly
+        // Starts half see-through: a fast melee or breath weapon lays one of
+        // these every few frames, and solid ones stacked into a white wall.
+        _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.5f + 0.5f * t * t);
     }
 
     private void Contact(Vector3 at)
@@ -582,7 +591,7 @@ internal sealed partial class ExplosionFx : Node3D, IPooled
 
         fx.GlobalTransform = new Transform3D(Basis.Identity, position);
         fx._mesh.MaterialOverride = CombatVisuals.Glow(tint, additive: true);
-        fx._mesh.Transparency = 0f;
+        fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0f);
         fx._mesh.Scale = Vector3.One * (fx._radius * 0.35f);
 
         fx._light.LightColor = tint;
@@ -610,7 +619,7 @@ internal sealed partial class ExplosionFx : Node3D, IPooled
                     // than an inflating balloon.
                     float eased = 1f - (1f - t) * (1f - t);
                     fx._mesh.Scale = Vector3.One * (fx._radius * (0.35f + 0.65f * eased));
-                    fx._mesh.Transparency = t;
+                    fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(t);
                     fx._light.LightEnergy = 4f * (1f - t);
                     continue;
                 }

@@ -235,6 +235,12 @@ public sealed partial class Main : Node3D
         // Merchant, microwave and breakable pots: same lifetime and populate hook.
         Interactables.Attach(this, Run.Seed);
         PerfProbe.Attach(this);
+        // --give=id,id: start holding these weapons at max level (effect checks).
+        foreach (string arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--give="))
+                foreach (string id in arg["--give=".Length..].Split(','))
+                    if (Catalog.WeaponById(id) is { } def) _weapons.DevMax(def);
+                    else if (Tomes.ById(id) is { } tome && Progression.TomeBook.Current is { } book) while (book.Add(tome)) { }
         // Map shrines (charge, challenge, statue, greed); same lifetime as chests.
         ShrineSpawner.Attach(this, Run.Seed);
 

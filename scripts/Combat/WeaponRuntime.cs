@@ -312,7 +312,7 @@ public sealed class WeaponRuntime
         if (_auraDisc is null || !GodotObject.IsInstanceValid(_auraDisc)) return;
 
         _pulse = MathF.Max(0f, _pulse - dt * 3.2f);
-        _auraDisc.Transparency = 0.35f - 0.35f * _pulse;
+        _auraDisc.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.35f - 0.35f * _pulse);
         if (_auraLight is not null && GodotObject.IsInstanceValid(_auraLight))
             _auraLight.LightEnergy = 0.5f + 1.6f * _pulse;
     }

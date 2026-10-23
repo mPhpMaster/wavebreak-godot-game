@@ -262,7 +262,7 @@ internal sealed partial class StatusFx : Node
         Vector3 z = x.Cross(y);
         var basis = new Basis(x * 0.06f, y * (len / 3f), z * 0.06f);
         arc.GlobalTransform = new Transform3D(basis, from + d * 0.5f);
-        arc.Transparency = 0f;
+        arc.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0f);
         arc.Visible = true;
     }
 
@@ -275,7 +275,7 @@ internal sealed partial class StatusFx : Node
             _age[i] += dt;
             MeshInstance3D arc = _arcs[i];
             if (_age[i] >= Life) { arc.Visible = false; continue; }
-            arc.Transparency = _age[i] / Life;
+            arc.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(_age[i] / Life);
         }
     }
 }

@@ -431,9 +431,14 @@ internal static class WeaponBehaviors
         public void Fire(WeaponRuntime w, WeaponSystem sys, StatSheet s)
         {
             WeaponDef d = w.Def;
-            int n = Shots(w, s);
-            float reach = MathF.Max(2f, d.Range * Area(s));
+            int shots = Shots(w, s);
+            // At most four rings: past that they tiled the screen into terraces.
+            // Extra projectiles fold into the rings' damage instead.
+            int n = Math.Min(shots, 4);
+            float reach = MathF.Max(2f, d.Range * MathF.Min(Area(s), 2.5f));
             Vector3 centre = Ground(sys.MuzzlePosition);
+            DamageInfo hit = sys.BuildDamage(w);
+            if (shots > n) hit.Amount *= (float)shots / n;
             for (int i = 0; i < n; i++)
             {
                 // Extra rings follow at 80% of the speed of the one before.
@@ -441,7 +446,7 @@ internal static class WeaponBehaviors
                 ProjectileSpec spec = Spec(sys, d, Vector3.Forward, 0f, 1f, 0.5f);
                 spec.Origin = centre;
                 spec.Lifetime = reach / speed;
-                Projectile.SpawnMotion(sys, spec, sys.BuildDamage(w), new Projectile.MotionSpec
+                Projectile.SpawnMotion(sys, spec, hit.Clone(), new Projectile.MotionSpec
                 {
                     Motion = ProjectileMotion.Ring, Mesh = ExpansionVisuals.Crest, MeshScale = 1f,
                     Anchor = centre, P0 = speed, P1 = 1f + d.Radius,

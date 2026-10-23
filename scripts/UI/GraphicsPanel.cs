@@ -159,6 +159,8 @@ public sealed partial class GraphicsPanel : VBoxContainer
             v => GraphicsSettings.Change(c => c.Shake = v / 100f, false)));
         list.AddChild(SliderRow("Speed & dash zoom", 0, 100, 5, () => C().ScreenFx * 100f, v => $"{v:0}%",
             v => GraphicsSettings.Change(c => c.ScreenFx = v / 100f, false)));
+        list.AddChild(SliderRow("Weapon effects opacity", 10, 100, 5, () => C().WeaponFx * 100f, v => $"{v:0}%",
+            v => GraphicsSettings.Change(c => c.WeaponFx = v / 100f, false)));
         list.AddChild(SliderRow("Brightness", 50, 150, 5, () => C().Brightness * 100f, v => $"{v:0}%",
             v => GraphicsSettings.Change(c => c.Brightness = v / 100f, false)));
         list.AddChild(SliderRow("UI scale", 80, 150, 5, () => C().UiScale * 100f, v => $"{v:0}%",

@@ -39,8 +39,11 @@ namespace Wavebreak.Game
 
         // Per step. Health also compounds slightly so a strong build still meets a wall.
         private const float HealthPerStep = 0.15f;
-        private const float HealthCompound = 1.04f;
-        private const float DamagePerStep = 0.12f;
+        private const float HealthCompound = 1.10f;
+        private const float DamagePerStep = 0.25f;
+        // Damage compounds too: armour and dodge stack high enough that linear
+        // growth never got through, leaving a strong build stuck forever.
+        private const float DamageCompound = 1.09f;
         private const float SpawnBase = 1.5f;
         private const float SpawnPerStep = 0.35f;
         private const float SpeedPerStep = 0.02f;
@@ -106,7 +109,7 @@ namespace Wavebreak.Game
             float steps = Steps;
             _enemies.LiveCapScale = 1f;
             _enemies.PhaseHealthScale = _stage.EnemyHealthScale * HealthFactor;
-            _enemies.PhaseDamageScale = _stage.EnemyDamageScale * (1f + DamagePerStep * steps);
+            _enemies.PhaseDamageScale = _stage.EnemyDamageScale * (1f + DamagePerStep * steps) * MathF.Pow(DamageCompound, steps);
             _enemies.PhaseSpeedScale = _stage.EnemySpeedScale * MathF.Min(1f + SpeedPerStep * steps, SpeedCap);
             _enemies.SpawnRateScale = SpawnBase + SpawnPerStep * steps;
         }
