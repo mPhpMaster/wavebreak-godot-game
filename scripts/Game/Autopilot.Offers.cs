@@ -98,7 +98,17 @@ public sealed partial class Autopilot
             WeaponSystem? ws = Main.Instance?.Weapons;
             int owned = ws?.Weapons.Count ?? 0;
             bool held = ws?.Has(weapon.Id) ?? false;
-            if (held) return 2.1f + (int)weapon.Rarity * 0.1f;
+            if (held)
+            {
+                // A rolled upgrade: rarity is the size of every line, the line
+                // count is breadth, and damage/speed/projectiles are what a
+                // bot can rely on to matter.
+                if (offer.Upgrade is not { } up) return 2.1f + (int)weapon.Rarity * 0.1f;
+                float core = (up.Has(UpgradeStat.Damage) ? 0.15f : 0f)
+                           + (up.Has(UpgradeStat.AttackSpeed) ? 0.1f : 0f)
+                           + (up.Has(UpgradeStat.Projectiles) ? 0.2f : 0f);
+                return 1.9f + (int)up.Rarity * 0.22f + 0.08f * up.Lines.Count + core;
+            }
             return owned < 3 ? 3.0f : 1.4f + (int)weapon.Rarity * 0.15f;
         }
 

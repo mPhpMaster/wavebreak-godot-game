@@ -24,8 +24,10 @@ public sealed class Offer
     private Offer(string title, string detail, string description, string effect,
                   Rarity rarity, Color tint,
                   WeaponDef? weapon = null, ItemDef? item = null,
-                  float healFraction = 0f, int gold = 0, TomeDef? tome = null)
+                  float healFraction = 0f, int gold = 0, TomeDef? tome = null,
+                  WeaponUpgrade? upgrade = null)
     {
+        Upgrade = upgrade;
         Tome = tome;
         Title = title;
         Detail = detail;
@@ -41,6 +43,10 @@ public sealed class Offer
 
     /// <summary>The weapon this offer grants or levels, or null.</summary>
     public WeaponDef? Weapon { get; }
+
+    /// <summary>The rolled upgrade a held-weapon offer applies, or null for a
+    /// new weapon. Its rarity is the card's rarity.</summary>
+    public WeaponUpgrade? Upgrade { get; }
 
     /// <summary>The item this offer adds a stack of, or null.</summary>
     public ItemDef? Item { get; }
@@ -110,23 +116,35 @@ public sealed class Offer
 
     // ------------------------------------------------------------- factories
 
-    internal static Offer ForWeapon(WeaponDef def, int currentLevel)
+    internal static Offer ForWeapon(WeaponDef def, int currentLevel, WeaponUpgrade? upgrade = null)
     {
         int next = currentLevel + 1;
         bool isNew = currentLevel <= 0;
+        if (isNew) upgrade = null;
 
         string detail = isNew ? "New weapon" : $"Level {currentLevel} → {next}";
         string effect = isNew
             ? $"{def.DamageAtLevel(1):0} damage every {def.CooldownAtLevel(1):0.00}s"
               + Plural(def.ProjectilesAtLevel(1))
-            : WeaponDelta(def, currentLevel, next);
+              + (def.Element != Element.Physical ? $"\n{def.Element}: {StatusName(def.Element)}" : "")
+            : upgrade is not null ? upgrade.Describe() : WeaponDelta(def, currentLevel, next);
 
         string description = string.IsNullOrWhiteSpace(def.Description)
             ? $"{def.Shape} · {def.Element}"
             : def.Description;
 
-        return new Offer(def.DisplayName, detail, description, effect, def.Rarity, def.Tint, weapon: def);
+        return new Offer(def.DisplayName, detail, description, effect,
+                         upgrade?.Rarity ?? def.Rarity, def.Tint, weapon: def, upgrade: upgrade);
     }
+
+    private static string StatusName(Element e) => e switch
+    {
+        Element.Fire => "burns",
+        Element.Ice => "chills, then freezes",
+        Element.Lightning => "shocks and stuns",
+        Element.Poison => "stacking poison",
+        _ => "",
+    };
 
     private static string Plural(int projectiles)
         => projectiles > 1 ? $", {projectiles} projectiles" : "";
@@ -247,6 +265,7 @@ public sealed class OfferPool
     // no reason for any of them to allocate scratch space.
     private readonly List<Offer> _candidates = new(64);
     private readonly List<float> _weights = new(64);
+    private float _upgradeStats;
 
     /// <param name="items">The item catalogue. Held by reference into a private
     /// copy, so a later edit of the catalogue cannot change a run in flight.</param>
@@ -314,6 +333,7 @@ public sealed class OfferPool
         if (count <= 0) return chosen;
 
         float luck = Math.Clamp(stats?.Get(Stat.Luck) ?? 0f, MinLuck, MaxLuck);
+        _upgradeStats = stats?.Get(Stat.UpgradeStats) ?? 0f;
 
         // Three cases, and they are not the same: no system was supplied (fall
         // back to the ledger), a live one was (ask it), or a dead one was — a
@@ -413,7 +433,12 @@ public sealed class OfferPool
                            * LuckShift(def.Rarity, luck);
             if (weight <= 0f) continue;
 
-            _candidates.Add(Offer.ForWeapon(def, level));
+            // A held weapon's card carries its rolled upgrade, so what the card
+            // says is exactly what taking it does.
+            WeaponUpgrade? upgrade = level > 0
+                ? WeaponUpgrades.Roll(def, _rng, luck, (int)(_upgradeStats))
+                : null;
+            _candidates.Add(Offer.ForWeapon(def, level, upgrade));
             _weights.Add(weight);
         }
     }

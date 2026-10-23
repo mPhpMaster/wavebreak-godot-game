@@ -35,11 +35,10 @@ public sealed partial class CharacterPassives : Node
     private const float MomentumBuildSeconds = 1.5f;
     private const float MomentumFadeSeconds = 2.5f;
 
+    // Kindling is the shared Burn status (Combat/StatusEffects: 25% of the hit
+    // per second for 3 s) granted as Ignite Chance, so it stacks with fire
+    // items and scales with Status Duration and Elemental Damage.
     private const float BurnChance = 0.35f;          // per hit, times the weapon's proc coefficient
-    private const float BurnFraction = 0.25f;        // of the hit, per second
-    private const float BurnSeconds = 3f;
-    private const float BurnTick = 0.5f;
-    private const int MaxBurning = 96;
 
     private const float DashRefundPerKill = 0.3f;
 
@@ -58,7 +57,6 @@ public sealed partial class CharacterPassives : Node
     private const float OverchargeBase = 30f;
     private const float OverchargePerLevel = 3f;
 
-    private static readonly Color BurnColor = new(1.00f, 0.50f, 0.15f);
     private static readonly Color StormColor = new(0.75f, 0.70f, 1.00f);
 
     private Main _main = null!;
@@ -73,11 +71,6 @@ public sealed partial class CharacterPassives : Node
     private float _ambush;
     private int _ambushStacks;
     private int _charge;
-    private float _burnTimer;
-
-    private sealed class Burn { public float Dps; public float Left; }
-    private readonly Dictionary<Enemy, Burn> _burning = new();
-    private readonly List<Enemy> _scratch = new();
 
     /// <summary>Called from <see cref="RunMeta.Attach"/> after the character's
     /// stats are applied.</summary>
@@ -95,6 +88,7 @@ public sealed partial class CharacterPassives : Node
     {
         Player? p = _main.Player;
         if (_kind == PassiveKind.Tailwind && p is not null) p.ExtraAirJumps = 1;
+        if (_kind == PassiveKind.Kindling && p is not null) SetMod(p, Stat.IgniteChance, ModifierOp.Flat, BurnChance);
 
         EventBus.Subscribe<EnemyDamaged>(OnEnemyDamaged);
         EventBus.Subscribe<PlayerDamaged>(OnPlayerDamaged);
@@ -162,9 +156,6 @@ public sealed partial class CharacterPassives : Node
                     if (_ambush <= 0f) SetAmbush(p, 0);
                 }
                 break;
-            case PassiveKind.Kindling:
-                TickBurns(dt);
-                break;
         }
     }
 
@@ -188,12 +179,6 @@ public sealed partial class CharacterPassives : Node
 
         switch (_kind)
         {
-            case PassiveKind.Kindling:
-                if (killed || e.Target is not Enemy enemy) return;
-                if (e.Info.Source is "burn" or "thorns" or "overcharge" || e.Info.ProcCoefficient <= 0f) return;
-                if (!_rng.Chance(BurnChance * e.Info.ProcCoefficient)) return;
-                Ignite(enemy, e.Info.Amount * BurnFraction);
-                break;
             case PassiveKind.Tailwind:
                 if (killed) LivePlayer?.RefundDash(DashRefundPerKill);
                 break;
@@ -236,58 +221,6 @@ public sealed partial class CharacterPassives : Node
         float v = AmbushPerStack * stacks;
         SetMod(p, Stat.MoveSpeed, ModifierOp.Additive, v);
         SetMod(p, Stat.AttackSpeed, ModifierOp.Additive, v);
-    }
-
-    private void Ignite(Enemy enemy, float dps)
-    {
-        if (dps <= 0f) return;
-        if (_burning.TryGetValue(enemy, out Burn? b))
-        {
-            // Refresh, keeping the hotter flame rather than stacking: burns
-            // that stacked per hit would turn a fast weapon into a furnace.
-            b.Dps = Mathf.Max(b.Dps, dps);
-            b.Left = BurnSeconds;
-            return;
-        }
-        if (_burning.Count >= MaxBurning) return;
-        _burning[enemy] = new Burn { Dps = dps, Left = BurnSeconds };
-    }
-
-    private void TickBurns(float dt)
-    {
-        if (_burning.Count == 0) return;
-        _burnTimer += dt;
-        if (_burnTimer < BurnTick) return;
-        float step = _burnTimer;
-        _burnTimer = 0f;
-
-        _scratch.Clear();
-        _scratch.AddRange(_burning.Keys);
-        foreach (Enemy enemy in _scratch)
-        {
-            Burn b = _burning[enemy];
-            b.Left -= step;
-            if (!IsInstanceValid(enemy) || !enemy.IsAlive || b.Left <= -0.01f)
-            {
-                _burning.Remove(enemy);
-                continue;
-            }
-            var info = new DamageInfo
-            {
-                Amount = b.Dps * step,
-                Element = Element.Fire,
-                CanCrit = false,
-                ProcCoefficient = 0f,
-                Source = "burn",
-            };
-            enemy.TakeDamage(info);
-            if (info.Nullified || info.Amount <= 0f) { _burning.Remove(enemy); continue; }
-            EventBus.Publish(new EnemyDamaged(enemy, info));
-            if (info.Amount >= 1f)
-                EventBus.Publish(new PopupRequested(enemy.AimPoint + Vector3.Up * 0.5f,
-                    Mathf.RoundToInt(info.Amount).ToString(), BurnColor, 0.7f));
-            if (!enemy.IsAlive || b.Left <= 0f) _burning.Remove(enemy);
-        }
     }
 
     private void Overcharge()

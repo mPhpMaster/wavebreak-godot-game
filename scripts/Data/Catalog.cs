@@ -20,7 +20,7 @@ namespace Wavebreak.Data;
 /// Read the comments as the balance record. Where a number was chosen against
 /// another number, the comment says which.
 /// </summary>
-public static class Catalog
+public static partial class Catalog
 {
     // ------------------------------------------------------------------ access
 
@@ -150,6 +150,16 @@ public static class Catalog
         Stat.GoldGain        => "Gold",
         Stat.Luck            => "Luck",
         Stat.EnemyScaling    => "Enemy Strength",
+        Stat.ElementalDamage => "Elemental Damage",
+        Stat.StatusChance    => "Status Chance",
+        Stat.StatusDuration  => "Status Duration",
+        Stat.MegacritChance  => "Megacrit Chance",
+        Stat.IgniteChance    => "Ignite Chance",
+        Stat.ChillChance     => "Chill Chance",
+        Stat.ShockChance     => "Shock Chance",
+        Stat.PoisonChance    => "Poison Chance",
+        Stat.FreezePower     => "Freeze Power",
+        Stat.UpgradeStats    => "Upgrade Stat Lines",
         _                    => stat.ToString(),
     };
 
@@ -161,7 +171,8 @@ public static class Catalog
     /// "+6 Crit Chance" are both wrong in ways a player will believe.
     /// </summary>
     public static bool IsFractionStat(Stat stat)
-        => stat is Stat.CritChance or Stat.CritDamage or Stat.Lifesteal;
+        => stat is Stat.CritChance or Stat.CritDamage or Stat.Lifesteal
+            || IsElementFractionStat(stat);
 
     /// <summary>One line of plain English for an item effect, e.g. "+10% Damage",
     /// "+6 Armour", "x1.20 Damage", "-12% Move Speed".</summary>
@@ -194,7 +205,7 @@ public static class Catalog
 
     private static readonly List<WeaponDef> WeaponList = BuildWeapons();
     private static readonly List<EnemyDef> EnemyList = BuildEnemies();
-    private static readonly List<ItemDef> ItemList = BuildItems();
+    private static readonly List<ItemDef> ItemList = WithElementItems(BuildItems());
 
     private static readonly Dictionary<string, WeaponDef> WeaponsById = Index(WeaponList, static w => w.Id);
     private static readonly Dictionary<string, EnemyDef> EnemiesById = Index(EnemyList, static e => e.Id);
@@ -232,9 +243,9 @@ public static class Catalog
     //  damage; single-target weapons get extra projectiles, which is what keeps a
     //  level-8 starter relevant against a level-8 aura.
     //
-    //  Element is currently flavour and colour, not a damage type multiplier;
-    //  spreading it across the roster is what makes adding resistances later a
-    //  content change rather than a rewrite.
+    //  Element decides the status a weapon applies (Combat/StatusEffects: Fire
+    //  burns, Ice chills then freezes, Lightning shocks, Poison stacks) and is
+    //  scaled by Elemental Damage. Physical weapons apply nothing on their own.
 
     private static List<WeaponDef> BuildWeapons() => new()
     {

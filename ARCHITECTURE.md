@@ -195,6 +195,23 @@ it is recorded at once, and then `Game/FinalSwarm` escalates until the player
 dies; that death still publishes `RunEnded(survived: true)`.
 `--no-final-swarm` restores the instant win; `--difficulty=<id>` forces a tier.
 
+## Elements, statuses, megacrits, weapon upgrade rarities
+
+- `Combat/StatusEffects` decides what a landed weapon hit applies (Fire burn,
+  Ice chill then freeze, Lightning shock arc plus stun, Poison stacks); the
+  state and tint live on the enemy (`Actors/Enemy.Status.cs`: `ApplyBurn`,
+  `ApplyPoison`, `ApplyChill`, `ApplyStun`). Item procs are plain stats
+  (`IgniteChance`/`ChillChance`/`ShockChance`/`PoisonChance`, `StatusChance`,
+  `StatusDuration`, `ElementalDamage`, `FreezePower`), so element items need no
+  code (`Data/Catalog.Elements.cs`). Ticks and arcs carry proc coefficient 0.
+  Bosses take 30% freeze/stun time and get a short crowd-control immunity.
+- A crit rolls `MegacritChance` to become a megacrit (x3 on top, magenta number).
+- Weapon levels are rolled upgrades (`Combat/WeaponUpgrade.cs`): a Luck-weighted
+  rarity and 1-3 stat lines, rolled when the card is built so the card shows
+  exactly what it gives; `WeaponRuntime.Bonus` holds the sum. `DamagePerLevel`,
+  `CooldownPerLevel` and `ProjectilesEveryNLevels` now only size the damage and
+  speed lines and gate projectile lines (0 = never).
+
 `Game/Main.cs` constructs the systems and ticks them **in one place** rather than
 letting each run its own `_Process`. That ordering is deliberate: with
 independent callbacks, whether weapons fire before or after enemies move depends

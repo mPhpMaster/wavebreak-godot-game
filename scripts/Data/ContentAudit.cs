@@ -206,6 +206,8 @@ public static partial class ContentAudit
             AuditTomes(system);
             Interactables.Audit(Check);
             AuditShrines();
+            AuditUpgrades(system);
+            AuditElements();
         }
         catch (Exception e)
         {
@@ -320,7 +322,9 @@ public static partial class ContentAudit
             float dps1 = def.DamageAtLevel(1) * def.ProjectilesAtLevel(1) / def.CooldownAtLevel(1);
             Check(def.Damage > 0f && def.Cooldown > 0f && def.Projectiles >= 1 && def.MaxLevel >= 1 && def.Range > 0f,
                   $"weapon numbers {def.Id}");
-            Check(def.CooldownAtLevel(def.MaxLevel) >= 0.05f, $"weapon max-level cooldown {def.Id}");
+            // Levels are rolled upgrades now (Combat/WeaponUpgrades), so the
+            // per-level fields only seed the damage/speed roll sizes.
+            Check(WeaponUpgrades.EligibleLines(def) >= 3, $"weapon {def.Id} has fewer than 3 upgrade lines");
 
             (int hits1, float dmg1) = FireTest(system, def, 1);
             (int hitsN, float dmgN) = FireTest(system, def, def.MaxLevel);

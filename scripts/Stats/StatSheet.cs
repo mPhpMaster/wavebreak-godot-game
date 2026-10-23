@@ -74,6 +74,9 @@ public sealed class StatSheet
         Stat.Skips           => 3f,
 
         Stat.EnemyScaling    => 1f,
+
+        Stat.ElementalDamage => 0f,     // read as a bonus: 0 => x1
+        Stat.StatusDuration  => 1f,
         _ => 0f,
     };
 
@@ -160,7 +163,7 @@ public sealed class StatSheet
     /// <summary>Asymptote of the XP and gold bonus: at most x3 income.</summary>
     public const float IncomeCap = 2f;
 
-    public static bool IsBonusStat(Stat stat) => stat is Stat.Damage or Stat.XpGain or Stat.GoldGain;
+    public static bool IsBonusStat(Stat stat) => stat is Stat.Damage or Stat.XpGain or Stat.GoldGain or Stat.ElementalDamage;
 
     /// <summary>Damage multiplier form of a "bonus" stat: 0 reads as x1.</summary>
     public float GetMultiplier(Stat stat) => 1f + Get(stat);
@@ -183,6 +186,10 @@ public sealed class StatSheet
         Stat.Armor           => Math.Max(0f, v),
         Stat.Evasion         => Math.Max(0f, v),
         Stat.Rerolls or Stat.Banishes or Stat.Skips => Math.Max(0f, v),
+        Stat.StatusChance or Stat.MegacritChance or Stat.IgniteChance or Stat.ChillChance
+            or Stat.ShockChance or Stat.PoisonChance => Math.Clamp(v, 0f, 1f),
+        Stat.StatusDuration  => Math.Max(0.1f, v),
+        Stat.FreezePower or Stat.UpgradeStats => Math.Max(0f, v),
         // Diminishing returns on income. Once +% items actually applied, stacking
         // them had no ceiling: a 15-minute run ended at level 103 with 193k gold
         // and 200 items. v / (1 + v/2): +50% -> +40%, +100% -> +67%,

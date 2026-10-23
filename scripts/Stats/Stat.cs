@@ -51,6 +51,19 @@ public enum Stat
     // --- meta: how fast the world gets harder. Lets an item trade danger for
     // reward, which is where a lot of the interesting build decisions live.
     EnemyScaling,
+
+    // --- elements and statuses (Combat/StatusEffects). Appended, never
+    // inserted: other content refers to these by name, saves by nothing.
+    ElementalDamage,    // a bonus like Damage: 0 means x1, on non-physical hits and every status tick
+    StatusChance,       // flat chance added to an elemental weapon's own status roll
+    StatusDuration,     // multiplier on every status timer, base 1
+    MegacritChance,     // chance that a crit becomes a megacrit
+    IgniteChance,       // chance on any hit to apply Burn, whatever the weapon's element
+    ChillChance,        // ... Chill
+    ShockChance,        // ... Shock
+    PoisonChance,       // ... Poison
+    FreezePower,        // each point: one fewer Chill stack to freeze, +20% freeze time
+    UpgradeStats,       // extra stat lines on every rolled weapon upgrade
 }
 
 /// <summary>How a modifier folds into a stat. Order of application is fixed by
