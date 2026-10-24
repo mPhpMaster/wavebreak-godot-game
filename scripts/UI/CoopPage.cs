@@ -12,9 +12,16 @@ namespace Wavebreak.UI;
 ///   HOST (Steam)     a friends-only Steam lobby for up to 4 (Net/Steam/SteamLobby)
 ///   INVITE FRIENDS   the Steam overlay's invite dialog
 ///   friends list     friends sitting in a Wavebreak lobby, each with JOIN
-/// plus the lobby itself: Steam avatar, name, character and skin, READY, and
-/// START for the host. Invites accepted in the overlay, "Join Game" in Steam
-/// and <c>+connect_lobby</c> all land here (<see cref="SteamLobby.PendingJoin"/>).
+/// plus the lobby itself, READY, and START for the host. Invites accepted in
+/// the overlay, "Join Game" in Steam and <c>+connect_lobby</c> all land here
+/// (<see cref="SteamLobby.PendingJoin"/>).
+///
+/// Layout: the left column picks who you play as (character, skin, hat) with
+/// the same character panel as single-player (<see cref="CharacterInfo"/>),
+/// and the difficulty, which only the host can change. The right panel holds
+/// the status, the friends list and the session buttons. Below it, on the
+/// beach, every joined player stands side by side in their look with their
+/// name and READY state over their head (<see cref="CoopLineup"/>).
 ///
 /// Steam starts when this page opens, never earlier. When it cannot (Steam
 /// not running, not signed in) the page says so and offers RETRY; the rest of
@@ -36,6 +43,7 @@ public sealed partial class CoopPage : Control
     private static readonly Color Ink = new(0.93f, 0.95f, 0.99f);
     private static readonly Color InkDim = new(0.62f, 0.68f, 0.78f);
     private static readonly Color Accent = new(0.45f, 0.82f, 1.00f);
+    private static readonly Color Gold = new(1.00f, 0.84f, 0.38f);
     private static readonly Color Warn = new(1.00f, 0.72f, 0.45f);
     private static readonly Color PanelBack = new(0.05f, 0.06f, 0.10f, 0.86f);
 
@@ -67,10 +75,24 @@ public sealed partial class CoopPage : Control
     private Button _leave = null!;
     private Label _heroName = null!;
     private Label _skinName = null!;
+    private Label _hatName = null!;
+    private Label _difficulty = null!;
     private readonly List<Button> _arrows = new();
+    private readonly List<Button> _difficultyArrows = new();
     private Label _status = null!;
-    private VBoxContainer _lobby = null!;
+    private Label _note = null!;
+    private Label _players = null!;
     private bool _readyOn;
+    private Control _panel = null!;
+
+    /// <summary>Lowest screen y of the session panel; the beach line-up keeps its name tags under it.</summary>
+    public float PanelBottom => _panel is null ? 0f : _panel.GetGlobalRect().End.Y;
+
+    // the character panel (shared text with the PLAY page: CharacterInfo)
+    private Label _infoName = null!;
+    private Label _infoBlurb = null!;
+    private Label _infoStats = null!;
+    private Label _infoPassive = null!;
 
     public CoopPage(Action back)
     {
@@ -83,37 +105,56 @@ public sealed partial class CoopPage : Control
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         LoadSettings();
 
+        // ---- left: who you are
         var column = new VBoxContainer();
-        MainMenu.Place(column, 60f, 186f, 420f, 520f);
-        column.AddThemeConstantOverride("separation", 8);
+        MainMenu.Place(column, 60f, 186f, 400f, 520f);
+        column.AddThemeConstantOverride("separation", 5);
         AddChild(column);
 
-        column.AddChild(MainMenu.MakeLabel("CO-OP", 22, InkDim));
+        column.AddChild(MainMenu.MakeLabel("CO-OP", 20, InkDim));
+        var hostRow = new HBoxContainer();
+        hostRow.AddThemeConstantOverride("separation", 6);
         _hostSteam = MainMenu.MenuButton("HOST (Steam)", HostSteam);
-        column.AddChild(_hostSteam);
         _invite = MainMenu.MenuButton("INVITE FRIENDS", Invite);
-        column.AddChild(_invite);
+        foreach (Button b in new[] { _hostSteam, _invite })
+        {
+            b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            b.CustomMinimumSize = new Vector2(0f, 42f);
+            b.AddThemeFontSizeOverride("font_size", 17);
+            b.ClipText = true;
+            hostRow.AddChild(b);
+        }
+        column.AddChild(hostRow);
 
         // Who you play as, chosen here (the PLAY page starts a solo run on a
-        // click). Only unlocked characters and skins; the choice is saved and
-        // the lobby updates at once.
-        _heroName = Picker(column, "Character", () => CycleCharacter(-1), () => CycleCharacter(+1));
-        _skinName = Picker(column, "Skin", () => CycleSkin(-1), () => CycleSkin(+1));
+        // click). Only unlocked characters, skins and owned hats; the choice
+        // is saved and the lobby updates at once.
+        _heroName = Picker(column, "Character", () => CycleCharacter(-1), () => CycleCharacter(+1), _arrows);
+        _skinName = Picker(column, "Skin", () => CycleSkin(-1), () => CycleSkin(+1), _arrows);
+        _hatName = Picker(column, "Hat", () => CycleHat(-1), () => CycleHat(+1), _arrows);
+        // The host picks the difficulty for everyone; a client sees it here.
+        _difficulty = Picker(column, "Difficulty", () => StepDifficulty(-1), () => StepDifficulty(+1), _difficultyArrows);
 
-        // Friends in a Wavebreak lobby, each with JOIN.
-        _friendsTitle = MainMenu.MakeLabel("FRIENDS IN A GAME", 15, InkDim);
-        column.AddChild(_friendsTitle);
-        var scroll = new ScrollContainer
+        // The same panel as the PLAY page: name, blurb, starting weapon and
+        // stats, passive.
+        var info = new PanelContainer();
+        var infoStyle = new StyleBoxFlat { BgColor = PanelBack, ContentMarginLeft = 14, ContentMarginRight = 14, ContentMarginTop = 8, ContentMarginBottom = 10 };
+        infoStyle.SetCornerRadiusAll(6);
+        info.AddThemeStyleboxOverride("panel", infoStyle);
+        var infoBox = new VBoxContainer();
+        infoBox.AddThemeConstantOverride("separation", 3);
+        info.AddChild(infoBox);
+        _infoName = MainMenu.MakeLabel("", 21, Ink);
+        _infoBlurb = MainMenu.MakeLabel("", 14, Ink);
+        _infoStats = MainMenu.MakeLabel("", 14, Accent);
+        _infoPassive = MainMenu.MakeLabel("", 14, Gold);
+        foreach (Label l in new[] { _infoName, _infoBlurb, _infoStats, _infoPassive })
         {
-            CustomMinimumSize = new Vector2(0f, 96f),
-            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-            FollowFocus = true,
-        };
-        _friends = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        _friends.AddThemeConstantOverride("separation", 4);
-        scroll.AddChild(_friends);
-        _friendsScroll = scroll;
-        column.AddChild(scroll);
+            l.AutoTranslateMode = AutoTranslateModeEnum.Disabled;   // CharacterInfo translates
+            l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            infoBox.AddChild(l);
+        }
+        column.AddChild(info);
 
         // Developer only: direct IP over ENet.
         _direct = new VBoxContainer();
@@ -130,17 +171,20 @@ public sealed partial class CoopPage : Control
         _direct.AddChild(Row("Address", _address, _join));
         column.AddChild(_direct);
 
-        column.AddChild(MainMenu.MenuButton("BACK", () => { LeaveSession(); _readyOn = false; _back(); }));
+        Button back = MainMenu.MenuButton("BACK", () => { LeaveSession(); _readyOn = false; _back(); });
+        back.CustomMinimumSize = new Vector2(0f, 42f);
+        column.AddChild(back);
 
-        // Right: the lobby and the session buttons.
+        // ---- right: the session; the beach under it shows the players.
         var panel = new PanelContainer();
-        var style = new StyleBoxFlat { BgColor = PanelBack, ContentMarginLeft = 20, ContentMarginRight = 20, ContentMarginTop = 16, ContentMarginBottom = 16 };
+        var style = new StyleBoxFlat { BgColor = PanelBack, ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 12, ContentMarginBottom = 12 };
         style.SetCornerRadiusAll(6);
         panel.AddThemeStyleboxOverride("panel", style);
-        MainMenu.Place(panel, 510f, 186f, 680f, 520f);
+        MainMenu.Place(panel, 490f, 186f, 730f, 0f);
         AddChild(panel);
+        _panel = panel;
         var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 10);
+        box.AddThemeConstantOverride("separation", 8);
         panel.AddChild(box);
 
         _status = MainMenu.MakeLabel("", 17, Ink);
@@ -152,11 +196,24 @@ public sealed partial class CoopPage : Control
         _retry.CustomMinimumSize = new Vector2(180f, 44f);
         box.AddChild(_retry);
 
-        box.AddChild(MainMenu.MakeLabel("PLAYERS (up to 4)", 15, InkDim));
-        _lobby = new VBoxContainer();
-        _lobby.AddThemeConstantOverride("separation", 4);
-        _lobby.CustomMinimumSize = new Vector2(0f, 136f);
-        box.AddChild(_lobby);
+        // Friends in a Wavebreak lobby, each with JOIN.
+        _friendsTitle = MainMenu.MakeLabel("FRIENDS IN A GAME", 15, InkDim);
+        box.AddChild(_friendsTitle);
+        var scroll = new ScrollContainer
+        {
+            CustomMinimumSize = new Vector2(0f, 92f),
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            FollowFocus = true,
+        };
+        _friends = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        _friends.AddThemeConstantOverride("separation", 4);
+        scroll.AddChild(_friends);
+        _friendsScroll = scroll;
+        box.AddChild(scroll);
+
+        _players = MainMenu.MakeLabel("", 15, InkDim);
+        _players.AutoTranslateMode = AutoTranslateModeEnum.Disabled;
+        box.AddChild(_players);
 
         var buttons = new HBoxContainer();
         buttons.AddThemeConstantOverride("separation", 8);
@@ -166,18 +223,19 @@ public sealed partial class CoopPage : Control
         foreach (Button b in new[] { _ready, _start, _leave })
         {
             b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            b.CustomMinimumSize = new Vector2(0f, 44f);
             buttons.AddChild(b);
         }
         box.AddChild(buttons);
 
-        Label note = MainMenu.MakeLabel(
+        _note = MainMenu.MakeLabel(
             "Play with your Steam friends: HOST (Steam) opens a friends-only lobby and INVITE FRIENDS opens the Steam overlay. " +
             "Friends join from the invite, with \"Join Game\" on your name in Steam, or with JOIN in their list. No addresses or ports. " +
             "Steam shows the game as \"Spacewar\" (Valve's test app) until Wavebreak has its own Steam page. " +
             "Each player keeps their own character, weapons, level-ups and items; experience is shared. " +
-            "A downed player is revived by a teammate standing next to them.", 14, InkDim);
-        note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        box.AddChild(note);
+            "A downed player is revived by a teammate standing next to them.", 13, InkDim);
+        _note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        box.AddChild(_note);
 
         NetSession.Changed += Refresh;
         SteamLobby.Changed += OnSteamChanged;
@@ -319,8 +377,24 @@ public sealed partial class CoopPage : Control
         CharacterDef c = Characters.ById(me.CharacterId) ?? Characters.Default;
         _heroName.Text = Loc.T(c.DisplayName);
         _skinName.Text = SkinName(c, me.SkinId);
+        _hatName.Text = Hats.ById(me.HatId) is { } hat ? Loc.T(hat.Name) : Loc.T(Hats.All[0].Name);
+        CharacterInfo.Of(c).Into(_infoName, _infoBlurb, _infoStats, _infoPassive);
         // The look can change in the lobby, not once the run has started.
         foreach (Button arrow in _arrows) arrow.Disabled = Coop.InRun || Launch.Automated;
+
+        // Difficulty: the host's (or, out of a session, your own) choice.
+        // Only the host and a player not yet in a session can change it.
+        DifficultyTier tier = active && DifficultyTiers.ById(Coop.DifficultyId) is { } lobbyTier ? lobbyTier : DifficultyTiers.Selected;
+        string tierName = Loc.T(tier.Name);
+        _difficulty.Text = Coop.IsClient ? Loc.F("{0} (the host picks)", tierName) : tierName;
+        _difficulty.TooltipText = tier.Summary;
+        _difficulty.MouseFilter = MouseFilterEnum.Pass;
+        _difficulty.AddThemeColorOverride("font_color", DifficultyTiers.IndexOf(tier) switch { 0 => Accent, 1 => Gold, _ => Warn });
+        foreach (Button arrow in _difficultyArrows)
+        {
+            arrow.Visible = !Coop.IsClient;
+            arrow.Disabled = Coop.InRun || Launch.Automated;
+        }
 
         string status;
         bool warn = false;
@@ -347,29 +421,20 @@ public sealed partial class CoopPage : Control
         _status.Text = status;
         _status.AddThemeColorOverride("font_color", warn ? Warn : Ink);
 
-        foreach (Node n in _lobby.GetChildren()) n.QueueFree();
-        bool viaSteam = NetSession.Instance?.ViaSteam == true;
-        foreach (CoopPeer p in Coop.Roster)
-        {
-            CharacterDef pc = Characters.ById(p.CharacterId) ?? Characters.Default;
-            string state = p.Id == 1 ? Loc.T("host") : p.Ready ? Loc.T("ready") : Loc.T("not ready");
-            string line = Loc.F("{0}  ·  {1} ({2})  ·  {3}", p.Name, pc.DisplayName, SkinName(pc, p.SkinId), state);
-            var row = new HBoxContainer();
-            row.AddThemeConstantOverride("separation", 8);
-            if (viaSteam) row.AddChild(AvatarRect(SteamLobby.SteamIdForPeer(p.Id), Coop.SlotColor(p.Slot)));
-            Label l = MainMenu.MakeLabel(line, 17, Coop.SlotColor(p.Slot));
-            l.AutoTranslateMode = AutoTranslateModeEnum.Disabled;
-            l.VerticalAlignment = VerticalAlignment.Center;
-            row.AddChild(l);
-            _lobby.AddChild(row);
-        }
+        // Who is in: a count here; the players themselves stand on the beach.
+        int ready = 0;
+        foreach (CoopPeer p in Coop.Roster) if (p.Ready) ready++;
+        _players.Visible = active;
+        _players.Text = Loc.F("PLAYERS {0}/{1}   ·   ready {2}/{3}", Coop.Roster.Count, Coop.MaxPlayers, ready, Coop.Roster.Count);
 
+        bool viaSteam = NetSession.Instance?.ViaSteam == true;
         _hostSteam.Disabled = active || busy || !steam;
         _invite.Disabled = !(steam && viaSteam && SteamLobby.LobbyId != 0 && !Coop.InRun);
         _retry.Visible = !steam && !active;
         bool showFriends = steam && !active && !busy;
         _friendsTitle.Visible = showFriends;
         _friendsScroll.Visible = showFriends;
+        _note.Visible = !active;
 
         _direct.Visible = ShowDirectIp;
         _host.Disabled = active || busy;
@@ -424,7 +489,7 @@ public sealed partial class CoopPage : Control
     }
 
     /// <summary>A Steam avatar square, or a slot-coloured blank while it loads.</summary>
-    private static Control AvatarRect(ulong steamId, Color fallback)
+    internal static Control AvatarRect(ulong steamId, Color fallback)
     {
         var size = new Vector2(28f, 28f);
         if (SteamLobby.Avatar(steamId) is { } tex)
@@ -439,28 +504,28 @@ public sealed partial class CoopPage : Control
         return new ColorRect { Color = fallback with { A = 0.35f }, CustomMinimumSize = size, SizeFlagsVertical = SizeFlags.ShrinkCenter };
     }
 
-    // ------------------------------------------------------------ character and skin
+    // ------------------------------------------------------------ character, skin, hat, difficulty
 
-    private Label Picker(VBoxContainer column, string name, Action prev, Action next)
+    private Label Picker(VBoxContainer column, string name, Action prev, Action next, List<Button> arrows)
     {
-        var value = MainMenu.MakeLabel("", 18, Accent);
+        var value = MainMenu.MakeLabel("", 17, Accent);
         value.AutoTranslateMode = AutoTranslateModeEnum.Disabled;
         value.HorizontalAlignment = HorizontalAlignment.Center;
         value.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         value.ClipText = true;
         // Right to left, "previous" sits on the right and points that way.
-        Button a = Arrow(Loc.IsRtl ? ">" : "<", prev);
-        Button b = Arrow(Loc.IsRtl ? "<" : ">", next);
+        Button a = Arrow(Loc.IsRtl ? ">" : "<", prev, arrows);
+        Button b = Arrow(Loc.IsRtl ? "<" : ">", next, arrows);
         column.AddChild(Row(name, a, value, b));
         return value;
     }
 
-    private Button Arrow(string text, Action pressed)
+    private static Button Arrow(string text, Action pressed, List<Button> arrows)
     {
-        var b = new Button { Text = text, FocusMode = FocusModeEnum.All, CustomMinimumSize = new Vector2(44f, 40f) };
-        b.AddThemeFontSizeOverride("font_size", 20);
+        var b = new Button { Text = text, FocusMode = FocusModeEnum.All, CustomMinimumSize = new Vector2(40f, 34f) };
+        b.AddThemeFontSizeOverride("font_size", 18);
         b.Pressed += pressed;
-        _arrows.Add(b);
+        arrows.Add(b);
         return b;
     }
 
@@ -488,6 +553,37 @@ public sealed partial class CoopPage : Control
         LookChanged();
     }
 
+    /// <summary>Owned hats only (the PLAY page previews and sells the rest).</summary>
+    private void CycleHat(int step)
+    {
+        CharacterDef c = Current();
+        var owned = new List<HatDef>();
+        foreach (HatDef h in Hats.All) if (h.IsOwned) owned.Add(h);
+        if (owned.Count == 0) return;
+        int i = Math.Max(0, owned.IndexOf(Hats.SelectedFor(c.Id)));
+        Hats.Select(c.Id, owned[((i + step) % owned.Count + owned.Count) % owned.Count]);
+        LookChanged();
+    }
+
+    /// <summary>Host (or no session yet): the next unlocked tier that way.
+    /// The choice is the profile's, so the PLAY page shows it too.</summary>
+    private void StepDifficulty(int step)
+    {
+        if (Coop.IsClient || Coop.InRun) return;
+        int n = DifficultyTiers.All.Count;
+        int start = DifficultyTiers.IndexOf(DifficultyTiers.Selected);
+        for (int k = 1; k <= n; k++)
+        {
+            int i = ((start + step * k) % n + n) % n;
+            if (!DifficultyTiers.IsUnlocked(i)) continue;
+            DifficultyTiers.Select(i);
+            break;
+        }
+        Profile.Save();
+        if (Coop.IsHost) NetSession.Instance?.SetLobbyDifficulty(DifficultyTiers.Selected.Id);
+        Refresh();
+    }
+
     private void LookChanged()
     {
         Profile.Save();
@@ -512,9 +608,9 @@ public sealed partial class CoopPage : Control
     private static Control Row(string name, params Control[] controls)
     {
         var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 10);
-        Label l = MainMenu.MakeLabel(name, 17, Ink);
-        l.CustomMinimumSize = new Vector2(110f, 0f);
+        row.AddThemeConstantOverride("separation", 8);
+        Label l = MainMenu.MakeLabel(name, 16, Ink);
+        l.CustomMinimumSize = new Vector2(100f, 0f);
         l.VerticalAlignment = VerticalAlignment.Center;
         row.AddChild(l);
         foreach (Control c in controls)

@@ -72,6 +72,7 @@ public sealed partial class RemotePlayer : Node3D, IDamageable
         _yawNode.AddChild(_rig);
         _rig.EnableShadow();
         _rig.SetRecolor(skin.Paint);
+        if (_look.HatId.Length > 0) _rig.SetHat(_look.HatId);
 
         // A ring in the player's colour at their feet: who is who at a glance,
         // even when two people picked the same character and skin.

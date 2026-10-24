@@ -225,18 +225,22 @@ public sealed partial class Projectile : Node3D, IPooled
         // the angle that actually got hit. Set before Launch, because Dress reads
         // it when it sizes the mesh.
         float width = MathF.Max(0.4f, 2f * reach * MathF.Sin(Mathf.DegToRad(Mathf.Clamp(halfAngleDegrees, 5f, 89f))));
-        p._cosmeticScale = new Vector3(width, 0.18f, reach);
+        // Drawn capped and flat on the ground (Weapons/FxGuard): with area
+        // tomes the hit reach grows past 10 m, and a sheet that size at knee
+        // height read as a white floor laid over the whole screen.
+        float shownReach = MathF.Min(reach, Weapons.FxGuard.MaxSheet);
+        p._cosmeticScale = new Vector3(MathF.Min(width, Weapons.FxGuard.MaxSheet), 0.04f, shownReach);
 
         p.Launch(null, spec, null);
-        // -Z is forward; dropped to knee height so the sheet sits under the
-        // camera's line of sight instead of across it.
-        p._mesh.Position = new Vector3(0f, -0.6f, -reach * 0.5f);
+        // -Z is forward; on the ground under the muzzle.
+        p._mesh.Position = new Vector3(0f, -(Weapons.FxGuard.MuzzleHeight - Weapons.FxGuard.GroundLift), -shownReach * 0.5f);
         Live.Add(p);
     }
 
     /// <summary>Advance every live shot and every explosion flash by one frame.</summary>
     public static void UpdateAll(float dt)
     {
+        Weapons.FxGuard.Update();   // near-camera fade follows the zoom
         for (int i = Live.Count - 1; i >= 0; i--)
         {
             Projectile p = Live[i];
@@ -247,7 +251,11 @@ public sealed partial class Projectile : Node3D, IPooled
                 continue;
             }
 
-            if (!p._retired) p.Step(dt);
+            if (!p._retired)
+            {
+                p.Step(dt);
+                if (!p._retired) p.KeepOutOfSight();
+            }
 
             if (p._retired)
             {
@@ -404,7 +412,29 @@ public sealed partial class Projectile : Node3D, IPooled
         _mesh.Scale = _cosmeticScale * (0.7f + 0.3f * t);
         // Starts half see-through: a fast melee or breath weapon lays one of
         // these every few frames, and solid ones stacked into a white wall.
-        _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.5f + 0.5f * t * t);
+        _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.65f + 0.35f * t * t);
+    }
+
+    // Weapons/FxGuard: an effect on the camera's line to the player turns
+    // see-through, and gets its own fade back when it moves off it.
+    private bool _sightFaded;
+    private float _restFade;
+
+    private void KeepOutOfSight()
+    {
+        Vector3 s = _mesh.Scale;
+        float radius = MathF.Max(MathF.Max(MathF.Abs(s.X), MathF.Abs(s.Z)), MathF.Abs(s.Y)) * (_mode == ProjectileMode.Cosmetic ? 0.5f : 1f);
+        float block = Weapons.FxGuard.BlocksView(_mesh.GlobalPosition, radius);
+        if (block > 0f)
+        {
+            if (!_sightFaded) { _restFade = _mesh.Transparency; _sightFaded = true; }
+            _mesh.Transparency = MathF.Max(_mesh.Transparency, block);
+        }
+        else if (_sightFaded)
+        {
+            _sightFaded = false;
+            _mesh.Transparency = _restFade;
+        }
     }
 
     private void Contact(Vector3 at)
@@ -507,6 +537,7 @@ public sealed partial class Projectile : Node3D, IPooled
         _retired = true;
 
         Visible = false;
+        _sightFaded = false;
         _system = null;
         _template = null;
         _lock = null;
@@ -586,13 +617,15 @@ internal sealed partial class ExplosionFx : Node3D, IPooled
         if (fx is null) return;      // at the light budget: skip the flash, keep the frame
 
         fx._age = 0f;
-        fx._radius = MathF.Max(0.3f, radius);
+        // The shell is drawn capped and squashed into a low dome: a blast
+        // scaled by area tomes used to swallow the player and the camera.
+        fx._radius = Mathf.Clamp(radius, 0.3f, Weapons.FxGuard.MaxBlobRadius);
         fx._retired = false;
 
         fx.GlobalTransform = new Transform3D(Basis.Identity, position);
         fx._mesh.MaterialOverride = CombatVisuals.Glow(tint, additive: true);
-        fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0f);
-        fx._mesh.Scale = Vector3.One * (fx._radius * 0.35f);
+        fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.25f);
+        fx._mesh.Scale = Flat(fx._radius * 0.35f);
 
         fx._light.LightColor = tint;
         fx._light.OmniRange = fx._radius * 2.6f;
@@ -601,6 +634,8 @@ internal sealed partial class ExplosionFx : Node3D, IPooled
 
         Live.Add(fx);
     }
+
+    private static Vector3 Flat(float r) => new(r, r * 0.55f, r);
 
     public static void UpdateAll(float dt)
     {
@@ -618,8 +653,8 @@ internal sealed partial class ExplosionFx : Node3D, IPooled
                     // the first third, which is what reads as a detonation rather
                     // than an inflating balloon.
                     float eased = 1f - (1f - t) * (1f - t);
-                    fx._mesh.Scale = Vector3.One * (fx._radius * (0.35f + 0.65f * eased));
-                    fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(t);
+                    fx._mesh.Scale = Flat(fx._radius * (0.35f + 0.65f * eased));
+                    fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.25f + 0.75f * t);
                     fx._light.LightEnergy = 4f * (1f - t);
                     continue;
                 }
@@ -707,6 +742,7 @@ internal static class CombatVisuals
         };
 
         if (additive) material.BlendMode = BaseMaterial3D.BlendModeEnum.Add;
+        Weapons.FxGuard.Track(material);   // fades out between the camera and the player
 
         Materials[key] = material;
         return material;

@@ -32,7 +32,6 @@ public sealed partial class PauseMenu : Node
     private GraphicsPanel _graphicsPanel = null!;
     private Button _resume = null!;
     private bool _open;
-    private bool _mouseWasCaptured;
 
     public PauseMenu(StatsPanel sheet, LevelUpPanel levelUp, ResultsScreen results)
     {
@@ -199,13 +198,14 @@ public sealed partial class PauseMenu : Node
         Open();
         // The camera frees the mouse on the same focus loss, possibly first; the
         // run had it captured, so take it back when the player resumes.
-        _mouseWasCaptured = true;
+        PlayerCamera.RecaptureAfterHolds();
     }
 
     private bool CanOpen()
     {
         if (Screenshot.Requested || DevPanel.IsOpen) return false;
-        if (_levelUp.IsOpen || _results.Visible) return false;
+        // The compact level-up hand does not own the game, so pausing over it is fine.
+        if (_levelUp.PausesGame || _results.Visible) return false;
         if (Main.Instance?.Run is { Over: true }) return false;
         return !Net.Coop.IsPaused(GetTree());
     }
@@ -215,8 +215,7 @@ public sealed partial class PauseMenu : Node
     private void Open()
     {
         _open = true;
-        _mouseWasCaptured = Input.MouseMode == Input.MouseModeEnum.Captured;
-        Input.MouseMode = Input.MouseModeEnum.Visible;
+        PlayerCamera.HoldCursor(this);
         // Co-op: the world keeps running for the others; only this player waits.
         Net.Coop.SetPaused(GetTree(), true);
         _sheet.Pinned = true;
@@ -231,7 +230,7 @@ public sealed partial class PauseMenu : Node
         ShowSettings(false);
         _sheet.Pinned = false;
         Net.Coop.SetPaused(GetTree(), false);
-        if (_mouseWasCaptured) PlayerCamera.TryCaptureMouse();
+        PlayerCamera.ReleaseCursor(this);
     }
 
     private void Restart()
@@ -412,6 +411,7 @@ public sealed partial class PauseMenu : Node
         sens.ValueChanged += v => { GameSettings.SetSensitivity((float)v); sensValue.Text = $"{GameSettings.Sensitivity:0.00}x"; };
         page.AddChild(Row(Loc.T("Mouse"), sens, sensValue));
 
+        page.AddChild(new GameplayPanel(null, 200f, withTitle: false));   // compact level-up, auto-pick
         page.AddChild(MainMenu.MenuButton(Loc.T("GRAPHICS"), () => ShowGraphics(true)));
         page.AddChild(MainMenu.MenuButton(Loc.T("KEY BINDINGS"), () => ShowKeys(true)));
         page.AddChild(MainMenu.MenuButton(Loc.T("BACK"), () => ShowSettings(false)));

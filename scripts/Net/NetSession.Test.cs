@@ -37,6 +37,16 @@ public sealed partial class NetSession
     private double _testStartedAt;
     private float _testDownAt = 20f;
 
+    // Lobby difficulty: the host picks --coop-difficulty=<id>; a client with
+    // --coop-expect-difficulty=<id> checks it saw that tier in the lobby
+    // before READY and that its run started on it.
+    private string? _testDifficulty;
+    private string? _testExpectDifficulty;
+    private string _testLobbyDifficultySeen = "";
+
+    /// <summary>--coop-hat=&lt;id&gt;: the hat this test player wears in the lobby.</summary>
+    internal static string TestHat { get; private set; } = "";
+
     // Host-leaves scenario: the host quits at --coop-quit-at=S; a client
     // given --coop-expect-host-leave must land on the title's CO-OP page with
     // the message, which it reports from there (the session node is gone).
@@ -102,6 +112,10 @@ public sealed partial class NetSession
             else if (arg == "--coop-expect-host-leave") s._testExpectHostLeave = true;
             else if (arg.StartsWith("--coop-expect-phase=")) s._testExpectPhase = arg["--coop-expect-phase=".Length..].ToInt();
             else if (arg.StartsWith("--coop-down-shot=")) s._testDownShot = arg["--coop-down-shot=".Length..];
+            else if (arg.StartsWith("--coop-difficulty=")) s._testDifficulty = arg["--coop-difficulty=".Length..];
+            else if (arg.StartsWith("--coop-expect-difficulty=")) s._testExpectDifficulty = arg["--coop-expect-difficulty=".Length..];
+            else if (arg.StartsWith("--coop-hat=")) TestHat = arg["--coop-hat=".Length..];
+            else if (arg.StartsWith("--coop-levelup-at=")) s._testLevelUpAt = arg["--coop-levelup-at=".Length..].ToFloat();
         }
         if (PlayerName == DefaultName()) PlayerName = s._testRole == "host" ? "Host" : "Guest";
         GD.Print($"[coop-test] role={s._testRole} players={s._testPlayers} seconds={s._testSeconds}");
@@ -124,7 +138,11 @@ public sealed partial class NetSession
             if (Coop.IsHost && !_testLobbyOnly && Coop.Roster.Count >= _testPlayers && Coop.Roster.TrueForAll(p => p.Ready)) StartGame();
             if (Coop.IsClient && !_testReadySent && Coop.LocalPeer is not null)
             {
+                // Wait for the host's tier to arrive with the roster before READY.
+                if (_testExpectDifficulty is not null && Coop.DifficultyId.Length == 0) return;
                 _testReadySent = true;
+                _testLobbyDifficultySeen = Coop.DifficultyId;
+                GD.Print($"[coop-test] lobby difficulty seen: {_testLobbyDifficultySeen}");
                 SetReady(true);
             }
             return;
@@ -160,6 +178,8 @@ public sealed partial class NetSession
                 break;
             }
         }
+
+        ProcessLevelUpTest(t, me);   // NetSession.Test.LevelUp.cs
 
         if (Coop.IsClient && !_testDowned && t >= _testDownAt && me is not null && me.IsAlive)
         {
@@ -243,7 +263,9 @@ public sealed partial class NetSession
             if (reachedEnd && !_testClientLeft) problems.Add("the client's departure was not seen");
             if (AttacksMirrored == 0) problems.Add("no enemy attack was mirrored");
             if (_testExpectPhase > 0 && phase < _testExpectPhase) problems.Add($"only reached phase {phase}");
-            line = $"role=host players={PeakPlayers} enemies_synced={EnemiesSynced} hits={HitsApplied} kills={kills} phase={phase} " +
+            if (_testDifficulty is not null && Meta.DifficultyTiers.Active.Id != _testDifficulty)
+                problems.Add($"run started on {Meta.DifficultyTiers.Active.Id}, lobby picked {_testDifficulty}");
+            line = $"difficulty={Meta.DifficultyTiers.Active.Id} role=host players={PeakPlayers} enemies_synced={EnemiesSynced} hits={HitsApplied} kills={kills} phase={phase} " +
                    $"pickups={PickupsSynced} remote_collects={RemoteCollects} chests={ChestsSynced} attacks={AttacksMirrored} " +
                    $"states_rx={StatesReceived} hurts_sent={HurtsSent} client_left={(_testClientLeft ? 1 : 0)} " +
                    $"remotes_now={_remotes.Count} level={level} t={_main?.Run.Clock ?? "-"}";
@@ -260,7 +282,13 @@ public sealed partial class NetSession
             if (_testDowned && revives == 0) problems.Add("went down and was never revived");
             if (AttacksReceived == 0) problems.Add("no mirrored enemy attack arrived");
             if (_testExpectPhase > 0 && (phase < _testExpectPhase || BossesSeen == 0)) problems.Add($"phase {phase}, bosses seen {BossesSeen}");
-            line = $"role=client players={Math.Max(PeakPlayers, Coop.Roster.Count)} phase={phase} bosses_seen={BossesSeen} " +
+            if (_testExpectDifficulty is not null)
+            {
+                if (_testLobbyDifficultySeen != _testExpectDifficulty) problems.Add($"lobby showed difficulty '{_testLobbyDifficultySeen}', host picked {_testExpectDifficulty}");
+                if (Meta.DifficultyTiers.Active.Id != _testExpectDifficulty) problems.Add($"run started on {Meta.DifficultyTiers.Active.Id}, host picked {_testExpectDifficulty}");
+            }
+            LevelUpTestProblems(problems);
+            line = $"difficulty={Meta.DifficultyTiers.Active.Id} lobby_difficulty={_testLobbyDifficultySeen} {LevelUpTestFields} role=client players={Math.Max(PeakPlayers, Coop.Roster.Count)} phase={phase} bosses_seen={BossesSeen} " +
                    $"attacks_rx={AttacksReceived} enemies_synced={EnemiesSynced} hits={HitsQueued} " +
                    $"confirmed_kills={PuppetKills} kills={kills} pickups={PickupsSynced} xp_shared={SharedXp} chests={ChestsSynced} " +
                    $"states_rx={StatesReceived} enemy_states={EnemyStatesReceived} hurts_rx={HurtsReceived} " +

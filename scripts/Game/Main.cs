@@ -164,6 +164,32 @@ public sealed partial class Main : Node3D
             GD.Print($"GUARD info open={_levelUp.IsOpen} before={before} after={after} {_levelUp.DebugState}");
         Expect("level-up: 1 after the delay picks a card", !_levelUp.IsOpen && after > before);
 
+        // Mouse-look comes back the moment a hand closes, also after a queued
+        // second hand (the old bug: the camera stayed dead until a click).
+        Actors.PlayerCamera.ForceCaptureForTest = true;
+        foreach (bool compact in new[] { false, true })
+        {
+            Meta.GameplaySettings.ForceCompactForTest(compact);
+            Input.MouseMode = Input.MouseModeEnum.Captured;
+            _levelUp.Show(_offers.Roll(3, _weapons, _inventory, _player.Stats), Choose);
+            _levelUp.Show(_offers.Roll(3, _weapons, _inventory, _player.Stats), Choose);
+            await Wait(0.05);
+            bool freed = Input.MouseMode == Input.MouseModeEnum.Visible;
+            for (int hand = 0; hand < 2; hand++)
+            {
+                ulong at = Time.GetTicksMsec();
+                while (Time.GetTicksMsec() - at < 650) await Wait(0.05);
+                Press(Key.Key1);
+                await Wait(0.1);
+            }
+            string mode = compact ? "compact" : "full";
+            Expect($"level-up ({mode}): cursor freed while open, captured again after two queued picks (now {Input.MouseMode})",
+                   freed && !_levelUp.IsOpen && Input.MouseMode == Input.MouseModeEnum.Captured);
+        }
+        Meta.GameplaySettings.ForceCompactForTest(false);
+        Actors.PlayerCamera.ForceCaptureForTest = false;
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+
         _player.Health.Kill();
         await Wait(0.1);
         Press(Key.Space);

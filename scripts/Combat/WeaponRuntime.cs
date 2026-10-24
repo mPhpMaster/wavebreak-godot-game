@@ -303,8 +303,11 @@ public sealed class WeaponRuntime
             body.AddChild(_auraRoot);
         }
 
-        _auraDisc!.Scale = new Vector3(radius, 1f, radius);
-        _auraLight!.OmniRange = radius * 1.7f;
+        // Drawn capped (Weapons/FxGuard): a max-area field used to paint the
+        // whole screen; the hit radius stays the real one.
+        float shown = MathF.Min(radius, Weapons.FxGuard.MaxCentredRadius);
+        _auraDisc!.Scale = new Vector3(shown, 1f, shown);
+        _auraLight!.OmniRange = shown * 1.7f;
     }
 
     private void AnimateAura(float dt)

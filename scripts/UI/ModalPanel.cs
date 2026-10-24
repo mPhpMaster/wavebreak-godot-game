@@ -27,7 +27,6 @@ public partial class ModalPanel : Control
     public bool IsOpen { get; private set; }
 
     private ulong _shownAtMsec;
-    private bool _mouseWasCaptured;
     private bool _subscribed;
 
     protected bool Armed => Time.GetTicksMsec() - _shownAtMsec >= ArmDelayMsec;
@@ -72,9 +71,8 @@ public partial class ModalPanel : Control
 
     protected void OpenPanel()
     {
-        if (!IsOpen) _mouseWasCaptured = Input.MouseMode == Input.MouseModeEnum.Captured;
+        Actors.PlayerCamera.HoldCursor(this);
         _shownAtMsec = Time.GetTicksMsec();
-        Input.MouseMode = Input.MouseModeEnum.Visible;
         IsOpen = true;
         Visible = true;
         if (IsInsideTree()) Net.Coop.SetPaused(GetTree(), true);
@@ -85,8 +83,7 @@ public partial class ModalPanel : Control
         if (!IsOpen) return;
         IsOpen = false;
         Visible = false;
-        if (_mouseWasCaptured) Actors.PlayerCamera.TryCaptureMouse();
-        _mouseWasCaptured = false;
+        Actors.PlayerCamera.ReleaseCursor(this);
         if (IsInsideTree()) Net.Coop.SetPaused(GetTree(), false);
         OnClosed();
     }

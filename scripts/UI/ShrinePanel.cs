@@ -39,7 +39,6 @@ public sealed partial class ShrinePanel : Control
     private List<ShrineBoon> _current = new();
     private Action<ShrineBoon>? _callback;
     private Label _heading = null!;
-    private bool _mouseWasCaptured;
     private ulong _shownAtMsec;
     private float _autoPick;
     private float _autoPickLeft;
@@ -184,8 +183,7 @@ public sealed partial class ShrinePanel : Control
 
         }
 
-        if (!IsOpen) _mouseWasCaptured = Input.MouseMode == Input.MouseModeEnum.Captured;
-        Input.MouseMode = Input.MouseModeEnum.Visible;
+        Actors.PlayerCamera.HoldCursor(this);
         _shownAtMsec = Time.GetTicksMsec();
         _autoPickLeft = _autoPick;
         IsOpen = true;
@@ -201,10 +199,9 @@ public sealed partial class ShrinePanel : Control
         _current = new List<ShrineBoon>();
         _callback = null;
         foreach (var c in _cards) c.Root.Visible = false;
-        if (_mouseWasCaptured) Actors.PlayerCamera.TryCaptureMouse();
-        _mouseWasCaptured = false;
+        Actors.PlayerCamera.ReleaseCursor(this);
         // Leave the tree paused if the level-up panel is up underneath.
-        if (IsInsideTree() && LevelUp is not { IsOpen: true }) Net.Coop.SetPaused(GetTree(), false);
+        if (IsInsideTree() && LevelUp is not { PausesGame: true }) Net.Coop.SetPaused(GetTree(), false);
     }
 
     private void Pick(int index)

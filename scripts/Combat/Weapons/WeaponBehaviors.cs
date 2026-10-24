@@ -158,7 +158,11 @@ internal static class WeaponBehaviors
         public void Fire(WeaponRuntime w, WeaponSystem sys, StatSheet s)
         {
             WeaponDef d = w.Def;
-            int n = Shots(w, s);
+            int shots = Shots(w, s);
+            // At most four pools: a max build laid a dozen overlapping ones that
+            // stacked into one opaque sheet around the player. Extra
+            // projectiles fold into the pools' damage instead.
+            int n = Math.Min(shots, 4);
             float radius = MathF.Max(0.6f, d.Radius * Area(s));
             Vector3 feet = Ground(sys.MuzzlePosition);
             for (int i = 0; i < n; i++)
@@ -171,6 +175,7 @@ internal static class WeaponBehaviors
                 spec.Lifetime = d.Range * Duration(s);   // Range is the pool's lifetime in seconds
                 DamageInfo t = sys.BuildDamage(w);
                 t.Knockback = 0f;
+                if (shots > n) t.Amount *= (float)shots / n;
                 Projectile.SpawnMotion(sys, spec, t, new Projectile.MotionSpec
                 {
                     Motion = ProjectileMotion.Puddle, Mesh = ExpansionVisuals.Pool, MeshScale = radius, Tick = 0.4f,
@@ -336,7 +341,10 @@ internal static class WeaponBehaviors
             {
                 Vector3 dir = aim.Rotated(Vector3.Up, Mathf.DegToRad(Spread(d, i, n)));
                 Vector3 hold = origin + dir * dist;
+                // Low over the ground, not at chest height (FxGuard).
+                hold.Y = Ground(origin).Y + 0.3f;
                 ProjectileSpec spec = Spec(sys, d, dir, Speed(d, s), d.Range, 0.5f);
+                spec.Origin = spec.Origin with { Y = hold.Y };
                 spec.BlastRadius = pull * 0.8f;
                 spec.Lifetime = dist / spec.Speed + 2.2f * Duration(s);
                 Projectile.SpawnMotion(sys, spec, sys.BuildDamage(w), new Projectile.MotionSpec
