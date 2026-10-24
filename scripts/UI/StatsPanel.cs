@@ -12,9 +12,12 @@ using Wavebreak.Stats;
 namespace Wavebreak.UI;
 
 /// <summary>
-/// Hold Tab: the whole character sheet in one look — run state, every stat with
-/// how far it has moved from base, the loadout, and the sound settings and
-/// controls.
+/// Hold Tab: the whole run in one look — the big map of the current map
+/// (StatsPanel.Map.cs, UI/BigMap: fog of war, landmarks, you, the team, finds,
+/// the portal and pings) in the middle, run state and every stat with how far
+/// it has moved from base on one side, the build (weapons, tomes, items as
+/// icons with hover details) on the other. No settings or controls: those
+/// live in Settings only.
 ///
 /// Hold rather than toggle, because the question it answers ("what is my crit
 /// chance right now?") is a glance, and a toggle that is left open turns into a
@@ -90,6 +93,12 @@ public sealed partial class StatsPanel : Control
     }
     private bool _pinned;
 
+    /// <summary>Held open by a capture (--map-tour, the fog checks).</summary>
+    public static bool ForceOpen { get; set; }
+
+    /// <summary>The sheet is up (other overlays hide their world markers).</summary>
+    public static bool IsShown { get; private set; }
+
     public StatsPanel(Player player, Inventory inventory, WeaponSystem weapons, RunState run)
     {
         _player = player;
@@ -161,6 +170,7 @@ public sealed partial class StatsPanel : Control
         var body = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
         body.AddThemeConstantOverride("separation", 20);
         body.AddChild(_scroll);
+        body.AddChild(MapBox());      // StatsPanel.Map.cs
         body.AddChild(BuildBox());
         outer.AddChild(body);
 
@@ -177,7 +187,8 @@ public sealed partial class StatsPanel : Control
 
     public override void _Process(double delta)
     {
-        bool want = _pinned || Screenshot.ShowStats || (_available && Input.IsActionPressed("stats"));
+        bool want = _pinned || ForceOpen || Screenshot.ShowStats || (_available && Input.IsActionPressed("stats"));
+        IsShown = want;
         if (want != Visible)
         {
             Visible = want;
@@ -198,40 +209,46 @@ public sealed partial class StatsPanel : Control
         if (!IsInstanceValid(_player)) return;
         StatSheet stats = _player.Stats;
 
+        // Two stat columns on wide screens; one scrolling column when the map
+        // in the middle needs the room (1280 wide).
+        bool wide = GetViewportRect().Size.X >= WideSheet;
+        _character.Visible = wide;
+        VBoxContainer first = wide ? _character : _stats;
         Clear(_character);
-        Section(_character, "RUN");
-        Row(_character, "Time", _run.Clock);
-        Row(_character, "Level", _inventory.Level.ToString());
-        Row(_character, "XP", $"{_inventory.XpIntoLevel} / {_inventory.XpForNextLevel}");
-        Row(_character, "Kills", _run.Kills.ToString());
-        Row(_character, "Gold", _inventory.Gold.ToString());
-        Row(_character, "Seed", _run.Seed.ToString(), Dim);
-
-        Section(_character, "HEALTH");
-        PlayerHealth health = _player.Health;
-        Row(_character, "Health", $"{health.Current:0} / {health.Max:0}");
-        if (health.ShieldMax > 0f) Row(_character, "Shield", $"{health.Shield:0} / {health.ShieldMax:0}");
-        Row(_character, "Regen", Loc.F("{0:0.##} /s", stats.RegenPerSecond()));
-        Row(_character, "Damage taken", $"-{stats.ArmorReduction() * 100f:0}%");
-        Row(_character, "Dodge", $"{stats.EvasionChance() * 100f:0}%");
-
-        Section(_character, "MOVEMENT");
-        float dash = _player.DashCooldownRemaining;
-        Row(_character, "Dash", dash <= 0f ? Loc.T("ready") : Loc.F("{0:0.0}s", dash), dash <= 0f ? Better : Ink);
-        Row(_character, "Speed now", Loc.F("{0:0.0} m/s", _player.PlanarVelocity.Length()));
-        Row(_character, "Top speed", Loc.F("{0:0.0} m/s", _player.PeakSpeed));
-
         Clear(_stats);
+        Section(first, "RUN");
+        Row(first, "Time", _run.Clock);
+        Row(first, "Level", _inventory.Level.ToString());
+        Row(first, "XP", $"{_inventory.XpIntoLevel} / {_inventory.XpForNextLevel}");
+        Row(first, "Kills", _run.Kills.ToString());
+        Row(first, "Gold", _inventory.Gold.ToString());
+        Row(first, "Seed", _run.Seed.ToString(), Dim);
+
+        Section(first, "HEALTH");
+        PlayerHealth health = _player.Health;
+        Row(first, "Health", $"{health.Current:0} / {health.Max:0}");
+        if (health.ShieldMax > 0f) Row(first, "Shield", $"{health.Shield:0} / {health.ShieldMax:0}");
+        Row(first, "Regen", Loc.F("{0:0.##} /s", stats.RegenPerSecond()));
+        Row(first, "Damage taken", $"-{stats.ArmorReduction() * 100f:0}%");
+        Row(first, "Dodge", $"{stats.EvasionChance() * 100f:0}%");
+
+        Section(first, "MOVEMENT");
+        float dash = _player.DashCooldownRemaining;
+        Row(first, "Dash", dash <= 0f ? Loc.T("ready") : Loc.F("{0:0.0}s", dash), dash <= 0f ? Better : Ink);
+        Row(first, "Speed now", Loc.F("{0:0.0} m/s", _player.PlanarVelocity.Length()));
+        Row(first, "Top speed", Loc.F("{0:0.0} m/s", _player.PeakSpeed));
+
         foreach ((string title, Stat[] group) in Groups)
         {
             // The short first column takes the last two groups; stacked under
             // the rest they ran off the bottom of a 720p screen.
-            VBoxContainer into = title is "UTILITY" or "ELEMENTS" ? _character : _stats;
+            VBoxContainer into = wide && title is "UTILITY" or "ELEMENTS" ? _character : _stats;
             Section(into, title);
             foreach (Stat stat in group) StatRow(stats, stat, into);
         }
 
         RebuildBuild(stats);
+        RefreshMapTitle();   // StatsPanel.Map.cs
 
         CallDeferred(MethodName.FitScroll);
     }
@@ -264,6 +281,7 @@ public sealed partial class StatsPanel : Control
         float want = _columns.GetCombinedMinimumSize().Y;
         float room = GetViewportRect().Size.Y - 190f;
         _scroll.CustomMinimumSize = new Vector2(_columns.GetCombinedMinimumSize().X, Mathf.Max(200f, Mathf.Min(want, room)));
+        FitMap(room, _columns.GetCombinedMinimumSize().X);   // StatsPanel.Map.cs
     }
 
     internal static string Format(StatSheet stats, Stat stat, float v) => stat switch

@@ -81,7 +81,7 @@ public sealed record MapChallengeDef(
 }
 
 /// <summary>
-/// Per-map challenges: 11 named runs for each of the five maps (55 in all),
+/// Per-map challenges: 11 named runs for each of the six maps (66 in all),
 /// built from the twelve global modifiers plus map twists (Gravemoor at night,
 /// the Shallows at high tide, a lava floor on Cinder Reach) and three pressure
 /// tiers (Hard / Harder / Hardest).
@@ -232,10 +232,35 @@ public static class MapChallenges
           MapGoal.Clear, M("hyper"), MapTwist.LavaFloor, 3, 220, CosmeticKind.Skin, "kiln_sister.ashmother"),
         C("cr_crown", "cinder", "Cinder Crown", "Glass hull on the lava floor: win the run and hold the swarm. The pearl tiara.",
           MapGoal.Swarm, M("glass"), MapTwist.LavaFloor, 0, 450, CosmeticKind.Hat, "pearl_tiara"),
+
+        // ------------------------------------------------- Stormwatch Harbour
+        // Appended last: the saved selection is an index into this list.
+        C("sw_storm", "stormwatch", "Storm Night", "The storm has put the harbour lights out. Steer by the lighthouse.",
+          MapGoal.Clear, None, MapTwist.Night, 0, 50),
+        C("sw_flood", "stormwatch", "Flood Tide", "The sea is in the streets: wide pools of slow water everywhere.",
+          MapGoal.Clear, None, MapTwist.HighTide, 0, 50),
+        C("sw_fret", "stormwatch", "Harbour Fret", "Sea fret rolls in off the water. Listen for them round the corners.",
+          MapGoal.Survive, M("fog"), MapTwist.None, 0, 40),
+        C("sw_gale", "stormwatch", "Gale Warning", "Everything moves faster in a gale, you included.",
+          MapGoal.Clear, M("hyper"), MapTwist.None, 0, 55),
+        C("sw_market", "stormwatch", "Market Day", "Twice the crowd in the old town's streets.",
+          MapGoal.Clear, M("swarm"), MapTwist.None, 0, 60),
+        C("sw_watch", "stormwatch", "Night Watch", "Elite waves every 20 seconds, in the dark.",
+          MapGoal.Clear, M("elites"), MapTwist.Night, 0, 80),
+        C("sw_ballast", "stormwatch", "No Ballast", "No items at all. Sail light.",
+          MapGoal.Clear, M("noitems"), MapTwist.None, 0, 90),
+        C("sw_hard", "stormwatch", "Squall Line", "Stormwatch with the wind up.",
+          MapGoal.Clear, None, MapTwist.None, 1, 80),
+        C("sw_harder", "stormwatch", "Storm Surge", "Tougher crowds wading through flooded streets.",
+          MapGoal.Clear, None, MapTwist.HighTide, 2, 120),
+        C("sw_hardest", "stormwatch", "The Perfect Storm", "Night, a gale and the hardest tide. The keeper would be proud.",
+          MapGoal.Clear, M("hyper"), MapTwist.Night, 3, 220),
+        C("sw_crown", "stormwatch", "Lighthouse Crown", "Start in the storm, win the run and hold the swarm.",
+          MapGoal.Swarm, None, MapTwist.Night, 0, 300),
     };
 
     /// <summary>Map ids in picker order.</summary>
-    public static readonly string[] MapOrder = { "thornmeadow", "rimeglass", "gravemoor", "shallows", "cinder" };
+    public static readonly string[] MapOrder = { "thornmeadow", "rimeglass", "gravemoor", "shallows", "cinder", "stormwatch" };
 
     public static IEnumerable<MapChallengeDef> ForMap(string mapId) => All.Where(c => c.MapId == mapId);
 

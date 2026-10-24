@@ -25,7 +25,7 @@ public sealed record RouteDef(string Id, string Name, string Blurb, string[] Map
 /// map with the classic numbers for its phase (<see cref="Stages.ForPhase"/>),
 /// so a route changes where you fight, not how hard each phase is.
 ///
-/// Drawn routes pick 3 of the 5 maps from the run seed: a seeded run replays
+/// Drawn routes pick 3 of the 6 maps from the run seed: a seeded run replays
 /// the same draw.
 ///
 /// Harder tiers are longer (<see cref="DifficultyTier.Phases"/>: 4 on
@@ -57,14 +57,18 @@ public static class Routes
                 new[] { "shallows", "rimeglass", "gravemoor" }),
             new("lantern", "Lantern Road", "Gravemoor, Thornmeadow, Cinder Reach. Start in the dark.",
                 new[] { "gravemoor", "thornmeadow", "cinder" }),
-            new("draw", "Tide Draw", "Three of the five maps, in a random order, drawn from the run's seed.",
+            new("draw", "Tide Draw", "Three of the six maps, in a random order, drawn from the run's seed.",
                 Array.Empty<string>()),
         };
         // "Start on X": X first, then two of the other four drawn per run.
-        foreach (string id in new[] { "thornmeadow", "shallows", "rimeglass", "gravemoor", "cinder" })
+        foreach (string id in new[] { "thornmeadow", "shallows", "rimeglass", "gravemoor", "cinder", "stormwatch" })
             list.Add(new RouteDef("start:" + id, "Start: " + (Stages.ById(id)?.DisplayName ?? id),
                                   "This map first; the next two are drawn from the rest each run.",
                                   Array.Empty<string>(), id));
+        // Appended after the start routes: the saved choice is an index.
+        // --route=beacon forces Stormwatch Harbour first (tests, captures).
+        list.Add(new("beacon", "Beacon Road", "Stormwatch Harbour, Gravemoor, Cinder Reach. Follow the lighthouse into the dark.",
+                     new[] { "stormwatch", "gravemoor", "cinder" }));
         return list;
     }
 

@@ -50,6 +50,9 @@
 #   coop-trade-timeout  the guest asks the host; both READY; the host stands in
 #                  the portal and the room's countdown (8 s) ends it: both
 #                  windows close, nothing changes hands, both reach map 2.
+# Fog of war (NetSession.Fog.cs): in 'coop' each side reveals a far probe and
+# must see the other's through the shared mask (COOPFOG line), with the Tab
+# big map photographed: tests/shots/coop-fog-host.png / -client.png
 #
 #   ./tests/coop.ps1
 #   ./tests/coop.ps1 -Seconds 90 -Port 17777 -SkipBuild
@@ -153,6 +156,12 @@ function Hud([string]$side) {
 # revive must be sped up by the host's Lifeline.
 $hostPerks = "--give=perk_crew_beacon,perk_lifeline --coop-check-perks"
 $clientPerks = "--give=perk_lifeline --coop-check-perks"
+# Shared fog of war (NetSession.Test.Fog.cs): each side reveals a far probe
+# nobody stands in; the other must see it through the FogBits mask. Prints
+# COOPFOG PASS|FAIL; the Tab big map is photographed with both probes.
+function Fog([string]$side) {
+    " --coop-check-fog `"--coop-fog-shot=$(Join-Path $shotDir "coop-fog-$side.png")`""
+}
 
 # 1. A minute of play: sync, hits, kills, shared xp, down + revive, client leaves.
 # The host shortens the first phase so the boss, the portal and the second
@@ -161,8 +170,16 @@ $clientPerks = "--give=perk_lifeline --coop-check-perks"
 # start on it. At 12 s the client opens a real level-up hand and walks with
 # the move key while it is open (the compact hand must not stop it), then
 # picks with the 1 key.
-Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" --coop-difficulty=hard `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host') $hostPerks" `
-                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest --coop-expect-difficulty=hard --coop-levelup-at=12 `"--coop-levelup-shot=$(Join-Path $shotDir 'coop-levelup-client.png')`" `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client') $clientPerks" ([int]($Seconds + 150)) $true $true
+Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" --coop-difficulty=hard `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host')$(Fog 'host') $hostPerks" `
+                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest --coop-expect-difficulty=hard --coop-levelup-at=12 `"--coop-levelup-shot=$(Join-Path $shotDir 'coop-levelup-client.png')`" `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client')$(Fog 'client') $clientPerks" ([int]($Seconds + 150)) $true $true
+foreach ($who in @('host', 'client')) {
+    if ($Only.Count -and $Only -notcontains 'coop') { break }
+    $log = Join-Path $shotDir "coop-$who.log"
+    $fog = (Get-Content $log -ErrorAction SilentlyContinue | Where-Object { $_ -match '^COOPFOG (PASS|FAIL)' } | Select-Object -First 1)
+    if (-not $fog -or $fog -match '^COOPFOG FAIL') { $failures += "[coop] $who fog: $(if ($fog) { $fog.Trim() } else { 'no COOPFOG line' })" }
+    elseif (-not (Test-Path (Join-Path $shotDir "coop-fog-$who.png"))) { $failures += "[coop] $who fog: no screenshot" }
+    Write-Host "[coop] $who : $(if ($fog) { $fog.Trim() } else { 'NO COOPFOG LINE' })" -ForegroundColor $(if ($fog -match 'PASS') { 'Green' } else { 'Red' })
+}
 
 # 2. The host quits mid-run: the lone guest takes over as the host and plays on.
 Invoke-Scenario 'coop-hostleft' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `

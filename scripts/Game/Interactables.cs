@@ -555,7 +555,7 @@ public sealed partial class Interactables : Node
         if (normal.Y < minNormalY) return false;
         if (g.Y - _centre.Y > maxHeight || g.Y - _centre.Y < -2f) return false;
         if (Ray(space, g + Vector3.Up * 0.1f, g + Vector3.Up * headroom, out _, out _)) return false;
-        if (OverlapsObstacle(g, footprint)) return false;
+        if (OverlapsObstacle(g, footprint) || MapBlockers.Inside(g with { Y = -1f }, footprint + 1f)) return false;
         spot = g;
         return true;
     }

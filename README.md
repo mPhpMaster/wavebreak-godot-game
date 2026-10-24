@@ -23,17 +23,17 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 
 | | |
 |---|---|
-| Maps | 5: Thornmeadow, Rimeglass Plateau, Cinder Reach, Gravemoor, Saltglass Shallows. Each has its own enemies, hazards, boss and music; a run is 3 maps on Normal and Hard, 4 on Nightmare and Tempest, 5 from Abyss up |
+| Maps | 6: Thornmeadow, Rimeglass Plateau, Cinder Reach, Gravemoor, Saltglass Shallows and Stormwatch Harbour (the biggest: an old town, cliffs, a lighthouse, docks and a coral canyon you cannot see across). Each has its own enemies, hazards, boss and music; a run is 3 maps on Normal and Hard, 4 on Nightmare and Tempest, 5 from Abyss up |
 | Weapons / items / tomes | 33 / 98 / 26, with elements, status effects, megacrits and upgrade rarities. Three are signature weapons that only their hero can hold |
 | Perks | 15 levelled rules picked like tomes (and sometimes found in chests): chain lightning every Nth hit, shield bubbles from elites, a chilling dash wake, stomps, crits that heal, orbiting XP motes, gold-fuelled damage, a refused lethal blow, a chest-finding beacon, a knock-back pulse, armour for standing still, speed-fuelled attack speed, a cornered damage boost, and two team perks (Crew Beacon buffs nearby allies; Lifeline speeds up the revives you give). Perks share the tome slots |
 | Enemies | 53, including phase bosses with move sets |
 | Characters | 24 with passives, 151 skins, 22 hats. The heroes trio each bring a signature weapon: Sunny the Lookout (Spyglass Glint, a precise beam at whatever you look at), Biscuit the Sea Dog (Mooring Anchor, a ring that holds a crowd until it is hauled in) and Flick the Kite Fox (Skimmer Kite, a kite you steer by running) |
 | Quests | 327 (18 secret), which unlock characters, weapons, items, skins and Pearls |
-| Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 55 map challenges, the Toggler, leaderboard |
+| Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 66 map challenges, the Toggler, leaderboard |
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests |
 | Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full and a microwave. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |
 | Level-up | Three cards with icons (a perk card shows what the level adds and the total); reroll (R), banish (B) and skip (X); optional compact hand that keeps the game running, and auto-pick by a rule (Settings > Gameplay) |
-| Music | 19 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
+| Music | 21 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
 | Co-op | Online, 2-4 players with Steam friends: lobbies, invites, no ports (see [Co-op](#co-op-2-4-players)) |
 | Languages | English and Arabic (full right-to-left layout) |
 | Settings | Full graphics page (presets, display, scaling/FSR, AA, shadows, effects, FOV, shake, UI scale, weapon-effect opacity, FPS counter), audio, key bindings |
@@ -182,14 +182,18 @@ Title screen → **CO-OP**.
 | Shift, right mouse | dash |
 | Ctrl | slide; in the air, slam |
 | E, left mouse | interact |
-| Tab | hold for the character sheet |
+| Tab | hold for the big map (fog of war, landmarks, the team, chests, shrines, portal, pings), your stats and your build |
 | Y | hold for the scoreboard |
 | G, middle mouse | ping the spot you look at (co-op; a local marker in single-player) |
 | Esc / P | pause menu (Resume, Settings, End Run, Restart, Main menu, Quit; in co-op, Leave Game instead of End Run and Restart) |
 | M, `[` `]`, `-` `=`, `9` `0` | mute, music volume, master volume, effects volume |
 
-A small minimap sits in the top-right corner (it turns with the camera;
-Settings → Graphics → CAMERA & HUD turns it off or changes its size).
+A small minimap sits in the top-right corner (north up;
+Settings → Graphics → CAMERA & HUD turns it off or changes its size). Each
+map starts unexplored: the minimap and the Tab map show only what you (and
+your teammates, in co-op) have been near, and enemies, chests and shrines in
+the fog stay hidden. On Stormwatch Harbour the name of the district you are
+in shows under the minimap.
 All keys can be rebound in Settings → Key bindings. The game pauses itself
 when its window loses focus.
 

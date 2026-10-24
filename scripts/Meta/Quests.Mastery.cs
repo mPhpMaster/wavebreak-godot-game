@@ -209,6 +209,7 @@ public static class MasteryQuests
         ("cinder", "Cinder Reach", "Ash on the Wind", "Reach Runner"),
         ("gravemoor", "Gravemoor", "Rest Disturbed", "Moor Sexton"),
         ("shallows", "Saltglass Shallows", "Low Water", "Shallows Pilot"),
+        ("stormwatch", "Stormwatch Harbour", "Weathered the Storm", "Harbour Master"),
     };
 
     // ------------------------------------------------------------- table

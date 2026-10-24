@@ -98,6 +98,8 @@ public sealed partial class Main : Node3D
             _ = RunLengthCheck.Run(this);            // --check-phases / --check-portal-timer
         else if (Trade.TradeCheck.Requested())
             _ = Trade.TradeCheck.Run(this);          // --check-trade (swap meet rules and escrow)
+        else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--map-tour=")) is { } tourArg)
+            _ = MapTour(tourArg["--map-tour=".Length..]);   // Main.MapTour.cs
     }
 
     /// <summary>--levelup-shot=&lt;png&gt;: open a real level-up hand (after a

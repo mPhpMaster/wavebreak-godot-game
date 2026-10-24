@@ -60,6 +60,7 @@ public sealed partial class Minimap : Control
     {
         Name = "Minimap";
         MouseFilter = MouseFilterEnum.Ignore;
+        TextureFilter = TextureFilterEnum.Linear;   // soft fog edges
         HudSettings.Load();
         Layout();
     }
@@ -108,6 +109,7 @@ public sealed partial class Minimap : Control
         DrawCircle(_centre, _radius, Back);
         DrawArc(_centre, _radius * 0.5f, 0f, Mathf.Tau, 48, Ring, 1f, true);
         DrawArc(_centre, _radius * 0.25f, 0f, Mathf.Tau, 32, Ring, 1f, true);
+        DrawFog();      // Minimap.Fog.cs: the explored map under everything
 
         DrawChestsAndShrines();
         DrawEnemies();
@@ -124,6 +126,7 @@ public sealed partial class Minimap : Control
             DrawCircle(at, 7.5f, Rim);
             DrawCentred("N", at, 11, Ink);
         }
+        DrawZoneName(me);   // Minimap.Fog.cs
     }
 
     /// <summary>World point to map offset from the centre (pixels, camera-up).</summary>
@@ -156,7 +159,7 @@ public sealed partial class Minimap : Control
         if (ChestSpawner.Instance is { } chests)
             foreach (Chest c in chests.Chests)
             {
-                if (!IsInstanceValid(c) || c.IsOpen || !c.IsInsideTree()) continue;
+                if (!IsInstanceValid(c) || c.IsOpen || !c.IsInsideTree() || !FogOfWar.IsRevealed(c.GlobalPosition)) continue;
                 if (Inside(c.GlobalPosition) is not Vector2 at) continue;
                 var r = new Rect2(at - new Vector2(3.5f, 3f), new Vector2(7f, 6f));
                 DrawRect(r.Grow(1f), Ink);
@@ -164,10 +167,10 @@ public sealed partial class Minimap : Control
             }
         if (ShrineSpawner.Instance is { } shrines)
             foreach (MapShrine s in shrines.Shrines)
-                if (IsInstanceValid(s) && !s.Spent && Inside(s.GlobalPosition) is Vector2 at) Diamond(at, 4.5f, ShrineDot);
+                if (IsInstanceValid(s) && !s.Spent && FogOfWar.IsRevealed(s.GlobalPosition) && Inside(s.GlobalPosition) is Vector2 at) Diamond(at, 4.5f, ShrineDot);
         if (CuteShrineSpawner.Instance is { } cute)
             foreach (CuteShrine s in cute.Shrines)
-                if (IsInstanceValid(s) && !s.Spent && Inside(s.GlobalPosition) is Vector2 at) Diamond(at, 4.5f, CuteShrineDot);
+                if (IsInstanceValid(s) && !s.Spent && FogOfWar.IsRevealed(s.GlobalPosition) && Inside(s.GlobalPosition) is Vector2 at) Diamond(at, 4.5f, CuteShrineDot);
     }
 
     private void DrawEnemies()
@@ -177,7 +180,7 @@ public sealed partial class Minimap : Control
         for (int i = 0; i < alive.Count; i++)
         {
             Enemy e = alive[i];
-            if (!e.IsAlive) continue;
+            if (!e.IsAlive || !FogOfWar.IsRevealed(e.GlobalPosition)) continue;   // nothing drawn in fog
             if (e.IsBoss)
             {
                 Vector2 at = Pinned(e.GlobalPosition, 8f, out bool pinned);

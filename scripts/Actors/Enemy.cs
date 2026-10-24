@@ -440,7 +440,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     private bool CoastThisTick(float distance)
     {
         int every = distance > 30f ? 3 : distance > 16f ? 2 : 1;
-        if (every == 1 || IsBoss || _act != Act.None || !IsOnFloor() || _knockback.LengthSquared() > 0.01f) return false;
+        if (every == 1 || IsBoss || _act != Act.None || !IsOnFloor() || _knockback.LengthSquared() > 0.01f || _detouring) return false;
         return (++_slideTick + (int)(GetInstanceId() & 7)) % every != 0;
     }
 
@@ -467,6 +467,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
 
         float distance = toPlayer.Length();
         Vector3 heading = distance > 0.001f ? toPlayer / distance : Vector3.Zero;
+        heading = SteerAroundBlockers(position, heading, playerPosition, distance);   // Enemy.Blockers.cs
 
         // Ease off the throttle inside striking distance. Enemies that keep
         // driving forward at full speed shove each other through the player and

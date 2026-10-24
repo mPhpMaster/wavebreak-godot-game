@@ -44,7 +44,7 @@ public sealed partial class ShrineHud : Control
 
     public override void _Process(double delta)
     {
-        Visible = !Net.Coop.IsPaused(GetTree());
+        Visible = !Net.Coop.IsPaused(GetTree()) && !StatsPanel.IsShown;   // not over the Tab sheet
         ShrineSpawner? s = ShrineSpawner.Instance;
         if (s is null || !Visible) { _banner.Visible = false; _greed.Visible = false; return; }
 
