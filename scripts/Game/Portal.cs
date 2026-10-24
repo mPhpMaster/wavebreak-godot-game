@@ -34,6 +34,12 @@ public sealed partial class Portal : Node3D
     private MeshInstance3D _beam = null!;
     private OmniLight3D _light = null!;
     private float _age;
+    private Label3D _timer = null!;
+    private int _shownSeconds = -1;
+
+    /// <summary>Seconds until this portal pulls everyone through, shown over
+    /// the ring; null (the rest room's CONTINUE portal) shows nothing.</summary>
+    public float? Countdown { get; set; }
 
     /// <summary>True once the opening animation has finished. Entry is refused
     /// before that, so the player cannot be yanked away the instant the boss
@@ -82,6 +88,22 @@ public sealed partial class Portal : Node3D
         _light = new OmniLight3D { LightColor = Core, LightEnergy = 3f, OmniRange = 12f, Position = new Vector3(0f, 2.5f, 0f) };
         AddChild(_light);
 
+        _timer = new Label3D
+        {
+            Name = "Countdown",
+            FontSize = 64,
+            PixelSize = 0.024f,
+            OutlineSize = 14,
+            Modulate = Rim,
+            OutlineModulate = new Color(0.08f, 0.10f, 0.22f, 0.95f),
+            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+            NoDepthTest = true,
+            RenderPriority = 3,
+            Position = new Vector3(0f, RingRadius * 2f + 1.3f, 0f),
+            Visible = false,
+        };
+        AddChild(_timer);
+
         Scale = Vector3.One * 0.01f;
     }
 
@@ -100,6 +122,19 @@ public sealed partial class Portal : Node3D
         float pulse = 0.5f + 0.5f * Mathf.Sin(_age * 4f);
         _light.LightEnergy = 2.5f + pulse * 1.5f;
         _disc.Scale = new Vector3(1f + pulse * 0.06f, 1f, 1f + pulse * 0.06f);
+
+        _timer.Visible = Countdown.HasValue;
+        if (Countdown is float left)
+        {
+            int secs = Mathf.CeilToInt(left);
+            if (secs != _shownSeconds)
+            {
+                _shownSeconds = secs;
+                _timer.Text = Meta.Loc.F("CLOSES IN {0}", secs);
+            }
+            // The last ten seconds turn warm and pulse.
+            _timer.Modulate = left <= 10f ? new Color(1f, 0.55f, 0.45f).Lerp(Rim, pulse * 0.5f) : Rim;
+        }
     }
 
     /// <summary>True when <paramref name="p"/> is standing in the portal.</summary>

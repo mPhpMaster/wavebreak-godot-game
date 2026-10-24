@@ -13,7 +13,9 @@ public sealed record DifficultyTier(
     float Damage,     // enemy damage
     float SpawnRate,  // director credit income and bank
     float Crowd,      // how fast the live cap grows with the clock
-    float Reward)     // Pearls multiplier
+    float Reward,     // Pearls multiplier
+    int Phases = 3,   // maps (phases) in a run: rest rooms between, the final boss on the last
+    float PortalSeconds = 90f)   // how long a boss portal stays open before it pulls everyone through
 {
     public string Summary => Reward <= 1f
         ? Loc.T("The tide as it was meant to be.")
@@ -36,14 +38,18 @@ public static partial class DifficultyTiers
 {
     public static readonly IReadOnlyList<DifficultyTier> All = new List<DifficultyTier>
     {
-        new("normal",    "Normal",    1.00f, 1.00f, 1.00f, 1.00f, 1.00f),
-        new("hard",      "Hard",      1.45f, 1.30f, 1.25f, 1.15f, 1.50f),
-        new("nightmare", "Nightmare", 2.10f, 1.70f, 1.55f, 1.30f, 2.25f),
+        // Harder tiers are also longer: more maps before the final boss (see
+        // Meta/Routes for which maps, Data/Stages.ForPhase for how hard each is),
+        // and their boss portals close sooner (StageDirector: at zero the
+        // portal pulls everyone through).
+        new("normal",    "Normal",    1.00f, 1.00f, 1.00f, 1.00f, 1.00f, 3, 90f),
+        new("hard",      "Hard",      1.45f, 1.30f, 1.25f, 1.15f, 1.50f, 3, 75f),
+        new("nightmare", "Nightmare", 2.10f, 1.70f, 1.55f, 1.30f, 2.25f, 4, 60f),
         // Past Nightmare: each tier unlocks by winning the one before it, like the rest.
-        new("tempest",   "Tempest",   3.00f, 2.20f, 1.80f, 1.45f, 3.00f),
-        new("abyss",     "Abyss",     4.30f, 2.80f, 2.10f, 1.60f, 4.00f),
-        new("leviathan", "Leviathan", 6.20f, 3.60f, 2.45f, 1.75f, 5.50f),
-        new("endless",   "Endless Tide", 9.00f, 4.80f, 2.80f, 1.90f, 7.50f),
+        new("tempest",   "Tempest",   3.00f, 2.20f, 1.80f, 1.45f, 3.00f, 4, 50f),
+        new("abyss",     "Abyss",     4.30f, 2.80f, 2.10f, 1.60f, 4.00f, 5, 40f),
+        new("leviathan", "Leviathan", 6.20f, 3.60f, 2.45f, 1.75f, 5.50f, 5, 35f),
+        new("endless",   "Endless Tide", 9.00f, 4.80f, 2.80f, 1.90f, 7.50f, 5, 30f),
     };
 
     private const string SelectedKey = "difficulty";

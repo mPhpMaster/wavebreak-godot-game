@@ -51,24 +51,73 @@ public static partial class Stages
     /// it already is the classic map for that position, so the default route
     /// is the very same objects.
     /// </summary>
-    public static StageDef ForPhase(StageDef map, int index)
+    public static StageDef ForPhase(StageDef map, int index) => ForPhase(map, index, Run.Count);
+
+    /// <summary>
+    /// The maps in order of rising difficulty, for runs longer than the classic
+    /// three (harder tiers, <see cref="Meta.DifficultyTier.Phases"/>): the
+    /// gentle meadow first, the open beach, the cold plateau, the crowded
+    /// graveyard, and Cinder Reach always last.
+    /// </summary>
+    public static readonly string[] LongOrder = { "thornmeadow", "shallows", "rimeglass", "gravemoor", "cinder" };
+
+    /// <summary>
+    /// <paramref name="map"/> as played in phase <paramref name="index"/> of a
+    /// run of <paramref name="count"/> phases. Three phases are exactly the
+    /// classic numbers (above). Longer runs keep stepping up past phase 3
+    /// (<see cref="PhaseNumbers"/>), and only the last phase's boss gets the
+    /// final boss's health share; the bosses before it are gates like any other.
+    /// </summary>
+    public static StageDef ForPhase(StageDef map, int index, int count)
     {
         StageDef template = Run[Mathf.Clamp(index, 0, Run.Count - 1)];
+        if (count != Run.Count)
+        {
+            StageDef longCopy = Copy(map);
+            (longCopy.EnemyHealthScale, longCopy.EnemyDamageScale, longCopy.EnemySpeedScale) = PhaseNumbers(index);
+            longCopy.BossHealthScale = index >= count - 1 ? Run[^1].BossHealthScale : Run[0].BossHealthScale;
+            longCopy.PhaseSeconds = template.PhaseSeconds;
+            longCopy.BossGraceSeconds = template.BossGraceSeconds;
+            return longCopy;
+        }
         if (ReferenceEquals(map, template)) return map;
 
-        var copy = new StageDef();
-        // Reflection rather than a hand list: fields other people add to
-        // StageDef (music, enemy lists) are carried over without anyone
-        // remembering to edit this copy.
-        foreach (PropertyInfo p in typeof(StageDef).GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
-            if (p.CanRead && p.CanWrite) p.SetValue(copy, p.GetValue(map));
-
+        StageDef copy = Copy(map);
         copy.EnemyHealthScale = template.EnemyHealthScale;
         copy.EnemyDamageScale = template.EnemyDamageScale;
         copy.EnemySpeedScale = template.EnemySpeedScale;
         copy.BossHealthScale = template.BossHealthScale;
         copy.PhaseSeconds = template.PhaseSeconds;
         copy.BossGraceSeconds = template.BossGraceSeconds;
+        return copy;
+    }
+
+    /// <summary>Enemy health, damage and speed multipliers for phase
+    /// <paramref name="index"/> (0-based): the classic three, then each later
+    /// phase another step (+25% health, +0.13 damage, +0.03 speed; the speed
+    /// cap in Enemy.Configure still holds).</summary>
+    public static (float Health, float Damage, float Speed) PhaseNumbers(int index)
+    {
+        if (index < Run.Count)
+        {
+            StageDef t = Run[Mathf.Max(0, index)];
+            return (t.EnemyHealthScale, t.EnemyDamageScale, t.EnemySpeedScale);
+        }
+        StageDef last = Run[^1];
+        int extra = index - (Run.Count - 1);
+        return (last.EnemyHealthScale * Mathf.Pow(1.25f, extra),
+                last.EnemyDamageScale + 0.13f * extra,
+                last.EnemySpeedScale + 0.03f * extra);
+    }
+
+    /// <summary>Reflection rather than a hand list: fields other people add to
+    /// StageDef (music, enemy lists) are carried over without anyone
+    /// remembering to edit this copy.</summary>
+    private static StageDef Copy(StageDef map)
+    {
+        var copy = new StageDef();
+        foreach (PropertyInfo p in typeof(StageDef).GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            if (p.CanRead && p.CanWrite) p.SetValue(copy, p.GetValue(map));
         return copy;
     }
 
@@ -94,7 +143,7 @@ public static partial class Stages
             Ridges = 2, RidgeHeight = 2.0f,
             Landmarks = 18,
             Chests = 7,
-            Merchants = 1, Microwaves = 1, Breakables = 34,
+            Merchants = 0, Microwaves = 1, Breakables = 34,
             ChargeShrines = 3, ChallengeShrines = 2, StatueShrines = 2, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             EnemyHealthScale = 1.25f, EnemyDamageScale = 1.12f, EnemySpeedScale = 1.04f,
@@ -122,7 +171,7 @@ public static partial class Stages
             Ridges = 14, RidgeHeight = 2.0f,
             Landmarks = 6,
             Chests = 7,
-            Merchants = 1, Microwaves = 1, Breakables = 30,
+            Merchants = 0, Microwaves = 1, Breakables = 30,
             ChargeShrines = 4, ChallengeShrines = 1, StatueShrines = 1, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             EnemyHealthScale = 1.25f, EnemyDamageScale = 1.12f, EnemySpeedScale = 1.04f,

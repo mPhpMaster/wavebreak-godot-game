@@ -37,6 +37,9 @@ public sealed partial class StageDirector
         PortalOpen,
         /// <summary>The last boss died; the win is announced after a short beat.</summary>
         Victory,
+        /// <summary>Between two maps: the safe rest room (shop, campfire, CONTINUE
+        /// portal). No enemies, run clock held. See StageDirector.RestRoom.cs.</summary>
+        RestRoom,
         /// <summary>The last boss died and the run is won; an endless, escalating
         /// swarm follows until death (see <see cref="Game.FinalSwarm"/>).</summary>
         FinalSwarm,
@@ -85,6 +88,21 @@ public sealed partial class StageDirector
 
     public PhaseState State { get; private set; } = PhaseState.Waves;
 
+    private float _portalLeft;
+    private float _portalSyncIn;
+    private readonly float _portalSecondsOverride;
+
+    /// <summary>How long a boss portal stays open: the tier's
+    /// <see cref="Meta.DifficultyTier.PortalSeconds"/>, or --portal-seconds=N.</summary>
+    public float PortalSeconds => _portalSecondsOverride > 0f ? _portalSecondsOverride : Meta.DifficultyTiers.Active.PortalSeconds;
+
+    /// <summary>Seconds until the open boss portal pulls everyone through, or
+    /// -1 when no boss portal is open.</summary>
+    public float PortalSecondsLeft => State == PhaseState.PortalOpen ? _portalLeft : -1f;
+
+    /// <summary>How the last boss portal was taken: "entered" or "timeout".</summary>
+    public string PortalExitReason { get; private set; } = "";
+
     /// <summary>True from the moment the last phase boss dies: the run is won,
     /// even if the player then dies in the Final Swarm.</summary>
     public bool Won { get; private set; }
@@ -118,7 +136,8 @@ public sealed partial class StageDirector
 
     /// <summary>The open portal, for the HUD arrow and the autopilot.</summary>
     public Vector3? PortalPosition => State == PhaseState.PortalOpen && _portal is not null && GodotObject.IsInstanceValid(_portal)
-        ? _portal.GlobalPosition : null;
+        ? _portal.GlobalPosition
+        : State == PhaseState.RestRoom && Rest is { } rest ? rest.ExitPosition : null;
 
     public StageDirector(Node3D root, RunState run, EnemyManager enemies, Player player, PlayerCamera camera,
                          IReadOnlyList<StageDef> stages, IReadOnlyList<EnemyDef> roster)
@@ -139,6 +158,8 @@ public sealed partial class StageDirector
                 _startPhase = arg["--start-phase=".Length..].ToInt();
             else if (arg.StartsWith("--open-portal-at="))
                 _openPortalAt = arg["--open-portal-at=".Length..].ToFloat();
+            else if (arg.StartsWith("--portal-seconds="))
+                _portalSecondsOverride = arg["--portal-seconds=".Length..].ToFloat();
         }
     }
 
@@ -206,6 +227,14 @@ public sealed partial class StageDirector
         if (_run.Over || _index < 0) return;
 
         GuardFall();
+        // The boss portal's countdown runs everywhere, so the HUD and the
+        // portal's own numbers move smoothly; the host corrects clients twice
+        // a second and alone decides what happens at zero.
+        if (State == PhaseState.PortalOpen)
+        {
+            _portalLeft = Mathf.Max(0f, _portalLeft - dt);
+            if (_portal is not null && GodotObject.IsInstanceValid(_portal)) _portal.Countdown = _portalLeft;
+        }
         // Co-op client: the host runs the phase flow and sends each step
         // (StageDirector.Coop.cs).
         if (Net.Coop.IsClient) return;
@@ -246,12 +275,40 @@ public sealed partial class StageDirector
                 break;
 
             case PhaseState.PortalOpen:
-                if (_portal is not null && (_portal.Contains(_player.GlobalPosition)
-                                            || Net.Coop.IsHost && Net.NetSession.Instance?.AnyRemoteInside(_portal) == true))
+                if (Net.Coop.IsHost)
                 {
-                    Log($"portal entered -> phase {_index + 2}/{_stages.Count}");
-                    EnterPhase(_index + 1);
+                    _portalSyncIn -= dt;
+                    if (_portalSyncIn <= 0f)
+                    {
+                        _portalSyncIn = 0.5f;
+                        Net.NetSession.Instance?.SendPortalTimer(_portalLeft);
+                    }
                 }
+                bool entered = _portal is not null && (_portal.Contains(_player.GlobalPosition)
+                                                       || Net.Coop.IsHost && Net.NetSession.Instance?.AnyRemoteInside(_portal) == true);
+                // At zero the portal pulls everyone through, wherever they
+                // stand: the map is cleared, nothing is gained by waiting,
+                // and a portal that simply shut would strand the run.
+                bool closing = !entered && _portal is not null && _portalLeft <= 0f;
+                if (closing) Log("portal closing: everyone is pulled through");
+                if (entered || closing)
+                {
+                    PortalExitReason = entered ? "entered" : "timeout";
+                    if (RestRoomEnabled)
+                    {
+                        Log($"portal entered -> rest room, then phase {_index + 2}/{_stages.Count}");
+                        EnterRestRoom();
+                    }
+                    else
+                    {
+                        Log($"portal entered -> phase {_index + 2}/{_stages.Count}");
+                        EnterPhase(_index + 1);
+                    }
+                }
+                break;
+
+            case PhaseState.RestRoom:
+                StepRestRoom(dt);
                 break;
 
             case PhaseState.FinalSwarm:
@@ -276,6 +333,7 @@ public sealed partial class StageDirector
         bool first = _index < 0;
         _index = index;
         StageDef stage = Stage;
+        FreeRestRoom();
 
         if (_portal is not null && GodotObject.IsInstanceValid(_portal)) _portal.QueueFree();
         _portal = null;
@@ -484,6 +542,9 @@ public sealed partial class StageDirector
         _portal = new Portal();
         _root.AddChild(_portal);
         _portal.GlobalPosition = Arena.Centre;
+        _portalLeft = PortalSeconds;
+        _portalSyncIn = 0f;
+        _portal.Countdown = _portalLeft;
         State = PhaseState.PortalOpen;
         Log($"portal open at {Arena.Centre}");
         EventBus.Publish(new PortalOpened(_index + 1, Arena.Centre));

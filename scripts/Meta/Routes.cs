@@ -27,10 +27,23 @@ public sealed record RouteDef(string Id, string Name, string Blurb, string[] Map
 ///
 /// Drawn routes pick 3 of the 5 maps from the run seed: a seeded run replays
 /// the same draw.
+///
+/// Harder tiers are longer (<see cref="DifficultyTier.Phases"/>: 4 on
+/// Nightmare and Tempest, 5 from Abyss up). A longer run uses more maps,
+/// never one twice: Classic becomes the maps in rising order
+/// (<see cref="Stages.LongOrder"/>), a fixed route gets the unused maps slotted
+/// in before its last one, and a draw draws more. Each map is scaled for its
+/// position (<see cref="Stages.ForPhase(StageDef, int, int)"/>), so phases 4
+/// and 5 keep stepping up, and the final boss is always on the last map.
 /// </summary>
 public static class Routes
 {
+    /// <summary>Maps in a Normal run (and on any tier without its own count).</summary>
     public const int Length = 3;
+
+    /// <summary>Maps in a run on <paramref name="tier"/>: its phase count, no
+    /// more than there are maps.</summary>
+    public static int PhasesFor(DifficultyTier tier) => Math.Clamp(tier.Phases, 1, Stages.All.Count);
 
     public static readonly IReadOnlyList<RouteDef> All = BuildAll();
 
@@ -107,13 +120,15 @@ public static class Routes
             else explicitMaps = v.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 
+        int phases = PhasesFor(DifficultyTiers.Active);
         IReadOnlyList<StageDef> stages;
         if (explicitMaps is { Length: > 0 })
         {
+            // An explicit list is played as given, at its own length.
             route = new RouteDef("custom", "Custom", "", explicitMaps);
-            stages = Build(route, seed);
+            stages = Build(route, seed, explicitMaps.Length);
         }
-        else stages = route.Id == "classic" ? Stages.Run : Build(route, seed);
+        else stages = route.Id == "classic" && phases == Length ? Stages.Run : Build(route, seed, phases);
 
         stages = MapChallenges.Twist(stages);   // map challenge twist, on a copy of its map
         Active = route;
@@ -123,13 +138,41 @@ public static class Routes
 
     /// <summary>The maps of <paramref name="route"/> for a run of
     /// <paramref name="seed"/>, each scaled for its phase.</summary>
-    public static IReadOnlyList<StageDef> Build(RouteDef route, ulong seed)
+    public static IReadOnlyList<StageDef> Build(RouteDef route, ulong seed) => Build(route, seed, Length);
+
+    /// <summary>The maps of <paramref name="route"/> for a run of
+    /// <paramref name="phases"/> maps, each scaled for its phase.</summary>
+    public static IReadOnlyList<StageDef> Build(RouteDef route, ulong seed, int phases)
     {
+        phases = Math.Clamp(phases, 1, Stages.All.Count);
         var maps = new List<StageDef>();
-        if (!route.Drawn)
+        if (!route.Drawn && route.Id == "classic" && phases > Length)
+        {
+            // The classic three plus the extra maps they need, all in rising
+            // order: Gravemoor before Shallows, so a 4-map run adds the harder one.
+            var keep = new HashSet<string>(route.MapIds);
+            foreach (string id in new[] { "gravemoor", "shallows", "rimeglass", "thornmeadow", "cinder" })
+            {
+                if (keep.Count >= phases) break;
+                keep.Add(id);
+            }
+            foreach (string id in Stages.LongOrder)
+                if (keep.Contains(id) && Stages.ById(id) is { } s) maps.Add(s);
+        }
+        else if (!route.Drawn)
         {
             foreach (string id in route.MapIds)
                 if (Stages.ById(id) is { } s) maps.Add(s);
+            // Longer than the route: the unused maps, in rising order, go in
+            // before its last map (the route's finale stays the finale).
+            // Shorter: drop from the middle, keeping the start and the finale.
+            foreach (string id in Stages.LongOrder)
+            {
+                if (maps.Count >= phases || maps.Count == 0) break;
+                if (maps.Exists(m => m.Id == id) || Stages.ById(id) is not { } extra) continue;
+                maps.Insert(maps.Count - 1, extra);
+            }
+            while (maps.Count > phases && maps.Count > 1) maps.RemoveAt(maps.Count - 2);
         }
         else
         {
@@ -141,7 +184,7 @@ public static class Routes
                 maps.Add(first);
                 pool.Remove(first);
             }
-            while (maps.Count < Length && pool.Count > 0)
+            while (maps.Count < phases && pool.Count > 0)
             {
                 int i = rng.RangeInt(0, pool.Count);
                 maps.Add(pool[i]);
@@ -151,7 +194,7 @@ public static class Routes
         if (maps.Count == 0) return Stages.Run;
 
         var scaled = new List<StageDef>(maps.Count);
-        for (int i = 0; i < maps.Count; i++) scaled.Add(Stages.ForPhase(maps[i], i));
+        for (int i = 0; i < maps.Count; i++) scaled.Add(Stages.ForPhase(maps[i], i, maps.Count));
         return scaled;
     }
 

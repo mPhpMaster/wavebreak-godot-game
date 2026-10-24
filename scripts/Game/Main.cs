@@ -88,6 +88,10 @@ public sealed partial class Main : Node3D
             _ = PanelShots(panelArg["--panel-shot=".Length..]);   // Main.PanelShots.cs
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--icon-sheet=")) is { } sheetArg)
             _ = UI.IconSheet.Capture(GetTree(), this, sheetArg["--icon-sheet=".Length..]);
+        else if (RestRoomCheck.Requested(out string? restShot))
+            _ = RestRoomCheck.Run(this, restShot);   // --check-restroom / --restroom-shot=
+        else if (RunLengthCheck.Requested())
+            _ = RunLengthCheck.Run(this);            // --check-phases / --check-portal-timer
     }
 
     /// <summary>--levelup-shot=&lt;png&gt;: open a real level-up hand (after a
@@ -264,12 +268,16 @@ public sealed partial class Main : Node3D
         float dt = (float)delta;
         if (Run.Over) return;
 
-        Run.Tick(dt);
+        // The rest room between maps holds the run clock and the enemy
+        // director (Game/StageDirector.RestRoom.cs).
+        bool resting = _stages.InRestRoom;
+        if (!resting) Run.Tick(dt);
         // Before the enemy director: a phase change clears the field and sets
         // the new multipliers, and the spawns this frame should already see them.
         _stages.Tick(dt);
         if (Run.Over) return;
-        using (Prof.Scope("Director")) _enemies.Tick(dt, Run.Seconds);
+        if (!resting)
+            using (Prof.Scope("Director")) _enemies.Tick(dt, Run.Seconds);
         using (Prof.Scope("Weapons")) _weapons.Tick(dt);
     }
 

@@ -110,9 +110,11 @@ public partial class StageDef : Resource
     /// <summary>World chests placed when the map is built.</summary>
     [Export] public int Chests { get; set; } = 5;
 
-    /// <summary>Shady merchants: a stall selling three items for gold. One per
-    /// map is the design; zero turns the shop off for a map.</summary>
-    [Export] public int Merchants { get; set; } = 1;
+    /// <summary>Shady merchants placed on the map itself. Zero on every map:
+    /// the shop moved to the rest room between maps (<see cref="Game.RestRoom"/>),
+    /// where shopping does not compete with the crowd. Kept as a knob for maps
+    /// that want a stall anyway.</summary>
+    [Export] public int Merchants { get; set; }
 
     /// <summary>Microwaves: pay once to duplicate one held item (+1 stack).
     /// Each one works once.</summary>
@@ -227,7 +229,7 @@ public static partial class Stages
             Ridges = 4, RidgeHeight = 2.2f,
             Landmarks = 10,
             Chests = 6,
-            Merchants = 1, Microwaves = 1, Breakables = 28,
+            Merchants = 0, Microwaves = 1, Breakables = 28,
             ChargeShrines = 3, ChallengeShrines = 1, StatueShrines = 1, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
         },
@@ -250,7 +252,7 @@ public static partial class Stages
             Ridges = 6, RidgeHeight = 2.4f,
             Landmarks = 14,
             Chests = 7,
-            Merchants = 1, Microwaves = 1, Breakables = 36,
+            Merchants = 0, Microwaves = 1, Breakables = 36,
             ChargeShrines = 4, ChallengeShrines = 2, StatueShrines = 1, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             EnemyHealthScale = 1.25f, EnemyDamageScale = 1.12f, EnemySpeedScale = 1.04f,
@@ -275,7 +277,7 @@ public static partial class Stages
             Ridges = 18, RidgeHeight = 2.8f,
             Landmarks = 12,
             Chests = 7,
-            Merchants = 1, Microwaves = 1, Breakables = 32,
+            Merchants = 0, Microwaves = 1, Breakables = 32,
             ChargeShrines = 4, ChallengeShrines = 2, StatueShrines = 2, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             // The last boss meets the steepest part of the clock curve; at 0.55

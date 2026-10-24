@@ -102,6 +102,9 @@ public sealed partial class NetSession
             else if (arg == "--coop-expect-host-leave") s._testExpectHostLeave = true;
             else if (arg.StartsWith("--coop-expect-phase=")) s._testExpectPhase = arg["--coop-expect-phase=".Length..].ToInt();
             else if (arg.StartsWith("--coop-down-shot=")) s._testDownShot = arg["--coop-down-shot=".Length..];
+            else if (arg == "--coop-down-before-rest") s._testDownBeforeRest = s._testDownBeforeRestAsked = true;
+            else if (arg == "--coop-expect-restroom") s._testExpectRest = true;
+            else if (arg.StartsWith("--coop-rest-shot=")) s._testRestShot = arg["--coop-rest-shot=".Length..];
         }
         if (PlayerName == DefaultName()) PlayerName = s._testRole == "host" ? "Host" : "Guest";
         GD.Print($"[coop-test] role={s._testRole} players={s._testPlayers} seconds={s._testSeconds}");
@@ -133,6 +136,7 @@ public sealed partial class NetSession
 
         float t = _main.Run.Seconds;
         Player? me = Player.Instance;
+        TestRestRoom((float)GetProcessDeltaTime());
 
         if (Coop.IsHost && _testHostQuitAt > 0f)
         {
@@ -243,7 +247,11 @@ public sealed partial class NetSession
             if (reachedEnd && !_testClientLeft) problems.Add("the client's departure was not seen");
             if (AttacksMirrored == 0) problems.Add("no enemy attack was mirrored");
             if (_testExpectPhase > 0 && phase < _testExpectPhase) problems.Add($"only reached phase {phase}");
-            line = $"role=host players={PeakPlayers} enemies_synced={EnemiesSynced} hits={HitsApplied} kills={kills} phase={phase} " +
+            int rests = _main?.Stages.RestRoomsVisited ?? 0;
+            string restExit = _main?.Stages.RestExitReason ?? "";
+            if (_testExpectRest && rests == 0) problems.Add("never entered the rest room");
+            if (_testExpectRest && rests > 0 && restExit != "all") problems.Add($"left the rest room by '{restExit}', not with everyone in the portal");
+            line = $"role=host rest_rooms={rests} rest_exit={(restExit.Length > 0 ? restExit : "-")} players={PeakPlayers} enemies_synced={EnemiesSynced} hits={HitsApplied} kills={kills} phase={phase} " +
                    $"pickups={PickupsSynced} remote_collects={RemoteCollects} chests={ChestsSynced} attacks={AttacksMirrored} " +
                    $"states_rx={StatesReceived} hurts_sent={HurtsSent} client_left={(_testClientLeft ? 1 : 0)} " +
                    $"remotes_now={_remotes.Count} level={level} t={_main?.Run.Clock ?? "-"}";
@@ -260,7 +268,12 @@ public sealed partial class NetSession
             if (_testDowned && revives == 0) problems.Add("went down and was never revived");
             if (AttacksReceived == 0) problems.Add("no mirrored enemy attack arrived");
             if (_testExpectPhase > 0 && (phase < _testExpectPhase || BossesSeen == 0)) problems.Add($"phase {phase}, bosses seen {BossesSeen}");
-            line = $"role=client players={Math.Max(PeakPlayers, Coop.Roster.Count)} phase={phase} bosses_seen={BossesSeen} " +
+            if (_testExpectRest && RestRoomsSeen == 0) problems.Add("the host never took this player into the rest room");
+            if (_testExpectRest && RestRoomsSeen > 0 && phase < 2) problems.Add("still in the rest room / not on map 2");
+            int restShops = Game.Interactables.Instance?.MerchantBuys ?? 0;
+            if (_testExpectRest && RestRoomsSeen > 0 && Game.Interactables.Instance?.Rests == 0) problems.Add("never rested at the campfire");
+            if (_testExpectRest && _testDownBeforeRestAsked && RestRevives == 0) problems.Add("arrived downed and was not revived");
+            line = $"role=client rest_rooms={RestRoomsSeen} rest_revives={RestRevives} merchant_buys={restShops} players={Math.Max(PeakPlayers, Coop.Roster.Count)} phase={phase} bosses_seen={BossesSeen} " +
                    $"attacks_rx={AttacksReceived} enemies_synced={EnemiesSynced} hits={HitsQueued} " +
                    $"confirmed_kills={PuppetKills} kills={kills} pickups={PickupsSynced} xp_shared={SharedXp} chests={ChestsSynced} " +
                    $"states_rx={StatesReceived} enemy_states={EnemyStatesReceived} hurts_rx={HurtsReceived} " +
