@@ -21,6 +21,9 @@ namespace Wavebreak.Meta;
 ///     --dump-strings=&lt;txt&gt; write every content string with no Arabic translation, then quit
 ///     --secret-test         walk to every hidden secret and press interact
 ///     --offer-check         prove earned items/weapons are in the level-up pool
+///     --steam-test          let an automated run (--menu-shot) start Steam: live co-op checks
+///     --connect-lobby=&lt;id&gt;  join this Steam lobby at start (same as Steam's +connect_lobby)
+///     --steam-selftest      check the Steam transport over a fake in-memory Steam, then quit
 /// </summary>
 public static class Launch
 {
@@ -77,6 +80,8 @@ public static class Launch
                 SkipsMenu = true;
             }
             else if (arg == "--latin-report") { }   // Game/Screenshot: a capture diagnostic, menu or run
+            // Net/Steam: allow Steam in an automated run; join a lobby at start (menu flags).
+            else if (arg == "--steam-test" || arg.StartsWith("--steam-test=") || arg.StartsWith("--connect-lobby")) { }
             else if (arg.StartsWith("--")) SkipsMenu = true;
         }
     }

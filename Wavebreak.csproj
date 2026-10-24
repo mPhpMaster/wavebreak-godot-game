@@ -6,4 +6,7 @@
     <LangVersion>12</LangVersion>
     <RootNamespace>Wavebreak</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Steamworks.NET" Version="2024.8.0" />
+  </ItemGroup>
 </Project>

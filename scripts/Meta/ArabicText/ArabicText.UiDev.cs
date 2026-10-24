@@ -6,6 +6,9 @@ public static partial class ArabicText
     internal static readonly (string En, string Ar)[] UiDev =
     {
         ("DEVELOPER PANEL", "لوحة المطوّر"),
+        ("Direct-IP co-op on the CO-OP page", "لعب جماعي بعنوان IP مباشر في صفحة اللعب الجماعي"),
+        ("Direct-IP host and join rows are shown on the CO-OP page.", "صفوف الاستضافة والانضمام بعنوان IP مباشر ظاهرة في صفحة اللعب الجماعي."),
+        ("Direct-IP rows hidden: co-op goes through Steam.", "صفوف IP المباشر مخفية: اللعب الجماعي يمر عبر Steam."),
         ("Pause game while open", "أوقف اللعبة أثناء فتحها"),
         ("Close", "إغلاق"),
         ("The run pauses while the panel is open.", "تتوقف الجولة ما دامت اللوحة مفتوحة."),

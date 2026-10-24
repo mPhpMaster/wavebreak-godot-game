@@ -138,7 +138,10 @@ Useful test flags (all after `--`):
 | `--perf` | every 5 s: FPS, CPU/GPU render ms, draw calls, nodes, live enemies, per-system ms (`Game/Prof`), and a node census every 30 s |
 | `--levelup-shot=x.png`, `--menu-shot=x.png --menu-page=<page>`, `--panel-shot=<prefix>` | capture screens |
 | `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL |
-| `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session printing `COOP PASS/FAIL` (see "Online co-op") |
+| `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
+| `--steam-selftest` | Steam transport over a fake in-memory Steam: frames, handshake, relay, ordering, refusal, timeouts. Prints `STEAM SELFTEST PASS/FAIL` |
+| `--steam-test` | let an automated launch (`--menu-shot`) start Steam, for live checks. Without it, automated runs never touch Steam |
+| `--connect-lobby=<id>` | join this Steam lobby at start, like Steam's own `+connect_lobby <id>` |
 
 `tests/smoke.ps1` runs three seeded 30-second runs; `tests/coop.ps1` runs the
 two-process co-op test. Automated launches run
@@ -159,6 +162,17 @@ resources into the exe. The installer (`installer/Wavebreak.iss`) installs per
 user by default, adds Start-menu and optional desktop shortcuts, speaks English
 or Arabic, and writes `build/installer/Wavebreak-Setup-<version>.exe`.
 `build/` is git-ignored.
+
+Steam files: the editor plugin `addons/wavebreak_steam` (enabled in
+`project.godot`, C#, `#if TOOLS`) copies `thirdparty/steamworks/win64/steam_api64.dll`
+next to the exported exe and writes `steam_appid.txt` from `SteamApp.AppId`
+at the end of every Windows export; the export log shows
+`[steam export] ... -> build/windows`. The installer lists both files by
+name, so a build without them fails to compile instead of shipping a game
+that cannot start Steam. The NuGet package (Steamworks.NET 2024.8.0, MIT)
+carries only the managed wrapper; the DLL in `thirdparty/` is Valve's
+redistributable for SDK 1.60, the version that wrapper is built against
+(checked by matching its 952 imports to the DLL's exports).
 
 ## Physics and performance
 
@@ -214,11 +228,15 @@ scripts/
   Meta/        Profile, Unlocks, Quests, Characters, Hats, Pearls, MetaShop, Difficulty,
                Routes, Challenges, Leaderboard, Launch, Loc + ArabicText/, Graphics/Game settings
   Net/         Coop (session facts), NetSession (+ .Run, .World, .Test), RemotePlayer
+    Steam/     SteamApp (start-up, App ID), SteamLobby, SteamPeer (+ SteamFrame),
+               SteamLink (ISteamLink, fake hub), SteamMessagesLink, SteamPump, SteamSelfTest
   Visuals/     ModelSpec, ModelBuilder, CharacterRig, PlayerLooks, EnemyVisuals,
                PropTheme, PropFactory, ToonMaterials, ArtAssets, showcase/stress
 assets/        imported CC0 models, icons, music, fonts (see assets/CREDITS.md)
 tools/         compose_music.py and other generators
 installer/     Inno Setup script, icon generator
+addons/        wavebreak_steam: export plugin for the Steam DLL and steam_appid.txt
+thirdparty/    steamworks/win64/steam_api64.dll (Valve redistributable, .gdignore'd)
 tests/         smoke.ps1, coop.ps1, run-offscreen.ps1
 docs/          screenshots used by README.md
 ```
@@ -337,13 +355,15 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
 `scripts/Net/` plus small `*.Coop.cs` partials next to the code they extend
 (`Enemy.Coop`, `EnemyManager.Coop`, `Pickup.Coop`, `Player.Coop`,
 `PlayerHealth.Coop`, `ChestSpawner.Coop`, `StageDirector.Coop`). It is built on
-Godot's high-level multiplayer: one `ENetMultiplayerPeer` and RPCs on a single
+Godot's high-level multiplayer: one `MultiplayerPeer` and RPCs on a single
 node, `/root/NetSession`, which has the same path on every peer and survives
-scene changes. No Steam, no relay, nothing to install: direct IP, with LAN,
-port forwarding or a free virtual LAN (ZeroTier, Tailscale) to reach the host.
-The design follows what the Megabonk mod *Bonk With Friends* chose to sync
-(lobby, players, enemies, damage, XP, pickups, chests, run start and end) and
-how. None of its code is used.
+scene changes. Players find each other through **Steam lobbies** and talk
+through Valve's relay (`SteamPeer`, see "Steam lobbies and transport");
+`ENetMultiplayerPeer` (direct IP) remains as the developer and test path.
+Only the peer differs: every RPC, the roster and the run sync are the same
+over both. The design follows what the Megabonk mod *Bonk With Friends* chose
+to sync (lobby, players, enemies, damage, XP, pickups, chests, run start and
+end) and how, including its Steam lobby flow. None of its code is used.
 
 **Single-player has no network code path.** A `NetSession` exists only while a
 session does. Every hook in the game is behind `Net.Coop.Active`, `IsHost`,
@@ -417,10 +437,69 @@ first. So a boss's `Boss` message never arrives before the boss's spawn, and
   their run was already over, in which case the results screen stays.
   Joining a run in progress is refused.
 
+### Steam lobbies and transport
+
+`scripts/Net/Steam/`, on Steamworks.NET (NuGet, MIT). It follows the mod's
+flow: lobby for finding people, a direct Steam P2P link to the lobby owner for
+the game itself.
+
+- **When Steam starts** (`SteamApp.TryInit`): only when the CO-OP page opens
+  or its RETRY is pressed, or when the game was launched with
+  `+connect_lobby <id>`. Never in single-player, never in an automated run
+  unless `--steam-test` is given. If `SteamAPI.InitEx` fails (Steam not
+  running, not signed in, DLL missing) the page shows "Steam must be running
+  to play co-op" with RETRY, and the error goes to the log. A `SteamPump` node
+  then runs callbacks every frame and shuts Steam down on quit.
+- **App ID**: `SteamApp.AppId = 480`, Valve's public test app *Spacewar*.
+  Anyone can use it without a store page, so friends see "Spacewar" in Steam.
+  Shipping under the game's own name needs a Steamworks App ID; change that
+  constant (the export writes `steam_appid.txt` from it) and nothing else.
+  The App ID also goes into the `SteamAppId`/`SteamGameId` environment
+  variables before init, so editor and test runs need no file.
+- **DLL**: `SteamApp` installs a `DllImportResolver` for the Steamworks.NET
+  assembly that loads `steam_api64.dll` from beside the exe (exported) or from
+  `thirdparty/steamworks/win64` (editor and tests).
+- **Lobby** (`SteamLobby`): HOST (Steam) creates a friends-only lobby with 4
+  slots, sets `game=wavebreak` and `protocol=<Coop.Protocol>`, and sets rich
+  presence `connect=+connect_lobby <id>` so Steam's "Join Game" works. INVITE
+  FRIENDS calls `ActivateGameOverlayInviteDialog`. Joins arrive from
+  `GameLobbyJoinRequested` (an invite accepted in Steam),
+  `GameRichPresenceJoinRequested`, the friends list on the page
+  (`GetFriendGamePlayed` with our App ID and a lobby whose data says
+  `wavebreak`), or the command line. A join that arrives mid single-player
+  run waits for the title (`PendingJoin`). After entering, the client checks
+  the lobby's game and protocol and connects to `GetLobbyOwner`. Each member
+  publishes its Godot peer id as lobby member data `peer`, so every machine
+  can put a Steam avatar (`GetSmallFriendAvatar`) on every roster row.
+- **Transport** (`SteamPeer`, a `MultiplayerPeerExtension`): the star ENet
+  had, over **ISteamNetworkingMessages** (`SteamMessagesLink`). That is
+  connectionless P2P addressed by Steam id, through Valve's relay, so there is
+  no NAT trouble and no port to open. Not ISteamNetworkingSockets: in
+  Steamworks.NET its P2P calls take `SteamNetworkingConfigValue_t`, whose
+  overlapped union CoreCLR refuses to load, so every such call throws under
+  .NET. Frames (`SteamFrame`) start with a kind byte:
+  HELLO (with a magic) → WELCOME (the client's random Godot peer id) or REFUSE
+  (full); DATA carries Godot's channel, transfer mode and a sequence number;
+  PING keeps idle links alive; BYE leaves. Reliable packets use Steam
+  reliable sends, which are ordered. For unreliable-ordered packets the
+  receiver drops anything older than the newest it has seen on that channel.
+  The host accepts a HELLO only from a lobby member, and drops a peer silent
+  for 12 s. The client gives up after 25 s without a WELCOME. Server relay
+  is on, so client-to-client RPCs and peer announcements work as over ENet.
+- **Seam for tests** (`ISteamLink`): the peer only sends, receives and hears
+  about failed sessions. `FakeSteamHub` implements that in memory, with held
+  and reversed unreliable delivery and cut links. `--steam-selftest` runs 43
+  checks: frame round trips and malformed frames, sequence wrap-around, the
+  raw handshake, stale-packet dropping, broadcast targets, wrong-magic HELLOs.
+  It also runs a host and four clients, each on its own `SceneMultiplayer` in
+  one process, covering relay RPCs, a 200 KB message, a non-member ignored, a
+  fifth player refused, leave, timeout and host leaving.
+
 ### Testing
 
-`tests/coop.ps1` launches two game processes on localhost, through the
-hidden-desktop wrapper:
+`tests/coop.ps1` tests the game's co-op sync over ENet (the developer path;
+`SteamPeer` slots in under the same RPCs). It launches two game processes on
+localhost, through the hidden-desktop wrapper:
 
 ```
 host:   -- --coop-host=7777 --coop-players=2 --auto --invulnerable --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 ...
@@ -439,9 +518,50 @@ reason on failure. A second scenario has the host quit at 15 s
 `--coop-lobby-only` with `--menu-shot=x.png --menu-page=coop` photographs a
 filled lobby.
 
+`--steam-selftest` checks the Steam transport without Steam (above).
+`--menu-shot=x.png --menu-page=coop` (add `--lang=ar`) photographs the
+"Steam must be running" state. Automated runs never start Steam, so this
+works on any machine.
+
+**Live Steam check** (two Steam accounts on two PCs, or a PC and a VM; one
+Windows session runs one Steam client):
+
+1. Both: start Steam, sign in, launch Wavebreak, open CO-OP. The status line
+   must not say "Steam must be running", and the log shows
+   `[steam] ready: app 480, user <name> ...`.
+2. A: HOST (Steam). The status reads "Lobby open..." and the log shows
+   `[steam] lobby <id> created`.
+3. A: INVITE FRIENDS → pick B. If no overlay appears, use the Steam friends
+   list: right-click B → Invite to Lobby.
+4. B, with Wavebreak open on CO-OP: accept the invite in Steam. Or wait about
+   2 s for A to appear under FRIENDS IN A GAME and press JOIN. B's log:
+   `[steam] in lobby ...`, then `[steam] connected to host ... as peer <id>`.
+5. Both rosters show two rows with avatars. B: READY. A: START. Play,
+   go down and revive, then B leaves: A's run continues. Repeat with A
+   leaving: B lands on CO-OP with "The host left the game".
+6. B joining from a cold start: close Wavebreak on B and use **Join Game** on
+   A in Steam. Under App ID 480 this starts Spacewar, not Wavebreak (see
+   limits). Instead, test the command line Steam would use:
+   `Wavebreak.exe +connect_lobby <id from A's log>`.
+
+The log is `%APPDATA%\Godot\app_userdata\Wavebreak\logs\godot.log`.
+
+`Wavebreak.exe -- --menu-shot=x.png --menu-page=coop --steam-test` captures
+the page with Steam really started, for a one-machine sanity check.
+
 ### Known limits
 
-- Direct IP only: no server browser, no NAT punch-through, no relay.
+- Steam only for players. Direct IP stays behind the developer panel switch
+  (Profile tab: "Direct-IP co-op on the CO-OP page") and the test flags.
+- Under the test App ID 480 Steam shows the game as "Spacewar". An invite
+  accepted, or "Join Game" pressed, while Wavebreak is closed starts Spacewar.
+  Have Wavebreak running on the CO-OP page first. A real App ID fixes both.
+- The Steam overlay may not appear in a game Steam did not launch (Vulkan
+  only gets Steam's overlay layer when Steam starts the game). INVITE FRIENDS
+  then points to the friends list's "Invite to Lobby", which needs no overlay.
+- The Steam path has not been played live yet (no Steam on the build
+  machine). The transport passes its fake-Steam self-test, and the exported
+  build loads the DLL and fails cleanly with Steam off.
 - No late joining, and no reconnecting to a run after a disconnect.
 - Enemy wind-up telegraphs, burrowing and auras are not mirrored, only their
   attacks are. Cute-enemy special hazards (bubbles, puddles, pinches) hit the

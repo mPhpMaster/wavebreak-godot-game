@@ -12,8 +12,11 @@ namespace Wavebreak.Net;
 /// run -> title) and exists only while a session does — single-player never
 /// creates it.
 ///
-/// Built on Godot's high-level multiplayer (ENet + RPCs). This file is the
-/// connection and the lobby; the run's traffic is in the other partials:
+/// Built on Godot's high-level multiplayer (RPCs over a MultiplayerPeer). The
+/// peer is a <see cref="SteamPeer"/> for players (Steam lobby, Valve relay) or
+/// an ENetMultiplayerPeer for the developer direct-IP path and the automated
+/// test; nothing above the peer differs. This file is the connection and the
+/// lobby; the run's traffic is in the other partials:
 ///   NetSession.Run.cs    players, down/revive, start/end, clock
 ///   NetSession.World.cs  enemies, hits, enemy attacks, pickups, chests, stage
 ///   NetSession.Test.cs   the automated two-process test
@@ -29,7 +32,13 @@ public sealed partial class NetSession : Node
     /// 7777", "Connecting...").</summary>
     public string Status { get; private set; } = "";
 
-    private ENetMultiplayerPeer? _peer;
+    private MultiplayerPeer? _peer;
+
+    /// <summary>The session runs over Steam (lobby + <see cref="SteamPeer"/>), not ENet.</summary>
+    public bool ViaSteam { get; private set; }
+
+    /// <summary>Steam id behind a peer id, as far as the transport knows it.</summary>
+    public ulong SteamIdOfPeer(long peerId) => _peer is SteamPeer sp ? sp.SteamIdOf(peerId) : 0;
     private double _connectStarted = -1;
     private const double ConnectTimeout = 8.0;
 
@@ -80,30 +89,74 @@ public sealed partial class NetSession : Node
 
     // ------------------------------------------------------------ host / join
 
-    /// <summary>Open a lobby on <paramref name="port"/>. The host is player 1.</summary>
+    /// <summary>Developer path: open a lobby on <paramref name="port"/> over
+    /// ENet (direct IP). The host is player 1.</summary>
     public void Host(int port)
     {
         WhenReady(() =>
         {
             CloseSocket();
-            _peer = new ENetMultiplayerPeer();
-            Error err = _peer.CreateServer(port, Coop.MaxPlayers - 1);
+            var enet = new ENetMultiplayerPeer();
+            Error err = enet.CreateServer(port, Coop.MaxPlayers - 1);
             if (err != Error.Ok)
             {
                 Fail(Loc.F("Could not host on port {0} ({1}).", port, err.ToString()));
                 return;
             }
-            Multiplayer.MultiplayerPeer = _peer;
-            Coop.Mode = CoopMode.Host;
-            Coop.LocalId = 1;
-            Coop.Roster.Clear();
-            CoopPeer me = LocalProfile();
-            me.Id = 1;
-            me.Slot = 0;
-            me.Ready = true;
-            Coop.Roster.Add(me);
-            Status = Loc.F("Hosting on port {0}. Waiting for players...", port);
+            ViaSteam = false;
+            BecomeHost(enet, Loc.F("Hosting on port {0}. Waiting for players...", port));
             GD.Print($"[coop] hosting on port {port}");
+        });
+    }
+
+    /// <summary>Host in the Steam lobby just created (<see cref="SteamLobby"/>):
+    /// lobby members connect through Valve's relay.</summary>
+    public void HostSteam()
+    {
+        WhenReady(() =>
+        {
+            CloseSocket();
+            ViaSteam = true;
+            PlayerName = CleanName(SteamApp.PersonaName);
+            SteamPeer sp = SteamPeer.CreateHost(new SteamMessagesLink());
+            sp.AllowJoin = SteamLobby.IsMember;
+            BecomeHost(sp, Loc.T("Lobby open. Invite friends with INVITE FRIENDS or from your Steam friends list."));
+            SteamLobby.PublishPeerId(1);
+            GD.Print($"[coop] hosting Steam lobby {SteamLobby.LobbyId}");
+        });
+    }
+
+    private void BecomeHost(MultiplayerPeer peer, string status)
+    {
+        _peer = peer;
+        Multiplayer.MultiplayerPeer = peer;
+        Coop.Mode = CoopMode.Host;
+        Coop.LocalId = 1;
+        Coop.Roster.Clear();
+        CoopPeer me = LocalProfile();
+        me.Id = 1;
+        me.Slot = 0;
+        me.Ready = true;
+        Coop.Roster.Add(me);
+        Status = status;
+        Changed?.Invoke();
+    }
+
+    /// <summary>Connect to the owner of the Steam lobby just joined. The
+    /// transport has its own connect timeout (the relay can take a few seconds).</summary>
+    public void JoinSteam(ulong hostSteamId, string hostName)
+    {
+        WhenReady(() =>
+        {
+            CloseSocket();
+            ViaSteam = true;
+            PlayerName = CleanName(SteamApp.PersonaName);
+            _peer = SteamPeer.CreateClient(new SteamMessagesLink(), hostSteamId);
+            Multiplayer.MultiplayerPeer = _peer;
+            Coop.Mode = CoopMode.Client;
+            Coop.Roster.Clear();
+            Status = Loc.F("Connecting to {0} through Steam...", hostName.Length > 0 ? hostName : hostSteamId.ToString());
+            GD.Print($"[coop] joining {hostSteamId} through Steam");
             Changed?.Invoke();
         });
     }
@@ -119,13 +172,15 @@ public sealed partial class NetSession : Node
                 return;
             }
             CloseSocket();
-            _peer = new ENetMultiplayerPeer();
-            Error err = _peer.CreateClient(host, port);
+            ViaSteam = false;
+            var enet = new ENetMultiplayerPeer();
+            Error err = enet.CreateClient(host, port);
             if (err != Error.Ok)
             {
                 Fail(Loc.F("Could not connect to {0} ({1}).", $"{host}:{port}", err.ToString()));
                 return;
             }
+            _peer = enet;
             Multiplayer.MultiplayerPeer = _peer;
             Coop.Mode = CoopMode.Client;
             Coop.Roster.Clear();
@@ -159,6 +214,7 @@ public sealed partial class NetSession : Node
         bool wasActive = Coop.Active;
         EndRunState();
         CloseSocket();
+        if (ViaSteam) SteamLobby.Leave();
         Coop.Reset();
         Status = "";
         if (wasActive) GD.Print("[coop] session closed");
@@ -183,6 +239,7 @@ public sealed partial class NetSession : Node
         GD.Print($"[coop] {message}");
         Coop.Notice = message;
         CloseSocket();
+        if (ViaSteam) SteamLobby.Leave();
         Coop.Reset();
         Status = message;
         Changed?.Invoke();
@@ -225,6 +282,7 @@ public sealed partial class NetSession : Node
         CoopPeer me = LocalProfile();
         Status = Loc.T("Connected. Waiting for the host...");
         GD.Print($"[coop] connected as {Coop.LocalId}");
+        if (ViaSteam) SteamLobby.PublishPeerId(Coop.LocalId);
         RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId);
         Changed?.Invoke();
     }
@@ -232,7 +290,10 @@ public sealed partial class NetSession : Node
     private void OnConnectionFailed()
     {
         _connectStarted = -1;
-        Fail(Loc.T("Could not reach the host."));
+        if (_peer is SteamPeer sp)
+            Fail(sp.EndReason == "refused" ? Loc.T("That game is full.") : Loc.T("Could not reach the host through Steam."));
+        else
+            Fail(Loc.T("Could not reach the host."));
     }
 
     private void OnServerDisconnected()
@@ -243,6 +304,7 @@ public sealed partial class NetSession : Node
         string message = Loc.T("The host left the game.");
         TestHostLeft();
         CloseSocket();
+        if (ViaSteam) SteamLobby.Leave();
         Coop.Reset();
         Coop.Notice = message;
         Status = message;
@@ -455,6 +517,7 @@ public sealed partial class NetSession : Node
         Coop.DifficultyId = difficultyId;
         Coop.InRun = true;
         Coop.ClearHold();
+        if (ViaSteam && Coop.IsHost) SteamLobby.SetJoinable(false);   // no joining mid-run
         BeginLoading();
         GetTree().Paused = false;
         GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile, UI.MainMenu.RunScene);

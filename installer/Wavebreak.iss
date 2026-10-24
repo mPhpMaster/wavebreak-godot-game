@@ -39,7 +39,13 @@ Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "{#Source}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#Source}\*"; DestDir: "{app}"; Excludes: "steam_api64.dll,steam_appid.txt"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Steam co-op: the export puts these next to the exe (addons/wavebreak_steam).
+; Listed by name so a build without them fails here instead of shipping a
+; game whose CO-OP page can never start Steam. steam_appid.txt holds the App
+; ID (480, Valve's Spacewar test app, until Wavebreak has its own).
+Source: "{#Source}\steam_api64.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Source}\steam_appid.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "wavebreak.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
