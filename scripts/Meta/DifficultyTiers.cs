@@ -39,6 +39,11 @@ public static partial class DifficultyTiers
         new("normal",    "Normal",    1.00f, 1.00f, 1.00f, 1.00f, 1.00f),
         new("hard",      "Hard",      1.45f, 1.30f, 1.25f, 1.15f, 1.50f),
         new("nightmare", "Nightmare", 2.10f, 1.70f, 1.55f, 1.30f, 2.25f),
+        // Past Nightmare: each tier unlocks by winning the one before it, like the rest.
+        new("tempest",   "Tempest",   3.00f, 2.20f, 1.80f, 1.45f, 3.00f),
+        new("abyss",     "Abyss",     4.30f, 2.80f, 2.10f, 1.60f, 4.00f),
+        new("leviathan", "Leviathan", 6.20f, 3.60f, 2.45f, 1.75f, 5.50f),
+        new("endless",   "Endless Tide", 9.00f, 4.80f, 2.80f, 1.90f, 7.50f),
     };
 
     private const string SelectedKey = "difficulty";

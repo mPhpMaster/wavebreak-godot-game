@@ -403,6 +403,8 @@ public static partial class ArabicText
         ("Normal", "عادي"),
         ("Hard", "صعب"),
         ("Nightmare", "كابوس"),
+        ("Abyss", "الهاوية"),
+        ("Endless Tide", "المدّ اللانهائي"),
 
         ("Everything faster: enemies +30% speed and spawns +15%; you +30% move and +25% attack speed; waves 15% shorter.", "كل شيء أسرع: الأعداء +30% سرعة و+15% ظهور؛ وأنت +30% حركة و+25% سرعة هجوم؛ الموجات أقصر 15%."),
         ("Glass Hull", "هيكل زجاجي"),
