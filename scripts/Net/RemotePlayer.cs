@@ -127,8 +127,14 @@ public sealed partial class RemotePlayer : Node3D, IDamageable
             OutlineRenderPriority = 3,
             AutoTranslateMode = AutoTranslateModeEnum.Disabled,   // a name is a name
             Position = new Vector3(0f, Actors.Player.BodyHeight + 0.75f, 0f),
+            // UI/TeamTags draws the tag (name, colour, health, edge arrow) on
+            // the canvas; this one stays as a fallback that is not shown.
+            Visible = false,
         };
         AddChild(_tag);
+
+        // Beam and pinging ring while down (DownFlare).
+        AddChild(new DownFlare(this, color));
     }
 
     /// <summary>A state packet from the owner.</summary>

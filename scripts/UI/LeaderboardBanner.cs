@@ -59,6 +59,8 @@ public sealed partial class LeaderboardBanner : Control
     private void OnPlaced(LeaderboardPlaced e)
     {
         if (e.Rank <= 0) return;
+        // The results screen shows the placing as a badge in its header.
+        if (Game.Main.Instance?.Results is { IsShown: true }) return;
         LeaderboardEntry? entry = null;
         foreach (LeaderboardEntry x in Leaderboard.Top) if (x.When == e.When) entry = x;
         if (entry is null) return;

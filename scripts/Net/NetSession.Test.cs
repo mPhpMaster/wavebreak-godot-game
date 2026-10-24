@@ -280,6 +280,7 @@ public sealed partial class NetSession
                    $"downed={downs} revived={revives} host_visible={(_remotes.Count > 0 ? 1 : 0)} level={level} t={_main?.Run.Clock ?? "-"}";
         }
 
+        line += " " + AwarenessTestCheck(role, problems);   // NetSession.Awareness.cs
         GD.Print(problems.Count == 0 ? $"COOP PASS {line}" : $"COOP FAIL {line} reason=\"{string.Join("; ", problems)}\"");
         if (_main is not null && IsInstanceValid(_main)) GD.Print(_main.Summary());
 

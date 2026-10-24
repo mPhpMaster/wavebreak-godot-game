@@ -199,6 +199,7 @@ public sealed partial class NetSession
                 run.Finish(survived: _main.Stages.Won);
             }
         }
+        ProcessAwareness(dt);   // scoreboard sync, awareness test (NetSession.Awareness.cs)
         FlushEvents();
         FlushHits();
     }
@@ -221,17 +222,19 @@ public sealed partial class NetSession
             return;
         }
         bool helped = false;
+        long helper = 0;
         foreach (RemotePlayer r in _remotes.Values)
         {
             if (!IsInstanceValid(r) || r.Down || !r.HasState) continue;
             Vector3 d = r.GlobalPosition - me.GlobalPosition;
             d.Y = 0f;
-            if (d.LengthSquared() <= Coop.ReviveRadius * Coop.ReviveRadius) { helped = true; break; }
+            if (d.LengthSquared() <= Coop.ReviveRadius * Coop.ReviveRadius) { helped = true; helper = r.PeerId; break; }
         }
         _revive = helped ? _revive + dt : Mathf.Max(0f, _revive - dt * 0.5f);
         if (_revive < Coop.ReviveSeconds) return;
         _revive = 0f;
         me.Health.Revive(Coop.ReviveHealth);
+        CreditRevive(helper);   // scoreboard (NetSession.Awareness.cs)
     }
 
     // ------------------------------------------------------------ player state

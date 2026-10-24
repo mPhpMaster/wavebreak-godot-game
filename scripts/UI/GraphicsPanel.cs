@@ -166,6 +166,9 @@ public sealed partial class GraphicsPanel : VBoxContainer
         list.AddChild(SliderRow("UI scale", 80, 150, 5, () => C().UiScale * 100f, v => $"{v:0}%",
             v => GraphicsSettings.Change(c => c.UiScale = v / 100f, false), live: false));
         list.AddChild(Toggle("Show FPS counter", () => C().ShowFps, on => GraphicsSettings.Change(c => c.ShowFps = on, false)));
+        // Minimap (Meta/HudSettings, its own [hud] section).
+        list.AddChild(Toggle("Show minimap", () => HudSettings.Minimap, HudSettings.SetMinimap));
+        list.AddChild(Row("Minimap size", Option(HudSettings.SizeNames, () => HudSettings.SizeIndex, HudSettings.SetSize)));
 
         // ---------------------------------------------------------- density
         list.AddChild(Section("VISUAL DENSITY"));

@@ -33,6 +33,8 @@ public static class Keybinds
         ("slide", "Slide / slam"),
         ("interact", "Interact (chests, shrines)"),
         ("stats", "Character sheet (hold)"),
+        ("scoreboard", "Scoreboard (hold)"),
+        ("ping", "Ping (mark a spot)"),
         ("pause", "Pause"),
         ("levelup_reroll", "Level-up: reroll"),
         ("levelup_banish", "Level-up: banish"),

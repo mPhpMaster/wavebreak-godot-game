@@ -101,11 +101,21 @@ function Invoke-Scenario([string]$name, [string]$hostArgs, [string]$clientArgs, 
     }
 }
 
+# Team-awareness checks (NetSession.Awareness.cs): the client lands the
+# killing blow on the boss, and both sides check the toast credits it, the
+# scoreboard shows kills for both, a down marker appeared, and pings arrived
+# (the host passes on only 3 of a 5-ping burst). Screenshots of the
+# scoreboard, the boss toast and a ping on each side.
+function Hud([string]$side) {
+    "--coop-check-hud `"--coop-board-shot=$(Join-Path $shotDir "coop-board-$side.png")`" " +
+    "`"--coop-boss-shot=$(Join-Path $shotDir "coop-boss-$side.png")`" `"--coop-ping-shot=$(Join-Path $shotDir "coop-ping-$side.png")`""
+}
+
 # 1. A minute of play: sync, hits, kills, shared xp, down + revive, client leaves.
 # The host shortens the first phase so the boss, the portal and the second
 # map (all host-driven) happen inside the minute too.
-Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`"" `
-                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`"" ([int]($Seconds + 150)) $true $true
+Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host')" `
+                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client')" ([int]($Seconds + 150)) $true $true
 
 # 2. The host quits mid-run: the client must land on the CO-OP page with a message.
 Invoke-Scenario 'coop-hostleft' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `

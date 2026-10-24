@@ -182,6 +182,15 @@ public sealed partial class NetSession
     private void Hits(float[] d)
     {
         if (!Coop.IsHost) return;
+        // Every hit in this batch is the sender's: kill credit and the
+        // scoreboard read it (Enemy.Awareness.cs).
+        Enemy.NetHitter = Multiplayer.GetRemoteSenderId();
+        try { ApplyHits(d); }
+        finally { Enemy.NetHitter = 0; }
+    }
+
+    private void ApplyHits(float[] d)
+    {
         // Applied straight to the enemy: no EnemyDamaged is published here, so
         // the host's own lifesteal and on-hit items never fire off someone
         // else's hit (the client already ran its own).

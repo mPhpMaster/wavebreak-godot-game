@@ -91,8 +91,17 @@ Title screen → **CO-OP**.
   first 8 seconds.
 - At 0 health you go **down**. A teammate who stands next to you for 4
   seconds revives you with 40% health. The run ends when everyone is down.
-- Enemies chase the nearest player who is still up. The camera follows you,
-  and names show over the other players' heads.
+- Enemies chase the nearest player who is still up. The camera follows you.
+- Every teammate has a name tag in their colour with a health bar, readable
+  through walls; an arrow on the screen edge points to anyone off-screen.
+  A downed teammate sends up a tall beam of light, shows a red SOS on the
+  minimap, and a line on screen tells you to go and revive them.
+- **Ping** (G or middle mouse) marks the spot you look at for everyone:
+  "Enemy here", "Chest", "Shrine", "Go here", or "Help!" when you ping
+  yourself or are down. Pings last 6 seconds, 3 per 5 seconds.
+- Whoever lands the killing blow on a boss is named in a banner. Hold **Y**
+  for the scoreboard (kills, boss kills, downs, revives, damage dealt and
+  taken, level, gold); it is also on the results screen.
 - If the host leaves, everyone returns to the CO-OP page with a message. If
   someone else leaves, their character is removed and the run goes on.
 - You cannot join a run that has already started. Co-op always uses the
@@ -135,9 +144,13 @@ Title screen → **CO-OP**.
 | Ctrl | slide; in the air, slam |
 | E, left mouse | interact |
 | Tab | hold for the character sheet |
+| Y | hold for the scoreboard |
+| G, middle mouse | ping the spot you look at (co-op; a local marker in single-player) |
 | Esc / P | pause menu (Resume, Settings, End Run, Restart, Main menu, Quit; in co-op, Leave Game instead of End Run and Restart) |
 | M, `[` `]`, `-` `=`, `9` `0` | mute, music volume, master volume, effects volume |
 
+A small minimap sits in the top-right corner (it turns with the camera;
+Settings → Graphics → CAMERA & HUD turns it off or changes its size).
 All keys can be rebound in Settings → Key bindings. The game pauses itself
 when its window loses focus.
 

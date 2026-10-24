@@ -222,13 +222,15 @@ scripts/
   Audio/       AudioDirector, SfxSynth, MusicDirector, MusicTracks, Boombox, AudioSettings
   Progression/ XpCurve, Inventory, OfferPool, TomeBook, LevelUpChoices
   UI/          Hud, LevelUpPanel, PauseMenu, StatsPanel, ResultsScreen, BossBar, MainMenu
-               pages (Codex, MetaShop, Boombox, Graphics, CoopPage), CoopHud, DevPanel, CuteStyle, Icons
+               pages (Codex, MetaShop, Boombox, Graphics, CoopPage), CoopHud, DevPanel, CuteStyle, Icons,
+               AwarenessLayer (Minimap, TeamTags, PingMarkers, AwarenessAlerts, ScoreboardPanel)
   Data/        Definitions, Catalog*, Stages*, Tomes*, MapShrines, ContentAudit*  <- all content
   Game/        Main, Arena, StageDirector, FinalSwarm, Portal, RunState, spawners,
                Autopilot, Screenshot, PerfProbe/Prof
   Meta/        Profile, Unlocks, Quests, Characters, Hats, Pearls, MetaShop, Difficulty,
                Routes, Challenges, Leaderboard, Launch, Loc + ArabicText/, Graphics/Game settings
-  Net/         Coop (session facts), NetSession (+ .Run, .World, .Test), RemotePlayer
+  Net/         Coop (session facts), NetSession (+ .Run, .World, .Test, .Awareness, .Pings),
+               RemotePlayer, DownFlare, Pings
     Steam/     SteamApp (start-up, App ID), SteamLobby, SteamPeer (+ SteamFrame),
                SteamLink (ISteamLink, fake hub), SteamMessagesLink, SteamPump, SteamSelfTest
   Visuals/     ModelSpec, ModelBuilder, CharacterRig, PlayerLooks, EnemyVisuals,
@@ -607,6 +609,73 @@ The log is `%APPDATA%\Godot\app_userdata\Wavebreak\logs\godot.log`.
 `Wavebreak.exe -- --menu-shot=x.png --menu-page=coop --steam-test` captures
 the page with Steam really started, for a one-machine sanity check.
 
+### Team awareness: minimap, name tags, pings, boss toast, scoreboard
+
+`UI/AwarenessLayer` installs it for every run (`Main._Ready`), single-player
+included. Its overlay is a CanvasLayer on the HUD's layer but just *before*
+the `UI` layer in the tree (same-layer CanvasLayers stack by index), so the
+HUD, level-up panel, pause menu and results all draw over it; the scoreboard
+has its own layer 30 so it works over the pause menu and the results.
+
+- **Minimap** (`UI/Minimap`): one Control, all `_Draw`, redrawn at 15 Hz.
+  Round, top-right under kills/gold, and it **turns with the camera**
+  (camera-forward is up; a small N on the rim shows north) because a
+  north-up map has to be rotated in your head mid-fight. Shows you (arrow
+  turned by body facing), teammates (slot-coloured dots with an initial),
+  enemies (red; elites bigger; bosses big and pinned to the rim), unopened
+  chests (`ChestSpawner.Chests`, a read-only partial), unused shrines, the
+  open portal, pings, and downed players as a pulsing SOS cross (you too,
+  while down). Settings: "Show minimap" / "Minimap size" under CAMERA & HUD,
+  stored in `[hud]` of `settings.cfg` by `Meta/HudSettings` (never in
+  automated runs).
+- **Name tags** (`UI/TeamTags`): canvas-drawn, so always on top of walls and
+  props, unlike the old `Label3D` (still on `RemotePlayer`, hidden). Pill in
+  the player's colour, health bar under the name (revive progress while
+  down), fading to 40% from 22 to 80 m. Off-screen teammates get an
+  edge arrow with name and distance; edge arrows keep out of the top 150 px
+  (clock, phase lines) and bottom 110 px (dash meter).
+- **Downed flare** (`Net/DownFlare`, a child of each `RemotePlayer`): a
+  46 m additive, fog-free beam and a ring pinging outward, only while down.
+  `UI/AwarenessAlerts` polls the remote down flags (10 Hz) and shows
+  "<name> is down! Go revive them" for 6 s, cleared at once on revive. No
+  new traffic: the 20 Hz player state already carries the down flag.
+- **Boss kill credit**: the machine that owns enemy health (host, or this
+  machine in single-player) records `Enemy.LastHitter` on every damage
+  (`Actors/Enemy.Awareness.cs`). `NetSession.Hits` sets `Enemy.NetHitter`
+  to the sender around the client's batch, so a client's killing blow is
+  credited to that client. A boss death on the host sends `BossSlain`
+  (reliable, call-local) to everyone; single-player publishes `BossDefeated`
+  directly. The toast sits low centre (the upper middle is the map title card).
+- **Scoreboard** (`Game/RunScoreboard`, static, reset per run): kills, boss
+  kills and damage dealt are counted where enemy health lives (host/SP, via
+  `LastHitter`); downs, level, damage taken and gold earned by each player's
+  own machine (`ScoreSelf`, client to host, 1 Hz); revives given by the
+  downed machine, which knows who stood next to it (`RevivedBy`). The host
+  merges and sends the table (`ScoreSync`, `long[]` stride 9, 1 Hz). Hold
+  **Y** (`scoreboard` action) for `UI/ScoreboardPanel`; the results screen
+  has a scoreboard card (`UI/ScoreboardRows`).
+- **Pings** (`Net/Pings`, `NetSession.Pings`, `UI/PingMarkers`): the `ping`
+  action (G, middle mouse) raycasts from the screen centre (world and enemy
+  layers, the player excluded; the ground plane if nothing is hit) and names
+  the ping from what is within 3.5 m: enemy, chest, shrine; pinging yourself
+  or pinging while down is "Help!", anything else "Go here". 6 s life, one
+  live ping per player, 3 per 5 s checked on the sender and again on the host
+  (`PingAsk` → host → `PingShow` to all, call-local). Drawn on the canvas
+  (pin, ring, name, distance, edge arrow) and on the minimap, with a
+  synthesised two-note chime on the SFX bus. Single-player: a local marker.
+
+The co-op test runs all of it with `--coop-check-hud` (both sides): the
+client finishes the first boss with one big hit through the normal hit
+path, then each side requires the toast to name the client, a scoreboard
+with kills for both players, a down marker drawn (host: the client's SOS
+and the alert; client: its own SOS), a revive credited, and pings shown
+both ways; the client fires a 5-ping burst straight at the host, which must
+pass on exactly 3. `--coop-board-shot`, `--coop-boss-shot` and
+`--coop-ping-shot` photograph the scoreboard, the toast and a ping
+(`tests/shots/coop-board-*.png`, `coop-boss-*.png`, `coop-ping-*.png`).
+In single-player, `--show-scoreboard` holds the scoreboard open for a
+capture.
+
 ### Known limits
 
 - Steam only for players. Direct IP stays behind the developer panel switch
@@ -629,6 +698,25 @@ the page with Steam really started, for a one-machine sanity check.
 - Quests, Pearls and unlocks are counted on each machine for its own player
   and profile. Kills are counted for everyone, since every machine sees every
   kill.
+
+## Results screen
+
+`UI/ResultsScreen` is all containers inside one centred panel sized to the
+window (up to 1560x940, 20 px margin), so it fits 1280x720 and 1920x1080
+without scrolling and mirrors for Arabic: a header (VICTORY / YOU SURVIVED /
+YOU DIED, the tier and CO-OP as badges, a leaderboard badge when the run
+placed, which replaces `LeaderboardBanner` while the results are up, and one
+short line about how it ended), six icon tiles (time, level, kills, bosses,
+gold earned, Pearls), three cards (the Pearls breakdown with the balance
+apart; the build as weapon and item icons with names on hover, only the
+item grid scrolls; the scoreboard), big RESTART / MAIN MENU buttons with
+their keys, and the seed in small print. While it is up, `_Process` keeps
+the mouse visible and `PlayerCamera.TryCaptureMouse` refuses: a level-up
+or shrine panel closing after the run ended restored the capture it found
+when it opened, which is how the cursor vanished on the victory screen.
+`--results-shot=x.png [--results-win] [--results-after=N]` (with `--auto
+--invulnerable --give=...`, `--lang=ar`, `--resolution 1920x1080`)
+photographs it.
 
 ## Developer panel
 
