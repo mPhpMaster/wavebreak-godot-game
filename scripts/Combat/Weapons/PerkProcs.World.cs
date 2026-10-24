@@ -226,6 +226,9 @@ public sealed partial class PerkProcs
 
     private float _pulseTimer = 2f;
 
+    /// <summary>--check-perks: make the next pulse go off within a frame.</summary>
+    internal void PrimePulseForCheck() => _pulseTimer = 0.01f;
+
     private void TickPulse(Player p, float dt)
     {
         int lp = L(Pulse);

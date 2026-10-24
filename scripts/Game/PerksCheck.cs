@@ -117,9 +117,11 @@ public static class PerksCheck
             await Wait(tree, 1.0);   // let the heal budget refill
             p.Health.CheckSetFraction(0.5f);
             float before = p.Health.Current;
-            Enemy? t = Spawn(grunt, Ahead(3f));
+            // An elite: a grunt can die to the rest of the maxed build before
+            // the crits land, which made this flaky across seeds.
+            Enemy? t = Spawn(elite, Ahead(3f));
             await Wait(tree, 0.1);
-            for (int i = 0; i < 4 && t is not null; i++) WeaponHit(t, 0.01f, crit: true);
+            for (int i = 0; i < 4 && t is not null && t.IsAlive; i++) WeaponHit(t, 0.01f, crit: true);
             await Wait(tree, 0.1);
             Report(d, p.Health.Current > before + 0.5f, $"health {before:0.#} -> {p.Health.Current:0.#}");
         }
@@ -141,7 +143,7 @@ public static class PerksCheck
         // 4. Brine Wake: dash through a pack.
         {
             PerkDef d = D(Perks.BrineWake);
-            for (int i = 0; i < 3; i++) Spawn(grunt, Ahead(1.5f + i * 1.2f));
+            for (int i = 0; i < 3; i++) Spawn(elite, Ahead(1.5f + i * 1.2f));   // elites: they outlive the build
             await Wait(tree, 0.2);
             p.MoveOverride = () => Vector3.Forward;
             p.RequestDash();
@@ -222,9 +224,15 @@ public static class PerksCheck
         // 10. Fair Winds: running raises attack speed.
         {
             PerkDef d = D(Perks.FairWinds);
-            p.MoveOverride = () => Vector3.Right;
-            await Wait(tree, 0.8);
-            float bonus = procs.ModValue(d.Id, Stat.AttackSpeed);
+            // Run one way, and another if a rock or wall stops the first.
+            float bonus = 0f;
+            foreach (Vector3 dir in new[] { Vector3.Right, Vector3.Left, Vector3.Back, Vector3.Forward })
+            {
+                p.MoveOverride = () => dir;
+                await Wait(tree, 0.8);
+                bonus = procs.ModValue(d.Id, Stat.AttackSpeed);
+                if (bonus > 0.03f) break;
+            }
             p.MoveOverride = () => Vector3.Zero;
             Report(d, bonus > 0.03f, $"attack speed +{bonus * 100f:0.#}% at {p.PlanarVelocity.Length():0.0} m/s");
         }
@@ -269,6 +277,9 @@ public static class PerksCheck
             int before = procs.FiredCount(d.Id);
             for (int i = 0; i < 3; i++)
                 Spawn(grunt, p.GlobalPosition + new Vector3(Mathf.Cos(i * 2.1f), 0f, Mathf.Sin(i * 2.1f)) * 2.5f);
+            // Fire now: with every perk at max, the rest of the build kills the
+            // grunts long before a 5 s pulse would come round on its own.
+            procs.PrimePulseForCheck();
             for (int i = 0; i < 80 && procs.FiredCount(d.Id) == before; i++) await Wait(tree, 0.1);
             Report(d, procs.FiredCount(d.Id) > before, "");
         }
