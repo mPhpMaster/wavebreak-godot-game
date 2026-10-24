@@ -217,6 +217,7 @@ public sealed partial class NetSession : Node
     public void Leave()
     {
         bool wasActive = Coop.Active;
+        TradeLocalEnd("The trade was cancelled.");   // NetSession.Trade.cs
         EndRunState();
         CloseSocket();
         if (ViaSteam) SteamLobby.Leave();
@@ -260,6 +261,7 @@ public sealed partial class NetSession : Node
         }
         StepMigration();   // NetSession.Migration.cs
         ProcessRun((float)delta);
+        StepTrade((float)delta);   // NetSession.Trade.cs
         ProcessTest((float)delta);
     }
 
@@ -277,6 +279,7 @@ public sealed partial class NetSession : Node
         string name = Coop.NameOf(id);
         Coop.Roster.RemoveAll(p => p.Id == id);
         BroadcastRoster();
+        TradePeerLeft(id, name);   // NetSession.Trade.cs: their trades end, escrows go home
         PeerLeftRun(id, name);
         Changed?.Invoke();
     }
@@ -313,6 +316,7 @@ public sealed partial class NetSession : Node
     private void OnServerDisconnected()
     {
         GD.Print("[coop] host disconnected");
+        TradeLocalEnd("The host left. The trade was cancelled.");   // NetSession.Trade.cs
         if (_migrating) { RetryReconnect(); return; }   // the new host went too: keep trying until the window closes
         // Mid-run: a remaining player takes over (NetSession.Migration.cs).
         if (TryMigrate()) return;

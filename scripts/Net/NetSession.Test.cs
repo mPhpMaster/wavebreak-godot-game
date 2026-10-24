@@ -155,6 +155,7 @@ public sealed partial class NetSession
         float t = _main.Run.Seconds;
         Player? me = Player.Instance;
         TestRestRoom((float)GetProcessDeltaTime());
+        StepTradeTest();       // NetSession.Test.Trade.cs
         StepMigrationTest();   // NetSession.Test.Migration.cs
 
         if (Coop.IsHost && _testHostQuitAt > 0f)
@@ -262,6 +263,7 @@ public sealed partial class NetSession
 
         // Host migration / late join runs have their own checks (NetSession.Test.Migration.cs).
         if (MigrationTestLine(role, problems, phase) is { } migrationLine) line = migrationLine;
+        else if (TradeTestLine(role, problems, phase) is { } tradeLine) line = tradeLine;   // NetSession.Test.Trade.cs
         else if (role == "host")
         {
             if (PeakPlayers < _testPlayers) problems.Add($"only {PeakPlayers} players joined");

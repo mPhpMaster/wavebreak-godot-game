@@ -18,6 +18,11 @@ public sealed partial class Autopilot
     private RestRoom? _restRoom;
     private float _restClock;
 
+    /// <summary>Test hook (the swap meet check, Net/NetSession.Test.Trade.cs):
+    /// when set and it returns a wish, the bot follows it instead of its
+    /// errands, so it stands at the stall or in the portal on cue.</summary>
+    public static System.Func<Vector3, Vector3?>? RestSteer { get; set; }
+
     private Vector3 RestRoomThink(RestRoom room, Vector3 me)
     {
         float dt = (float)_player.GetPhysicsProcessDeltaTime();
@@ -27,6 +32,7 @@ public sealed partial class Autopilot
             _restClock = 0f;
         }
         _restClock += dt;
+        if (RestSteer?.Invoke(me) is { } steer) return steer;
 
         if (_restClock < RestErrandSeconds && Interactables.Instance is { } hub)
         {

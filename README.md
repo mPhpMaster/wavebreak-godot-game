@@ -93,6 +93,16 @@ Title screen → **CO-OP**.
   player arrives revived. Everyone shops with their own gold. The next map
   starts when everyone stands in the CONTINUE portal (the count is on
   screen), or 30 seconds after the first player stepped in.
+- **Swap meet:** the rest stop has a beaver's stall (co-op only). Press E
+  there, pick a teammate, and once they accept, a trade window opens on both
+  screens. Each of you puts up gold, items (one copy per click, the whole
+  stack with a right-click or Shift-click) and whole tomes with their level.
+  Both press READY, then both CONFIRM; any change to either offer clears
+  both READY flags, so nothing can be switched at the last second. Offers
+  your teammate could not hold (a full stack, a tome they already have, no
+  free tome slot) are greyed out with the reason. Weapons are not traded.
+  Leaving the room (or its 30 s countdown running out) cancels an open trade
+  and nothing changes hands.
 - A level-up or the pause menu does not stop the game for the others. Your
 - A level-up does not stop anyone, you included: a compact hand docks at the
   bottom of the screen and you keep walking, jumping and dashing while you

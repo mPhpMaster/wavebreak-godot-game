@@ -96,6 +96,8 @@ public sealed partial class Main : Node3D
             _ = RestRoomCheck.Run(this, restShot);   // --check-restroom / --restroom-shot=
         else if (RunLengthCheck.Requested())
             _ = RunLengthCheck.Run(this);            // --check-phases / --check-portal-timer
+        else if (Trade.TradeCheck.Requested())
+            _ = Trade.TradeCheck.Run(this);          // --check-trade (swap meet rules and escrow)
     }
 
     /// <summary>--levelup-shot=&lt;png&gt;: open a real level-up hand (after a

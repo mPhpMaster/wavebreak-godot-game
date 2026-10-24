@@ -408,8 +408,8 @@ public sealed partial class ResultsScreen : Control
         foreach (string id in _itemOrder)
         {
             ItemDef? def = Catalog.ItemById(id);
-            if (def is null) continue;
             int stacks = _itemStacks[id];
+            if (def is null || stacks <= 0) continue;   // traded away (Game/Trade)
             string name = Loc.T(def.DisplayName);
             _itemGrid.AddChild(IconTile(Icons.For(def), Catalog.RarityColor(def.Rarity), 38f,
                 stacks > 1 ? Loc.Ltr($"x{stacks}") : "", Ink, stacks > 1 ? $"{name}  ×{stacks}" : name));

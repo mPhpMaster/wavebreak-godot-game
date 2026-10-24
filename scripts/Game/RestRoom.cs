@@ -92,6 +92,7 @@ public sealed partial class RestRoom : Node3D
             yield return Merchant;
             yield return Campfire;
             yield return Microwave;
+            if (Trader is not null) yield return Trader;   // co-op only (RestRoom.Trade.cs)
         }
     }
 
@@ -146,6 +147,7 @@ public sealed partial class RestRoom : Node3D
 
         // The sign at the arrival spot, so the first frame says where you are.
         BuildSign(new Vector3(-2.4f, 0f, 5.2f));
+        BuildSwapMeet();   // co-op: the trader's stall (RestRoom.Trade.cs)
 
         var layer = new CanvasLayer { Name = "RestRoomUI", Layer = 3 };
         AddChild(layer);
