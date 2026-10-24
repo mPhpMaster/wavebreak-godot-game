@@ -15,36 +15,43 @@ namespace Wavebreak.UI;
 /// Raised by <see cref="RunEnded"/> — <c>Game.Main</c> is the handler and calls
 /// <see cref="Show"/> — and it stays up until the player restarts.
 ///
-/// The numbers come from two places on purpose. The totals that the rest of the
-/// game already tracks (level, gold, item stacks, weapon count) are read from the
-/// inventory and weapon system, because those are authoritative and a second
-/// count that disagrees with the HUD is worse than no count. The *itemised* lists
-/// are accumulated from the bus as the run happens, because "which items did I
-/// end up with" is a question the UI can answer for itself without asking the
-/// inventory to expose its internals to a screen that only wants to print them.
+/// Layout, top to bottom, all in containers so it mirrors for Arabic and
+/// fits 1280x720 and 1920x1080 without scrolling (only the item grid scrolls):
+/// <list type="number">
+/// <item>Header: VICTORY / YOU SURVIVED / YOU DIED, the difficulty tier as a
+/// badge, a leaderboard ribbon when the run placed, and one short line about
+/// how it ended.</item>
+/// <item>Six stat tiles with icons: time, level, kills, bosses, gold, Pearls.</item>
+/// <item>Three cards: the Pearls breakdown (lines, total, balance apart), the
+/// build (weapon and item icons in a grid, names on hover), and the
+/// scoreboard (one row per player; single-player shows you).</item>
+/// <item>Big RESTART and MAIN MENU buttons with their keys under them, and the
+/// seed in small print.</item>
+/// </list>
 ///
-/// Restart reloads the scene rather than resetting state in place. Every system
-/// here is built to be constructed once per run, and a reload is the only way to
-/// be certain nothing survived that should not have — which matters most for the
-/// bug this whole codebase is arranged to avoid: a handler from a dead run still
-/// subscribed to the bus.
+/// The totals come from the inventory and weapon system (authoritative); the
+/// itemised build is accumulated from the bus as the run happens.
+///
+/// Restart reloads the scene rather than resetting state in place: a reload is
+/// the only way to be certain nothing from the dead run (a handler still on the
+/// bus) survives into the next.
 /// </summary>
 public sealed partial class ResultsScreen : Control
 {
-    private const float PanelWidth = 940f;
-    private const float PanelHeight = 560f;
+    private const float MaxWidth = 1560f, MaxHeight = 940f, Margin = 20f;
 
-    private static readonly Color Dim = new(0.01f, 0.02f, 0.03f, 0.86f);
-    private static readonly Color PanelBack = new(0.08f, 0.09f, 0.13f, 0.98f);
-    private static readonly Color Ink = new(0.94f, 0.96f, 0.99f);
-    private static readonly Color InkDim = new(0.62f, 0.68f, 0.78f);
+    private static readonly Color Dim = new(0.01f, 0.02f, 0.04f, 0.80f);
+    private static readonly Color PanelBack = new(0.07f, 0.08f, 0.13f, 0.98f);
+    private static readonly Color CardBack = new(0.12f, 0.14f, 0.22f, 1f);
+    private static readonly Color Ink = new(0.95f, 0.97f, 1.00f);
+    private static readonly Color InkDim = new(0.70f, 0.76f, 0.86f);
     private static readonly Color Outline = new(0.02f, 0.03f, 0.05f, 0.9f);
-    private static readonly Color Victory = new(0.42f, 0.92f, 0.55f);
-    private static readonly Color Defeat = new(1.00f, 0.36f, 0.34f);
+    private static readonly Color Victory = new(0.45f, 0.95f, 0.60f);
+    private static readonly Color Defeat = new(1.00f, 0.44f, 0.42f);
+    private static readonly Color Gold = new(1.00f, 0.84f, 0.38f);
+    private static readonly Color PearlTint = new(0.78f, 0.90f, 1.00f);
 
     // ------------------------------------------------------------ bus state
-    // Accumulated for the whole run, not gathered at the end: an item's id is
-    // published once when it is taken, and nothing keeps a list of them for us.
 
     private readonly Dictionary<string, int> _itemStacks = new();
     private readonly List<string> _itemOrder = new();
@@ -53,17 +60,21 @@ public sealed partial class ResultsScreen : Control
 
     // ------------------------------------------------------------- widgets
 
-    private ColorRect _accent = null!;
+    private PanelContainer _panel = null!;
+    private StyleBoxFlat _panelStyle = null!;
     private Label _title = null!;
     private Label _subtitle = null!;
-    private Label _statNames = null!;
-    private Label _statValues = null!;
-    private VBoxContainer _loadout = null!;
-    private Button _restart = null!;
+    private Label _seed = null!;
+    private HBoxContainer _badges = null!;
+    private HBoxContainer _tiles = null!;
+    private VBoxContainer _pearlCard = null!;
+    private HFlowContainer _weaponGrid = null!;
+    private HFlowContainer _itemGrid = null!;
+    private Label _buildEmpty = null!;
 
     private bool _subscribed;
-    private Meta.RunRewards.Payout? _payout;
-    private static readonly Color PearlTint = new(0.80f, 0.90f, 1.00f);
+    private RunRewards.Payout? _payout;
+    private int _leaderboardRank;
 
     /// <summary>True once the screen has been raised for this run.</summary>
     public bool IsShown { get; private set; }
@@ -83,6 +94,7 @@ public sealed partial class ResultsScreen : Control
 
         EventBus.Subscribe<ItemAcquired>(OnItemAcquired);
         EventBus.Subscribe<WeaponAcquired>(OnWeaponAcquired);
+        EventBus.Subscribe<LeaderboardPlaced>(OnLeaderboard);
         _subscribed = true;
     }
 
@@ -92,6 +104,7 @@ public sealed partial class ResultsScreen : Control
         _subscribed = false;
         EventBus.Unsubscribe<ItemAcquired>(OnItemAcquired);
         EventBus.Unsubscribe<WeaponAcquired>(OnWeaponAcquired);
+        EventBus.Unsubscribe<LeaderboardPlaced>(OnLeaderboard);
     }
 
     private void OnItemAcquired(ItemAcquired e)
@@ -108,6 +121,14 @@ public sealed partial class ResultsScreen : Control
         _weaponLevels[e.Id] = e.NewLevel;
     }
 
+    /// <summary>The run made the local top ten (published after Show).</summary>
+    private void OnLeaderboard(LeaderboardPlaced e)
+    {
+        if (e.Rank <= 0) return;
+        _leaderboardRank = e.Rank;
+        if (IsShown) WriteBadges();
+    }
+
     // ---------------------------------------------------------------- build
 
     private void Build()
@@ -117,93 +138,136 @@ public sealed partial class ResultsScreen : Control
         dim.MouseFilter = MouseFilterEnum.Stop;
         AddChild(dim);
 
-        var panel = new ColorRect { Color = PanelBack, MouseFilter = MouseFilterEnum.Ignore };
-        Centre(panel, PanelWidth, PanelHeight);
-        AddChild(panel);
+        _panelStyle = Box(PanelBack, Defeat, 22);
+        _panelStyle.SetBorderWidthAll(0);
+        _panelStyle.BorderWidthTop = 6;
+        _panelStyle.ContentMarginLeft = _panelStyle.ContentMarginRight = 22;
+        _panelStyle.ContentMarginTop = 14;
+        _panelStyle.ContentMarginBottom = 12;
+        _panel = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+        _panel.AddThemeStyleboxOverride("panel", _panelStyle);
+        AddChild(_panel);
+        Resized += Fit;
 
-        _accent = new ColorRect { Color = Defeat, MouseFilter = MouseFilterEnum.Ignore };
-        _accent.AnchorLeft = 0f; _accent.AnchorRight = 1f;
-        _accent.AnchorTop = 0f; _accent.AnchorBottom = 0f;
-        _accent.OffsetTop = 0f; _accent.OffsetBottom = 6f;
-        panel.AddChild(_accent);
+        var col = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        col.AddThemeConstantOverride("separation", 10);
+        _panel.AddChild(col);
 
-        _title = MakeLabel(Loc.T("RUN OVER"), 52, Defeat, HorizontalAlignment.Center);
-        Inset(_title, 0f, 34f, PanelWidth, 62f);
-        panel.AddChild(_title);
+        // ---- header
+        var header = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        header.AddThemeConstantOverride("separation", 16);
+        col.AddChild(header);
+        _title = MakeLabel(Loc.T("YOU DIED"), 50, Defeat);
+        _title.VerticalAlignment = VerticalAlignment.Center;
+        header.AddChild(_title);
+        var headRight = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.Center };
+        headRight.AddThemeConstantOverride("separation", 4);
+        header.AddChild(headRight);
+        _badges = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        _badges.AddThemeConstantOverride("separation", 8);
+        headRight.AddChild(_badges);
+        _subtitle = MakeLabel("", 18, InkDim);
+        _subtitle.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        headRight.AddChild(_subtitle);
 
-        _subtitle = MakeLabel("", 16, InkDim, HorizontalAlignment.Center);
-        Inset(_subtitle, 0f, 98f, PanelWidth, 24f);
-        panel.AddChild(_subtitle);
+        // ---- stat tiles
+        _tiles = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        _tiles.AddThemeConstantOverride("separation", 10);
+        col.AddChild(_tiles);
 
-        // Left half: the scoreboard. Two multi-line labels rather than one, or a
-        // grid of a dozen: the names are left-aligned and the values right-aligned
-        // in a column beside them, which is the only way the numbers line up under
-        // a proportional font. Padding one string with spaces does not.
-        Label statsHeading = MakeLabel(Loc.T("RUN"), 15, InkDim);
-        Inset(statsHeading, 56f, 148f, 300f, 20f);
-        panel.AddChild(statsHeading);
+        // ---- cards
+        var cards = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsVertical = SizeFlags.ExpandFill };
+        cards.AddThemeConstantOverride("separation", 12);
+        col.AddChild(cards);
 
-        _statNames = MakeLabel("", 22, InkDim);
-        // Right-to-left swaps the two columns' alignment, so the names' box
-        // moves to the right end of the values' box to keep them apart.
-        Inset(_statNames, Loc.IsRtl ? 236f : 56f, 176f, 200f, 300f);
-        panel.AddChild(_statNames);
+        _pearlCard = Card(cards, Loc.T(Pearls.Name).ToUpper(), PearlTint, 0.25f);
 
-        _statValues = MakeLabel("", 22, Ink, HorizontalAlignment.Right);
-        Inset(_statValues, 56f, 176f, 380f, 300f);
-        panel.AddChild(_statValues);
+        VBoxContainer build = Card(cards, Loc.T("BUILD"), Gold, 0.42f);
+        build.AddChild(Caption(Loc.T("WEAPONS")));
+        _weaponGrid = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore };
+        _weaponGrid.AddThemeConstantOverride("h_separation", 8);
+        _weaponGrid.AddThemeConstantOverride("v_separation", 6);
+        build.AddChild(_weaponGrid);
+        build.AddChild(Caption(Loc.T("ITEMS")));
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
+        build.AddChild(scroll);
+        _itemGrid = new HFlowContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        _itemGrid.AddThemeConstantOverride("h_separation", 6);
+        _itemGrid.AddThemeConstantOverride("v_separation", 6);
+        scroll.AddChild(_itemGrid);
+        _buildEmpty = MakeLabel(Loc.T("No items this run."), 16, InkDim);
+        _buildEmpty.Visible = false;
+        build.AddChild(_buildEmpty);
 
-        // Right half: what the run was actually built out of. Scrolled, because a
-        // long run genuinely does end with twenty-plus stacks and a truncated
-        // list is the one thing a results screen must not do.
-        Label loadoutHeading = MakeLabel(Loc.T("BUILD"), 15, InkDim);
-        Inset(loadoutHeading, PanelWidth - 440f, 148f, 300f, 20f);
-        panel.AddChild(loadoutHeading);
+        VBoxContainer board = Card(cards, Loc.F("SCOREBOARD  [{0}]", Keybinds.Describe(Keybinds.Primary(ScoreboardPanel.Action))), new Color(0.62f, 0.98f, 1f), 0.33f);
+        board.AddChild(new ScoreboardRows());
 
-        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        Inset(scroll, PanelWidth - 440f, 176f, 384f, 300f);
-        panel.AddChild(scroll);
+        // ---- buttons. No keyboard focus: Space is ui_accept, so a focused
+        // button would be pressed by the Space the player was hammering to jump
+        // when they died. Keys go through _Input (Enter / R, Esc).
+        var buttons = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
+        buttons.AddThemeConstantOverride("separation", 24);
+        col.AddChild(buttons);
+        buttons.AddChild(BigButton(Loc.T("RESTART"), Loc.T("Enter  /  R"), Victory, Restart, 300f));
+        buttons.AddChild(BigButton(Loc.T("MAIN MENU"), Loc.Ltr("Esc"), InkDim, ToMainMenu, 240f));
 
-        _loadout = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        _loadout.AddThemeConstantOverride("separation", 3);
-        scroll.AddChild(_loadout);
+        _seed = MakeLabel("", 12, new Color(0.52f, 0.57f, 0.66f), HorizontalAlignment.Center);
+        col.AddChild(_seed);
+    }
 
-        // No keyboard focus. Space is ui_accept, so a focused button is pressed by
-        // the same Space the player was hammering to jump when they died -- the
-        // run restarted before the results could even be read. Keyboard restart
-        // goes through _Input instead (Enter / R), the mouse still clicks it.
-        _restart = new Button { Text = Loc.T("RESTART"), FocusMode = FocusModeEnum.None };
-        _restart.AddThemeFontSizeOverride("font_size", 22);
-        Inset(_restart, PanelWidth * 0.5f - 130f, PanelHeight - 74f, 260f, 46f);
-        panel.AddChild(_restart);
-        _restart.Pressed += Restart;
+    /// <summary>Centre the panel, as large as the screen allows up to a cap.</summary>
+    private void Fit()
+    {
+        Vector2 size = Size;
+        float w = Mathf.Min(size.X - Margin * 2f, MaxWidth);
+        float h = Mathf.Min(size.Y - Margin * 2f, MaxHeight);
+        _panel.AnchorLeft = 0.5f; _panel.AnchorRight = 0.5f; _panel.AnchorTop = 0.5f; _panel.AnchorBottom = 0.5f;
+        _panel.OffsetLeft = -w * 0.5f; _panel.OffsetRight = w * 0.5f;
+        _panel.OffsetTop = -h * 0.5f; _panel.OffsetBottom = h * 0.5f;
+    }
 
-        // Back to the title (Meta: profile/unlocks). Same no-focus rule as Restart.
-        var menu = new Button { Text = Loc.T("MAIN MENU"), FocusMode = FocusModeEnum.None };
-        menu.AddThemeFontSizeOverride("font_size", 18);
-        Inset(menu, PanelWidth * 0.5f + 150f, PanelHeight - 70f, 180f, 38f);
-        panel.AddChild(menu);
-        menu.Pressed += ToMainMenu;
+    private VBoxContainer Card(Container parent, string title, Color accent, float stretch)
+    {
+        StyleBoxFlat style = Box(CardBack, accent, 16);
+        style.SetBorderWidthAll(0);
+        style.BorderWidthTop = 3;
+        style.ContentMarginLeft = style.ContentMarginRight = 14;
+        style.ContentMarginTop = 10;
+        style.ContentMarginBottom = 10;
+        var card = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = stretch };
+        card.AddThemeStyleboxOverride("panel", style);
+        parent.AddChild(card);
+        var box = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        box.AddThemeConstantOverride("separation", 6);
+        card.AddChild(box);
+        box.AddChild(MakeLabel(title, 17, accent));
+        return box;
+    }
 
-        Label hint = MakeLabel(Loc.T("enter  ·  R   restart        esc   main menu"), 14, InkDim, HorizontalAlignment.Center);
-        Inset(hint, 0f, PanelHeight - 24f, PanelWidth, 20f);
-        panel.AddChild(hint);
+    private Control BigButton(string text, string hint, Color accent, System.Action pressed, float width)
+    {
+        var box = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        box.AddThemeConstantOverride("separation", 2);
+        var b = new Button { Text = text, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(width, 52f) };
+        b.AddThemeFontSizeOverride("font_size", 24);
+        b.AddThemeColorOverride("font_color", Ink);
+        b.AddThemeColorOverride("font_hover_color", accent);
+        b.AddThemeStyleboxOverride("normal", Box(new Color(0.15f, 0.18f, 0.28f), accent, 14, 2));
+        b.AddThemeStyleboxOverride("hover", Box(new Color(0.20f, 0.24f, 0.36f), accent, 14, 3));
+        b.AddThemeStyleboxOverride("pressed", Box(new Color(0.24f, 0.29f, 0.42f), accent, 14, 3));
+        b.Pressed += pressed;
+        box.AddChild(b);
+        box.AddChild(MakeLabel(hint, 15, InkDim, HorizontalAlignment.Center));
+        return box;
     }
 
     // ----------------------------------------------------------------- show
 
     /// <summary>
-    /// Raise the screen for a finished run.
-    ///
-    /// Idempotent: a run can publish <see cref="RunEnded"/> from more than one
-    /// place — the player dying and the clock running out in the same frame is
-    /// not exotic — and the second call must not rebuild the list or steal focus
-    /// from a player already reaching for the button.
+    /// Raise the screen for a finished run. Idempotent: a run can publish
+    /// <see cref="RunEnded"/> from more than one place, and the second call
+    /// must not rebuild the screen under a player already reaching for it.
     /// </summary>
-    /// <param name="run">The finished run. Supplies the clock and the seed.</param>
-    /// <param name="inventory">Authoritative level, experience, gold and stack
-    /// count.</param>
-    /// <param name="weapons">Authoritative weapon count.</param>
     public void Show(RunState? run, Inventory? inventory, WeaponSystem? weapons)
     {
         if (IsShown) return;
@@ -214,122 +278,182 @@ public sealed partial class ResultsScreen : Control
 
         // Pearls are paid here at the latest (idempotent; usually already paid
         // by the RunEnded handler), so the numbers below are what was credited.
-        _payout = Meta.RunRewards.Settle();
+        _payout = RunRewards.Settle();
         FinalSwarm? swarm = Main.Instance?.Stages?.Swarm;
 
         // A death in the Final Swarm is still a won run: the last boss fell.
         _title.Text = Loc.T(survived ? (swarm is not null ? "VICTORY" : "YOU SURVIVED") : "YOU DIED");
         _title.AddThemeColorOverride("font_color", accent);
-        _accent.Color = accent;
+        _panelStyle.BorderColor = accent;
 
-        _subtitle.Text = run is null ? "" : Loc.F("seed {0}", run.Seed);
         if (swarm is not null)
-            _subtitle.Text = Loc.F("Run won  ·  then held the Final Swarm for {0} ({1} kills, enemy hp +{2}%)",
-                                   RunState.Format(swarm.Seconds), swarm.Kills, swarm.HealthBonusPercent) + "  ·  " + _subtitle.Text;
-        if (Meta.DifficultyTiers.Active.Reward > 1f)
-            _subtitle.Text = $"{Loc.T(Meta.DifficultyTiers.Active.Name)}  ·  " + _subtitle.Text;
+            _subtitle.Text = Loc.F("Held the Final Swarm for {0}  ·  {1} kills  ·  enemy hp +{2}%",
+                                   RunState.Format(swarm.Seconds), swarm.Kills, swarm.HealthBonusPercent);
+        else if (run is not null && run.StageName.Length > 0)
+            _subtitle.Text = Loc.F("Map {0} of {1}  ·  {2}", run.Phase, run.PhaseCount, Loc.T(run.StageName));
+        _seed.Text = run is null ? "" : Loc.F("seed {0}", run.Seed);
 
-        WriteStats(run, inventory, weapons);
-        BuildLoadout();
+        WriteBadges();
+        WriteTiles(run, inventory);
+        WritePearls();
+        WriteBuild();
 
         Visible = true;
         _coopRun = Net.Coop.InRun;
         GetTree().Paused = true;
+        Fit();
 
-        // Release the camera's mouse capture so Restart can be clicked. The
-        // reloaded scene's camera captures it again on its own.
+        // Release the camera's mouse capture so the buttons can be clicked; the
+        // reloaded scene's camera captures it again on its own. _Process keeps
+        // it free while the screen is up.
         Input.MouseMode = Input.MouseModeEnum.Visible;
         _shownAtMsec = Time.GetTicksMsec();
     }
 
-    private void WriteStats(RunState? run, Inventory? inventory, WeaponSystem? weapons)
+    public override void _Process(double delta)
     {
-        string clock = run?.Clock ?? "00:00";
-        int kills = run?.Kills ?? 0;
-        int elites = run?.Elites ?? 0;
-
-        int level = inventory?.Level ?? 1;
-        int xp = inventory?.Xp ?? 0;
-        int gold = inventory?.Gold ?? 0;
-        int stacks = inventory?.TotalStacks ?? 0;
-        int weaponCount = weapons?.Weapons.Count ?? 0;
-
-        _statNames.Text = Loc.T("Time\nLevel\nKills\nElites\nGold\nWeapons\nItems\nExperience");
-        _statValues.Text = Loc.IsolateNumbers($"{clock}\n{level}\n{kills}\n{elites}\n{gold}\n{weaponCount}\n{stacks}\n{xp}");
-        if (_payout is { } pay)
-        {
-            _statNames.Text += $"\n{Loc.T(Meta.Pearls.Name)}";
-            _statValues.Text += "\n" + Loc.Ltr($"+{pay.Total}");
-        }
+        // A panel that closes after the run ended (a level-up or shrine panel
+        // left open under the results, the co-op world still running) restores
+        // the mouse capture it found when it opened, which hid the cursor on
+        // the results. Nothing may capture it while this screen is up.
+        if (Visible && Input.MouseMode != Input.MouseModeEnum.Visible)
+            Input.MouseMode = Input.MouseModeEnum.Visible;
     }
 
-    /// <summary>
-    /// Fills the build list: weapons with their levels, then items with their
-    /// stack counts, each in its own rarity colour.
-    ///
-    /// Rebuilt from scratch rather than updated in place — it is written exactly
-    /// once per run, at the moment everything else has already stopped, so the
-    /// allocation is free and the code is a third the size.
-    /// </summary>
-    private void BuildLoadout()
+    private void WriteBadges()
     {
-        foreach (Node child in _loadout.GetChildren()) child.QueueFree();
+        foreach (Node c in _badges.GetChildren()) c.QueueFree();
+        DifficultyTier tier = DifficultyTiers.Active;
+        _badges.AddChild(Badge(Loc.T(tier.Name).ToUpper(), tier.Reward > 1f ? Defeat : new Color(0.55f, 0.85f, 1f)));
+        if (Net.Coop.InRun || _coopRun) _badges.AddChild(Badge(Loc.T("CO-OP"), new Color(0.62f, 0.98f, 1f)));
+        if (_leaderboardRank > 0)
+            _badges.AddChild(Badge(_leaderboardRank == 1 ? Loc.T("NEW BEST RUN") : Loc.F("LEADERBOARD #{0}", _leaderboardRank), Gold));
+    }
 
-        // Where this run's Pearls came from (Meta.RunRewards), above the build.
-        if (_payout is { } pay)
+    private void WriteTiles(RunState? run, Inventory? inventory)
+    {
+        foreach (Node c in _tiles.GetChildren()) c.QueueFree();
+        int bosses = Main.Instance?.Stages?.BossesDefeated ?? 0;
+        Tile("hourglass", new Color(0.62f, 0.86f, 1f), run?.Clock ?? "00:00", Loc.T("Time"));
+        Tile("up", new Color(0.80f, 0.72f, 1f), $"{inventory?.Level ?? 1}", Loc.T("Level"));
+        Tile("skull", new Color(1f, 0.62f, 0.56f), $"{run?.Kills ?? 0}", Loc.T("Kills"));
+        Tile("crown", Gold, $"{bosses}", Loc.T("Bosses"));
+        Tile("coin", new Color(1f, 0.78f, 0.30f), $"{RunScoreboard.LocalSelf().Gold}", Loc.T("Gold earned"));
+        Tile("gem", PearlTint, _payout is { } p ? $"+{p.Total}" : "0", Loc.T(Pearls.Name));
+    }
+
+    private void Tile(string glyph, Color tint, string value, string caption)
+    {
+        var tile = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        StyleBoxFlat style = Box(tint with { A = 0.13f }, tint with { A = 0.55f }, 16, 2);
+        style.ContentMarginLeft = style.ContentMarginRight = 10;
+        style.ContentMarginTop = style.ContentMarginBottom = 6;
+        tile.AddThemeStyleboxOverride("panel", style);
+        _tiles.AddChild(tile);
+        var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        row.AddThemeConstantOverride("separation", 10);
+        tile.AddChild(row);
+        IconView icon = IconView.Make(40f, false);
+        icon.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        icon.Set(new IconSpec(glyph, tint), tint);
+        row.AddChild(icon);
+        var text = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        text.AddThemeConstantOverride("separation", -4);
+        row.AddChild(text);
+        text.AddChild(MakeLabel(Loc.Ltr(value), 30, Ink));
+        text.AddChild(MakeLabel(caption, 14, InkDim));
+    }
+
+    private void WritePearls()
+    {
+        while (_pearlCard.GetChildCount() > 1) { Node c = _pearlCard.GetChild(1); _pearlCard.RemoveChild(c); c.QueueFree(); }
+        if (_payout is not { } pay)
         {
-            _loadout.AddChild(Heading(Loc.T(pay.Headline).ToUpperInvariant()));
-            foreach (Meta.RunRewards.Line line in pay.Lines)
-                if (line.Amount > 0) _loadout.AddChild(Row($"{Loc.T(line.Label)}  ·  {Loc.Ltr($"+{line.Amount}")}", PearlTint));
-            _loadout.AddChild(Row(Loc.F("Balance  ·  {0}", Meta.Pearls.Balance), InkDim));
+            _pearlCard.AddChild(MakeLabel(Loc.T("No Pearls this run."), 16, InkDim));
+            return;
         }
+        foreach (RunRewards.Line line in pay.Lines)
+            if (line.Amount > 0) _pearlCard.AddChild(Pair(Loc.T(line.Label), Loc.Ltr($"+{line.Amount}"), 16, Ink, PearlTint));
+        if (pay.Tier.Reward > 1f)
+            _pearlCard.AddChild(Pair(Loc.T(pay.Tier.Name), Loc.Ltr($"x{pay.Tier.Reward:0.##}"), 16, Ink, Defeat));
+        _pearlCard.AddChild(new HSeparator { MouseFilter = MouseFilterEnum.Ignore });
+        _pearlCard.AddChild(Pair(Loc.T("TOTAL"), Loc.Ltr($"+{pay.Total}"), 24, PearlTint, PearlTint));
+        var spacer = new Control { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsVertical = SizeFlags.ExpandFill };
+        _pearlCard.AddChild(spacer);
+        var balance = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+        StyleBoxFlat s = Box(new Color(0.08f, 0.10f, 0.16f), PearlTint with { A = 0.5f }, 12, 1);
+        s.ContentMarginLeft = s.ContentMarginRight = 10;
+        s.ContentMarginTop = s.ContentMarginBottom = 4;
+        balance.AddThemeStyleboxOverride("panel", s);
+        balance.AddChild(Pair(Loc.T("Balance"), Loc.Ltr($"{Pearls.Balance}"), 15, InkDim, Ink));
+        _pearlCard.AddChild(balance);
+    }
 
-        if (_weaponOrder.Count > 0)
+    private void WriteBuild()
+    {
+        foreach (Node c in _weaponGrid.GetChildren()) c.QueueFree();
+        foreach (Node c in _itemGrid.GetChildren()) c.QueueFree();
+        foreach (string id in _weaponOrder)
         {
-            _loadout.AddChild(Heading(Loc.T("WEAPONS")));
-            foreach (string id in _weaponOrder)
-            {
-                WeaponDef? def = Catalog.WeaponById(id);
-                int level = _weaponLevels[id];
-                bool maxed = def is not null && level >= def.MaxLevel;
-                string name = Loc.T(def?.DisplayName ?? id);
-
-                _loadout.AddChild(Row(
-                    maxed ? Loc.F("{0}  ·  MAX", name) : Loc.F("{0}  ·  Lv {1}", name, level),
-                    def is null ? Ink : Catalog.RarityColor(def.Rarity)));
-            }
+            WeaponDef? def = Catalog.WeaponById(id);
+            if (def is null) continue;
+            int level = _weaponLevels[id];
+            bool maxed = level >= def.MaxLevel;
+            string name = Loc.T(def.DisplayName);
+            _weaponGrid.AddChild(IconTile(Icons.For(def), Catalog.RarityColor(def.Rarity), 46f,
+                maxed ? Loc.T("MAX") : Loc.F("Lv {0}", level), maxed ? Gold : Ink,
+                maxed ? Loc.F("{0}  ·  MAX", name) : Loc.F("{0}  ·  Lv {1}", name, level)));
         }
-
-        if (_itemOrder.Count == 0) return;
-
-        _loadout.AddChild(Heading(Loc.T("ITEMS")));
         foreach (string id in _itemOrder)
         {
             ItemDef? def = Catalog.ItemById(id);
+            if (def is null) continue;
             int stacks = _itemStacks[id];
-            string name = Loc.T(def?.DisplayName ?? id);
-
-            _loadout.AddChild(Row(
-                stacks > 1 ? $"{name}  ×{stacks}" : name,
-
-                def is null ? Ink : Catalog.RarityColor(def.Rarity)));
+            string name = Loc.T(def.DisplayName);
+            _itemGrid.AddChild(IconTile(Icons.For(def), Catalog.RarityColor(def.Rarity), 38f,
+                stacks > 1 ? Loc.Ltr($"x{stacks}") : "", Ink, stacks > 1 ? $"{name}  ×{stacks}" : name));
         }
+        _buildEmpty.Visible = _itemOrder.Count == 0;
     }
 
-    private static Label Heading(string text)
+    /// <summary>An icon on a rarity disc with a small caption under it; the
+    /// full name on hover.</summary>
+    private static Control IconTile(IconSpec spec, Color ring, float size, string caption, Color captionColor, string tooltip)
     {
-        Label label = MakeLabel(text, 14, InkDim);
-        label.CustomMinimumSize = new Vector2(0f, 26f);
-        label.VerticalAlignment = VerticalAlignment.Bottom;
-        return label;
+        var box = new VBoxContainer { MouseFilter = MouseFilterEnum.Pass, TooltipText = tooltip };
+        box.AddThemeConstantOverride("separation", -2);
+        IconView icon = IconView.Make(size);
+        icon.Set(spec, ring);
+        icon.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        box.AddChild(icon);
+        if (caption.Length > 0) box.AddChild(MakeLabel(caption, 13, captionColor, HorizontalAlignment.Center));
+        return box;
     }
 
-    private static Label Row(string text, Color color)
+    private static HBoxContainer Pair(string left, string right, int size, Color leftColor, Color rightColor)
     {
-        Label label = MakeLabel(text, 17, color);
-        label.CustomMinimumSize = new Vector2(0f, 21f);
-        return label;
+        var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        Label l = MakeLabel(left, size, leftColor);
+        l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        row.AddChild(l);
+        row.AddChild(MakeLabel(right, size, rightColor));
+        return row;
     }
+
+    private static Control Badge(string text, Color tint)
+    {
+        var p = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
+        StyleBoxFlat s = Box(tint with { A = 0.20f }, tint, 12, 2);
+        s.ContentMarginLeft = s.ContentMarginRight = 12;
+        s.ContentMarginTop = 2;
+        s.ContentMarginBottom = 3;
+        p.AddThemeStyleboxOverride("panel", s);
+        p.AddChild(MakeLabel(text, 16, tint));
+        return p;
+    }
+
+    private static Label Caption(string text) => MakeLabel(text, 14, InkDim);
 
     // ---------------------------------------------------------------- input
 
@@ -378,14 +502,9 @@ public sealed partial class ResultsScreen : Control
             return;
         }
 
-        // Unpause first. The paused flag lives on the SceneTree, not on the
-        // scene, so reloading while paused hands the fresh run a frozen tree and
-        // the game never starts.
+        // Unpause first: the paused flag lives on the SceneTree, so reloading
+        // while paused hands the fresh run a frozen tree.
         GetTree().Paused = false;
-
-        // Deferred: this runs from inside input handling or a button signal, and
-        // freeing the scene that owns the node currently emitting is exactly the
-        // situation deferred calls exist for.
         GetTree().CallDeferred(SceneTree.MethodName.ReloadCurrentScene);
     }
 
@@ -400,6 +519,14 @@ public sealed partial class ResultsScreen : Control
 
     // -------------------------------------------------------------- helpers
 
+    private static StyleBoxFlat Box(Color back, Color border, int radius, int borderWidth = 0)
+    {
+        var s = new StyleBoxFlat { BgColor = back, BorderColor = border };
+        s.SetBorderWidthAll(borderWidth);
+        s.SetCornerRadiusAll(radius);
+        return s;
+    }
+
     private static Label MakeLabel(string text, int size, Color color,
                                    HorizontalAlignment align = HorizontalAlignment.Left)
     {
@@ -408,31 +535,12 @@ public sealed partial class ResultsScreen : Control
             Text = text,
             HorizontalAlignment = align,
             MouseFilter = MouseFilterEnum.Ignore,
+            AutoTranslateMode = AutoTranslateModeEnum.Disabled,
         };
         label.AddThemeFontSizeOverride("font_size", size);
         label.AddThemeColorOverride("font_color", color);
         label.AddThemeColorOverride("font_outline_color", Outline);
-        label.AddThemeConstantOverride("outline_size", 5);
+        label.AddThemeConstantOverride("outline_size", 4);
         return label;
-    }
-
-    private static void Centre(Control control, float width, float height)
-    {
-        control.AnchorLeft = 0.5f; control.AnchorRight = 0.5f;
-        control.AnchorTop = 0.5f; control.AnchorBottom = 0.5f;
-        control.OffsetLeft = -width * 0.5f;
-        control.OffsetRight = width * 0.5f;
-        control.OffsetTop = -height * 0.5f;
-        control.OffsetBottom = height * 0.5f;
-    }
-
-    private static void Inset(Control control, float left, float top, float width, float height)
-    {
-        control.AnchorLeft = 0f; control.AnchorRight = 0f;
-        control.AnchorTop = 0f; control.AnchorBottom = 0f;
-        control.OffsetLeft = left;
-        control.OffsetRight = left + width;
-        control.OffsetTop = top;
-        control.OffsetBottom = top + height;
     }
 }

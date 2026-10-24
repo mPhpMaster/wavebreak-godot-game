@@ -75,6 +75,8 @@ public sealed partial class Main : Node3D
         // Co-op: remote players, the team panel, and a held start until every
         // machine has loaded (Net/NetSession.Run.cs).
         if (Net.Coop.InRun) Net.NetSession.Instance?.BeginRun(this);
+        // Minimap, team name tags, boss toast, down alert, scoreboard (UI/AwarenessLayer).
+        UI.AwarenessLayer.Install(this);
 
         if (Screenshot.Requested)
             _ = RunScreenshot();
@@ -86,6 +88,8 @@ public sealed partial class Main : Node3D
             _ = LevelUpShot(shotArg["--levelup-shot=".Length..]);
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--panel-shot=")) is { } panelArg)
             _ = PanelShots(panelArg["--panel-shot=".Length..]);   // Main.PanelShots.cs
+        else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--results-shot=")) is { } resultsArg)
+            _ = ResultsShot(resultsArg["--results-shot=".Length..]);   // Main.ResultsShot.cs
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--icon-sheet=")) is { } sheetArg)
             _ = UI.IconSheet.Capture(GetTree(), this, sheetArg["--icon-sheet=".Length..]);
     }

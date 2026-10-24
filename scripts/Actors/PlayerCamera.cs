@@ -291,6 +291,8 @@ public partial class PlayerCamera : Node3D
     {
         if (Game.Screenshot.Requested || Game.Screenshot.Auto) return false;
         if (!DisplayServer.WindowIsFocused()) return false;
+        // Never under the results screen: the cursor must stay for its buttons.
+        if (Game.Main.Instance?.Results is { IsShown: true }) return false;
         Input.MouseMode = Input.MouseModeEnum.Captured;
         return true;
     }

@@ -681,6 +681,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         info.Amount = amount;
 
         _health -= amount;
+        NoteDamage(amount);   // last hitter + scoreboard (Enemy.Awareness.cs)
         _flashTimer = FlashDuration;
         _rig?.PlayHit();
 
@@ -721,6 +722,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         // in the floor, and the pickup layer spawns from this point.
         EventBus.Publish(new EnemyKilled(GlobalPosition + new Vector3(0f, 0.35f, 0f), xp, gold, IsElite || IsBoss));
         if (NetId > 0 && Net.Coop.IsHost) Net.NetSession.Instance?.OnEnemyGone(this, killed: true);
+        NoteDeath();   // kill credit and the boss toast (Enemy.Awareness.cs)
 
         Deactivate();
         Despawned?.Invoke(this);
