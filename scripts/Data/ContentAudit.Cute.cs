@@ -18,7 +18,8 @@ public static partial class ContentAudit
         int skins = Characters.All.Sum(c => c.Skins.Count);
         Line($"cute characters={Characters.All.Count} skins={skins} hats={Hats.All.Count} crew={string.Join(",", Characters.CuteIds)}");
         Check(Characters.All.Count >= 21, $"only {Characters.All.Count} characters (want 21)");
-        Check(skins is >= 125 and <= 145, $"{skins} skins (want about 133)");
+        // +18 with the heroes trio (Meta/Characters.Heroes.cs): about 151.
+        Check(skins is >= 140 and <= 165, $"{skins} skins (want about 151)");
         Check(Hats.All.Count >= 22, $"only {Hats.All.Count} hats (want 22)");
 
         var passives = new Dictionary<PassiveKind, string>();

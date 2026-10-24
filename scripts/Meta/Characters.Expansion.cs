@@ -20,6 +20,7 @@ public static partial class Characters
     {
         baseList.AddRange(ExpansionCrew());
         baseList.AddRange(CuteCrew());   // Meta/Characters.Cute.cs
+        baseList.AddRange(HeroCrew());   // Meta/Characters.Heroes.cs
         return baseList;
     }
 

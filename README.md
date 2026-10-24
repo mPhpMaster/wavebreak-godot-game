@@ -24,10 +24,10 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | | |
 |---|---|
 | Maps | 5: Thornmeadow, Rimeglass Plateau, Cinder Reach, Gravemoor, Saltglass Shallows. Each has its own enemies, hazards, boss and music; a run is 3 maps on Normal and Hard, 4 on Nightmare and Tempest, 5 from Abyss up |
-| Weapons / items / tomes | 30 / 98 / 26, with elements, status effects, megacrits and upgrade rarities |
+| Weapons / items / tomes | 33 / 98 / 26, with elements, status effects, megacrits and upgrade rarities. Three are signature weapons that only their hero can hold |
 | Enemies | 53, including phase bosses with move sets |
-| Characters | 21 with passives, 133 skins, 22 hats |
-| Quests | 303 (18 secret), which unlock characters, weapons, items, skins and Pearls |
+| Characters | 24 with passives, 151 skins, 22 hats. The heroes trio each bring a signature weapon: Sunny the Lookout (Spyglass Glint, a precise beam at whatever you look at), Biscuit the Sea Dog (Mooring Anchor, a ring that holds a crowd until it is hauled in) and Flick the Kite Fox (Skimmer Kite, a kite you steer by running) |
+| Quests | 327 (18 secret), which unlock characters, weapons, items, skins and Pearls |
 | Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 55 map challenges, the Toggler, leaderboard |
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests |
 | Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full and a microwave. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |

@@ -60,7 +60,10 @@ public static class Toggler
     {
         var list = new List<ToggleEntry>();
         foreach (WeaponDef w in MetaContent.OfferWeapons(Catalog.Weapons, toggled: false))
+        {
+            if (Combat.Weapons.Signatures.Is(w.Id)) continue;   // a character's own weapon, never switched off
             list.Add(new ToggleEntry(ToggleKind.Weapon, w.Id, w.DisplayName, w.Rarity, w));
+        }
         foreach (ItemDef i in MetaContent.OfferItems(Catalog.Items, toggled: false))
             list.Add(new ToggleEntry(ToggleKind.Item, i.Id, i.DisplayName, i.Rarity, i));
         foreach (TomeDef t in Tomes.All)

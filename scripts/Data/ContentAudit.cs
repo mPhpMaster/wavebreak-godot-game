@@ -211,6 +211,7 @@ public static partial class ContentAudit
             AuditExpansion(system);
             AuditIcons();
             AuditCute(system);              // ContentAudit.CuteEnemies.cs
+            AuditHeroes(system);            // ContentAudit.Heroes.cs
             AuditLocalisation();    // ContentAudit.Loc.cs
             AuditMapChallenges();   // map challenges, Toggler, slots, cute shrines (ContentAudit.MapChallenges.cs)
             AuditMusic();           // tracks per map, every file loads, Boombox catalogue (ContentAudit.Music.cs)
@@ -378,6 +379,7 @@ public static partial class ContentAudit
         }
 
         runtime.Dispose();
+        Combat.Weapons.SignatureFx.Clear();   // lingering signature effects (anchors) end with their test
         Targeting.Source = null;
 
         return (dummies.Sum(d => d.Hits), dummies.Sum(d => d.Damage));
@@ -745,7 +747,8 @@ public static partial class ContentAudit
         // The offer pool installs its Rng on the drop table; give the run its own back.
         if (Main.Instance?.Run?.Rng is { } runRng) PickupField.Ensure(runRng);
 
-        foreach (WeaponDef w in Catalog.Weapons.Skip(1))   // index 0 is already owned
+        // Index 0 is already owned; signatures are never offered new (ContentAudit.Heroes.cs).
+        foreach (WeaponDef w in Catalog.Weapons.Skip(1).Where(w => !Combat.Weapons.Signatures.Is(w.Id)))
         {
             counts.TryGetValue(w.Id, out int n);
             Check(n > 0, $"weapon {w.Id} never offered in {rolls} rolls");

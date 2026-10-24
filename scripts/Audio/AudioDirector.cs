@@ -211,6 +211,7 @@ public sealed partial class AudioDirector : Node
         EventBus.Subscribe<RunEnded>(OnRunEnded);
         SubscribeChestSounds();
         SubscribeShrineSounds();
+        SubscribeHeroSounds();
         _subscribed = true;
     }
 
@@ -233,6 +234,7 @@ public sealed partial class AudioDirector : Node
         EventBus.Unsubscribe<RunEnded>(OnRunEnded);
         UnsubscribeChestSounds();
         UnsubscribeShrineSounds();
+        UnsubscribeHeroSounds();
     }
 
     private static void EnsureStreams()
@@ -392,6 +394,7 @@ public sealed partial class AudioDirector : Node
 
     private void OnWeaponFired(WeaponFired e)
     {
+        if (Combat.Weapons.Signatures.ConsumeFired()) return;   // plays its own sound (AudioDirector.Heroes.cs)
         Sfx id = e.Shape switch
         {
             AttackShape.Melee => Sfx.FireMelee,

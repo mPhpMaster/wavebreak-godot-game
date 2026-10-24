@@ -37,6 +37,7 @@ public static partial class Catalog
             ItemList.Add(i);
             ItemsById[i.Id] = i;
         }
+        AddSignatureWeapons();   // Data/Catalog.Heroes.cs
     }
 
     /// <summary>Ids added by this file, for the expansion audit.</summary>

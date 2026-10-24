@@ -34,7 +34,7 @@ public static partial class PlayerLooks
 
     private static ModelSpec? ResolveCute(string id)
     {
-        if (!CuteLooks.TryGetValue(id, out var look)) return null;
+        if (!CuteLooks.TryGetValue(id, out var look) && !HeroLooks.TryGetValue(id, out look)) return null;   // + PlayerLooks.Heroes.cs
         ModelSpec? s = ArtAssets.Model(look.File, PetHeight, ArtAssets.ClipsFor(look.File), "hero:" + id);
         if (s is null) return null;
         s.LodDistance = 0f;

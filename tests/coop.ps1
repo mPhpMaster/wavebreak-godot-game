@@ -27,6 +27,10 @@
 #                  fallback port (Port+1), enemies keep moving, the clock keeps
 #                  going, and both reach map 2 through the rest room.
 #                  Screenshots: coop-migrate-a.png / -b.png, toasts -toast-*.png
+# Heroes (NetSession.Test.Heroes.cs):
+#   coop-heroes    the host plays Biscuit, the guest Sunny; each holds its own
+#                  signature weapon and lands hits with it (the guest's reach
+#                  the host). Screenshots coop-heroes-host.png / -client.png
 # Late join (NetSession.Snapshot.cs):
 #   coop-latejoin  host + guest start; a third player joins about 20 s into the
 #                  run, gets the world snapshot, the team's level, and plays.
@@ -38,7 +42,7 @@ param(
     [float]$Seconds = 60,
     [int]$Port = 7777,
     [switch]$SkipBuild,
-    # Run only these scenarios (coop, coop-hostleft, coop-fallback, coop-migrate, coop-latejoin); all when empty.
+    # Run only these scenarios (coop, coop-hostleft, coop-fallback, coop-heroes, coop-migrate, coop-latejoin); all when empty.
     [string[]]$Only = @()
 )
 
@@ -181,6 +185,19 @@ function Invoke-Multi([string]$name, [object[]]$sides, [int]$timeout) {
         if ($errs) { Write-Host "  engine errors in the $($s.Name) log:"; $errs | ForEach-Object { Write-Host "    $($_.Trim())" } }
     }
 }
+
+# 2c. Heroes: the host plays Biscuit, the guest plays Sunny (the two longest
+# reaches: co-op bots keep their distance, and the kite is short-ranged, so it
+# is checked in the single-player runs), each on a profile
+# that has them unlocked. Both must hold their own signature weapon and land
+# hits with it; the guest's land on puppets and travel to the host like any
+# other weapon's (--coop-expect-signature, NetSession.Test.Heroes.cs).
+$heroProfile = Join-Path $shotDir 'coop-heroes-profile'
+foreach ($who in 'host', 'client') {
+    Set-Content -Path "$heroProfile-$who.cfg" -Value "[unlocks]`n`nqh_sunny=true`nqh_biscuit=true`nqh_flick=true`n" -Encoding ascii
+}
+Invoke-Scenario 'coop-heroes' "--coop-players=2 --coop-seconds=45 --auto --invulnerable --seed=13 --character=biscuit `"--profile=$heroProfile-host.cfg`" --coop-expect-signature" `
+                              "--coop-seconds=45 --coop-down-at=999 --auto --invulnerable --character=sunny `"--profile=$heroProfile-client.cfg`" --coop-expect-signature" 190 $true $true
 
 # 3. Host migration with three players: the host quits at 20 s; the guests go on.
 $mig = "--auto --invulnerable --phase-seconds=22 --open-portal-at=34"

@@ -53,6 +53,7 @@ internal static class WeaponBehaviors
     /// leaves the weapon to the shape switch.</summary>
     public static bool TryFire(WeaponRuntime weapon, WeaponSystem system, StatSheet stats)
     {
+        if (Signatures.TryFire(weapon, system, stats)) return true;   // Combat/Weapons/Signatures.cs
         if (!ById.TryGetValue(weapon.Def.Id, out IWeaponBehavior? b)) return false;
         b.Fire(weapon, system, stats);
         return true;
