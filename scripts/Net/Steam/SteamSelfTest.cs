@@ -287,5 +287,20 @@ public sealed partial class SteamSelfTest : Node
         hp.Close();
         await Until(() => b.ServerGone, 3);
         Check(b.ServerGone, "host leaves: client gets server_disconnected");
+
+        // Host migration (Net/NetSession.Migration.cs): B, the elected
+        // survivor, hosts on its own Steam id; A comes back and connects to it.
+        b.Peer.Close();
+        SteamPeer nh = SteamPeer.CreateHost(hub.Link(B));
+        nh.AllowJoin = members.Contains;
+        b.Mp.MultiplayerPeer = nh;
+        Side a2 = MakeSide("A2", SteamPeer.CreateClient(hub.Link(A), B));
+        await Until(() => a2.Connected && nh.RemoteCount == 1, 3);
+        Check(a2.Connected && nh.SteamIdOf(a2.Id) == A, "migration: a survivor re-hosts on its Steam id and another reconnects to it");
+        Check(b.Mp.GetUniqueId() == 1, "migration: the new host is peer 1");
+        a2.Probe.RpcId(1, SteamSelfTestProbe.MethodName.Ping, "to the new host");
+        b.Probe.RpcId(a2.Id, SteamSelfTestProbe.MethodName.Ping, "from the new host");
+        await Until(() => b.Probe.Has(a2.Id, "to the new host") && a2.Probe.Has(1, "from the new host"), 3);
+        Check(b.Probe.Has(a2.Id, "to the new host") && a2.Probe.Has(1, "from the new host"), "migration: RPCs both ways with the new host");
     }
 }

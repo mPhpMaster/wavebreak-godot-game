@@ -155,6 +155,7 @@ public sealed partial class NetSession
         float t = _main.Run.Seconds;
         Player? me = Player.Instance;
         TestRestRoom((float)GetProcessDeltaTime());
+        StepMigrationTest();   // NetSession.Test.Migration.cs
 
         if (Coop.IsHost && _testHostQuitAt > 0f)
         {
@@ -163,6 +164,7 @@ public sealed partial class NetSession
             bool ok = PeakPlayers >= _testPlayers && StatesReceived >= 50;
             GD.Print($"COOP {(ok ? "PASS" : "FAIL")} role=host quit_early=1 players={PeakPlayers} states_rx={StatesReceived} " +
                      $"enemies_synced={EnemiesSynced} t={_main.Run.Clock}");
+            TestHostQuit();   // tell the others now (NetSession.Test.Migration.cs)
             GetTree().Quit();
             return;
         }
@@ -258,7 +260,9 @@ public sealed partial class NetSession
         var problems = new System.Collections.Generic.List<string>();
         if (!reachedEnd) problems.Add(reason);
 
-        if (role == "host")
+        // Host migration / late join runs have their own checks (NetSession.Test.Migration.cs).
+        if (MigrationTestLine(role, problems, phase) is { } migrationLine) line = migrationLine;
+        else if (role == "host")
         {
             if (PeakPlayers < _testPlayers) problems.Add($"only {PeakPlayers} players joined");
             if (EnemiesSynced == 0) problems.Add("no enemies were sent");
@@ -273,7 +277,9 @@ public sealed partial class NetSession
             if (_testExpectRest && rests > 0 && restExit != "all") problems.Add($"left the rest room by '{restExit}', not with everyone in the portal");
             if (_testDifficulty is not null && Meta.DifficultyTiers.Active.Id != _testDifficulty)
                 problems.Add($"run started on {Meta.DifficultyTiers.Active.Id}, lobby picked {_testDifficulty}");
-            line = $"difficulty={Meta.DifficultyTiers.Active.Id} role=host rest_rooms={rests} rest_exit={(restExit.Length > 0 ? restExit : "-")} players={PeakPlayers} enemies_synced={EnemiesSynced} hits={HitsApplied} kills={kills} phase={phase} " +
+            ParseMigrationTest();
+            if (_testExpectLateJoin && LateJoins == 0) problems.Add("nobody joined the run in progress");
+            line = $"late_joins={LateJoins} difficulty={Meta.DifficultyTiers.Active.Id} role=host rest_rooms={rests} rest_exit={(restExit.Length > 0 ? restExit : "-")} players={PeakPlayers} enemies_synced={EnemiesSynced} hits={HitsApplied} kills={kills} phase={phase} " +
                    $"pickups={PickupsSynced} remote_collects={RemoteCollects} chests={ChestsSynced} attacks={AttacksMirrored} " +
                    $"states_rx={StatesReceived} hurts_sent={HurtsSent} client_left={(_testClientLeft ? 1 : 0)} " +
                    $"remotes_now={_remotes.Count} level={level} t={_main?.Run.Clock ?? "-"}";

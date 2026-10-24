@@ -17,8 +17,19 @@
 # Both windows run on the hidden test desktop (run-offscreen.ps1). Each side
 # saves a screenshot near the end with both players in view:
 #   tests/shots/coop-host.png, tests/shots/coop-client.png
-# A second, shorter scenario has the host quit mid-run and checks the client
-# lands on the title's CO-OP page with the message (coop-hostleft-client.png).
+# Host migration (scripts/Net/NetSession.Migration.cs):
+#   coop-hostleft  two players, the host quits at 15 s: the guest becomes the
+#                  host of its own session and plays on (migrated=1)
+#   coop-fallback  same, with migration switched off (--coop-no-migrate): the
+#                  guest's run ends on the results screen, never a crash
+#   coop-migrate   three processes; the host quits at 20 s, the two guests
+#                  elect a new host (lowest slot), the other reconnects on the
+#                  fallback port (Port+1), enemies keep moving, the clock keeps
+#                  going, and both reach map 2 through the rest room.
+#                  Screenshots: coop-migrate-a.png / -b.png, toasts -toast-*.png
+# Late join (NetSession.Snapshot.cs):
+#   coop-latejoin  host + guest start; a third player joins about 20 s into the
+#                  run, gets the world snapshot, the team's level, and plays.
 #
 #   ./tests/coop.ps1
 #   ./tests/coop.ps1 -Seconds 90 -Port 17777 -SkipBuild
@@ -26,10 +37,13 @@
 param(
     [float]$Seconds = 60,
     [int]$Port = 7777,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    # Run only these scenarios (coop, coop-hostleft, coop-fallback, coop-migrate, coop-latejoin); all when empty.
+    [string[]]$Only = @()
 )
 
 $ErrorActionPreference = 'Stop'
+$Only = @($Only | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
 $root = Split-Path $PSScriptRoot -Parent
 
 $godot = 'D:\tools\godot\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe'
@@ -64,6 +78,7 @@ $failures = @()
 # One scenario: start the host, then the client, wait for both, check each
 # side's COOP line (and its screenshot when one is expected).
 function Invoke-Scenario([string]$name, [string]$hostArgs, [string]$clientArgs, [int]$timeout, [bool]$hostShot, [bool]$clientShot) {
+    if ($Only.Count -and $Only -notcontains $name) { Write-Host "[$name] skipped"; return }
     $hostLog = Join-Path $shotDir "$name-host.log"
     $clientLog = Join-Path $shotDir "$name-client.log"
     $hShot = Join-Path $shotDir "$name-host.png"
@@ -121,9 +136,71 @@ function Hud([string]$side) {
 Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" --coop-difficulty=hard `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host')" `
                        "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest --coop-expect-difficulty=hard --coop-levelup-at=12 `"--coop-levelup-shot=$(Join-Path $shotDir 'coop-levelup-client.png')`" `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client')" ([int]($Seconds + 150)) $true $true
 
-# 2. The host quits mid-run: the client must land on the CO-OP page with a message.
+# 2. The host quits mid-run: the lone guest takes over as the host and plays on.
 Invoke-Scenario 'coop-hostleft' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `
-                                "--coop-expect-host-leave --auto --invulnerable" 150 $false $true
+                                "--coop-expect-migration --coop-seconds=42 --coop-down-at=999 --auto --invulnerable" 170 $false $true
+
+# 2b. Fallback: migration off, the guest's run ends on the results screen.
+Invoke-Scenario 'coop-fallback' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `
+                                "--coop-no-migrate --auto --invulnerable" 150 $false $true
+
+# Several processes: each side is @{ Name; Args; Delay (s after the previous); Shot }.
+function Invoke-Multi([string]$name, [object[]]$sides, [int]$timeout) {
+    if ($Only.Count -and $Only -notcontains $name) { Write-Host "[$name] skipped"; return }
+    $jobs = @()
+    foreach ($s in $sides) {
+        $s.Log = Join-Path $shotDir "$name-$($s.Name).log"
+        $s.ShotPath = Join-Path $shotDir "$name-$($s.Name).png"
+        Remove-Item $s.Log, $s.ShotPath -ErrorAction SilentlyContinue
+        if ($s.Delay -gt 0) { Start-Sleep -Seconds $s.Delay }
+        if ($s.WaitFile) {
+            # Start when another side says so (--coop-mark-file), at most 3 minutes on.
+            for ($i = 0; $i -lt 360 -and -not (Test-Path $s.WaitFile); $i++) { Start-Sleep -Milliseconds 500 }
+        }
+        $cmd = "`"$godot`" --path `"$root`" --resolution 1280x720 -- $($s.Args)" + $(if ($s.Shot) { " `"--coop-shot=$($s.ShotPath)`"" } else { '' })
+        Write-Host "[$name] start $($s.Name)"
+        $jobs += Start-Job -ScriptBlock $side -ArgumentList $offscreen, $cmd, $s.Log, $timeout
+    }
+    Wait-Job -Job $jobs -Timeout ($timeout + 90) | Out-Null
+    Remove-Job -Job $jobs -Force -ErrorAction SilentlyContinue
+    foreach ($s in $sides) {
+        $out = Get-Content $s.Log -Raw -ErrorAction SilentlyContinue
+        $line = ($out -split "`n" | Where-Object { $_ -match '^COOP (PASS|FAIL)' } | Select-Object -First 1)
+        if (-not $line) {
+            $script:failures += "[$name] $($s.Name): no COOP line"
+            Write-Host "[$name] $($s.Name) : NO COOP LINE" -ForegroundColor Red
+            Write-Host ($out -split "`n" | Select-Object -Last 15 | Out-String)
+            continue
+        }
+        $line = $line.Trim()
+        if ($line -match '^COOP FAIL') { $script:failures += "[$name] $($s.Name): $line" }
+        if ($s.Shot -and -not (Test-Path $s.ShotPath)) { $script:failures += "[$name] $($s.Name): no screenshot" }
+        $color = if ($line -match '^COOP PASS') { 'Green' } else { 'Red' }
+        Write-Host "[$name] $($s.Name) : $line" -ForegroundColor $color
+        $errs = $out -split "`n" | Where-Object { $_ -match 'ERROR|Unhandled exception|NullReference' } | Select-Object -First 5
+        if ($errs) { Write-Host "  engine errors in the $($s.Name) log:"; $errs | ForEach-Object { Write-Host "    $($_.Trim())" } }
+    }
+}
+
+# 3. Host migration with three players: the host quits at 20 s; the guests go on.
+$mig = "--auto --invulnerable --phase-seconds=22 --open-portal-at=34"
+Invoke-Multi 'coop-migrate' @(
+    @{ Name = 'host'; Delay = 0; Shot = $false; Args = "--coop-host=$Port --coop-name=Host --coop-players=3 --coop-quit-at=20 --seed=5 $mig" },
+    @{ Name = 'a'; Delay = 4; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA --coop-expect-migration --coop-expect-phase=2 --coop-seconds=80 --coop-down-at=999 `"--coop-toast-shot=$(Join-Path $shotDir 'coop-migrate-toast-a.png')`" $mig" },
+    @{ Name = 'b'; Delay = 2; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestB --coop-expect-migration --coop-expect-phase=2 --coop-seconds=80 --coop-down-at=999 `"--coop-toast-shot=$(Join-Path $shotDir 'coop-migrate-toast-b.png')`" $mig" }
+) 260
+
+# 4. Late join: a third player joins about 20 s into the run, after the
+# host's team has cleared map 1 (the portal opens at 12 s), so the joiner
+# must catch up with map 2 (or the rest room), the enemies and the level.
+$mark = Join-Path $shotDir 'coop-latejoin.mark'
+Remove-Item $mark -ErrorAction SilentlyContinue
+$lj = "--auto --invulnerable --phase-seconds=10 --open-portal-at=12 --coop-seconds=66 --coop-down-at=999"
+Invoke-Multi 'coop-latejoin' @(
+    @{ Name = 'host'; Delay = 0; Shot = $true; Args = "--coop-host=$Port --coop-name=Host --coop-players=2 --coop-expect-late-join --seed=9 `"--coop-mark-file=$mark`" --coop-mark-at=18 $lj" },
+    @{ Name = 'a'; Delay = 4; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA $lj" },
+    @{ Name = 'late'; Delay = 0; WaitFile = $mark; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=Late --coop-late-join $lj" }
+) 240
 
 Write-Host ''
 if ($failures.Count) {
@@ -132,4 +209,4 @@ if ($failures.Count) {
     exit 1
 }
 Write-Host "COOP TEST PASSED" -ForegroundColor Green
-Write-Host "screenshots: $(Join-Path $shotDir 'coop-host.png') , $(Join-Path $shotDir 'coop-client.png') , $(Join-Path $shotDir 'coop-rest-host.png') , $(Join-Path $shotDir 'coop-rest-client.png') , $(Join-Path $shotDir 'coop-hostleft-client.png')"
+Write-Host "screenshots: $(Join-Path $shotDir 'coop-host.png') , $(Join-Path $shotDir 'coop-client.png') , $(Join-Path $shotDir 'coop-rest-host.png') , $(Join-Path $shotDir 'coop-rest-client.png') , $(Join-Path $shotDir 'coop-hostleft-client.png') , $(Join-Path $shotDir 'coop-migrate-a.png') , $(Join-Path $shotDir 'coop-migrate-b.png') , $(Join-Path $shotDir 'coop-latejoin-late.png')"

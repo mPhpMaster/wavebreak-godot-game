@@ -20,7 +20,7 @@ namespace Wavebreak.Net;
 /// Member data: peer=&lt;Godot peer id&gt;, so every player can put a Steam
 /// avatar on every roster row.
 /// </summary>
-public static class SteamLobby
+public static partial class SteamLobby
 {
     public const string GameTag = "wavebreak";
 
@@ -78,7 +78,9 @@ public static class SteamLobby
 
     // ------------------------------------------------------------ host
 
-    /// <summary>HOST (Steam): create a friends-only lobby and host in it.</summary>
+    /// <summary>HOST (Steam): create a lobby and host in it: public (listed
+    /// under BROWSE PUBLIC GAMES, anyone may join) or invite only (friends-only,
+    /// as before), as chosen on the CO-OP page (<see cref="LobbyVisibility"/>).</summary>
     public static void Host()
     {
         if (!SteamApp.Ready || Busy) return;
@@ -87,7 +89,8 @@ public static class SteamLobby
         Busy = true;
         Status = Loc.T("Creating a Steam lobby...");
         GD.Print("[steam] creating lobby");
-        _created!.Set(SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, Coop.MaxPlayers));
+        ELobbyType type = LobbyVisibility.Public ? ELobbyType.k_ELobbyTypePublic : ELobbyType.k_ELobbyTypeFriendsOnly;
+        _created!.Set(SteamMatchmaking.CreateLobby(type, Coop.MaxPlayers));
         Changed?.Invoke();
     }
 
@@ -113,6 +116,10 @@ public static class SteamLobby
         SteamMatchmaking.SetLobbyData(lobby, "game", GameTag);
         SteamMatchmaking.SetLobbyData(lobby, "protocol", Coop.Protocol);
         SteamMatchmaking.SetLobbyData(lobby, "host", SteamApp.PersonaName);
+        // Browse data (SteamLobby.Browse.cs, PublicGames).
+        SteamMatchmaking.SetLobbyData(lobby, PublicGames.VisibilityKey, LobbyVisibility.Public ? PublicGames.PublicValue : PublicGames.InviteValue);
+        SteamMatchmaking.SetLobbyData(lobby, "diff", DifficultyTiers.Selected.Id);
+        SteamMatchmaking.SetLobbyData(lobby, "state", PublicGames.FormatState(false, false, 0, 0));
         SteamMatchmaking.SetLobbyJoinable(lobby, true);
         SetPresence();
         GD.Print($"[steam] lobby {LobbyId} created");

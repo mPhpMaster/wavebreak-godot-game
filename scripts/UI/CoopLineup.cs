@@ -199,6 +199,8 @@ public sealed partial class CoopLineup : Node3D
             if (at.Y - tagH < top)
                 at = Stand(camera, f, sx, Mathf.Min(view.Y - 12f, y + (top - (at.Y - tagH))));
             if (camera.IsPositionBehind(f.Holder.GlobalPosition)) { f.Tag.Visible = false; continue; }
+            // No room under a tall panel (the public games list): no tag rather than one across the panel.
+            if (at.Y - tagH < top - 2f) { f.Tag.Visible = false; continue; }
             Vector2 size = f.Tag.GetCombinedMinimumSize();
             float w = Mathf.Max(size.X, 160f);
             f.Tag.Visible = true;

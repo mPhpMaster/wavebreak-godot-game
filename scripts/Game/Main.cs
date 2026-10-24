@@ -322,10 +322,21 @@ public sealed partial class Main : Node3D
         using (Prof.Scope("Weapons")) _weapons.Tick(dt);
     }
 
+    /// <summary>Co-op late join: levels still to be picked automatically,
+    /// by the player's auto-pick rule (Net/NetSession.Snapshot.cs).</summary>
+    public static int CatchUpPicks;
+
     private void OnLevelGained(LevelGained e)
     {
         var choices = _offers.Roll(3, _weapons, _inventory, _player.Stats);
         if (choices.Count == 0) return;
+
+        if (CatchUpPicks > 0)
+        {
+            CatchUpPicks--;
+            Choose(Autopilot.PickByRule(choices, Meta.GameplaySettings.Rule, Run.Rng));
+            return;
+        }
 
         if (Screenshot.Auto)
         {

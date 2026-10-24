@@ -17,7 +17,9 @@ namespace Wavebreak.Net;
 /// </summary>
 public sealed partial class RemotePlayer : Node3D, IDamageable
 {
-    public long PeerId { get; }
+    /// <summary>Settable: a host migration gives every player a new peer id
+    /// (Net/NetSession.Migration.cs), and the avatar is kept.</summary>
+    public long PeerId { get; internal set; }
     public int Slot { get; }
     public string DisplayName { get; private set; }
 

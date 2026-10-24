@@ -46,8 +46,11 @@ single-player never touches it.
 
 Title screen → **CO-OP**.
 
-1. **Host:** pick your character and skin with the arrows and press
-   **HOST (Steam)**. This opens a friends-only lobby for up to 4 players.
+1. **Host:** pick your character and skin with the arrows, choose
+   **Lobby: Public** or **Invite only**, and press **HOST (Steam)**. This
+   opens a lobby for up to 4 players. A public lobby is listed for everyone
+   under **BROWSE PUBLIC GAMES**; an invite-only lobby is for the friends you
+   invite. The game remembers your last choice.
 2. **Invite:** press **INVITE FRIENDS** to open the Steam overlay's invite
    dialog. If no Steam window appears, open your Steam friends list,
    right-click a friend and choose **Invite to Lobby**.
@@ -55,7 +58,10 @@ Title screen → **CO-OP**.
    any of these:
    - accept the invite in Steam;
    - right-click you in their Steam friends list and choose **Join Game**;
-   - press **JOIN** next to your name under **FRIENDS IN A GAME**.
+   - press **JOIN** next to your name under **FRIENDS IN A GAME**;
+   - for a public game: press **JOIN** on its row under **BROWSE PUBLIC
+     GAMES** (host, players x/4, difficulty, and the map it is on or "In the
+     lobby"). No invite needed.
 
    Then they press **READY**.
 4. The lobby lists everyone with their Steam picture, character, skin and
@@ -109,10 +115,17 @@ Title screen → **CO-OP**.
 - Whoever lands the killing blow on a boss is named in a banner. Hold **Y**
   for the scoreboard (kills, boss kills, downs, revives, damage dealt and
   taken, level, gold); it is also on the results screen.
-- If the host leaves, everyone returns to the CO-OP page with a message. If
-  someone else leaves, their character is removed and the run goes on.
-- You cannot join a run that has already started. Co-op always uses the
-  Classic route, with no challenges. The host's difficulty applies to everyone.
+- If the host leaves, the run goes on: another player becomes the host
+  (a message says who) after a hitch of a second or two, with every enemy,
+  orb, chest, the map and the clock as they were. If that is ever impossible
+  (the new host cannot be reached), the run ends on the results screen with
+  everything earned kept. If someone else leaves, their character is removed
+  and the run goes on.
+- You can join a run in progress, up to 4 players: anyone in a public game,
+  invited friends in an invite-only one. You arrive next to the host at the
+  team's average level, with your cards picked by your auto-pick rule
+  (Settings > Gameplay). Co-op always uses the Classic route, with no
+  challenges. The host's difficulty applies to everyone.
 
 | | |
 |---|---|
