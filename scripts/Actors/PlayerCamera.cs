@@ -287,8 +287,56 @@ public partial class PlayerCamera : Node3D
     /// system-wide on Windows, so capturing from an unfocused or background window
     /// takes the user's pointer away from whatever they were actually doing.
     /// </summary>
+    // ------------------------------------------------------------ cursor holds
+    //
+    // Every panel that needs the cursor (level-up, shrine, merchant/microwave
+    // modals, pause menu) holds it here instead of remembering the mouse mode
+    // itself. The capture state is recorded when the first hold starts and
+    // given back when the last one ends, so overlapping or queued panels can
+    // neither grab the mouse while another is still open nor forget that it
+    // was captured (the camera used to stay dead after a level-up until the
+    // player clicked).
+    private static readonly System.Collections.Generic.HashSet<GodotObject> CursorHolds = new();
+    private static bool _recaptureAfterHolds;
+
+    /// <summary>Free the cursor for <paramref name="owner"/> until <see cref="ReleaseCursor"/>.</summary>
+    public static void HoldCursor(GodotObject owner)
+    {
+        CursorHolds.RemoveWhere(o => !IsInstanceValid(o));
+        if (CursorHolds.Count == 0) _recaptureAfterHolds = Input.MouseMode == Input.MouseModeEnum.Captured;
+        CursorHolds.Add(owner);
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+    }
+
+    /// <summary>End <paramref name="owner"/>'s hold; the last one out re-captures
+    /// the mouse if it was captured when the first came in.</summary>
+    public static void ReleaseCursor(GodotObject owner)
+    {
+        if (!CursorHolds.Remove(owner)) return;
+        CursorHolds.RemoveWhere(o => !IsInstanceValid(o));
+        if (CursorHolds.Count > 0) return;
+        bool recapture = _recaptureAfterHolds;
+        _recaptureAfterHolds = false;
+        if (recapture) TryCaptureMouse();
+    }
+
+    /// <summary>The mouse should come back captured when the holds end (the
+    /// pause menu opened by a focus loss, which freed it first).</summary>
+    public static void RecaptureAfterHolds() { if (CursorHolds.Count > 0) _recaptureAfterHolds = true; }
+
+    /// <summary>True while any panel holds the cursor.</summary>
+    public static bool CursorHeld
+    {
+        get { CursorHolds.RemoveWhere(o => !IsInstanceValid(o)); return CursorHolds.Count > 0; }
+    }
+
+    /// <summary>--check-input-guards only: capture even in an unfocused,
+    /// automated window, so the check can see a panel hand the mouse back.</summary>
+    internal static bool ForceCaptureForTest { get; set; }
+
     public static bool TryCaptureMouse()
     {
+        if (ForceCaptureForTest) { Input.MouseMode = Input.MouseModeEnum.Captured; return true; }
         if (Game.Screenshot.Requested || Game.Screenshot.Auto) return false;
         if (!DisplayServer.WindowIsFocused()) return false;
         // Never under the results screen: the cursor must stay for its buttons.
@@ -360,7 +408,9 @@ public partial class PlayerCamera : Node3D
         }
 
         // Re-grab after Escape — but never while paused, where the click belongs to a menu.
-        if (RecaptureOnClick && button.ButtonIndex == MouseButton.Left && !Net.Coop.IsPaused(GetTree()))
+        // Nor while the compact level-up hand is up: a click that misses a card
+        // must not hide the cursor the player is choosing with.
+        if (RecaptureOnClick && button.ButtonIndex == MouseButton.Left && !Net.Coop.IsPaused(GetTree()) && !UI.LevelUpPanel.AnyCompactOpen && !CursorHeld)
         {
             TryCaptureMouse();
             GetViewport().SetInputAsHandled();

@@ -73,6 +73,7 @@ public sealed partial class MainMenu : Node3D
     private TogglerPage _toggler = null!;
     private BoomboxPage _boombox = null!;
     private CoopPage _coop = null!;
+    private CoopLineup? _lineup;
     private Button _runButton = null!;
     private Label _pearls = null!;
 
@@ -142,7 +143,8 @@ public sealed partial class MainMenu : Node3D
 
         if (coopAuto) Net.NetSession.StartAuto(GetTree());
         else if (coopArgs) Net.NetSession.TitleShown(this, _page);   // the host-leaves test lands here
-        if (Launch.MenuShot is not null) _ = CaptureAndQuit(coopAuto ? 7.0 : 2.5);
+        // Lobby captures: the host waits for the guest (who starts a moment later) to photograph first.
+        if (Launch.MenuShot is not null) _ = CaptureAndQuit(coopAuto ? 4.0 : 2.5);
     }
 
     private void TintHero(CharacterDef def) => ShowHeroSkin(def.SelectedSkin);
@@ -196,6 +198,7 @@ public sealed partial class MainMenu : Node3D
         _pages["settings"] = BuildSettingsPage();
         _pages["keys"] = BuildKeysPage();
         _pages["graphics"] = BuildGraphicsPage();
+        _pages["gameplay"] = BuildGameplayPage();   // UI/GameplayPanel
         _pages["shop"] = _shop = new MetaShopPage(() => ShowPage("main"));
         _pages["records"] = BuildLeaderboardPage();
         _pages["run"] = _runPicker = new ChallengePicker(() => ShowPage("play"));
@@ -203,6 +206,7 @@ public sealed partial class MainMenu : Node3D
         _shop.OpenToggler = () => ShowPage("toggler");
         _pages["boombox"] = _boombox = new BoomboxPage(() => ShowPage("main"));   // UI/BoomboxPage
         _pages["coop"] = _coop = new CoopPage(() => ShowPage("main"));   // UI/CoopPage
+        AddChild(_lineup = new CoopLineup(_coop));   // the lobby's players on the beach
         foreach (Control p in _pages.Values) _root.AddChild(p);
     }
 
@@ -371,13 +375,13 @@ public sealed partial class MainMenu : Node3D
         UnlockDef? source = Unlocks.ById(c.UnlockedBy);
         bool hidden = !open && source is { Secret: true };
 
-        _charName.Text = hidden ? "???" : Loc.T(c.DisplayName);
+        // Name, blurb, starting weapon and stats, passive: UI/CharacterInfo,
+        // shared with the CO-OP page.
+        CharacterInfo info = CharacterInfo.Of(c);
+        info.Into(_charName, _charBlurb, _charStats, null);
+        _charPassive.Text = info.Passive;
         _charLook.Text = Loc.F("look: {0}   ·   id: {1}", Loc.Ltr(c.LookId), Loc.Ltr(c.Id));
         _charLook.AutoTranslateMode = AutoTranslateModeEnum.Disabled; // ids, a developer line
-        _charBlurb.Text = Loc.T(hidden ? "Someone else walks these shores. You have not met them yet." : c.Blurb);
-        _charStats.Text = hidden ? "" :
-            Loc.F("Starts with {0}", c.StartingWeaponDef.DisplayName) + "\n" + Characters.Describe(c);
-        _charPassive.Text = hidden || c.PassiveName.Length == 0 ? "" : Loc.F("Passive — {0}: {1}", c.PassiveName, c.PassiveText);
         _charLock.Text = open ? Loc.T("Pick a skin and a hat, then press START RUN")
             : hidden ? Loc.F("Secret — {0}", source!.Hint)
             : Loc.F("Locked — {0}", source?.Description ?? "");
@@ -502,10 +506,14 @@ public sealed partial class MainMenu : Node3D
         // longer fit above the window's bottom edge.
         var pages = new HBoxContainer();
         pages.AddThemeConstantOverride("separation", 8);
-        foreach (Button b in new[] { MenuButton("GRAPHICS", () => ShowPage("graphics")), MenuButton("KEY BINDINGS", () => ShowPage("keys")) })
+        pages.AddThemeConstantOverride("separation", 6);
+        foreach (Button b in new[] { MenuButton("GAMEPLAY", () => ShowPage("gameplay")), MenuButton("GRAPHICS", () => ShowPage("graphics")), MenuButton("KEY BINDINGS", () => ShowPage("keys")) })
         {
             b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-            b.AddThemeFontSizeOverride("font_size", 19);
+            b.AddThemeFontSizeOverride("font_size", 16);
+            // Three side by side: tighter margins so they share the column.
+            foreach (string box in new[] { "normal", "hover", "pressed", "focus" })
+                if (b.GetThemeStylebox(box) is StyleBoxFlat flat) { flat.ContentMarginLeft = 10; flat.ContentMarginRight = 8; }
             pages.AddChild(b);
         }
         page.AddChild(pages);
@@ -557,6 +565,19 @@ public sealed partial class MainMenu : Node3D
         frame.AddThemeStyleboxOverride("panel", style);
         Place(frame, 44f, 176f, 700f, 534f);
         frame.AddChild(_graphics = new GraphicsPanel(() => ShowPage("settings"), 370f));
+        return frame;
+    }
+
+    private GameplayPanel _gameplay = null!;
+
+    private Control BuildGameplayPage()
+    {
+        var frame = new PanelContainer();
+        var style = new StyleBoxFlat { BgColor = PanelBack, ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 12, ContentMarginBottom = 12 };
+        style.SetCornerRadiusAll(6);
+        frame.AddThemeStyleboxOverride("panel", style);
+        Place(frame, 44f, 186f, 560f, 0f);
+        frame.AddChild(_gameplay = new GameplayPanel(() => ShowPage("settings"), 240f));
         return frame;
     }
 
@@ -639,6 +660,10 @@ public sealed partial class MainMenu : Node3D
             case "settings":
                 _volumeSliders[0].slider.GrabFocus();
                 break;
+            case "gameplay":
+                _gameplay.Refresh();
+                _gameplay.FocusFirst();
+                break;
             case "graphics":
                 _graphics.Refresh();
                 if (arg == "bottom") _graphics.FocusLast();
@@ -689,7 +714,7 @@ public sealed partial class MainMenu : Node3D
         {
             GetViewport().SetInputAsHandled();
             if (_page == "coop") CoopPage.LeaveSession();   // same as BACK
-            ShowPage(_page switch { "run" => "play", "toggler" => "shop", "keys" or "graphics" => "settings", _ => "main" });
+            ShowPage(_page switch { "run" => "play", "toggler" => "shop", "keys" or "graphics" or "gameplay" => "settings", _ => "main" });
         }
     }
 
@@ -699,10 +724,19 @@ public sealed partial class MainMenu : Node3D
     {
         SceneTree tree = GetTree();
         await ToSignal(tree.CreateTimer(after), SceneTreeTimer.SignalName.Timeout);
+        // A lobby capture (--coop-lobby-only): wait until both sides are in
+        // and ready, so each photographs the full line-up on the beach.
+        bool lobby = Net.Coop.Active;
+        for (int i = 0; lobby && i < 60 && !(Net.Coop.Roster.Count >= 2 && Net.Coop.Roster.TrueForAll(p => p.Ready)); i++)
+            await ToSignal(tree.CreateTimer(0.25), SceneTreeTimer.SignalName.Timeout);
+        if (lobby) await ToSignal(tree.CreateTimer(1.5), SceneTreeTimer.SignalName.Timeout);
         if (_page == "coop") ShowPage("coop");   // redraw with whoever joined
         await Game.Screenshot.Capture(tree, this, Launch.MenuShot!);
         GD.Print($"MENU page={_page} unlocks={Profile.UnlockedIds.Count}/{Unlocks.All.Count} secrets={Profile.FoundSecrets.Count} " +
-                 $"characters={string.Join(",", CharacterStates())}");
+                 $"characters={string.Join(",", CharacterStates())}" +
+                 (_page == "coop" ? $" lineup={_lineup?.Count ?? 0} difficulty={Net.Coop.DifficultyId}" : ""));
+        // Stay in the lobby a little longer so the other side's capture still sees two players.
+        if (lobby) for (int k = 0; k < 16 && Net.Coop.Active; k++) await ToSignal(tree.CreateTimer(0.25), SceneTreeTimer.SignalName.Timeout);
         tree.Quit();
     }
 

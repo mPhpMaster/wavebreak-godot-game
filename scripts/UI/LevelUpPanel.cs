@@ -102,6 +102,9 @@ public sealed partial class LevelUpPanel : Control
         BuildConfetti();
         for (int i = 0; i < MaxCards; i++) _cards.Add(BuildCard(i));
         BuildControls();
+        BuildCompact();      // LevelUpPanel.Compact.cs: the docked, non-pausing hand
+        BuildToast();
+        GameplaySettings.Load();
 
         // A run can end while a choice is open — a damage-over-time tick, or a
         // contact hit resolved in the same frame the level landed. Closing on
@@ -277,6 +280,14 @@ public sealed partial class LevelUpPanel : Control
         // to show the player zero choices is strictly worse than not stopping.
         if (list.Count == 0) return;
 
+        // Settings > Gameplay > Auto-pick: resolved at once by the player's
+        // rule, with a toast saying what was taken (LevelUpPanel.Compact.cs).
+        if (GameplaySettings.AutoPick && AutoPickSeconds <= 0f)
+        {
+            AutoResolve(list, onPick);
+            return;
+        }
+
         _queue.Enqueue(new Pending(list, onPick));
 
         // _resolving guards the re-entrant case: an offer whose effect grants
@@ -308,6 +319,9 @@ public sealed partial class LevelUpPanel : Control
         _current.AddRange(next.Offers);
         _callback = next.Callback;
 
+        // Chosen when a hand opens, not per card: a queue keeps one layout.
+        if (!IsOpen) _compactNow = WantsCompact;
+        ApplyLayoutMode();
         LayoutCards();
 
         _banishMode = false;
@@ -319,30 +333,56 @@ public sealed partial class LevelUpPanel : Control
         // Free it while the panel is up and hand it back on close, but only if
         // it was captured to begin with: a player who had pressed Escape to get
         // the cursor back should not have it grabbed away by a level-up.
-        if (!IsOpen) _mouseWasCaptured = Input.MouseMode == Input.MouseModeEnum.Captured;
+        //
+        // Recorded once per stretch of hands, not per hand: a queued second
+        // hand (or a pick that levels the player again) presents while IsOpen
+        // is briefly false, and by then this panel has already freed the
+        // cursor, so re-reading it would forget the capture and leave the
+        // camera dead until the player clicked.
+        // The hold (Actors/PlayerCamera) remembers the capture across panels.
+        Actors.PlayerCamera.HoldCursor(this);
+        _holdingMouse = true;
         _shownAtMsec = Time.GetTicksMsec();
-        Input.MouseMode = Input.MouseModeEnum.Visible;
 
-        if (!IsOpen) StartConfetti();
+        if (!IsOpen)
+        {
+            if (_compactNow) MarkOpen(true);
+            else StartConfetti();
+        }
         IsOpen = true;
         Visible = true;
         _autoPickLeft = AutoPickSeconds;
-        Net.Coop.SetPaused(GetTree(), true);   // co-op: the world keeps running
+        // The compact hand never pauses or holds: the player walks on while
+        // choosing. The full hand pauses (co-op: holds only this player).
+        if (!_compactNow) Net.Coop.SetPaused(GetTree(), true);
 
-        // Focus the first card so that the keyboard and a gamepad have somewhere
-        // to start; the number keys work regardless. Painted explicitly because a
-        // second queued level-up re-presents onto a button that already has focus,
-        // so FocusEntered does not fire again.
+        FocusFirstCard();
+    }
+
+    /// <summary>Focus the first card so that the keyboard and a gamepad have
+    /// somewhere to start; the number keys work regardless. Painted explicitly
+    /// because a second queued level-up re-presents onto a button that already
+    /// has focus, so FocusEntered does not fire again. The compact hand takes no
+    /// focus at all: Space (jump) and the arrow keys (movement) must never land
+    /// on a card while the player is walking.</summary>
+    private void FocusFirstCard()
+    {
+        if (_compactNow) return;
         _cards[0].Button.GrabFocus();
         Paint(_cards[0], true);
     }
 
-    private bool _mouseWasCaptured;
+    private bool _holdingMouse;
 
     /// <summary>Fill and position one card per current offer; hide the rest.
     /// Shared by opening the panel and by reroll/banish replacing cards.</summary>
     private void LayoutCards()
     {
+        if (_compactNow)
+        {
+            LayoutCompact();
+            return;
+        }
         int count = _current.Count;
         float totalWidth = count * CardWidth + (count - 1) * CardGap;
         float left = -totalWidth * 0.5f;
@@ -369,11 +409,15 @@ public sealed partial class LevelUpPanel : Control
         {
             // Still make sure the tree is not left paused by a panel that never
             // opened — cheap, and the failure it prevents is a frozen game.
-            if (IsInsideTree()) Net.Coop.SetPaused(GetTree(), false);
+            if (IsInsideTree() && !_compactNow) Net.Coop.SetPaused(GetTree(), false);
             return;
         }
 
-        if (IsOpen) StopConfetti();
+        if (IsOpen || AnyOpen)
+        {
+            if (_compactNow) MarkOpen(false);
+            else StopConfetti();
+        }
         IsOpen = false;
         Visible = false;
         _banishMode = false;
@@ -382,10 +426,16 @@ public sealed partial class LevelUpPanel : Control
 
         for (int i = 0; i < _cards.Count; i++) _cards[i].Root.Visible = false;
 
-        if (_mouseWasCaptured) Actors.PlayerCamera.TryCaptureMouse();
-        _mouseWasCaptured = false;
+        // Mouse-look works again the moment the hand closes (key, click,
+        // skip or a run that ended): hand the cursor back if it was captured.
+        if (_holdingMouse) Actors.PlayerCamera.ReleaseCursor(this);
+        _holdingMouse = false;
 
-        if (IsInsideTree()) Net.Coop.SetPaused(GetTree(), false);
+        // The compact hand never paused, so it must not unpause either: the
+        // pause menu or a shrine may hold the game right now.
+        if (IsInsideTree() && !_compactNow) Net.Coop.SetPaused(GetTree(), false);
+        _compactNow = false;
+        _compact.Visible = false;
     }
 
     private void OnRunEnded(RunEnded e) => Cancel();
@@ -446,6 +496,11 @@ public sealed partial class LevelUpPanel : Control
     {
         if (!IsOpen || DevPanel.IsOpen) return;
         if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
+        if (_compactNow)
+        {
+            CompactInput(@event, key);   // LevelUpPanel.Compact.cs
+            return;
+        }
 
         if (!Armed)
         {

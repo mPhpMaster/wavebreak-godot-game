@@ -90,10 +90,25 @@ public sealed partial class Projectile
         p._mesh.Mesh = m.Mesh;
         p._mesh.RotationDegrees = Vector3.Zero;
         p._mesh.Position = Vector3.Zero;
-        p._mesh.Scale = Vector3.One * MathF.Max(0.05f, m.MeshScale);
+        // Drawn sizes are capped (Weapons/FxGuard); hit radii are not.
+        float s = MathF.Max(0.05f, m.MeshScale);
+        p._mesh.Scale = m.Motion switch
+        {
+            ProjectileMotion.Orbit or ProjectileMotion.Boomerang => Vector3.One * MathF.Min(s, Weapons.FxGuard.MaxBlade),
+            ProjectileMotion.Vortex => Flat(MathF.Min(s, Weapons.FxGuard.MaxBlobRadius)),
+            ProjectileMotion.Puddle => new Vector3(MathF.Min(s, Weapons.FxGuard.MaxCentredRadius), MathF.Min(s, 1.2f), MathF.Min(s, Weapons.FxGuard.MaxCentredRadius)),
+            _ => Vector3.One * s,
+        };
+        if (m.Motion == ProjectileMotion.Vortex) p._p2 = MathF.Min(m.P2, Weapons.FxGuard.MaxBlobRadius);
         p._mesh.MaterialOverride = Weapons.ExpansionVisuals.Glow(spec.Tint);
+        // Lingering, player-sized effects start see-through.
+        p._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(
+            m.Motion is ProjectileMotion.Vortex or ProjectileMotion.Puddle or ProjectileMotion.Orbit ? 0.35f : 0f);
         return p;
     }
+
+    /// <summary>A vortex lies flat: a third as tall as it is wide.</summary>
+    private static Vector3 Flat(float r) => new(r, r * 0.35f, r);
 
     /// <summary>A straight glowing bar from <paramref name="from"/> to <paramref name="to"/>
     /// that fades — chain links, beams. Cosmetic only; damage is the caller's.</summary>
@@ -115,7 +130,9 @@ public sealed partial class Projectile
             Tint = tint,
             Lifetime = life,
         };
-        p._cosmeticScale = new Vector3(width, width * 0.6f, length);
+        // Thin and low whatever the area: a beam is a line, not a wall.
+        float w = MathF.Min(width, 0.9f);
+        p._cosmeticScale = new Vector3(w, MathF.Min(w * 0.6f, 0.3f), length);
         p.Launch(null, spec, null);
         p._mesh.Position = new Vector3(0f, 0f, -length * 0.5f);
         Live.Add(p);
@@ -207,7 +224,8 @@ public sealed partial class Projectile
     {
         float a = _p0 + _p1 * _age;
         Vector3 c = Muzzle;
-        Vector3 at = new Vector3(c.X + MathF.Sin(a) * _p2, c.Y - 0.15f, c.Z + MathF.Cos(a) * _p2);
+        // Knee height: blades passing in front of the camera stay under its line of sight.
+        Vector3 at = new Vector3(c.X + MathF.Sin(a) * _p2, c.Y - 0.55f, c.Z + MathF.Cos(a) * _p2);
         // Point the fin along its direction of travel.
         Place(at, new Vector3(MathF.Cos(a), 0f, -MathF.Sin(a)) * MathF.Sign(_p1 == 0f ? 1f : _p1));
 
@@ -224,7 +242,7 @@ public sealed partial class Projectile
     {
         _tickTimer -= dt;
         float left = _life - _age;
-        _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(left < 0.5f ? 1f - left / 0.5f : 0.15f);
+        _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(left < 0.5f ? 1f - left / 0.5f : 0.7f);
         if (_tickTimer > 0f) return;
         _tickTimer = _tick;
 
@@ -308,7 +326,11 @@ public sealed partial class Projectile
             return;
         }
 
-        _mesh.Scale = Vector3.One * (_p2 * (1f + 0.1f * MathF.Sin(_age * 14f)));
+        // Flat, capped (SpawnMotion) and fading further when it sits on a player:
+        // at max area it was a solid dome over the player and the camera.
+        float vs = _p2 * (1f + 0.1f * MathF.Sin(_age * 14f));
+        _mesh.Scale = Flat(vs);
+        _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.35f + Weapons.FxGuard.OverPlayer(GlobalPosition, vs));
         _tickTimer -= dt;
         if (_tickTimer > 0f || _template is null) return;
         _tickTimer = _tick;

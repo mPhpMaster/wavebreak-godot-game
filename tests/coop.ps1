@@ -114,8 +114,12 @@ function Hud([string]$side) {
 # 1. A minute of play: sync, hits, kills, shared xp, down + revive, client leaves.
 # The host shortens the first phase so the boss, the portal and the second
 # map (all host-driven) happen inside the minute too.
-Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host')" `
-                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client')" ([int]($Seconds + 150)) $true $true
+# The host picks Hard in the lobby; the client must see it before READY and
+# start on it. At 12 s the client opens a real level-up hand and walks with
+# the move key while it is open (the compact hand must not stop it), then
+# picks with the 1 key.
+Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" --coop-difficulty=hard `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host')" `
+                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest --coop-expect-difficulty=hard --coop-levelup-at=12 `"--coop-levelup-shot=$(Join-Path $shotDir 'coop-levelup-client.png')`" `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client')" ([int]($Seconds + 150)) $true $true
 
 # 2. The host quits mid-run: the client must land on the CO-OP page with a message.
 Invoke-Scenario 'coop-hostleft' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `

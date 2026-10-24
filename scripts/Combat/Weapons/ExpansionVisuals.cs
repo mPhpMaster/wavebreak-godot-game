@@ -39,6 +39,7 @@ internal static class ExpansionVisuals
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             CullMode = BaseMaterial3D.CullModeEnum.Disabled,
         };
+        FxGuard.Track(m);   // fades out between the camera and the player
         Materials[tint] = m;
         return m;
     }

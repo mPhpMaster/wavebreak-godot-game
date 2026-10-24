@@ -138,6 +138,8 @@ public sealed partial class NetSession : Node
         me.Slot = 0;
         me.Ready = true;
         Coop.Roster.Add(me);
+        // The lobby's difficulty starts as the host's own choice (PLAY page / CO-OP page).
+        Coop.DifficultyId = _testDifficulty ?? DifficultyTiers.Selected.Id;
         Status = status;
         Changed?.Invoke();
     }
@@ -283,7 +285,7 @@ public sealed partial class NetSession : Node
         Status = Loc.T("Connected. Waiting for the host...");
         GD.Print($"[coop] connected as {Coop.LocalId}");
         if (ViaSteam) SteamLobby.PublishPeerId(Coop.LocalId);
-        RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId);
+        RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId, me.HatId);
         Changed?.Invoke();
     }
 
@@ -328,12 +330,14 @@ public sealed partial class NetSession : Node
         Profile.EnsureLoaded();
         CharacterDef c = Characters.ForThisRun();
         SkinDef skin = Launch.Automated ? c.Skins[0] : c.SelectedSkin;
+        string hat = Launch.Automated ? TestHat : Hats.SelectedFor(c.Id).Id;
         return new CoopPeer
         {
             Id = Coop.LocalId,
             Name = CleanName(PlayerName),
             CharacterId = c.Id,
             SkinId = skin.Id,
+            HatId = hat,
         };
     }
 
@@ -358,7 +362,7 @@ public sealed partial class NetSession : Node
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void Hello(string protocol, string name, string characterId, string skinId)
+    private void Hello(string protocol, string name, string characterId, string skinId, string hatId)
     {
         if (!Coop.IsHost) return;
         long id = Multiplayer.GetRemoteSenderId();
@@ -387,6 +391,7 @@ public sealed partial class NetSession : Node
         p.Name = UniqueName(CleanName(name), id);
         p.CharacterId = characterId;
         p.SkinId = skinId;
+        p.HatId = hatId;
         BroadcastRoster();
         Changed?.Invoke();
     }
@@ -428,11 +433,12 @@ public sealed partial class NetSession : Node
         if (Coop.InRun) return;
         CoopPeer me = LocalProfile();
         if (Coop.IsClient && Coop.LocalPeer is not null)
-            RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId);
+            RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId, me.HatId);
         else if (Coop.IsHost && Coop.LocalPeer is { } host)
         {
             host.CharacterId = me.CharacterId;
             host.SkinId = me.SkinId;
+            host.HatId = me.HatId;
             BroadcastRoster();
             Changed?.Invoke();
         }
@@ -455,6 +461,16 @@ public sealed partial class NetSession : Node
         Changed?.Invoke();
     }
 
+    /// <summary>Host: the difficulty picked on the CO-OP page. Clients get it
+    /// with the roster and cannot change it.</summary>
+    public void SetLobbyDifficulty(string tierId)
+    {
+        if (!Coop.IsHost || Coop.InRun || DifficultyTiers.ById(tierId) is null) return;
+        Coop.DifficultyId = tierId;
+        BroadcastRoster();
+        Changed?.Invoke();
+    }
+
     /// <summary>The host's Start button: enabled with 2-4 players, all ready.</summary>
     public bool CanStart => Coop.IsHost && !Coop.InRun && Coop.Roster.Count >= 2
                             && Coop.Roster.TrueForAll(p => p.Ready);
@@ -468,9 +484,12 @@ public sealed partial class NetSession : Node
     private static string PackRoster()
     {
         var sb = new StringBuilder();
+        // Lobby-wide facts first, on a line of their own: the host's difficulty.
+        sb.Append("@|").Append(Coop.DifficultyId).Append('\n');
         foreach (CoopPeer p in Coop.Roster)
             sb.Append(p.Id).Append('|').Append(p.Slot).Append('|').Append(p.Ready ? 1 : 0).Append('|')
-              .Append(p.CharacterId).Append('|').Append(p.SkinId).Append('|').Append(p.Name).Append('\n');
+              .Append(p.CharacterId).Append('|').Append(p.SkinId).Append('|').Append(p.Name).Append('|')
+              .Append(p.HatId).Append('\n');
         return sb.ToString();
     }
 
@@ -482,6 +501,11 @@ public sealed partial class NetSession : Node
         foreach (string line in packed.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
             string[] f = line.Split('|');
+            if (f[0] == "@")
+            {
+                if (f.Length > 1) Coop.DifficultyId = f[1];
+                continue;
+            }
             if (f.Length < 6) continue;
             Coop.Roster.Add(new CoopPeer
             {
@@ -491,6 +515,7 @@ public sealed partial class NetSession : Node
                 CharacterId = f[3],
                 SkinId = f[4],
                 Name = f[5],
+                HatId = f.Length > 6 ? f[6] : "",
             });
         }
         if (Coop.LocalPeer is not null && !Coop.InRun) Status = Loc.T("In the lobby. Press READY when you are set.");
@@ -503,7 +528,9 @@ public sealed partial class NetSession : Node
     {
         if (!CanStart && !_testMode) return;
         ulong seed = ((ulong)GD.Randi() << 16) ^ GD.Randi();
-        string difficulty = DifficultyTiers.Selected.Id;
+        // The tier picked in the lobby (Coop.DifficultyId); the host's own
+        // selection if the lobby never set one.
+        string difficulty = DifficultyTiers.ById(Coop.DifficultyId) is { } lobbyTier ? lobbyTier.Id : DifficultyTiers.Selected.Id;
         if (EndlessMode.Selected) difficulty = "endless:" + difficulty;
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--seed=")) seed = (ulong)arg["--seed=".Length..].ToInt();

@@ -31,7 +31,7 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 55 map challenges, the Toggler, leaderboard |
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests |
 | Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full and a microwave. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |
-| Level-up | Three cards with icons; reroll (R), banish (B) and skip (X) |
+| Level-up | Three cards with icons; reroll (R), banish (B) and skip (X); optional compact hand that keeps the game running, and auto-pick by a rule (Settings > Gameplay) |
 | Music | 19 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
 | Co-op | Online, 2-4 players with Steam friends: lobbies, invites, no ports (see [Co-op](#co-op-2-4-players)) |
 | Languages | English and Arabic (full right-to-left layout) |
@@ -81,14 +81,21 @@ Title screen → **CO-OP**.
   Gold and med-packs go to whoever picks them up.
 - Chests are shared. The first player to open one gets it, and pays with
   their own gold.
-- Shrines, the merchant, the microwave and pots are each player's own.
+- Shrines, the microwave and pots are each player's own; the merchant is at
+  the rest stop.
 - After each boss the whole team goes to the rest stop together; a downed
   player arrives revived. Everyone shops with their own gold. The next map
   starts when everyone stands in the CONTINUE portal (the count is on
   screen), or 30 seconds after the first player stepped in.
 - A level-up or the pause menu does not stop the game for the others. Your
-  character stands still while it is open, and you cannot be hurt for the
-  first 8 seconds.
+- A level-up does not stop anyone, you included: a compact hand docks at the
+  bottom of the screen and you keep walking, jumping and dashing while you
+  pick with 1 / 2 / 3 or a click. The pause menu does not stop the game for
+  the others; your character stands still while it is open, and you cannot
+  be hurt for the first 8 seconds.
+- In the lobby every player stands on the beach in their character, skin and
+  hat, with their name and READY state over their head. The host picks the
+  difficulty for everyone; the others see it but cannot change it.
 - At 0 health you go **down**. A teammate who stands next to you for 4
   seconds revives you with 40% health. The run ends when everyone is down.
 - Enemies chase the nearest player who is still up. The camera follows you.
@@ -132,6 +139,14 @@ Title screen → **CO-OP**.
 | Arabic: title | Arabic: character select |
 | ![Arabic pause](docs/screenshots/arabic-pause-sheet.png) | |
 | Arabic: pause sheet | |
+
+## Settings > Gameplay
+
+| Option | What it does |
+|---|---|
+| Compact level-up | Single-player uses the small docked hand and keeps the game running while you choose (co-op always does) |
+| Auto-pick on level up | Off / On: every level-up takes a card at once, and a short note says which |
+| Auto-pick rule | Best rarity first, Prefer weapons, Prefer items, Prefer tomes, Upgrade what I have, Random |
 
 ## Controls
 

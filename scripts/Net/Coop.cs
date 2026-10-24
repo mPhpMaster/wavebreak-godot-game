@@ -13,6 +13,7 @@ public sealed class CoopPeer
     public string Name = "";
     public string CharacterId = "";
     public string SkinId = "";
+    public string HatId = "";
     public bool Ready;
 }
 
@@ -31,7 +32,7 @@ public static class Coop
 
     /// <summary>Protocol tag; a client from another build is turned away
     /// instead of desyncing halfway into a run.</summary>
-    public const string Protocol = "wavebreak-coop-1";
+    public const string Protocol = "wavebreak-coop-2";   // 2: hats and the host's difficulty in the lobby
 
     /// <summary>A teammate standing within this many metres of a downed
     /// player for <see cref="ReviveSeconds"/> brings them back.</summary>
@@ -53,6 +54,11 @@ public static class Coop
 
     /// <summary>True from the host's start signal until the run scene is left.</summary>
     public static bool InRun { get; internal set; }
+
+    /// <summary>The host's difficulty tier id. The host picks it on the CO-OP
+    /// page; it rides along with every roster update, so clients see it in the
+    /// lobby, and the run starts on it (<see cref="Meta.DifficultyTiers.BeginRun"/>).</summary>
+    public static string LobbyDifficulty => DifficultyId;
 
     /// <summary>Run seed, chosen by the host; every peer builds the same maps from it.</summary>
     public static ulong Seed { get; internal set; }
@@ -147,6 +153,7 @@ public static class Coop
         InRun = false;
         Roster.Clear();
         LocalId = 1;
+        DifficultyId = "";
         ClearHold();
     }
 }

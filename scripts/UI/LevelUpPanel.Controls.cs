@@ -120,6 +120,7 @@ public sealed partial class LevelUpPanel
         _skipButton.TooltipText = Loc.F("Skip this level for {0} gold.", LevelUpChoices.SkipGold(Progression.Inventory.Current?.Level ?? 1));
 
         _banishButton.AddThemeColorOverride("font_color", _banishMode ? BanishInk : ControlInk);
+        SyncCompactControls();
     }
 
     private void UpdateSubheading(string? message = null)
@@ -139,6 +140,7 @@ public sealed partial class LevelUpPanel
                 : Loc.T("Choose one");
         }
         _subheading.AddThemeColorOverride("font_color", _banishMode ? BanishInk : InkDim);
+        SyncCompactHeading();
     }
 
     /// <summary>Route a reroll/banish/skip key. True when it was one of them.</summary>
@@ -169,8 +171,7 @@ public sealed partial class LevelUpPanel
         UpdateSubheading();
         RefreshControls();
         ReArm();
-        _cards[0].Button.GrabFocus();
-        Paint(_cards[0], true);
+        FocusFirstCard();
     }
 
     private void ToggleBanish()

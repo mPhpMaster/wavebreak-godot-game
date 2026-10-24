@@ -140,6 +140,7 @@ Useful test flags (all after `--`):
 | `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL |
 | `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
+| `--compact-levelup`, `--autopick-rule=<id>` | Settings > Gameplay for this run only (compact hand; auto-pick by rule) |
 | `--steam-selftest` | Steam transport over a fake in-memory Steam: frames, handshake, relay, ordering, refusal, timeouts. Prints `STEAM SELFTEST PASS/FAIL` |
 | `--steam-test` | let an automated launch (`--menu-shot`) start Steam, for live checks. Without it, automated runs never touch Steam |
 | `--connect-lobby=<id>` | join this Steam lobby at start, like Steam's own `+connect_lobby <id>` |
@@ -461,13 +462,33 @@ first. So a boss's `Boss` message never arrives before the boss's spawn, and
 ### Decisions the brief left open
 
 - **Level-ups and menus do not pause.** The world keeps running in co-op.
-  `Coop.SetPaused` replaces `tree.Paused` in the level-up panel, the pause
-  menu and the shrine and modal panels. In co-op it sets `Coop.LocalHold`,
-  which freezes only the local player's movement and interact keys, and
-  shields them for at most 8 s per opening (`Coop.MenuGraceSeconds`). Pausing
-  everyone for each player's level-up would stop the game every few seconds
-  with four players; freezing the others' input would be worse. The grace
-  matches what Bonk With Friends does for the same reason.
+  `Coop.SetPaused` replaces `tree.Paused` in the pause menu and the shrine
+  and modal panels. In co-op it sets `Coop.LocalHold`, which freezes only
+  the local player's movement and interact keys, and shields them for at
+  most 8 s per opening (`Coop.MenuGraceSeconds`). Pausing everyone for each
+  player's level-up would stop the game every few seconds with four players;
+  freezing the others' input would be worse.
+- **Level-ups do not even hold you.** In a co-op run the level-up panel is
+  the compact hand (`UI/LevelUpPanel.Compact.cs`): small cards docked at the
+  bottom, no dimmer, no pause, no `LocalHold`, so the player keeps moving
+  while choosing. Single-player keeps the full pausing panel unless Settings >
+  Gameplay > Compact level-up is on. Input rules that keep picking out of the
+  way of playing: 1-4 and the reroll/banish/skip keys are taken only when not
+  bound to a movement action; no card ever takes focus (Space and the arrows
+  stay the body's); the root ignores the mouse, a click that misses a card
+  does not re-capture the mouse, and right-click stays dash; while another
+  menu holds the game the hand waits. `LevelUpPanel.PausesGame` is what the
+  pause menu and shrine panel ask now, instead of `IsOpen`.
+- **Lobby.** The host's difficulty (any of `DifficultyTiers.All`, only tiers
+  unlocked on the host's profile) is `Coop.DifficultyId`, sent as a `@|<id>`
+  header line on every roster broadcast, shown read-only to clients, and
+  used by `StartGame`, so `DifficultyTiers.BeginRun` starts everyone on it.
+  `CoopPeer.HatId` rides in `Hello` and the roster (protocol
+  `wavebreak-coop-2`), so the lobby line-up and the in-run puppets wear it.
+  `UI/CoopLineup` stands every roster player side by side on the title beach
+  (rebuilt per player only when the look changes, polled 5x a second) with a
+  left-to-right label layer on the CO-OP page for names and READY. The
+  page's left column reuses the PLAY page's panel text (`UI/CharacterInfo`).
 - **XP is shared.** The mod mirrors every XP gain to every player, and so
   does this: every XP orb anyone collects is granted to every player
   (`ShareXp`), and each applies their own XP-gain stat. Everyone levels
@@ -562,6 +583,13 @@ host:   -- --coop-host=7777 --coop-players=2 --auto --invulnerable --phase-secon
 client: -- --coop-join=127.0.0.1:7777 --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 ...
 ```
 
+The host picks Hard in the lobby (`--coop-difficulty=hard`); the client
+checks it saw that tier before READY and that its run started on it
+(`--coop-expect-difficulty`). At 12 s the client opens a real level-up hand
+(`--coop-levelup-at`), takes the autopilot off the wheel and holds the real
+`move_forward` action for 1.6 s: the hand must be the compact one, no input
+hold may be set, the player must move at least 1 m, and a real 1 key must
+take a card (`levelup_moved=`, `coop-levelup-client.png`).
 Both bots play about 60 s. The host spawns three ranged enemies at 10 s to
 test the mirrored shots. The client goes down on purpose at 20 s, and the
 host's bot walks over and revives it. The boss arrives and the portal opens,
@@ -576,7 +604,9 @@ reason on failure. A second scenario has the host quit at 15 s
 (`--coop-quit-at`); the client must land on the CO-OP page with the message
 (`--coop-expect-host-leave`). Screenshots go to `tests/shots/coop-*.png`.
 `--coop-lobby-only` with `--menu-shot=x.png --menu-page=coop` photographs a
-filled lobby.
+filled lobby; `tests/coop-lobby.ps1 [-Lang ar] [-Res 1920x1080]` runs a host
+and a guest (`--coop-hat`, `--character`) to the READY state and checks both
+captures show two players on the beach and the host's tier.
 
 `--steam-selftest` checks the Steam transport without Steam (above).
 `--menu-shot=x.png --menu-page=coop` (add `--lang=ar`) photographs the
@@ -754,8 +784,18 @@ reads shake and "speed & dash zoom" scales, `DamagePopup` the number cap, and
 `Arena` the prop-density multiplier (next map). "Weapon effects opacity"
 (default 75%) goes through `GraphicsSettings.FxFade`, which every projectile,
 swipe, explosion, aura disc and status arc uses for its fade, so a late build
-cannot wall off the screen. Swipes also start half transparent, sit at knee
-height and stay level; Breaker Swell draws at most four low rings. Environments and suns keep their
+cannot wall off the screen. `Combat/Weapons/FxGuard` keeps effects off the
+player and the screen, whoever fired them: drawn sizes are capped (player-
+centred fields 4.5 m, blobs such as Maelstrom Seed's vortex and explosion
+shells 2.8 m, swipe and breath sheets 5 m, blades 1.5 m; hit areas are not)
+and big ones lie flat on the ground (swipes on the floor, vortex and
+explosion shells squashed, Brine Wake at most four pools). Every weapon
+material fades per pixel nearer the camera than the player
+(`DistanceFadeMode.PixelAlpha`, following the zoom), and each pooled shot
+that sits on the camera-to-player line turns see-through
+(`Projectile.KeepOutOfSight`). The blue "dome" late in a run was Maelstrom
+Seed: its whorl and core scaled with area at chest height.
+Breaker Swell draws at most four low rings. Environments and suns keep their
 authored values as metadata, so switching an effect back on restores the map's
 look; Sea Fret marks its fog as gameplay fog, which "fog off" keeps at 60%.
 The default is the High preset, which equals the pre-settings look; automated
@@ -763,6 +803,24 @@ launches never load or save it. `UI/GraphicsPanel` is the shared page (title
 settings and pause menu); window mode, size and monitor wait for APPLY and
 revert after 10 s unless kept. `--check-graphics` drives every option and
 prints GRAPHICS PASS/FAIL; `--menu-page=graphics[:bottom]` captures the page.
+
+## Gameplay settings and auto-pick
+
+`Meta/GameplaySettings` (`[gameplay]` in `user://settings.cfg`, never read or
+written by automated runs; `--compact-levelup` and `--autopick-rule=<id>` set
+them in memory): Compact level-up, Auto-pick on level up and its rule.
+`UI/GameplayPanel` is the title's GAMEPLAY page and rows in the pause menu's
+settings. With auto-pick on, `LevelUpPanel.Show` resolves the hand at once
+through `Autopilot.PickByRule` (rule first, then rarity, then the bot's own
+score; supply payouts only when nothing else is offered) and shows a toast;
+automated runs log `LEVELUP autopick rule=... picked=...`.
+
+Panels that free the cursor (level-up, shrine, merchant/microwave, pause
+menu) hold it through `PlayerCamera.HoldCursor/ReleaseCursor`: the capture
+state is taken when the first hold starts and given back when the last one
+ends, so queued or overlapping panels never leave mouse-look dead until a
+click. `--check-input-guards` asserts the mouse is captured again right
+after two queued picks, in the full and the compact hand.
 
 ## Language (English / Arabic)
 

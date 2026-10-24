@@ -315,6 +315,7 @@ void fragment() {
         if (_camera is null) return;
         float dt = (float)delta;
         UpdateCamera(dt);
+        _lineup?.Tick(delta, _camera, _page == "coop", _hero);
         float t = _orbit * 16f;
         foreach (var (node, home, phase) in _bobbers)
             node.Position = home + new Vector3(0f, Mathf.Sin(t * 1.7f + phase) * 0.18f, 0f);
