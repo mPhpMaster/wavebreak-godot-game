@@ -84,6 +84,7 @@ public sealed partial class StageDirector
         // Orbs still on the floor were earned; they follow into the room.
         Pickup.AttractAll();
         _enemies.ClearField(ArrivalBreather);
+        _enemies.Quiet = true;
         ApplyScaling(1f);
 
         _rest = new RestRoom(_index + 1, _stages[_restNext].DisplayName);
@@ -166,6 +167,7 @@ public sealed partial class StageDirector
         RestExitReason = why;
         RestClockOut = _run.Seconds;
         Log($"leaving the rest room ({why}) -> phase {_restNext + 1}/{_stages.Count}");
+        _enemies.Quiet = false;
         EnterPhase(Mathf.Clamp(_restNext, 0, _stages.Count - 1));
     }
 

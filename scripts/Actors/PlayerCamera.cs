@@ -317,8 +317,25 @@ public partial class PlayerCamera : Node3D
         if (CursorHolds.Count > 0) return;
         bool recapture = _recaptureAfterHolds;
         _recaptureAfterHolds = false;
-        if (recapture) TryCaptureMouse();
+        // In a live run the mouse always goes back to the camera when the last
+        // panel closes. Deciding from "was it captured when the panel opened"
+        // missed too many paths (a focus blip, an earlier Escape, a queued hand)
+        // and players were left with a dead camera until they clicked.
+        if (InLiveRun()) recapture = true;
+        if (!recapture) return;
+        TryCaptureMouse();
+        // Again next frame: the click that picked a card is still being
+        // delivered, and a Control under it may toggle the mode back.
+        if (Engine.GetMainLoop() is SceneTree tree)
+            tree.CreateTimer(0.05, processAlways: true).Timeout += () =>
+            {
+                if (!CursorHeld && InLiveRun() && Input.MouseMode != Input.MouseModeEnum.Captured) TryCaptureMouse();
+            };
     }
+
+    private static bool InLiveRun()
+        => Game.Main.Instance is { } m && GodotObject.IsInstanceValid(m) && !m.Run.Over
+           && !(m.Results?.IsShown ?? false);   // not Paused: the closing panel unpauses just after
 
     /// <summary>The mouse should come back captured when the holds end (the
     /// pause menu opened by a focus loss, which freed it first).</summary>

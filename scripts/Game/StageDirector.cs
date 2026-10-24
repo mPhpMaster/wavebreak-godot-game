@@ -330,6 +330,7 @@ public sealed partial class StageDirector
 
     private void EnterPhase(int index)
     {
+        _enemies.Quiet = false;
         bool first = _index < 0;
         _index = index;
         StageDef stage = Stage;

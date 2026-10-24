@@ -71,7 +71,9 @@ public static class RunMeta
                 foreach (CharacterStat b in kind.LastingBoons) main.Player.Stats.Add(b.Stat, b.Op, b.Value, kind);
         SkinDef skin = Launch.Automated ? Character.Skins[0] : Character.SelectedSkin;
         main.Player.ApplySkin(skin.Tint, skin.LookId, skin.Paint);
-        main.Player.WearHat(Launch.Automated ? null : Hats.SelectedFor(Character.Id).Id);
+        string? hatArg = System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--hat="));
+        main.Player.WearHat(hatArg is not null ? hatArg["--hat=".Length..]   // test captures
+                            : Launch.Automated ? null : Hats.SelectedFor(Character.Id).Id);
 
         // Mouse sensitivity is read live by PlayerCamera from GameSettings, so a
         // change made in the pause menu applies immediately; nothing to do here.

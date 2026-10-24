@@ -409,6 +409,9 @@ public sealed partial class EnemyManager : Node3D
         float dt = (float)delta;
         if (dt <= 0f) return;
 
+        // The rest room is enemy-free whatever tried to spawn there (a split
+        // child, a summon or a shrine guardian from the map just left).
+        if (Quiet && _living > 0) ClearField(0f);
         Sweep();
         RebuildGrid();
         if (DevFrozen) return;   // developer panel: freeze AI
@@ -657,7 +660,7 @@ public sealed partial class EnemyManager : Node3D
     {
         int index = _defs.IndexOf(def);
         // Co-op client: only the host puts enemies on the field.
-        if (index < 0 || _living >= MaxAlive || Net.Coop.IsClient) return null;
+        if (index < 0 || _living >= MaxAlive || Net.Coop.IsClient || Quiet) return null;
 
         Enemy? enemy = _pools[index].Get();
         if (enemy is null) return null;
@@ -1106,6 +1109,10 @@ public sealed partial class EnemyManager : Node3D
     /// <paramref name="breather"/> is how long before the first spawn on the
     /// new map, so the title card is read in peace.
     /// </summary>
+    /// <summary>Set while the players are in the rest room: nothing may spawn
+    /// (<see cref="SpawnAt"/> refuses) and stragglers are removed each tick.</summary>
+    public bool Quiet { get; set; }
+
     public void ClearField(float breather)
     {
         for (int i = 0; i < _alive.Count; i++)

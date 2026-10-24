@@ -195,6 +195,17 @@ public sealed partial class Main : Node3D
                    freed && !_levelUp.IsOpen && Input.MouseMode == Input.MouseModeEnum.Captured);
         }
         Meta.GameplaySettings.ForceCompactForTest(false);
+
+        // The reported case: the cursor was already free when the hand opened
+        // (an earlier Escape, a focus blip). A pick must still give it back.
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+        _levelUp.Show(_offers.Roll(3, _weapons, _inventory, _player.Stats), Choose);
+        ulong opened = Time.GetTicksMsec();
+        while (Time.GetTicksMsec() - opened < 650) await Wait(0.05);
+        Press(Key.Key1);
+        await Wait(0.2);
+        Expect($"level-up: cursor free before the hand, captured after the pick (now {Input.MouseMode})",
+               !_levelUp.IsOpen && Input.MouseMode == Input.MouseModeEnum.Captured);
         Actors.PlayerCamera.ForceCaptureForTest = false;
         Input.MouseMode = Input.MouseModeEnum.Visible;
 
