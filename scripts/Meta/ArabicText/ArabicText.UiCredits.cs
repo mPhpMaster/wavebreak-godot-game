@@ -10,5 +10,7 @@ public static partial class ArabicText
         ("IDEA", "الفكرة"),
         ("FREE ASSETS", "موارد مجانية"),
         ("Thank you for playing.", "شكرًا لأنك لعبت."),
+        ("   · SIGNATURE UPGRADE", "   · ترقية السلاح الخاص"),
+        ("{0} → Lv {1}", "{0} ← المستوى {1}"),
     };
 }

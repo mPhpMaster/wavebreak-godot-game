@@ -100,6 +100,25 @@ public sealed partial class MerchantPanel : ModalPanel
         {
             var c = _cards[i];
             Offer? offer = _merchant.Offers is { } offers && i < offers.Length ? offers[i] : null;
+            if (offer is { Weapon: { } wdef })
+            {
+                // A signature weapon upgrade (Game/Interactables.EnsureStocked).
+                Color wc = Catalog.RarityColor(offer.Rarity);
+                int wprice = _merchant.Prices[i];
+                bool wafford = gold >= wprice;
+                bool wmax = Game.Main.Instance?.Weapons is { } ws && !ws.CanAdd(wdef);
+                c.icon.Visible = true;
+                c.icon.Set(Icons.For(wdef), wc);
+                c.rarity.Text = Loc.T(Catalog.RarityName(offer.Rarity)) + Loc.T("   · SIGNATURE UPGRADE");
+                c.rarity.AddThemeColorOverride("font_color", wc);
+                c.title.Text = Loc.T(offer.Title);
+                c.title.AddThemeColorOverride("font_color", wc.Lerp(Ink, 0.35f));
+                c.effect.Text = offer.Effect;
+                c.buy.Text = wmax ? Loc.T("MAXED") : wafford ? Loc.F("Buy · {0} gold", wprice) : Loc.F("{0} gold (need {1})", wprice, wprice - gold);
+                c.buy.Disabled = wmax || !wafford;
+                c.card.AddThemeStyleboxOverride("panel", Box(new Color(0.10f, 0.11f, 0.16f, 0.97f), wc));
+                continue;
+            }
             if (offer?.Item is not { } item)
             {
                 c.rarity.Text = "";

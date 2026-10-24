@@ -234,6 +234,18 @@ public sealed partial class Interactables : Node
                 break;
             }
         }
+        // A held hero signature weapon with levels left takes the last slot:
+        // the merchant hones it for gold (Rare-price), so it grows from the shop too.
+        if (Main.Instance?.Weapons is { } ws)
+            foreach (Combat.WeaponRuntime w in ws.Weapons)
+                if (Catalog.SignatureIds.Contains(w.Def.Id) && ws.CanAdd(w.Def))
+                {
+                    int last = offers.Length - 1;
+                    Combat.WeaponUpgrade up = Combat.WeaponUpgrades.Roll(w.Def, Rng, (Player.Instance?.Stats.Get(Stats.Stat.Luck) ?? 0f) + MerchantLuckBonus);
+                    offers[last] = Offer.ForWeapon(w.Def, w.Level, up);
+                    m.Prices[last] = MerchantPrice(Rarity.Rare) + 15 * w.Level;
+                    break;
+                }
         m.Offers = offers;
         m.Refresh();
         GD.Print($"[merchant] stocked phase={_phase} " + string.Join(" ",
@@ -247,6 +259,7 @@ public sealed partial class Interactables : Node
         EnsureStocked(m);
         Inventory? inv = Inventory.Current;
         if (inv is null || m.Offers is null || slot < 0 || slot >= m.Offers.Length) return false;
+        if (m.Offers[slot] is { Weapon: { } wdef } wo) return TryBuyWeapon(m, slot, wdef, wo);
         if (m.Offers[slot]?.Item is not { } item) return false;
 
         if (inv.IsMaxed(item))
@@ -271,6 +284,32 @@ public sealed partial class Interactables : Node
         EventBus.Publish(new PopupRequested(m.Top + Vector3.Up * 0.9f, item.DisplayName, colour, 1.6f));
         EventBus.Publish(new PopupRequested(m.Top, $"-{price} gold", new Color(1f, 0.78f, 0.25f)));
         GD.Print($"[merchant] bought {item.Id} rarity={item.Rarity} price={price} gold={inv.Gold}");
+        return true;
+    }
+
+    private bool TryBuyWeapon(Merchant m, int slot, WeaponDef def, Offer offer)
+    {
+        Inventory? inv = Inventory.Current;
+        if (inv is null || Main.Instance?.Weapons is not { } ws) return false;
+        if (!ws.CanAdd(def))
+        {
+            EventBus.Publish(new PopupRequested(m.Top, "MAXED", new Color(1f, 0.38f, 0.34f)));
+            return false;
+        }
+        int price = m.Prices[slot];
+        if (!inv.SpendGold(price))
+        {
+            EventBus.Publish(new PopupRequested(m.Top, $"need {price - inv.Gold} more gold", new Color(1f, 0.38f, 0.34f)));
+            return false;
+        }
+        ws.Add(def, offer.Upgrade);
+        m.Offers![slot] = null;
+        m.Refresh();
+        MerchantBuys++;
+        MerchantSpent += price;
+        EventBus.Publish(new PopupRequested(m.Top + Vector3.Up * 0.9f, Meta.Loc.F("{0} → Lv {1}", def.DisplayName, ws.LevelOf(def.Id)), Catalog.RarityColor(offer.Rarity), 1.6f));
+        EventBus.Publish(new PopupRequested(m.Top, $"-{price} gold", new Color(1f, 0.78f, 0.25f)));
+        GD.Print($"[merchant] honed {def.Id} to lv{ws.LevelOf(def.Id)} price={price} gold={inv.Gold}");
         return true;
     }
 

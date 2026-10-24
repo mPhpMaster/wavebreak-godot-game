@@ -338,6 +338,10 @@ public sealed partial class ChestSpawner : Node
         Opened++;
 
         bool gilded = chest.Tier == ChestTier.Gilded;
+
+        // A held hero signature weapon can be honed by a chest: 15% of standard
+        // chests, 35% of gilded ones, while it still has levels to gain.
+        if (TrySignatureUpgrade(chest, gilded, cost, player)) return true;
         // Sometimes a perk level instead of an item (Combat/Weapons/PerkProcs.Chests.cs).
         Offer reward = OfferPool.Current is { } pool
             ? Combat.Weapons.PerkProcs.RollChestPerk(pool, gilded, Rng) ?? pool.RollChest(inv, player.Stats,
@@ -373,6 +377,28 @@ public sealed partial class ChestSpawner : Node
         EventBus.Publish(new ChestOpened(chest.GlobalPosition, chest.Tier, chest.IsFree, cost, name, rarity));
         GD.Print($"[chest] opened tier={chest.Tier} free={chest.IsFree} cost={cost} reward=\"{name}\" " +
                  $"rarity={rarity} t={_clock:0}s next={NextPrice(ChestTier.Standard)}");
+        return true;
+    }
+
+    private bool TrySignatureUpgrade(Chest chest, bool gilded, int cost, Player player)
+    {
+        if (Main.Instance?.Weapons is not { } weapons) return false;
+        Combat.WeaponRuntime? sig = null;
+        foreach (Combat.WeaponRuntime w in weapons.Weapons)
+            if (Catalog.SignatureIds.Contains(w.Def.Id) && weapons.CanAdd(w.Def)) { sig = w; break; }
+        if (sig is null || !Rng.Chance(gilded ? 0.35f : 0.15f)) return false;
+
+        float luck = player.Stats.Get(Stats.Stat.Luck) + (gilded ? GildedLuckBonus : StandardLuckBonus);
+        Combat.WeaponUpgrade up = Combat.WeaponUpgrades.Roll(sig.Def, Rng, luck);
+        weapons.Add(sig.Def, up);
+        string name = Meta.Loc.F("{0} → Lv {1}", sig.Def.DisplayName, sig.Level);
+        Color colour = Catalog.RarityColor(up.Rarity);
+        chest.Open(Catalog.RarityName(up.Rarity), colour, UI.Icons.For(sig.Def));
+        EventBus.Publish(new PopupRequested(chest.Top + Vector3.Up * 0.9f, name, colour, 1.8f));
+        if (cost > 0)
+            EventBus.Publish(new PopupRequested(chest.Top, $"-{cost} gold", new Color(1f, 0.78f, 0.25f)));
+        EventBus.Publish(new ChestOpened(chest.GlobalPosition, chest.Tier, chest.IsFree, cost, name, up.Rarity));
+        GD.Print($"[chest] opened tier={chest.Tier} cost={cost} signature upgrade {sig.Def.Id} lv{sig.Level} rarity={up.Rarity}");
         return true;
     }
 
