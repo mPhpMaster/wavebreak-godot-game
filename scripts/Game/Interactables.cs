@@ -357,6 +357,9 @@ public sealed partial class Interactables : Node
             case Campfire fire:
                 Rest(fire);
                 break;
+            case Trader trader:
+                Trade.SwapMeet.Interact(trader);   // co-op trading (Game/Trade)
+                break;
         }
     }
 
@@ -393,6 +396,7 @@ public sealed partial class Interactables : Node
         Campfire when Player.Instance is { } pl && pl.Health.Current >= pl.Health.Max - 0.5f
             => Meta.Loc.F("{0} — rest by the campfire (health full)", _keyName),
         Campfire => Meta.Loc.F("{0} — rest by the campfire · heal to full", _keyName),
+        Trader => Trade.SwapMeet.Prompt(_keyName),
         _ => $"{_keyName} — {Meta.Loc.T(s.Verb)}",
 
     };

@@ -30,6 +30,19 @@
 # Late join (NetSession.Snapshot.cs):
 #   coop-latejoin  host + guest start; a third player joins about 20 s into the
 #                  run, gets the world snapshot, the team's level, and plays.
+# Swap meet (NetSession.Trade.cs, NetSession.Test.Trade.cs):
+#   coop-trade     in the rest room the host asks the guest to trade: 40 gold +
+#                  1 stat item for one of the guest's tomes; both READY; the
+#                  host raises the gold to 50, which must reset both READY
+#                  flags; both READY and CONFIRM. Each side checks its gold,
+#                  items, tomes and stat sheet; the script checks the team's
+#                  gold total is unchanged (no duplication). Screenshots of the
+#                  window on both sides (coop-trade-host/-client-window.png)
+#                  and of the invite (coop-trade-invite-client.png).
+#   coop-trade-ar  the same in Arabic at 1920x1080.
+#   coop-trade-timeout  the guest asks the host; both READY; the host stands in
+#                  the portal and the room's countdown (8 s) ends it: both
+#                  windows close, nothing changes hands, both reach map 2.
 #
 #   ./tests/coop.ps1
 #   ./tests/coop.ps1 -Seconds 90 -Port 17777 -SkipBuild
@@ -38,7 +51,7 @@ param(
     [float]$Seconds = 60,
     [int]$Port = 7777,
     [switch]$SkipBuild,
-    # Run only these scenarios (coop, coop-hostleft, coop-fallback, coop-migrate, coop-latejoin); all when empty.
+    # Run only these scenarios (coop, coop-hostleft, coop-fallback, coop-migrate, coop-latejoin, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
     [string[]]$Only = @()
 )
 
@@ -77,16 +90,16 @@ $failures = @()
 
 # One scenario: start the host, then the client, wait for both, check each
 # side's COOP line (and its screenshot when one is expected).
-function Invoke-Scenario([string]$name, [string]$hostArgs, [string]$clientArgs, [int]$timeout, [bool]$hostShot, [bool]$clientShot) {
+function Invoke-Scenario([string]$name, [string]$hostArgs, [string]$clientArgs, [int]$timeout, [bool]$hostShot, [bool]$clientShot, [string]$res = '1280x720') {
     if ($Only.Count -and $Only -notcontains $name) { Write-Host "[$name] skipped"; return }
     $hostLog = Join-Path $shotDir "$name-host.log"
     $clientLog = Join-Path $shotDir "$name-client.log"
     $hShot = Join-Path $shotDir "$name-host.png"
     $cShot = Join-Path $shotDir "$name-client.png"
     Remove-Item $hostLog, $clientLog, $hShot, $cShot -ErrorAction SilentlyContinue
-    $hostCmd = "`"$godot`" --path `"$root`" --resolution 1280x720 -- --coop-host=$Port --coop-name=Host $hostArgs" +
+    $hostCmd = "`"$godot`" --path `"$root`" --resolution $res -- --coop-host=$Port --coop-name=Host $hostArgs" +
                $(if ($hostShot) { " `"--coop-shot=$hShot`"" } else { '' })
-    $clientCmd = "`"$godot`" --path `"$root`" --resolution 1280x720 -- --coop-join=127.0.0.1:$Port --coop-name=Guest $clientArgs" +
+    $clientCmd = "`"$godot`" --path `"$root`" --resolution $res -- --coop-join=127.0.0.1:$Port --coop-name=Guest $clientArgs" +
                  $(if ($clientShot) { " `"--coop-shot=$cShot`"" } else { '' })
 
     Write-Host "[$name] host on port $Port, client joins 127.0.0.1:$Port"
@@ -201,6 +214,32 @@ Invoke-Multi 'coop-latejoin' @(
     @{ Name = 'a'; Delay = 4; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA $lj" },
     @{ Name = 'late'; Delay = 0; WaitFile = $mark; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=Late --coop-late-join $lj" }
 ) 240
+
+# 5. Swap meet: a trade between the two players in the rest room.
+# Gold is conserved across both machines: what one side lost the other got.
+function Check-TradeGold([string]$name, [bool]$moved) {
+    if ($Only.Count -and $Only -notcontains $name) { return }
+    $vals = @{}
+    foreach ($s in 'host', 'client') {
+        $line = (Get-Content (Join-Path $shotDir "$name-$s.log") -ErrorAction SilentlyContinue | Where-Object { $_ -match '^COOP (PASS|FAIL)' } | Select-Object -First 1)
+        if ($line -match 'gold_before=(\d+) gold_after=(\d+)') { $vals[$s] = @([int]$Matches[1], [int]$Matches[2]) }
+    }
+    if ($vals.Count -ne 2) { $script:failures += "[$name] gold fields missing"; return }
+    $before = $vals.host[0] + $vals.client[0]; $after = $vals.host[1] + $vals.client[1]
+    $ok = $before -eq $after -and ($moved -or ($vals.host[0] -eq $vals.host[1] -and $vals.client[0] -eq $vals.client[1]))
+    Write-Host "[$name] team gold $before -> $after (host $($vals.host[0])->$($vals.host[1]), guest $($vals.client[0])->$($vals.client[1]))" -ForegroundColor $(if ($ok) { 'Green' } else { 'Red' })
+    if (-not $ok) { $script:failures += "[$name] gold not conserved: $before -> $after" }
+}
+$tr = "--auto --invulnerable --phase-seconds=10 --coop-seconds=40 --coop-down-at=999"
+foreach ($t in @(@{ Name = 'coop-trade'; Lang = ''; Res = '1280x720'; Seed = 13 }, @{ Name = 'coop-trade-ar'; Lang = '--lang=ar'; Res = '1920x1080'; Seed = 17 })) {
+    $n = $t.Name
+    Invoke-Scenario $n "--coop-players=2 --coop-trade-test --seed=$($t.Seed) --open-portal-at=12 $tr $($t.Lang) `"--coop-trade-shot=$(Join-Path $shotDir "$n-host-window.png")`"" `
+                       "--coop-trade-test $tr $($t.Lang) `"--coop-trade-shot=$(Join-Path $shotDir "$n-client-window.png")`" `"--coop-trade-invite-shot=$(Join-Path $shotDir "$n-invite-client.png")`"" 200 $false $false $t.Res
+    Check-TradeGold $n $true
+}
+Invoke-Scenario 'coop-trade-timeout' "--coop-players=2 --coop-trade-timeout --rest-exit-seconds=8 --seed=19 --open-portal-at=12 $tr" `
+                                     "--coop-trade-timeout $tr" 200 $false $false
+Check-TradeGold 'coop-trade-timeout' $false
 
 Write-Host ''
 if ($failures.Count) {

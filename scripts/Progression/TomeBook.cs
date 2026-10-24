@@ -23,7 +23,7 @@ public readonly struct TomeAcquired
 /// as one modifier, so the sheet is a pure function of the levels and cannot
 /// drift. The def is the source tag; no tome can touch another's modifier.
 /// </summary>
-public sealed class TomeBook
+public sealed partial class TomeBook
 {
     /// <summary>The live run's book, or null outside a run.</summary>
     public static TomeBook? Current { get; private set; }

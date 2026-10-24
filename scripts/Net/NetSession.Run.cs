@@ -62,6 +62,8 @@ public sealed partial class NetSession
     {
         _main = main;
         _revive = 0f;
+        Game.Trade.TradeLedger.Reset();   // NetSession.Trade.cs: a new run holds no escrow
+        Game.Trade.TradeView.Reset();
         Pickup.ResetNet();
         ResetWorldState();
         foreach (CoopPeer p in Coop.Roster)

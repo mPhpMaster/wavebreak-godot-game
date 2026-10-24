@@ -35,6 +35,19 @@ public sealed partial class StageDirector
     /// portal before the host moves on without the rest.</summary>
     public const float RestExitTimeout = 30f;
 
+    /// <summary><see cref="RestExitTimeout"/>, or --rest-exit-seconds=N for a
+    /// test (the swap meet's portal-timeout check).</summary>
+    public static float RestExitSeconds { get; } = ReadRestExitSeconds();
+
+    private static float ReadRestExitSeconds()
+    {
+        foreach (string a in OS.GetCmdlineUserArgs())
+            if (a.StartsWith("--rest-exit-seconds=") && float.TryParse(a["--rest-exit-seconds=".Length..], System.Globalization.NumberStyles.Float,
+                                                                        System.Globalization.CultureInfo.InvariantCulture, out float s) && s > 0f)
+                return s;
+        return RestExitTimeout;
+    }
+
     private const float RestStatusInterval = 0.25f;
 
     private RestRoom? _rest;
@@ -136,7 +149,7 @@ public sealed partial class StageDirector
         if (inside >= total) { LeaveRestRoom("all"); return; }
         if (inside > 0)
         {
-            if (_restCountdown < 0f) _restCountdown = RestExitTimeout;
+            if (_restCountdown < 0f) _restCountdown = RestExitSeconds;
             _restCountdown -= dt;
             if (_restCountdown <= 0f) { LeaveRestRoom("timeout"); return; }
         }
@@ -167,6 +180,8 @@ public sealed partial class StageDirector
         RestExitReason = why;
         RestClockOut = _run.Seconds;
         Log($"leaving the rest room ({why}) -> phase {_restNext + 1}/{_stages.Count}");
+        // Swap meet: close every open trade (escrows go home) before the Phase message.
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.TradeRoomEnding();
         _enemies.Quiet = false;
         EnterPhase(Mathf.Clamp(_restNext, 0, _stages.Count - 1));
     }
@@ -174,6 +189,7 @@ public sealed partial class StageDirector
     /// <summary>Called by <see cref="EnterPhase"/>: a new map replaces the room.</summary>
     private void FreeRestRoom()
     {
+        if (_rest is not null && Trade.TradeView.Open) Net.NetSession.Instance?.TradeLocalEnd("The rest room ended. The trade was cancelled.");
         if (_rest is not null && GodotObject.IsInstanceValid(_rest))
         {
             _root.RemoveChild(_rest);

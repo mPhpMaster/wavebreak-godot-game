@@ -139,6 +139,7 @@ Useful test flags (all after `--`):
 | `--levelup-shot=x.png`, `--menu-shot=x.png --menu-page=<page>`, `--panel-shot=<prefix>` | capture screens |
 | `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL |
 | `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
+| `--check-trade`, `--swap-meet`, `--rest-exit-seconds=N` | swap meet: rules and escrow self-check (`TRADE PASS`), build the stall in single-player (captures), shorten the co-op rest room's countdown (see "Swap meet") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
 | `--coop-expect-migration`, `--coop-no-migrate`, `--coop-late-join`, `--coop-expect-late-join`, `--coop-toast-shot=x.png`, `--coop-mark-file=P --coop-mark-at=S` | host migration and late-join checks (see "Host migration and late join") |
 | `--check-browse`, `--fake-browse`, `--lobby=public\|invite` | public games list: filter/format self-check (`BROWSE PASS`), made-up rows for a `--menu-shot`, the lobby type for this run |
@@ -328,6 +329,101 @@ boss, a forfeit before it.
   (countdown runs and pulls the player through; `PORTALTIMER PASS`).
   `tests/coop.ps1` checks that both players pass through the room together.
 
+### Swap meet (co-op trading)
+
+`Actors/Trader`, `Game/RestRoom.Trade.cs`, `Game/Trade/*` (`TradeRules`,
+`TradeLedger`, `TradeView`, `SwapMeet`, `TradeCheck`), `Net/NetSession.Trade.cs`,
+`Net/NetSession.Test.Trade.cs`, `UI/TradeUi`, `UI/TradePanel`, `UI/Hud.Trade.cs`,
+`Progression/Inventory.Trade.cs`, `Progression/TomeBook.Trade.cs`,
+`Audio/SfxSynth.Trade.cs`, `Meta/ArabicText/ArabicText.UiTrade.cs`.
+
+- **The stall:** front left of the island, a beaver behind two crates under a
+  sea-green scalloped awning, a crab on the counter, a rug of wares, a hanging
+  "SWAP MEET" board and two arrows circling over the roof, so it never reads
+  as the purple merchant. Interact (E) opens the teammate picker.
+- **Single-player: no stall.** Nobody to trade with, so the room is exactly
+  what it was (`--check-restroom` still sees 3 stations). `--swap-meet` builds
+  it anyway for captures; E then pops "Trading needs another player", as it
+  does for a co-op player left alone in the session.
+- **Flow:** picker (1-3) -> `TradeAsk` to the host -> `TradeInvite` to the
+  teammate (ACCEPT 1 / DECLINE 2 or Esc; expires after 20 s) -> the host opens
+  a session and sends `TradeOpen` to both. Each side offers gold, item copies
+  and whole tomes (with their level) and sends it with its holdings
+  (`TradeSet`; holdings are re-sent whenever they change). READY, then
+  CONFIRM, both sides. **Every offer change bumps the session version and
+  clears both READY and both CONFIRM**, and READY/CONFIRM carry the version the
+  player saw, so a click on a table that has since changed is ignored.
+- **Rules** (`TradeRules.Validate`, the same code on the host, in both windows
+  and in the self-check): a side gives only what it holds; the receiver must
+  hold the result *after* the swap. Item stack caps count what the receiver
+  gives away of the same item; a tome must be new to the receiver (tomes are
+  never merged) unless the receiver gives theirs away in the same swap; the
+  receiver's tome count after the swap must fit its tome slots. The window
+  greys out bag tiles the partner could not take (reason in the tooltip) and
+  lists every broken rule; the host refuses READY while one stands.
+- **Weapons are not traded.** A weapon is more than an id and a level: each
+  level carries a rolled upgrade of some rarity (`WeaponRuntime.Upgrades`),
+  the character's starting weapon is part of its identity, the inventory's
+  weapon ledger only ever goes up (it never forgets a weapon), and a player
+  could trade away their only weapon. Moving the rolled upgrades faithfully
+  would need a weapon serialisation format for this one feature; the window
+  says "Weapons are not traded."
+- **Executing without duplication.** Each machine owns its own inventory
+  (see "Who owns what"), so the host cannot rewrite both. It runs an escrow:
+  `TradeEscrow` asks each side to re-check against its live inventory, remove
+  its offer and report exactly what it removed (`TradeEscrowed`, tome levels
+  included); only when both escrows are in does the host send each side the
+  other's (`TradeGrant`), which `TradeLedger.Settle` adds. A failed check or a
+  10 s timeout rolls back (`TradeRollback`: escrows go home, READY cleared, the
+  window stays open with the reason); a player leaving, the rest room ending,
+  Cancel, or the session closing ends the trade (`TradeClosed`, or
+  `TradeLocalEnd` when the host itself is gone): every escrow is refunded to
+  its owner. The goods are always in one inventory or one escrow. The host's
+  own player takes the same path through local calls (`ToParty`).
+- **Room end:** the host closes every trade in `LeaveRestRoom`, before the
+  Phase message (reliable and ordered, so every window is closed and every
+  escrow is back before the next map loads). That covers the CONTINUE
+  countdown running out with a trade open.
+- **Applying:** gold moves with `Inventory.TradeGold` (neither earned nor
+  spent: quests, the scoreboard, pickup sounds and gold procs do not see it;
+  the HUD gets the total through a zero-amount `GoldGained`); items with
+  `Inventory.TradeRemove` / `Add` (the stack is re-applied to the stat sheet,
+  so modifiers follow the count exactly); tomes with `TomeBook.TradeRemove` /
+  `TradeGrant` (every modifier is tagged with the def, so removal is one
+  `RemoveAllFrom` and the grant writes the level's total once). The HUD's tome
+  rows are rebuilt (`Hud.ResyncTomes`); the results screen drops items at 0.
+- **UI:** the cream card style, two columns (mirrored in Arabic): YOU GIVE
+  (offer well, gold row with -100/-10/-1/+1/+10/+100/ALL, your bag) and
+  "NAME GIVES" (their offer and gold, then what you will hold afterwards).
+  Tiles are the stats sheet's build-box tiles as buttons with tooltips: a
+  click offers one copy, right-click or Shift-click the whole stack, a click
+  on an offered tile takes one back. Keyboard: Tab/arrows and Enter, + / -
+  for 10 gold (Shift: 100), 1 READY, 2 CONFIRM, Esc/E cancel. The cursor is
+  freed through `ModalPanel` (`PlayerCamera.HoldCursor/ReleaseCursor`); in
+  co-op that sets `LocalHold` like every other panel. Sounds
+  (`SfxSynth.BuildTrade`): a "tok" when the partner's offer changes, a
+  two-note ding for each READY or CONFIRM, an arpeggio on completion, a
+  falling pair on cancel, a chime for an invite.
+- **Checks:** `--check-trade` (one process: packing, every rule, escrow,
+  refund restoring holdings and every stat exactly, settle; `TRADE PASS`).
+  `tests/coop.ps1` scenarios `coop-trade` (English, 1280x720) and
+  `coop-trade-ar` (Arabic, 1920x1080): the host offers 40 gold + a stat item
+  for the guest's tome; both READY; the host raises the gold to 50, which must
+  reset READY on both sides (`ready_resets=1`); both READY and CONFIRM; each
+  side checks its gold, items, tomes and that its stat sheet moved; the
+  script checks the team's gold total did not change. Screenshots
+  `tests/shots/coop-trade[-ar]-host-window.png`, `-client-window.png`,
+  `-invite-client.png`. `coop-trade-timeout`: the guest asks, both READY, the
+  host stands in the portal with `--rest-exit-seconds=8`; the room ends by
+  `timeout`, both windows close with "The rest room ended", and both
+  holdings are unchanged.
+- **Limits:** a tome received at max level counts towards "max a tome" feats
+  on the receiver. If the host process dies between sending the two
+  `TradeGrant`s of a guest-to-guest trade, one guest could end up with both
+  sides (each guest refunds an unanswered escrow when the host goes away);
+  both grants leave in the same network flush, so it takes a crash at that
+  exact moment. Trading happens only in the rest room.
+
 ## Elements, statuses, megacrits, weapon upgrade rarities
 
 - `Combat/StatusEffects` decides what a landed weapon hit applies (Fire burn,
@@ -444,6 +540,7 @@ responsive and cannot desync where it matters:
 | Chests | host places; first to ask gets it | `E` sends a request, and the host grants it to the first asker. The winner pays from their own gold and price ladder and rolls from their own pool. Everyone else sees it open with the winner's name |
 | Phase flow (waves → boss → portal → next map, win, Final Swarm) | host | Reliable `Phase`, `Boss` and `BossDown` messages replay the steps. A client's `StageDirector.Tick` only guards falls. The run clock is synced twice a second |
 | Rest room (entering, leaving, the CONTINUE count, the boss portal's countdown) | host | Reliable `RestEnter` when the host takes the boss portal; leaving is the usual `Phase` message. `RestStatus` (in the portal / total / countdown) and `PortalTimer` stream at 4 and 2 Hz, unreliable. Each machine builds its own room, revives and heals its own player, and shops with its own gold |
+| Trades at the swap meet | host decides; each side moves only its own goods | The host validates both offers and runs the escrow; each machine removes and adds only its own player's gold, items and tomes (see "Swap meet") |
 | Shrines, merchant, microwave, pots, secrets | each player | Each player has their own set, built from the shared seed, and their own rewards. Pot drops are personal (`Pickup.Personal`) |
 
 Why clients fire their own weapons instead of sending input to the host:

@@ -33,7 +33,7 @@ public enum Sfx
 /// so the mix is decided by <see cref="AudioDirector"/>'s volume table, and so
 /// nothing can clip on its own.
 /// </summary>
-internal static class SfxSynth
+internal static partial class SfxSynth
 {
     public const int Rate = 22050;
     public const float Peak = 0.5f;
