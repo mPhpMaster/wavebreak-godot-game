@@ -190,6 +190,24 @@ public sealed partial class MainMenu : Node3D
         shade.AnchorBottom = 1f; shade.OffsetRight = 470f;
         _root.AddChild(shade);
 
+        // Version, small, bottom right (left in RTL): config/version in project.godot.
+        string version = ProjectSettings.GetSetting("application/config/version", "").AsString();
+        var ver = new Label
+        {
+            Text = version.Length > 0 ? $"v{version}" : "",
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            AutoTranslateMode = AutoTranslateModeEnum.Disabled,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+        };
+        ver.AddThemeFontSizeOverride("font_size", 14);
+        ver.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 0.6f));
+        ver.AddThemeColorOverride("font_outline_color", new Color(0f, 0f, 0f, 0.6f));
+        ver.AddThemeConstantOverride("outline_size", 4);
+        ver.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomRight);
+        ver.OffsetLeft = -160f; ver.OffsetTop = -30f; ver.OffsetRight = -12f; ver.OffsetBottom = -8f;
+        _root.AddChild(ver);
+
         Label title = MakeLabel("WAVEBREAK", 72, Ink);
         title.AutoTranslateMode = AutoTranslateModeEnum.Disabled; // the name stays the name
         Place(title, 56f, 54f, 600f, 90f);
