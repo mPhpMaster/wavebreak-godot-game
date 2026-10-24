@@ -127,7 +127,10 @@ public sealed partial class CharacterRig
         Aabb box = MeasureScene(inst);
         Transform3D rest = skel.GetBoneGlobalRest(bone);
         Vector3 headInst = skelToInst * rest.Origin;
-        float topInst = box.Position.Y + box.Size.Y;
+        // The crown is the highest vertex skinned to the head bone. The whole
+        // model's box was too high on some heroes (hair, loose skinned-mesh
+        // bounds) and floated the hat a hand above the head.
+        float topInst = HeadTop(inst, skel, bone) ?? box.Position.Y + box.Size.Y;
         // Some rigs (the blocky set) put the head bone near the crown, which
         // made the head look a few centimetres tall and shrank the hat to a
         // sliver; a head is never less than about a fifth of the body.
@@ -156,6 +159,49 @@ public sealed partial class CharacterRig
                 if (Find(c) is { } f) return f;
             return null;
         }
+    }
+
+    /// <summary>Highest point, in <paramref name="inst"/> space, of the rest-pose
+    /// vertices weighted mostly to <paramref name="bone"/>; null if none are.</summary>
+    private static float? HeadTop(Node3D inst, Skeleton3D skel, int bone)
+    {
+        float? best = null;
+        void Walk(Node n, Transform3D xf)
+        {
+            Transform3D here = n is Node3D n3 ? xf * n3.Transform : xf;
+            if (n is MeshInstance3D { Mesh: ArrayMesh mesh } mi)
+            {
+                Skin? skin = mi.Skin;
+                for (int si = 0; si < mesh.GetSurfaceCount(); si++)
+                {
+                    var arrays = mesh.SurfaceGetArrays(si);
+                    if (arrays[(int)Mesh.ArrayType.Bones].VariantType == Variant.Type.Nil) continue;
+                    Vector3[] verts = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+                    int[] bones = arrays[(int)Mesh.ArrayType.Bones].AsInt32Array();
+                    float[] weights = arrays[(int)Mesh.ArrayType.Weights].AsFloat32Array();
+                    if (verts.Length == 0 || bones.Length < verts.Length) continue;
+                    int per = bones.Length / verts.Length;
+                    for (int v = 0; v < verts.Length; v++)
+                        for (int k = 0; k < per; k++)
+                        {
+                            int bi = v * per + k;
+                            if (weights.Length <= bi || weights[bi] < 0.5f) continue;
+                            int b = bones[bi];
+                            if (skin is not null && b < skin.GetBindCount())
+                            {
+                                string name = skin.GetBindName(b);
+                                b = name.Length > 0 ? skel.FindBone(name) : skin.GetBindBone(b);
+                            }
+                            if (b != bone) continue;
+                            float y = (here * verts[v]).Y;
+                            if (best is null || y > best) best = y;
+                        }
+                }
+            }
+            foreach (Node c in n.GetChildren()) Walk(c, here);
+        }
+        foreach (Node c in inst.GetChildren()) Walk(c, Transform3D.Identity);
+        return best;
     }
 
     private static Skeleton3D? FindSkeleton(Node n)
