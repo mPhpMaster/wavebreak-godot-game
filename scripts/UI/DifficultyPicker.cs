@@ -36,17 +36,21 @@ public sealed partial class DifficultyPicker : VBoxContainer
         AddChild(_note);
 
         // Endless: hidden until every tier has been won.
-        _endless = MainMenu.MenuButton("", () => { EndlessMode.Selected = !EndlessMode.Selected; Profile.Save(); Refresh(); });
+        _endless = MainMenu.MenuButton("", () => { EndlessMode.Selected = !EndlessMode.Selected; Profile.Save(); Refresh(); Changed?.Invoke(); });
         _endless.MouseEntered += () => _endless.GrabFocus();
         AddChild(_endless);
         Refresh();
     }
+
+    /// <summary>Raised after the tier changes (the route bar shows its map count).</summary>
+    public event System.Action? Changed;
 
     private void Cycle()
     {
         DifficultyTiers.CycleSelected();
         Profile.Save();
         Refresh();
+        Changed?.Invoke();
     }
 
     public void Refresh()

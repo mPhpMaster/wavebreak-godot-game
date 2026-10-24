@@ -282,7 +282,8 @@ public sealed partial class ResultsScreen : Control
         FinalSwarm? swarm = Main.Instance?.Stages?.Swarm;
 
         // A death in the Final Swarm is still a won run: the last boss fell.
-        _title.Text = Loc.T(survived ? (swarm is not null ? "VICTORY" : "YOU SURVIVED") : "YOU DIED");
+        bool hostLeft = Net.NetSession.Instance?.MigrationFallback is { Length: > 0 };
+        _title.Text = Loc.T(survived ? (swarm is not null ? "VICTORY" : "YOU SURVIVED") : hostLeft ? "RUN ENDED" : "YOU DIED");
         _title.AddThemeColorOverride("font_color", accent);
         _panelStyle.BorderColor = accent;
 

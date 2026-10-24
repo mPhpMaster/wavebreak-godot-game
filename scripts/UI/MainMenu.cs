@@ -285,6 +285,7 @@ public sealed partial class MainMenu : Node3D
             charList.AddChild(b);
         }
         _difficulty = new DifficultyPicker();
+        _difficulty.Changed += () => _runButton.Text = RouteBarText();
         list.AddChild(_difficulty);
 
         // Route & challenges (UI/ChallengePicker), above the character panel: the
@@ -418,6 +419,13 @@ public sealed partial class MainMenu : Node3D
         }
         _startButton.Disabled = !c.IsAvailable;
         if (focusStart && c.IsAvailable) _startButton.GrabFocus();
+    }
+
+    /// <summary>Route and modifiers, plus the selected tier's run length.</summary>
+    private static string RouteBarText()
+    {
+        DifficultyTier tier = EndlessMode.Selected ? DifficultyTiers.All[0] : DifficultyTiers.Selected;
+        return ChallengePicker.Summary() + "  ·  " + Loc.F("{0} maps, portal {1} s", tier.Phases, tier.PortalSeconds);
     }
 
     private void StartRun(CharacterDef c)
@@ -653,7 +661,7 @@ public sealed partial class MainMenu : Node3D
                 _coop.Open();
                 break;
             case "play":
-                _runButton.Text = ChallengePicker.Summary();
+                _runButton.Text = RouteBarText();
                 int i = Math.Max(0, IndexOfCharacter(arg.Length > 0 ? arg : Profile.SelectedCharacter));
                 _charButtons[i].GrabFocus();
                 ScrollRosterTo(_charButtons[i]);

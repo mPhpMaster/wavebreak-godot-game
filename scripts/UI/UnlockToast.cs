@@ -105,6 +105,13 @@ public sealed partial class UnlockToast : Control
     public override void _Process(double delta)
     {
         if (!_panel.Visible) return;
+        // Under the results screen the top centre is its header: show at the
+        // bottom instead so the two never overlap.
+        bool results = Game.Main.Instance?.Results is { IsShown: true };
+        _panel.AnchorTop = _panel.AnchorBottom = results ? 1f : 0f;
+        float h = _panel.GetCombinedMinimumSize().Y;
+        _panel.OffsetTop = results ? -h - 8f : 8f;
+        _panel.OffsetBottom = _panel.OffsetTop + h;
         _timer += (float)delta;
         float a = _timer < FadeSeconds ? _timer / FadeSeconds
                 : _timer > ShowSeconds - FadeSeconds ? (ShowSeconds - _timer) / FadeSeconds : 1f;
