@@ -58,16 +58,26 @@ Step 'Export game' {
     $argLine = "--headless --path `"$root`" --export-release `"Windows Desktop`" `"$out\Wavebreak.exe`""
     $p = Start-Process -FilePath $Godot -ArgumentList $argLine `
         -RedirectStandardOutput $log -RedirectStandardError "$log.err" -PassThru -NoNewWindow
-    # The exporter sometimes lingers after writing the pack; wait for it, then stop it.
-    $deadline = (Get-Date).AddMinutes(10)
+    # The exporter can linger after it is done. It copies the C# assemblies
+    # AFTER saving the pack, so stop it only once the game's DLL is fresh;
+    # killing it right after the pack shipped the previous build's code.
+    $started = Get-Date
+    $dll = "$out\data_Wavebreak_windows_x86_64\Wavebreak.dll"
+    $deadline = $started.AddMinutes(10)
     while (-not $p.HasExited -and (Get-Date) -lt $deadline) {
         Start-Sleep -Seconds 2
-        if ((Select-String -Path $log -Pattern 'DONE.*savepack' -Quiet -ErrorAction SilentlyContinue) -and -not $p.HasExited) {
+        $packed = Select-String -Path $log -Pattern 'DONE.*savepack' -Quiet -ErrorAction SilentlyContinue
+        $fresh = (Test-Path $dll) -and (Get-Item $dll).LastWriteTime -ge $started
+        if ($packed -and $fresh) {
             Start-Sleep -Seconds 5
             if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
         }
     }
+    if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
     if (-not (Select-String -Path $log -Pattern 'DONE.*savepack' -Quiet)) { throw "export failed, see $log" }
+    if (-not (Test-Path $dll) -or (Get-Item $dll).LastWriteTime -lt $started) {
+        throw "export left an old Wavebreak.dll (the game would run stale code); see $log"
+    }
     foreach ($f in 'Wavebreak.exe', 'Wavebreak.pck', 'steam_api64.dll', 'steam_appid.txt') {
         if (-not (Test-Path "$out\$f")) { throw "export is missing $f" }
     }
