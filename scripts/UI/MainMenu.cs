@@ -93,6 +93,13 @@ public sealed partial class MainMenu : Node3D
             AddChild(new Net.SteamSelfTest());
             return;
         }
+        // --check-browse: the public games list's filter and format (Net/PublicGames.cs).
+        if (Net.PublicGames.CheckRequested)
+        {
+            Net.PublicGames.RunCheck();
+            GetTree().Quit();
+            return;
+        }
         // --coop-host / --coop-join: the automated co-op test. No menu; the
         // session starts the run when everyone is in (Net/NetSession.Test.cs).
         // With --menu-shot the menu is built too, to photograph the lobby.

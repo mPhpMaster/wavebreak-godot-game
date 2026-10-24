@@ -195,6 +195,7 @@ public sealed partial class CoopPage : Control
         _retry.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         _retry.CustomMinimumSize = new Vector2(180f, 44f);
         box.AddChild(_retry);
+        BuildLobbyType(box);   // Public / Invite only (CoopPage.Browse.cs)
 
         // Friends in a Wavebreak lobby, each with JOIN.
         _friendsTitle = MainMenu.MakeLabel("FRIENDS IN A GAME", 15, InkDim);
@@ -210,6 +211,7 @@ public sealed partial class CoopPage : Control
         scroll.AddChild(_friends);
         _friendsScroll = scroll;
         box.AddChild(scroll);
+        BuildBrowse(box);   // BROWSE PUBLIC GAMES (CoopPage.Browse.cs)
 
         _players = MainMenu.MakeLabel("", 15, InkDim);
         _players.AutoTranslateMode = AutoTranslateModeEnum.Disabled;
@@ -258,6 +260,7 @@ public sealed partial class CoopPage : Control
         SteamLobby.ConsumePendingJoin();
         _friendsKey = "";
         RefreshFriends();
+        RequestBrowse();
         Refresh();
         if (Coop.IsHost) _start.GrabFocus();
         else if (Coop.IsClient) _ready.GrabFocus();
@@ -276,6 +279,7 @@ public sealed partial class CoopPage : Control
 
     public override void _Process(double delta)
     {
+        StepBrowse(delta);
         if (!IsVisibleInTree() || !SteamApp.Ready) return;
         _friendsAt += delta;
         if (_friendsAt >= FriendsEvery) RefreshFriends();
@@ -448,6 +452,7 @@ public sealed partial class CoopPage : Control
         _start.Visible = Coop.IsHost;
         _start.Disabled = NetSession.Instance?.CanStart != true;
         _leave.Visible = active || busy;
+        RefreshBrowseView(active, busy, steam);
     }
 
     /// <summary>Rebuild the friends list, only when it changed (rebuilding

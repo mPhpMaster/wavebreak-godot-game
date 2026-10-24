@@ -87,6 +87,15 @@ namespace Wavebreak.Game
             GD.Print($"[stage] t={_run.Clock} final swarm begins (run won; endless escalation every {StepSeconds:0}s)");
         }
 
+        /// <summary>Co-op: the host's swarm clock (a new host after migration
+        /// carries on the escalation instead of starting it over).</summary>
+        public void NetSetSeconds(float seconds)
+        {
+            Seconds = MathF.Max(0f, seconds);
+            _lastStep = (int)Steps;
+            Apply();
+        }
+
         public void Tick(float dt)
         {
             Seconds += dt;

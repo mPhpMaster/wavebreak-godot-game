@@ -104,6 +104,7 @@ public sealed partial class NetSession : Node
                 return;
             }
             ViaSteam = false;
+            _enetPort = port;
             BecomeHost(enet, Loc.F("Hosting on port {0}. Waiting for players...", port));
             GD.Print($"[coop] hosting on port {port}");
         });
@@ -183,6 +184,8 @@ public sealed partial class NetSession : Node
                 return;
             }
             _peer = enet;
+            _enetPort = port;
+            _enetHost = host;
             Multiplayer.MultiplayerPeer = _peer;
             Coop.Mode = CoopMode.Client;
             Coop.Roster.Clear();
@@ -255,6 +258,7 @@ public sealed partial class NetSession : Node
             _connectStarted = -1;
             Fail(Loc.T("No answer from the host. Check the address, the port and the firewall."));
         }
+        StepMigration();   // NetSession.Migration.cs
         ProcessRun((float)delta);
         ProcessTest((float)delta);
     }
@@ -281,16 +285,24 @@ public sealed partial class NetSession : Node
     {
         _connectStarted = -1;
         Coop.LocalId = Multiplayer.GetUniqueId();
+        // After a host migration: "I was slot N" (NetSession.Migration.cs).
+        int prevSlot = -1;
+        if (_migrating)
+        {
+            ReconnectedToNewHost();
+            prevSlot = _mySlotBefore;
+        }
         CoopPeer me = LocalProfile();
-        Status = Loc.T("Connected. Waiting for the host...");
+        if (!Coop.InRun) Status = Loc.T("Connected. Waiting for the host...");
         GD.Print($"[coop] connected as {Coop.LocalId}");
         if (ViaSteam) SteamLobby.PublishPeerId(Coop.LocalId);
-        RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId, me.HatId);
+        RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId, me.HatId, prevSlot);
         Changed?.Invoke();
     }
 
     private void OnConnectionFailed()
     {
+        if (_migrating) { RetryReconnect(); return; }
         _connectStarted = -1;
         if (_peer is SteamPeer sp)
             Fail(sp.EndReason == "refused" ? Loc.T("That game is full.") : Loc.T("Could not reach the host through Steam."));
@@ -301,6 +313,9 @@ public sealed partial class NetSession : Node
     private void OnServerDisconnected()
     {
         GD.Print("[coop] host disconnected");
+        if (_migrating) { RetryReconnect(); return; }   // the new host went too: keep trying until the window closes
+        // Mid-run: a remaining player takes over (NetSession.Migration.cs).
+        if (TryMigrate()) return;
         bool inRun = Coop.InRun;
         bool runOver = Game.Main.Instance?.Run is { Over: true };
         string message = Loc.T("The host left the game.");
@@ -361,8 +376,11 @@ public sealed partial class NetSession : Node
         return s.Length == 0 ? "Player" : s;
     }
 
+    /// <summary>A player introduces themselves. <paramref name="prevSlot"/> is
+    /// the slot they held before a host migration (-1 otherwise); mid-run, a
+    /// new player is a late joiner (NetSession.Snapshot.cs).</summary>
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void Hello(string protocol, string name, string characterId, string skinId, string hatId)
+    private void Hello(string protocol, string name, string characterId, string skinId, string hatId, int prevSlot)
     {
         if (!Coop.IsHost) return;
         long id = Multiplayer.GetRemoteSenderId();
@@ -372,27 +390,41 @@ public sealed partial class NetSession : Node
             return;
         }
         CoopPeer? p = Coop.Peer(id);
+        bool rejoin = false, lateJoin = false;
         if (p is null)
         {
-            if (Coop.InRun)
+            if (Coop.InRun && prevSlot >= 0 && AcceptRejoin(id, prevSlot))
             {
-                RefusePeer(id, Loc.T("That game has already started."));
+                p = Coop.Peer(id);
+                rejoin = true;
+            }
+            else if (Coop.InRun && !CanLateJoin(out string why))
+            {
+                RefusePeer(id, why);
                 return;
             }
-            if (Coop.Roster.Count >= Coop.MaxPlayers)
+            else if (Coop.Roster.Count >= Coop.MaxPlayers)
             {
                 RefusePeer(id, Loc.T("That game is full."));
                 return;
             }
-            p = new CoopPeer { Id = id, Slot = FreeSlot() };
-            Coop.Roster.Add(p);
-            GD.Print($"[coop] {CleanName(name)} joined as slot {p.Slot}");
+            if (p is null)
+            {
+                p = new CoopPeer { Id = id, Slot = FreeSlot(), Ready = Coop.InRun };
+                Coop.Roster.Add(p);
+                GD.Print($"[coop] {CleanName(name)} joined as slot {p.Slot}{(Coop.InRun ? " (run in progress)" : "")}");
+                // Already in the run scene (it missed its rejoin window): the world snapshot will do.
+                if (Coop.InRun && prevSlot >= 0) { rejoin = true; _loaded.Add(id); AddRemote(p); }
+                else lateJoin = Coop.InRun;
+            }
         }
-        p.Name = UniqueName(CleanName(name), id);
+        p!.Name = UniqueName(CleanName(name), id);
         p.CharacterId = characterId;
         p.SkinId = skinId;
         p.HatId = hatId;
         BroadcastRoster();
+        if (rejoin) SendWorldSnapshot(id, lateJoin: false);
+        else if (lateJoin) StartLateJoin(p);
         Changed?.Invoke();
     }
 
@@ -433,7 +465,7 @@ public sealed partial class NetSession : Node
         if (Coop.InRun) return;
         CoopPeer me = LocalProfile();
         if (Coop.IsClient && Coop.LocalPeer is not null)
-            RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId, me.HatId);
+            RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId, me.HatId, -1);
         else if (Coop.IsHost && Coop.LocalPeer is { } host)
         {
             host.CharacterId = me.CharacterId;
@@ -479,6 +511,7 @@ public sealed partial class NetSession : Node
     {
         if (!Coop.IsHost) return;
         Rpc(MethodName.RosterChanged, PackRoster());
+        PublishLobbyState();   // the browse list's players / difficulty (NetSession.Migration.cs)
     }
 
     private static string PackRoster()
@@ -486,6 +519,9 @@ public sealed partial class NetSession : Node
         var sb = new StringBuilder();
         // Lobby-wide facts first, on a line of their own: the host's difficulty.
         sb.Append("@|").Append(Coop.DifficultyId).Append('\n');
+        // Hosts who left mid-run, for their scoreboard lines (host migration).
+        foreach (KeyValuePair<long, string> d in Coop.Departed)
+            sb.Append("~|").Append(d.Key).Append('|').Append(d.Value).Append('\n');
         foreach (CoopPeer p in Coop.Roster)
             sb.Append(p.Id).Append('|').Append(p.Slot).Append('|').Append(p.Ready ? 1 : 0).Append('|')
               .Append(p.CharacterId).Append('|').Append(p.SkinId).Append('|').Append(p.Name).Append('|')
@@ -504,6 +540,11 @@ public sealed partial class NetSession : Node
             if (f[0] == "@")
             {
                 if (f.Length > 1) Coop.DifficultyId = f[1];
+                continue;
+            }
+            if (f[0] == "~")
+            {
+                if (f.Length > 2 && long.TryParse(f[1], out long gone)) Coop.Departed[gone] = f[2];
                 continue;
             }
             if (f.Length < 6) continue;
@@ -546,7 +587,8 @@ public sealed partial class NetSession : Node
         Coop.DifficultyId = Coop.Endless ? difficultyId["endless:".Length..] : difficultyId;
         Coop.InRun = true;
         Coop.ClearHold();
-        if (ViaSteam && Coop.IsHost) SteamLobby.SetJoinable(false);   // no joining mid-run
+        // The lobby stays joinable: players can join a run in progress
+        // (NetSession.Snapshot.cs), up to the lobby's 4 slots.
         BeginLoading();
         GetTree().Paused = false;
         GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile, UI.MainMenu.RunScene);

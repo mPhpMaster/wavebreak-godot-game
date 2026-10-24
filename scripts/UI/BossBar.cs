@@ -36,6 +36,7 @@ public sealed partial class BossBar : Control
     private ColorRect _fill = null!;
     private Label _name = null!;
     private Enemy? _boss;
+    private Data.EnemyDef? _lastDef;
     private float _shown = 1f;
     private float _trailShown = 1f;
     private float _alpha;
@@ -139,10 +140,13 @@ public sealed partial class BossBar : Control
 
         int count = em?.BossCount ?? 1;
         int phase = _boss.Phase;
-        if (count != _lastCount || phase != _lastPhase)
+        // The def too: the next boss can arrive with the same count and phase
+        // (a co-op client never sees a boss enrage), and must not keep the old name.
+        if (count != _lastCount || phase != _lastPhase || _boss.Def != _lastDef)
         {
             _lastCount = count;
             _lastPhase = phase;
+            _lastDef = _boss.Def;
             string name = _boss.Def?.DisplayName is { Length: > 0 } n
                 ? (Loc.IsArabic ? Loc.T(n) : n.ToUpperInvariant())
                 : Loc.T("BOSS");

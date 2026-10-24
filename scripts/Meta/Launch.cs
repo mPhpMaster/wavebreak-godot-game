@@ -82,6 +82,8 @@ public static class Launch
             else if (arg == "--latin-report") { }   // Game/Screenshot: a capture diagnostic, menu or run
             // Net/Steam: allow Steam in an automated run; join a lobby at start (menu flags).
             else if (arg == "--steam-test" || arg.StartsWith("--steam-test=") || arg.StartsWith("--connect-lobby")) { }
+            // Net/PublicGames: a made-up public games list (captures); the lobby type.
+            else if (arg == "--fake-browse" || arg.StartsWith("--lobby=")) { }
             else if (arg.StartsWith("--")) SkipsMenu = true;
         }
     }

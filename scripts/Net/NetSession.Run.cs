@@ -105,6 +105,15 @@ public sealed partial class NetSession
 
     private void MarkLoaded(long id)
     {
+        if (_go)
+        {
+            // A late joiner (NetSession.Snapshot.cs): the world, then its own Go.
+            _loaded.Add(id);
+            GD.Print($"[coop] {Coop.NameOf(id)} loaded the run in progress");
+            SendWorldSnapshot(id, lateJoin: true);
+            RpcId(id, MethodName.Go);
+            return;
+        }
         _loaded.Add(id);
         GD.Print($"[coop] {Coop.NameOf(id)} loaded ({_loaded.Count}/{Coop.Roster.Count})");
         TryGo(force: false);
@@ -172,6 +181,13 @@ public sealed partial class NetSession
         RunState run = _main.Run;
         Player? me = Player.Instance;
 
+        // Between hosts (NetSession.Migration.cs): play on locally, send nothing.
+        if (_migrating)
+        {
+            if (!run.Over && me is not null && IsInstanceValid(me)) StepRevive(me, dt);
+            return;
+        }
+
         _stateTimer -= dt;
         if (_stateTimer <= 0f && me is not null && IsInstanceValid(me))
         {
@@ -187,6 +203,7 @@ public sealed partial class NetSession
         if (Coop.IsHost)
         {
             StepHostWorld(dt);
+            StepRunSnapshot(dt);   // NetSession.Migration.cs
             _clockTimer -= dt;
             if (_clockTimer <= 0f)
             {
@@ -330,19 +347,42 @@ public sealed partial class NetSession
         if (!_go) TryGo(force: false);
     }
 
-    /// <summary>Client: the roster changed mid-run (someone left).</summary>
+    /// <summary>Client: the roster changed mid-run. Avatars are matched by
+    /// slot, which survives a host migration (peer ids do not): a matching
+    /// avatar takes the new id, a new player gets one (late join), and an
+    /// avatar whose player is gone leaves.</summary>
     private void SyncRemotes()
     {
         if (!Coop.InRun) return;
-        var gone = new List<long>();
-        foreach (long id in _remotes.Keys)
-            if (Coop.Peer(id) is null) gone.Add(id);
-        foreach (long id in gone)
+        var bySlot = new Dictionary<int, RemotePlayer>();
+        foreach (RemotePlayer r in _remotes.Values)
+            if (IsInstanceValid(r)) bySlot[r.Slot] = r;
+        var next = new Dictionary<long, RemotePlayer>();
+        var added = new List<CoopPeer>();
+        foreach (CoopPeer p in Coop.Roster)
         {
-            string name = _remotes[id].DisplayName;
-            if (IsInstanceValid(_remotes[id])) _remotes[id].QueueFree();
-            _remotes.Remove(id);
-            Popup(Loc.F("{0} left the game", name), new Color(1f, 0.8f, 0.4f));
+            if (p.Id == Coop.LocalId) continue;
+            if (bySlot.Remove(p.Slot, out RemotePlayer? r))
+            {
+                if (r.PeerId != p.Id) RunScoreboard.Rekey(r.PeerId, p.Id);
+                r.PeerId = p.Id;
+                next[p.Id] = r;
+            }
+            else added.Add(p);
+        }
+        foreach (RemotePlayer gone in bySlot.Values)
+        {
+            Popup(Loc.F("{0} left the game", gone.DisplayName), new Color(1f, 0.8f, 0.4f));
+            gone.QueueFree();
+        }
+        _remotes.Clear();
+        foreach (KeyValuePair<long, RemotePlayer> kv in next) _remotes[kv.Key] = kv.Value;
+        if (_main is null) return;
+        foreach (CoopPeer p in added)
+        {
+            AddRemote(p);
+            PeakPlayers = Mathf.Max(PeakPlayers, Coop.Roster.Count);
+            if (_go) Popup(Loc.F("{0} joined the game", p.Name), new Color(0.55f, 1f, 0.65f));
         }
     }
 

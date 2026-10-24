@@ -197,6 +197,14 @@ public static class RunScoreboard
     /// are then laid back on top (they are fresher here).</summary>
     public static void Apply(long[] d)
     {
+        // The host's table is the whole truth: a line it does not have (an
+        // id from before a host migration) goes.
+        var ids = new HashSet<long> { Coop.LocalId };
+        for (int i = 0; i + Stride <= d.Length; i += Stride) ids.Add(d[i]);
+        var stale = new List<long>();
+        foreach (long id in Lines.Keys) if (!ids.Contains(id)) stale.Add(id);
+        foreach (long id in stale) Lines.Remove(id);
+        if (stale.Count > 0) _dirty = true;
         for (int i = 0; i + Stride <= d.Length; i += Stride)
         {
             ScoreLine l = Line(d[i]);
@@ -204,6 +212,22 @@ public static class RunScoreboard
             l.Level = (int)d[i + 5]; l.DamageDealt = d[i + 6]; l.DamageTaken = d[i + 7]; l.GoldEarned = (int)d[i + 8];
         }
         RefreshLocal();
+        Version++;
+    }
+
+    /// <summary>Host migration: a player's line moves to their new peer id.</summary>
+    public static void Rekey(long from, long to)
+    {
+        if (from == to || !Lines.Remove(from, out ScoreLine? line)) return;
+        if (Lines.TryGetValue(to, out ScoreLine? clash))
+        {
+            // Should not happen; keep the line with more on it.
+            if (clash.Kills + clash.Level > line.Kills + line.Level) return;
+        }
+        line.Id = to;
+        if (Coop.NameOf(to) is { } name && !name.StartsWith('#')) line.Name = name;
+        Lines[to] = line;
+        _dirty = true;
         Version++;
     }
 

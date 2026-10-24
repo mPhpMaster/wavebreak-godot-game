@@ -140,6 +140,8 @@ Useful test flags (all after `--`):
 | `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL |
 | `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
+| `--coop-expect-migration`, `--coop-no-migrate`, `--coop-late-join`, `--coop-expect-late-join`, `--coop-toast-shot=x.png`, `--coop-mark-file=P --coop-mark-at=S` | host migration and late-join checks (see "Host migration and late join") |
+| `--check-browse`, `--fake-browse`, `--lobby=public\|invite` | public games list: filter/format self-check (`BROWSE PASS`), made-up rows for a `--menu-shot`, the lobby type for this run |
 | `--compact-levelup`, `--autopick-rule=<id>` | Settings > Gameplay for this run only (compact hand; auto-pick by rule) |
 | `--steam-selftest` | Steam transport over a fake in-memory Steam: frames, handshake, relay, ordering, refusal, timeouts. Prints `STEAM SELFTEST PASS/FAIL` |
 | `--steam-test` | let an automated launch (`--menu-shot`) start Steam, for live checks. Without it, automated runs never touch Steam |
@@ -509,10 +511,11 @@ first. So a boss's `Boss` message never arrives before the boss's spawn, and
   tree paused until the host has heard "loaded" from everyone (30 s cap).
   Then one `Go` starts the clocks.
 - **Leaving.** A client leaving removes their avatar, and the run goes on.
-  Their orbs go to the next nearest player. The host leaving sends every
-  client to the title's CO-OP page with "The host left the game", unless
-  their run was already over, in which case the results screen stays.
-  Joining a run in progress is refused.
+  Their orbs go to the next nearest player. The host leaving mid-run hands
+  the run to another player (see "Host migration and late join"); only in
+  the lobby does it send the others back to the CO-OP page with "The host
+  left the game". A run that was already over keeps its results screen.
+  Players can join a run in progress (same section).
 
 ### Steam lobbies and transport
 
@@ -536,8 +539,11 @@ the game itself.
 - **DLL**: `SteamApp` installs a `DllImportResolver` for the Steamworks.NET
   assembly that loads `steam_api64.dll` from beside the exe (exported) or from
   `thirdparty/steamworks/win64` (editor and tests).
-- **Lobby** (`SteamLobby`): HOST (Steam) creates a friends-only lobby with 4
-  slots, sets `game=wavebreak` and `protocol=<Coop.Protocol>`, and sets rich
+- **Lobby** (`SteamLobby`): HOST (Steam) creates a lobby with 4 slots,
+  public or friends-only (the CO-OP page's **Lobby: Public / Invite only**,
+  see "Public and invite-only lobbies"), sets `game=wavebreak` and
+  `protocol=<Coop.Protocol>` (now `wavebreak-coop-3`: Hello carries the
+  previous slot for host migration), and sets rich
   presence `connect=+connect_lobby <id>` so Steam's "Join Game" works. INVITE
   FRIENDS calls `ActivateGameOverlayInviteDialog`. Joins arrive from
   `GameLobbyJoinRequested` (an invite accepted in Steam),
@@ -570,7 +576,105 @@ the game itself.
   raw handshake, stale-packet dropping, broadcast targets, wrong-magic HELLOs.
   It also runs a host and four clients, each on its own `SceneMultiplayer` in
   one process, covering relay RPCs, a 200 KB message, a non-member ignored, a
-  fifth player refused, leave, timeout and host leaving.
+  fifth player refused, leave, timeout and host leaving, then a survivor
+  re-hosting on its own Steam id with another reconnecting to it (46 checks).
+
+### Host migration and late join
+
+`Net/NetSession.Migration.cs`, `NetSession.Snapshot.cs` and small
+`*.Migration.cs` partials (`Enemy`, `EnemyManager`, `Pickup`, `ChestSpawner`,
+`StageDirector`, `Inventory.CatchUp`).
+
+**What a client already has.** Everything the host simulates is mirrored
+on every client as puppets: every enemy (id, def, transform, health), orb
+and chest, plus the map, the boss, the portal and the rest room (the phase
+flow is replayed everywhere). What only the host knows it streams once a
+second in a reliable **run snapshot** (`RunSnap`, 17 floats plus, on ENet,
+each peer's address): the next free enemy, orb and chest ids; the enemy
+director's schedule (credits, next elite wave, wave end, spawn timer); the
+phase machine's private timers (phase index and state, boss arrival time,
+portal and rest-room countdowns, Final Swarm clock, endless loop flag and
+next map); the endless loop count. The scoreboard already syncs at 1 Hz.
+
+**Election.** Deterministic and silent: the surviving player with the
+lowest lobby slot (slots are unique; every survivor holds the same roster,
+so all pick the same one). Peer ids are not stable (the new host must be
+peer 1, and reconnecting clients get new ids), so slots are the identity:
+avatars, roster entries and scoreboard lines are re-keyed by slot
+(`RemotePlayer.PeerId` is settable, `RunScoreboard.Rekey`). The old host's
+line stays under a negative "departed" id (`Coop.Departed`, also sent with
+the roster). On Steam the lobby member that owns the lobby after Steam's
+own hand-over passes ownership to the elected host
+(`SteamLobby.HandOwnershipTo`), so lobby data, joinability and invites stay
+with whoever hosts.
+
+**The new host** (on `ServerDisconnected` mid-run): closes its client peer,
+opens a host peer (ENet: the session's port + 1, the pre-agreed fallback
+port, so a second migration uses + 2; Steam: a `SteamPeer` host in the same
+lobby), becomes peer 1, promotes every puppet to a real enemy
+(`Enemy.PromoteFromPuppet`: contact damage and speed recomputed from the
+director's current multipliers, health kept; a puppet the player had
+predicted dead dies for real), makes pending orbs collectable, learns the
+map's obstacles for chest placement, adopts the director and phase timers
+from the last snapshot (the boss puppet stays the phase boss; if it is
+gone it is sent again), and keeps each other survivor's slot open for
+`RejoinWindow` (20 s) before dropping it like a leaver.
+
+**The others** stop sending (their own player keeps moving; puppets stand),
+wait a second, then connect to the new host (ENet: its address as the old
+host reported it, on port + 1, retrying until the window closes; Steam: its
+Steam id) and say Hello with their previous slot. The new host re-keys
+them and sends a **world snapshot** (`WorldSnap`: phase index and state,
+clock, boss id, portal and swarm timers, endless loop, the host's
+position, every enemy, orb and chest with its open flag, and the run
+snapshot). The client lines its puppets up against it: matching ids are
+kept and corrected, the rest despawned, the missing spawned. Everyone sees
+the toast "Host left — Guest is now the host" (`UI/CoopToast`). The other
+survivor is back in sync a second or two after the host quit (the test
+prints it as `resync_s`); no enemy, orb, chest, phase step or second of run
+clock is lost.
+
+**Fallback.** When migration is impossible (the elected host cannot open
+its port, a survivor cannot reach the new host within the window, Steam
+cannot name the new host, or the host leaves before the run's Go), that
+machine ends its run (`RunState.Finish`, so the results screen shows and
+Pearls, records and quests are saved as on any run end), shows the
+message, and closes the session. Never a crash or a silent return to the
+menu. `--coop-no-migrate` forces this path for the test.
+
+**Late join.** The lobby stays joinable during the run (`SetJoinable(false)`
+at run start is gone). A Hello mid-run from a new player takes a free slot
+(4 max; refused during the victory beat or after the run ended) and gets
+`JoinRun` (seed, difficulty). It loads the run scene, says Loaded, and the
+host sends it the world snapshot and its own `Go`; nobody else waits. The
+others get the roster and add its avatar (`SyncRemotes` now adds as well as
+removes, matched by slot). The newcomer catches up with the host's map or
+rest room (`StageDirector.CatchUpMap/CatchUpState`, the same replay calls a
+client uses), is placed next to the host, and is levelled to the **team's
+average level** (rounded down, from the scoreboard) with every card picked
+by the player's own auto-pick rule (`Main.CatchUpPicks`,
+`Autopilot.PickByRule`): a fresh level-1 character would be dead weight in
+a late phase, and a minute of card menus mid-fight is worse.
+
+### Public and invite-only lobbies
+
+The CO-OP page's **Lobby** row (`UI/CoopPage.Browse.cs`) picks Public or
+Invite only before HOST; the choice is kept in `settings.cfg` `[coop]
+lobby_public` (`Net/LobbyVisibility`). Invite only is the old friends-only
+lobby (friends you invite, or who see you in a game). Public is
+`k_ELobbyTypePublic` with lobby data `vis=public`, `host`, `diff` and
+`state` (`lobby`, `map:2/3` or `rest:2/3`), kept current by the host
+(`SteamLobby.PublishState`, with the roster and once a second in a run).
+**BROWSE PUBLIC GAMES** asks Steam for lobbies with game, protocol and
+`vis` matching, worldwide (`SteamLobby.RequestPublicList`, on opening the
+page, REFRESH, and every 15 s). `Net/PublicGames` filters (ours, this
+protocol, public, not full, not empty, not our own, no duplicates), orders
+(lobbies not started first, then fuller games) and formats each row: host,
+players x/4, difficulty, "In the lobby" / "Map 2/3" / "Resting after map
+1/4", JOIN. Both kinds of lobby accept players during the run.
+`--check-browse` tests the filter and the format without Steam;
+`--fake-browse` fills the list for captures. When the panel grows past the
+beach line-up's room, line-up name tags hide rather than cross the panel.
 
 ### Testing
 
@@ -600,9 +704,32 @@ everyone in it (`rest_exit=all`, `--coop-expect-restroom`); then both reach
 map 2. Both bots huddle for a screenshot, the client leaves,
 and the host checks the run survived that. Each side prints
 `COOP PASS|FAIL role=... players=... enemies_synced=... hits=... ...` with the
-reason on failure. A second scenario has the host quit at 15 s
-(`--coop-quit-at`); the client must land on the CO-OP page with the message
-(`--coop-expect-host-leave`). Screenshots go to `tests/shots/coop-*.png`.
+reason on failure. Host migration and late join (`-Only <names>` runs a
+subset):
+
+- `coop-hostleft`: two players, the host quits at 15 s (`--coop-quit-at`,
+  which disconnects its peers at once); the guest must take over as the
+  host of its own session and play on (`--coop-expect-migration`:
+  migrated=1, enemies moved after it, the clock ran 15 s more, the toast).
+- `coop-fallback`: the same with `--coop-no-migrate`; the guest's run must
+  end on the results screen with the session closed.
+- `coop-migrate`: three processes. The host quits at 20 s; GuestA (lowest
+  slot) becomes the host on port + 1 and GuestB reconnects. Both must report
+  migrated=1 with the same new_host, enemy travel after the migration
+  (real AI on A, puppets on B), more than 15 s of clock after it, and map 2
+  reached through the new host's boss, portal and rest room
+  (`--coop-expect-phase=2`); A must have the rejoin, B a resync and enemy
+  states from A. Screenshots `coop-migrate-a/b.png` and the toast
+  `coop-migrate-toast-a/b.png`.
+- `coop-latejoin`: host and GuestA start (map 1's portal opens at 12 s);
+  the host writes a mark file at 18 s of run clock (after the rest room) (`--coop-mark-file/--coop-mark-at`) and
+  the script starts a third process then, which joins about 30 s into the
+  run (`--coop-late-join`): it must apply the world snapshot, be on the
+  host's phase, be at least level 2 (caught up), and play (hits, confirmed
+  kills, enemy states); the host must count the late join
+  (`--coop-expect-late-join`). Screenshot `coop-latejoin-late.png`.
+
+Screenshots go to `tests/shots/coop-*.png`.
 `--coop-lobby-only` with `--menu-shot=x.png --menu-page=coop` photographs a
 filled lobby; `tests/coop-lobby.ps1 [-Lang ar] [-Res 1920x1080]` runs a host
 and a guest (`--coop-hat`, `--character`) to the READY state and checks both
@@ -719,7 +846,15 @@ capture.
 - The Steam path has not been played live yet (no Steam on the build
   machine). The transport passes its fake-Steam self-test, and the exported
   build loads the DLL and fails cleanly with Steam off.
-- No late joining, and no reconnecting to a run after a disconnect.
+- A player who drops (not the host) cannot reconnect into the same slot;
+  they come back as a late joiner, at the team's level but with a fresh
+  build. Only the host's departure is migrated.
+- Host migration over Steam is untested live (the ENet path is tested with
+  three processes; the Steam transport's re-host is in `--steam-selftest`).
+  The ENet fallback port (+1 per migration) must be open on LAN hosts.
+- After a migration, state that lived only on the old host's machine and
+  was not in the snapshot restarts: enemy wind-ups and statuses in
+  progress, a boss's enrage phase, the director's spawn grid. A late joiner's build is auto-picked, not chosen.
 - Enemy wind-up telegraphs, burrowing and auras are not mirrored, only their
   attacks are. Cute-enemy special hazards (bubbles, puddles, pinches) hit the
   host only. Thorns use the host's stat.

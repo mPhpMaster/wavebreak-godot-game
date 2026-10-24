@@ -376,6 +376,8 @@ public sealed partial class NetSession
     /// <summary>Either side: this player pressed E at <paramref name="c"/>.</summary>
     public void AskChest(Chest c)
     {
+        // Between hosts (NetSession.Migration.cs): nobody to ask; try again in a moment.
+        if (_migrating) { ChestSpawner.Instance?.NetDenied(c); return; }
         if (Coop.IsHost) ResolveChest(c.NetId, Coop.LocalId);
         else RpcId(1, MethodName.ChestAsk, c.NetId);
     }

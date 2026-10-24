@@ -32,7 +32,7 @@ public static class Coop
 
     /// <summary>Protocol tag; a client from another build is turned away
     /// instead of desyncing halfway into a run.</summary>
-    public const string Protocol = "wavebreak-coop-2";   // 2: hats and the host's difficulty in the lobby
+    public const string Protocol = "wavebreak-coop-3";   // 2: hats and the host's difficulty in the lobby; 3: host migration, late join
 
     /// <summary>A teammate standing within this many metres of a downed
     /// player for <see cref="ReviveSeconds"/> brings them back.</summary>
@@ -83,7 +83,15 @@ public static class Coop
 
     public static CoopPeer? LocalPeer => Peer(LocalId);
 
-    public static string NameOf(long id) => Peer(id)?.Name ?? $"#{id}";
+    public static string NameOf(long id) => Peer(id)?.Name ?? (Departed.TryGetValue(id, out string? n) ? n : $"#{id}");
+
+    /// <summary>Players who hosted and left mid-run (host migration), by the
+    /// id their scoreboard line now carries (<see cref="DepartedId"/>).</summary>
+    public static readonly Dictionary<long, string> Departed = new();
+
+    /// <summary>The scoreboard id of a host who left from <paramref name="slot"/>:
+    /// negative, so it never meets a real peer id.</summary>
+    public static long DepartedId(int slot) => -(slot + 1);
 
     // ------------------------------------------------------------ menu "pause"
 
@@ -152,6 +160,7 @@ public static class Coop
         Mode = CoopMode.None;
         InRun = false;
         Roster.Clear();
+        Departed.Clear();
         LocalId = 1;
         DifficultyId = "";
         ClearHold();

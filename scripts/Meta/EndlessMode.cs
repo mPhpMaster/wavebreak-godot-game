@@ -70,6 +70,14 @@ public static class EndlessMode
         };
     }
 
+    /// <summary>Co-op late join: the host's loop count and its tier.</summary>
+    public static void NetSetLoop(int loop)
+    {
+        if (!Active || loop < 0 || loop == Loop) return;
+        Loop = loop;
+        DifficultyTiers.SetActive(TierFor(Loop));
+    }
+
     /// <summary>A loop's last boss is down: raise the stakes and go again.</summary>
     public static DifficultyTier NextLoop()
     {
