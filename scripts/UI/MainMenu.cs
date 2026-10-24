@@ -86,6 +86,12 @@ public sealed partial class MainMenu : Node3D
             GetTree().Quit();
             return;
         }
+        // --steam-selftest: the Steam transport over a fake Steam (Net/Steam/SteamSelfTest.cs).
+        if (Net.SteamSelfTest.Requested)
+        {
+            AddChild(new Net.SteamSelfTest());
+            return;
+        }
         // --coop-host / --coop-join: the automated co-op test. No menu; the
         // session starts the run when everyone is in (Net/NetSession.Test.cs).
         // With --menu-shot the menu is built too, to photograph the lobby.
@@ -121,9 +127,18 @@ public sealed partial class MainMenu : Node3D
         BuildBackdrop();
         BuildUi();
         GraphicsSettings.ApplyAll(this);
+        // Launched from a Steam invite (+connect_lobby <id>): start Steam and
+        // go straight to the CO-OP page, which joins.
+        if (Net.SteamApp.Allowed && Net.SteamLobby.TakeCommandLineLobby() is var lobby && lobby != 0)
+        {
+            GD.Print($"[steam] launched to join lobby {lobby}");
+            Net.SteamLobby.PendingJoin = lobby;
+            CoopPage.OpenOnTitle = true;
+        }
         ShowPage(DevReturnPage ?? (Launch.MenuShot is not null ? Launch.MenuPage : CoopPage.OpenOnTitle ? "coop" : "main"));
         DevReturnPage = null;
         DevPanel.Install(this);
+        Net.SteamLobby.JoinRequested += OnSteamJoinRequested;
 
         if (coopAuto) Net.NetSession.StartAuto(GetTree());
         else if (coopArgs) Net.NetSession.TitleShown(this, _page);   // the host-leaves test lands here
@@ -644,6 +659,16 @@ public sealed partial class MainMenu : Node3D
         }
     }
 
+    /// <summary>A Steam invite was accepted (overlay or "Join Game") while the
+    /// title is up: the CO-OP page opens and joins.</summary>
+    private void OnSteamJoinRequested()
+    {
+        if (_root is null || DevPanel.IsOpen) return;
+        ShowPage("coop");
+    }
+
+    public override void _ExitTree() => Net.SteamLobby.JoinRequested -= OnSteamJoinRequested;
+
     private static int IndexOfCharacter(string id)
     {
         for (int i = 0; i < Characters.All.Count; i++) if (Characters.All[i].Id == id) return i;
@@ -663,7 +688,7 @@ public sealed partial class MainMenu : Node3D
         if (@event.IsActionPressed("ui_cancel") && _page != "main")
         {
             GetViewport().SetInputAsHandled();
-            if (_page == "coop" && !Net.Coop.InRun) Net.NetSession.Instance?.Leave();   // same as BACK
+            if (_page == "coop") CoopPage.LeaveSession();   // same as BACK
             ShowPage(_page switch { "run" => "play", "toggler" => "shop", "keys" or "graphics" => "settings", _ => "main" });
         }
     }

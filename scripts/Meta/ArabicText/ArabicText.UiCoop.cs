@@ -24,14 +24,40 @@ public static partial class ArabicText
         ("not ready", "غير جاهز"),
         ("Host a game or join one.", "استضف لعبة أو انضم إلى واحدة."),
         ("The port must be a number from 1 to 65535.", "يجب أن يكون المنفذ رقمًا من 1 إلى 65535."),
-        ("Direct connection. On the same network (LAN), join the host's local address, for example 192.168.1.20:7777. " +
-         "Over the internet the host must forward the port (UDP) on their router, or everyone joins the same free virtual LAN " +
-         "such as ZeroTier or Tailscale and uses that address. Each player keeps their own character, weapons, level-ups and items; " +
-         "experience is shared. A downed player is revived by a teammate standing next to them.",
-         "اتصال مباشر. على الشبكة نفسها (LAN) انضم إلى العنوان المحلي للمضيف، مثل 192.168.1.20:7777. " +
-         "عبر الإنترنت يجب على المضيف فتح المنفذ (UDP) في الراوتر، أو ينضم الجميع إلى شبكة افتراضية مجانية واحدة " +
-         "مثل ZeroTier أو Tailscale ويستخدمون عنوانها. لكل لاعب شخصيته وأسلحته وترقياته وأغراضه؛ " +
-         "والخبرة مشتركة. اللاعب الساقط ينهضه زميل يقف بجانبه."),
+        ("Play with your Steam friends: HOST (Steam) opens a friends-only lobby and INVITE FRIENDS opens the Steam overlay. " +
+         "Friends join from the invite, with \"Join Game\" on your name in Steam, or with JOIN in their list. No addresses or ports. " +
+         "Steam shows the game as \"Spacewar\" (Valve's test app) until Wavebreak has its own Steam page. " +
+         "Each player keeps their own character, weapons, level-ups and items; experience is shared. " +
+         "A downed player is revived by a teammate standing next to them.",
+         "العب مع أصدقائك على Steam: زر «استضافة (Steam)» يفتح ردهة للأصدقاء فقط، وزر «دعوة الأصدقاء» يفتح واجهة Steam. " +
+         "ينضم أصدقاؤك من الدعوة، أو بخيار «الانضمام إلى اللعبة» على اسمك في Steam، أو بزر «انضمام» في قائمتهم. بلا عناوين ولا منافذ. " +
+         "يعرض Steam اللعبة باسم «Spacewar» (تطبيق Valve التجريبي) إلى أن تحصل Wavebreak على صفحتها في Steam. " +
+         "لكل لاعب شخصيته وأسلحته وترقياته وأغراضه؛ والخبرة مشتركة. " +
+         "اللاعب الساقط ينهضه زميل يقف بجانبه."),
+
+        // ---- Steam (Net/Steam, UI/CoopPage)
+        ("HOST (Steam)", "استضافة (Steam)"),
+        ("INVITE FRIENDS", "دعوة الأصدقاء"),
+        ("FRIENDS IN A GAME", "أصدقاء في لعبة"),
+        ("RETRY", "إعادة المحاولة"),
+        ("No friends are hosting right now.", "لا يستضيف أي صديق لعبة الآن."),
+        ("Steam must be running to play co-op.", "يجب أن يكون Steam قيد التشغيل للعب الجماعي."),
+        ("Start Steam and sign in, then press RETRY.", "شغّل Steam وسجّل الدخول، ثم اضغط «إعادة المحاولة»."),
+        ("Host a game and invite your Steam friends, or join a friend's game.", "استضف لعبة وادعُ أصدقاءك على Steam، أو انضم إلى لعبة صديق."),
+        ("No Steam window? Invite from your Steam friends list: right-click a friend, Invite to Lobby.",
+         "لم تظهر نافذة Steam؟ ادعُ من قائمة أصدقائك في Steam: انقر بالزر الأيمن على صديق واختر الدعوة إلى الردهة (Invite to Lobby)."),
+        ("Creating a Steam lobby...", "جارٍ إنشاء ردهة على Steam..."),
+        ("Could not create a Steam lobby ({0}).", "تعذّر إنشاء ردهة على Steam ({0})."),
+        ("A Steam invite is waiting. It opens here when the run ends.", "دعوة Steam بانتظارك. ستُفتح هنا عند انتهاء الجولة."),
+        ("Joining {0}'s game...", "جارٍ الانضمام إلى لعبة {0}..."),
+        ("Joining the lobby...", "جارٍ الانضمام إلى الردهة..."),
+        ("That game no longer exists.", "تلك اللعبة لم تعد موجودة."),
+        ("Could not join that lobby ({0}).", "تعذّر الانضمام إلى تلك الردهة ({0})."),
+        ("That lobby is not a Wavebreak game.", "تلك الردهة ليست لعبة Wavebreak."),
+        ("Could not reach the host through Steam.", "تعذّر الوصول إلى المضيف عبر Steam."),
+        ("Lobby open. Invite friends with INVITE FRIENDS or from your Steam friends list.",
+         "الردهة مفتوحة. ادعُ أصدقاءك بزر «دعوة الأصدقاء» أو من قائمة أصدقائك في Steam."),
+        ("Connecting to {0} through Steam...", "جارٍ الاتصال بـ {0} عبر Steam..."),
 
         // ---- connection and lobby messages
         ("Could not host on port {0} ({1}).", "تعذّرت الاستضافة على المنفذ {0} ({1})."),

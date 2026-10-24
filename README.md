@@ -32,33 +32,46 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; merchant; microwave; pots; chests |
 | Level-up | Three cards with icons; reroll (R), banish (B) and skip (X) |
 | Music | 19 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
-| Co-op | Online, 2-4 players, direct IP (see [Co-op](#co-op-2-4-players)) |
+| Co-op | Online, 2-4 players with Steam friends: lobbies, invites, no ports (see [Co-op](#co-op-2-4-players)) |
 | Languages | English and Arabic (full right-to-left layout) |
 | Settings | Full graphics page (presets, display, scaling/FSR, AA, shadows, effects, FOV, shake, UI scale, weapon-effect opacity, FPS counter), audio, key bindings |
 
 ## Co-op (2-4 players)
 
+Co-op runs through **Steam**: you play with your Steam friends, and nobody
+types an address or forwards a port. Everyone needs the Steam client running
+and signed in. Steam is only started when you open the CO-OP page;
+single-player never touches it.
+
 Title screen → **CO-OP**.
 
-1. **Host:** pick your character and skin with the arrows, enter a port
-   (default `7777`) and press **HOST**. Tell the others your address.
-2. **Join:** enter the host's address as `IP:port` (for example
-   `192.168.1.20:7777`) and press **JOIN**, then **READY**.
-3. The lobby lists everyone with their character and skin. When all are
-   ready, the host presses **START**.
+1. **Host:** pick your character and skin with the arrows and press
+   **HOST (Steam)**. This opens a friends-only lobby for up to 4 players.
+2. **Invite:** press **INVITE FRIENDS** to open the Steam overlay's invite
+   dialog. If no Steam window appears, open your Steam friends list,
+   right-click a friend and choose **Invite to Lobby**.
+3. **Join:** a friend who already has Wavebreak open on the CO-OP page can do
+   any of these:
+   - accept the invite in Steam;
+   - right-click you in their Steam friends list and choose **Join Game**;
+   - press **JOIN** next to your name under **FRIENDS IN A GAME**.
 
-**Where to connect.** It is a direct connection, with no account and no
-server in between:
+   Then they press **READY**.
+4. The lobby lists everyone with their Steam picture, character, skin and
+   ready state. When all are ready, the host presses **START**.
 
-- **Same network (LAN):** join the host's local IP (`ipconfig` on the host
-  shows it, usually `192.168.x.x`).
-- **Over the internet:** the host forwards the port (UDP, default 7777) on
-  their router to their PC and gives out their public IP, **or** everyone
-  installs the same free virtual LAN, such as [ZeroTier](https://www.zerotier.com/)
-  or [Tailscale](https://tailscale.com/), and joins the host's address on it.
-  No port forwarding is needed then.
-- Windows may ask the host to allow Wavebreak through the firewall the first
-  time. Allow it on private networks.
+**Things to know.**
+
+- Steam shows the game as **"Spacewar"**. Until Wavebreak has its own Steam
+  App ID it uses Valve's free test app (480), which every Steam account can
+  use. Your friends see "Playing Spacewar", and invites say Spacewar.
+- Have Wavebreak open on the CO-OP page before accepting an invite. If you
+  accept while the game is closed, Steam tries to start the real Spacewar
+  instead. Once Wavebreak has its own App ID, invites will start Wavebreak.
+- If Steam is not running, the CO-OP page says **"Steam must be running to
+  play co-op"**. Start Steam, sign in, then press **RETRY**.
+- Connections go through Valve's relay network. That works behind any router,
+  and players never see each other's IP addresses.
 
 **How it plays.**
 
@@ -128,7 +141,8 @@ when its window loses focus.
 **Ctrl+Shift+Alt+F12**, on the title screen or in a run, opens a hidden
 panel. It can unlock everything, give Pearls, edit your build, spawn anything
 and jump between stages. A run that uses it does not count toward quests,
-stats or the leaderboard.
+stats or the leaderboard. Its Profile tab can also show direct-IP host and
+join rows on the CO-OP page, for testing co-op without Steam.
 
 ## Building from source
 

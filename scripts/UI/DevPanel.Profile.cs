@@ -94,6 +94,14 @@ public sealed partial class DevPanel
         money.AddChild(reset);
         page.AddChild(money);
 
+        // Co-op goes through Steam; direct IP (ENet) stays for development.
+        page.AddChild(DevUi.Row(DevUi.Heading("CO-OP"),
+            Reg("coop_direct_ip", DevUi.Toggle("Direct-IP co-op on the CO-OP page", CoopPage.ShowDirectIp, on =>
+            {
+                CoopPage.ShowDirectIp = on;
+                Say(on ? "Direct-IP host and join rows are shown on the CO-OP page." : "Direct-IP rows hidden: co-op goes through Steam.");
+            }))));
+
         page.AddChild(DevUi.Heading("UNLOCK LIST  ·  click a row to unlock or lock it"));
         var list = new DevFilterList("filter unlocks: name, reward, description...");
         foreach (var (label, mode) in new[] { ("All", 0), ("Locked", 1), ("Unlocked", 2) })
