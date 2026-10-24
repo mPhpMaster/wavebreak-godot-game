@@ -8,6 +8,9 @@
 #   client - the host's enemies, drops and chests arrived, its hits were
 #            confirmed as kills, experience was shared, it went down on
 #            purpose and the host's bot revived it
+#   both   - each received the other's team-perk levels (Crew Beacon,
+#            Lifeline); the client stood in the host's beacon and its revive
+#            was sped up by the host's Lifeline
 #   both   - after the map-1 boss portal the host took the team into the rest
 #            room; the client arrived downed on purpose and was revived there;
 #            both bots shopped/rested and walked into the CONTINUE portal, and
@@ -126,6 +129,14 @@ function Hud([string]$side) {
     "`"--coop-boss-shot=$(Join-Path $shotDir "coop-boss-$side.png")`" `"--coop-ping-shot=$(Join-Path $shotDir "coop-ping-$side.png")`""
 }
 
+# Team perks (scripts/Net/NetSession.Perks.cs): the host starts with Crew
+# Beacon and Lifeline at max, the client with Lifeline. Each side must receive
+# the other's levels, the client must stand in the host's beacon (the host,
+# with the only beacon, must never get one from the client), and the client's
+# revive must be sped up by the host's Lifeline.
+$hostPerks = "--give=perk_crew_beacon,perk_lifeline --coop-check-perks"
+$clientPerks = "--give=perk_lifeline --coop-check-perks"
+
 # 1. A minute of play: sync, hits, kills, shared xp, down + revive, client leaves.
 # The host shortens the first phase so the boss, the portal and the second
 # map (all host-driven) happen inside the minute too.
@@ -133,8 +144,8 @@ function Hud([string]$side) {
 # start on it. At 12 s the client opens a real level-up hand and walks with
 # the move key while it is open (the compact hand must not stop it), then
 # picks with the 1 key.
-Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" --coop-difficulty=hard `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host')" `
-                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest --coop-expect-difficulty=hard --coop-levelup-at=12 `"--coop-levelup-shot=$(Join-Path $shotDir 'coop-levelup-client.png')`" `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client')" ([int]($Seconds + 150)) $true $true
+Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" --coop-difficulty=hard `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host') $hostPerks" `
+                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest --coop-expect-difficulty=hard --coop-levelup-at=12 `"--coop-levelup-shot=$(Join-Path $shotDir 'coop-levelup-client.png')`" `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client') $clientPerks" ([int]($Seconds + 150)) $true $true
 
 # 2. The host quits mid-run: the lone guest takes over as the host and plays on.
 Invoke-Scenario 'coop-hostleft' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `

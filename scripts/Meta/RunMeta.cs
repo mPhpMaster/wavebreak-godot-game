@@ -88,6 +88,7 @@ public static class RunMeta
         layer.AddChild(new UI.LeaderboardBanner());   // quests/passives/leaderboard
         CharacterPassives.Attach(main, Character);
         Combat.Weapons.ItemProcs.Attach(main);   // on-hit/on-kill/movement items
+        Combat.Weapons.PerkProcs.Attach(main);   // the 15 perks (Data/Tomes.Perks.cs), --check-perks
 
         // Shrines are placed per map by Game.StageDirector, under each arena, so
         // every phase has its own to find and they leave with the map.

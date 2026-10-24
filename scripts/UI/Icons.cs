@@ -379,6 +379,8 @@ public static class Icons
 
     public static IconSpec For(TomeDef def)
     {
+        // A perk is a rule, not a book: its own glyph and trigger badge (Data/Tomes.Perks.cs).
+        if (def is PerkDef perk) return new IconSpec(perk.Glyph, Readable(perk.Tint), perk.Badge, BadgeColorFor(perk.Badge, perk.Tint));
         (string glyph, Color color) = ForStat(def.Stat);
         if (TomeOverrides.TryGetValue(def.Id, out string? o)) glyph = o;
         return new IconSpec("tome", color, Overlay: glyph, OverlayColor: BookInk);

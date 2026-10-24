@@ -20,6 +20,7 @@ public static partial class Tomes
     static Tomes()
     {
         foreach (TomeDef t in ExpansionTomes()) List.Add(t);
+        foreach (PerkDef p in Perks.All) List.Add(p);   // Data/Tomes.Perks.cs
     }
 
     /// <summary>Ids added by this file, for the expansion audit.</summary>

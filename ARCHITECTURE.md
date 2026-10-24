@@ -135,6 +135,7 @@ Useful test flags (all after `--`):
 | `--auto --invulnerable --seed=N` | autopilot run that cannot die |
 | `--phase-seconds=N` / `--start-phase=N` | shorter phases / start on a later map |
 | `--give=id,id` | start holding these weapons and tomes at max; `all_items` adds one of every item |
+| `--check-perks [--check-perks-shot=x.png]`, `--perk-levelup-shot=x.png` | perks: every perk at max, each trigger made to happen, `PERKS PASS/FAIL`; a hand of perk cards (see "Perks") |
 | `--perf` | every 5 s: FPS, CPU/GPU render ms, draw calls, nodes, live enemies, per-system ms (`Game/Prof`), and a node census every 30 s |
 | `--levelup-shot=x.png`, `--menu-shot=x.png --menu-page=<page>`, `--panel-shot=<prefix>` | capture screens |
 | `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL |
@@ -408,6 +409,86 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   (`StageDef.BalanceShrines/WishingWells`), separate from `ShrineSpawner`, so
   the autopilot never uses them. `--cute-shrine-shot=<png>` photographs them.
 - `UI/CuteStyle` is the soft pastel look used by these pages.
+## Perks
+
+Fifteen levelled perks (`Data/Tomes.Perks.cs`, rules in
+`Combat/Weapons/PerkProcs*.cs`). A perk is a level-up pick whose levels buy a
+*rule* (a proc, a conditional stat, a team effect) instead of one clean stat.
+
+- **A perk is a tome.** `PerkDef : TomeDef`, appended to `Tomes.All` by one
+  line in `Tomes.Expansion.cs`. Everything a perk must respect is already keyed
+  by `TomeDef`: the slot limit (`TomeBook.Slots`, Bookshelf included), banish,
+  reroll and skip, the Toggler (`OfferPool.DisabledTomes`), "Prefer tomes"
+  auto-pick, the HUD tome list, the build box, the codex, the dev panel,
+  mastery quests and `--give`. A separate offer type would have had to be
+  threaded through each of those. Only three places say "perk": the card text
+  (`Offer.ForTome`), the card's kind tag (`· PERK`) and the icon (own glyph and
+  trigger badge, not a book). **Perks share the four tome slots**, so a build
+  chooses between a stat and a rule; the new-perk card says "uses a tome slot".
+- **Numbers live in the table.** Each perk has 3-4 `PerkParam`s, one value per
+  level (5-8 levels), and a template sentence with a hole per param.
+  `PerkProcs` reads every number through `PerkDef.V(param, level)`, so the
+  card, the codex, the build box and the effect cannot disagree. A card shows
+  what this level adds ("hits 11 → 10 · jumps 2 → 3") and the total after it;
+  a new card shows level 1. `TomeBook.Add` writes no modifier for a perk.
+- **Runtime** (`PerkProcs`, one node per run, attached by `RunMeta`), same
+  habits as `ItemProcs`: listens on the bus, every stat change is one tagged
+  modifier per (perk, stat) replaced each frame (level 0 writes nothing, so a
+  cleared build leaves no residue), damage is tagged `perk:` with proc
+  coefficient 0 and never triggers perks or items, and it has its own `Rng`.
+  Kills are "mine" when a hit published on this machine killed (weapons,
+  statuses, items, perks): `EnemyDamaged` is only ever published for local
+  hits, the host applies forwarded hits without publishing.
+- **The fifteen**: Stormcount (every Nth hit chains lightning), Bubble Net
+  (elites drop a bubble worth temporary shield), Cold Wake (dashes leave a
+  chilling, damaging wake), Crab Stomp (landing on an enemy stomps and
+  bounces), Crimson Tide (crits heal, capped per second; megacrits heal a %),
+  Flotsam Orbit (collected XP orbits you as damaging motes), Golden Ballast
+  (gold pickups stack timed damage; full stacks burst), Last Light (refuse N
+  lethal blows per map), Keeper's Beam (a beam marks the nearest closed chest;
+  opening it pays gold and heals), Tidal Pulse (periodic knock-back pulse),
+  Barnacle Hide (armour and thorns grow while standing still, shed slowly on
+  the move), Following Sea (attack and shot speed per m/s moved), Cornered Eel
+  (damage, lifesteal and evasion as health falls below half), and the two
+  team perks below.
+- **Team perks** (`PerkProcs.Coop.cs`, `Net/NetSession.Perks.cs`). Each
+  machine owns its own player's perks, so a teammate's buff is applied on
+  *your* machine: every player sends its Crew Beacon and Lifeline levels to
+  all (`PerkLevels`, reliable, on a change and every 3 s, so late joiners and
+  migrated sessions catch up), stored in `PerkNet` by peer id. Crew Beacon:
+  each machine gives its own player the strongest beacon in range (its own or
+  a teammate's puppet's; they do not stack). Lifeline: the downed machine
+  already counts its own revive (`NetSession.StepRevive`); it reads the
+  helper's level for the speed and the reach. Alone, the beacon buffs you and
+  Lifeline's low-health surge heals you.
+- **Also from chests**: `PerkProcs.RollChestPerk`, called first by
+  `ChestSpawner.TryOpen`: 30% of gilded and 5% of standard chests pay a perk
+  level instead of an item, when a perk can be taken (held below max or a free
+  slot; banished and Toggler-off perks excluded). The merchant stays items only.
+- **Visuals** (`PerkProcs.Fx.cs`): flat ground rings, small orbs, puddles and
+  one thin beam; at most 24 transient effects plus capped motes (8), bubbles
+  (5) and wake puddles (14); rings centred on the player are capped at
+  `FxGuard.MaxCentredRadius`; everything fades through
+  `GraphicsSettings.FxFade` and the near-camera fade. **Sounds**
+  (`Audio/AudioDirector.Perks.cs`): eleven soft synthesised cues, each with its
+  own minimum gap, and all perk sounds together at most 4 per second.
+- **Checks**: the content audit (`ContentAudit.Perks.cs`, EN and AR) checks
+  levels, tables, every level an upgrade, card text per level, icons, Arabic
+  for every string, no stat written by the book, shared slots, offers, Toggler,
+  banish, "Prefer tomes", and chest perks. `--check-perks` gives every perk at
+  max (slots lifted for the check) and makes each trigger happen in the real
+  game, printing `PERK <id> ok|FAIL` lines and `PERKS PASS/FAIL`
+  (`--check-perks-shot=x.png` adds a frame). `--perk-levelup-shot=x.png`
+  (with `--lang=ar`) photographs a hand of perk cards. `tests/coop.ps1` runs
+  the main scenario with `--coop-check-perks` (host: Crew Beacon + Lifeline,
+  client: Lifeline): levels arrive both ways, the client stands in the host's
+  beacon, and the client's revive is sped up by the host's Lifeline.
+- **Known limits**: on-kill perks count only kills landed on this machine.
+  Flotsam motes come from shared XP, so teammates' orbs feed them too. Keeper's
+  Beam is local (teammates do not see your beam). Last Light runs before the
+  co-op down, so a refused blow never downs you. Perk numbers are a first
+  balance pass.
+
 ## Online co-op (2-4 players)
 
 `scripts/Net/` plus small `*.Coop.cs` partials next to the code they extend
@@ -436,7 +517,7 @@ responsive and cannot desync where it matters:
 
 | Thing | Owner | Others see |
 |---|---|---|
-| A player's body, movement, health, weapons, level-ups, inventory, tomes | that player's machine | `RemotePlayer` puppets from 20 Hz unreliable state: position, facing, velocity, pose, health, down flag, pickup range |
+| A player's body, movement, health, weapons, level-ups, inventory, tomes and perks (teammates' Crew Beacon / Lifeline levels are synced, see "Perks") | that player's machine | `RemotePlayer` puppets from 20 Hz unreliable state: position, facing, velocity, pose, health, down flag, pickup range |
 | Enemies (director, spawns, AI, health, death) | host | `Enemy` puppets: spawn and death are reliable events; position, facing and health come in 15 Hz unreliable snapshots, with smoothing and a short look-ahead |
 | Damage *to* enemies | host applies it | Clients' weapons fire locally at puppets. A hit is predicted (number, flash, health bar), batched and sent to the host, which applies it to the real enemy. Crowd control (stun, chill/freeze) is forwarded the same way. Burn and poison tick on the client's puppet and forward each tick |
 | Damage *to* players | the victim | The host's contact swings at a remote player become a `Hurt` RPC. The owner applies it through their own i-frames, dodge, armour and shield. Enemy shots, blasts, shockwaves and flashes are mirrored, and each machine tests them against its own player |

@@ -77,7 +77,8 @@ public sealed class TomeBook
         _levels[def!.Id] = level;
 
         _stats.RemoveAllFrom(def);
-        if (def.Op != ModifierOp.Multiplicative || def.PerLevel > 0f)
+        // A perk (Data/Tomes.Perks.cs) has no stat of its own; Combat/Weapons/PerkProcs reads its level.
+        if (def is not PerkDef && (def.Op != ModifierOp.Multiplicative || def.PerLevel > 0f))
             _stats.Add(def.Stat, def.Op, def.ValueAtLevel(level), def);
         TomeExtras.Apply(def, _stats, level);   // multi-stat tomes (Data/Tomes.Expansion.cs)
 

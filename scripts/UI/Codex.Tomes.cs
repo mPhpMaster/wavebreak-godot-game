@@ -9,7 +9,11 @@ namespace Wavebreak.UI;
 public sealed partial class Codex
 {
     private static Button TomeCard(TomeDef t)
-        => Card(t.DisplayName, t.Description,
+        => t is PerkDef p
+            ? Card(p.DisplayName, p.Description,
+                   Loc.F("Lv 1: {0}\nmax Lv {1}: {2}", p.Summary(1), p.MaxLevel, p.Summary(p.MaxLevel)),
+                   Loc.F("PERK  ·  {0}", Catalog.RarityName(p.Rarity)), p.Tint, true)
+            : Card(t.DisplayName, t.Description,
                 Loc.F("{0} per level  ·  max Lv {1}: {2}", t.DescribeStep(), t.MaxLevel, t.DescribeTotal(t.MaxLevel)),
                 Loc.F("TOME  ·  {0}", Catalog.RarityName(t.Rarity)), t.Tint, true);
 }

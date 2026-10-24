@@ -204,6 +204,7 @@ public static partial class ContentAudit
             AuditDirector();
             AuditOffers(system);
             AuditTomes(system);
+            AuditPerks(system);     // ContentAudit.Perks.cs
             Interactables.Audit(Check);
             AuditShrines();
             AuditUpgrades(system);

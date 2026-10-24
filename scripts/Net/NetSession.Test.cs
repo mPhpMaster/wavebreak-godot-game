@@ -119,6 +119,7 @@ public sealed partial class NetSession
             else if (arg.StartsWith("--coop-expect-difficulty=")) s._testExpectDifficulty = arg["--coop-expect-difficulty=".Length..];
             else if (arg.StartsWith("--coop-hat=")) TestHat = arg["--coop-hat=".Length..];
             else if (arg.StartsWith("--coop-levelup-at=")) s._testLevelUpAt = arg["--coop-levelup-at=".Length..].ToFloat();
+            else if (arg == "--coop-check-perks") s._testCheckPerks = true;   // NetSession.Perks.cs
         }
         if (PlayerName == DefaultName()) PlayerName = s._testRole == "host" ? "Host" : "Guest";
         GD.Print($"[coop-test] role={s._testRole} players={s._testPlayers} seconds={s._testSeconds}");
@@ -315,6 +316,7 @@ public sealed partial class NetSession
         }
 
         line += " " + AwarenessTestCheck(role, problems);   // NetSession.Awareness.cs
+        line += " " + PerkTestCheck(role, problems);        // NetSession.Perks.cs
         GD.Print(problems.Count == 0 ? $"COOP PASS {line}" : $"COOP FAIL {line} reason=\"{string.Join("; ", problems)}\"");
         if (_main is not null && IsInstanceValid(_main)) GD.Print(_main.Summary());
 
