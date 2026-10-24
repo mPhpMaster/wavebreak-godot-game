@@ -53,7 +53,10 @@ Step 'Export game' {
     }
     New-Item -ItemType Directory -Force $out | Out-Null
     $log = "$root\build\export.log"
-    $p = Start-Process -FilePath $Godot -ArgumentList @('--headless', '--path', $root, '--export-release', 'Windows Desktop', "$out\Wavebreak.exe") `
+    # One string, each value quoted: Start-Process joins an array with bare
+    # spaces, which split the preset name 'Windows Desktop' in two.
+    $argLine = "--headless --path `"$root`" --export-release `"Windows Desktop`" `"$out\Wavebreak.exe`""
+    $p = Start-Process -FilePath $Godot -ArgumentList $argLine `
         -RedirectStandardOutput $log -RedirectStandardError "$log.err" -PassThru -NoNewWindow
     # The exporter sometimes lingers after writing the pack; wait for it, then stop it.
     $deadline = (Get-Date).AddMinutes(10)
