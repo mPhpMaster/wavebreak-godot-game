@@ -49,6 +49,8 @@ public sealed partial class Autopilot
         _clock += (float)_player.GetPhysicsProcessDeltaTime();
 
         Vector3 me = _player.GlobalPosition;
+        // Between maps: shop, rest, continue (Autopilot.RestRoom.cs).
+        if (Main.Instance?.Stages is { InRestRoom: true, Rest: { } room }) return RestRoomThink(room, me);
         Vector3 away = Vector3.Zero;
         int considered = 0;
         float nearest = float.MaxValue;

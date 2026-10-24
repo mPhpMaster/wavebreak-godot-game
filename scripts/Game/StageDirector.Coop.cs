@@ -1,3 +1,4 @@
+using Godot;
 using Wavebreak.Actors;
 using Wavebreak.Core;
 using Wavebreak.Data;
@@ -30,6 +31,12 @@ public sealed partial class StageDirector
         _bossDef = def ?? boss?.Def;
         if (_bossDef is not null) _fought.Add(_bossDef.Id);
         EventBus.Publish(new PhaseBossArrived(_index + 1, _bossDef?.DisplayName ?? ""));
+    }
+
+    /// <summary>The host's portal countdown (twice a second).</summary>
+    public void NetPortalTimer(float secondsLeft)
+    {
+        if (State == PhaseState.PortalOpen) _portalLeft = Mathf.Max(0f, secondsLeft);
     }
 
     /// <summary>The host's phase boss died: open the portal (or win) here too.</summary>

@@ -8,6 +8,11 @@
 #   client - the host's enemies, drops and chests arrived, its hits were
 #            confirmed as kills, experience was shared, it went down on
 #            purpose and the host's bot revived it
+#   both   - after the map-1 boss portal the host took the team into the rest
+#            room; the client arrived downed on purpose and was revived there;
+#            both bots shopped/rested and walked into the CONTINUE portal, and
+#            the host left only when everyone stood in it (rest_exit=all).
+#            A frame inside the room: tests/shots/coop-rest-host.png / -client.png
 #
 # Both windows run on the hidden test desktop (run-offscreen.ps1). Each side
 # saves a screenshot near the end with both players in view:
@@ -99,8 +104,8 @@ function Invoke-Scenario([string]$name, [string]$hostArgs, [string]$clientArgs, 
 # 1. A minute of play: sync, hits, kills, shared xp, down + revive, client leaves.
 # The host shortens the first phase so the boss, the portal and the second
 # map (all host-driven) happen inside the minute too.
-Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`"" `
-                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`"" ([int]($Seconds + 150)) $true $true
+Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`"" `
+                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`"" ([int]($Seconds + 150)) $true $true
 
 # 2. The host quits mid-run: the client must land on the CO-OP page with a message.
 Invoke-Scenario 'coop-hostleft' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `
@@ -113,4 +118,4 @@ if ($failures.Count) {
     exit 1
 }
 Write-Host "COOP TEST PASSED" -ForegroundColor Green
-Write-Host "screenshots: $(Join-Path $shotDir 'coop-host.png') , $(Join-Path $shotDir 'coop-client.png') , $(Join-Path $shotDir 'coop-hostleft-client.png')"
+Write-Host "screenshots: $(Join-Path $shotDir 'coop-host.png') , $(Join-Path $shotDir 'coop-client.png') , $(Join-Path $shotDir 'coop-rest-host.png') , $(Join-Path $shotDir 'coop-rest-client.png') , $(Join-Path $shotDir 'coop-hostleft-client.png')"

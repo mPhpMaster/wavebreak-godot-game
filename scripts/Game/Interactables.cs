@@ -94,10 +94,12 @@ public sealed partial class Interactables : Node
     public int PotsBroken { get; private set; }
     public int PotsPlaced { get; private set; }
     public int StationsPlaced { get; private set; }
+    /// <summary>Times the player rested at a rest-room campfire.</summary>
+    public int Rests { get; private set; }
 
     public string SummaryFields =>
         $"merchantbuys={MerchantBuys} merchantspent={MerchantSpent} microwaves={MicrowaveUses} " +
-        $"microwavespent={MicrowaveSpent} pots={PotsBroken}/{PotsPlaced} stations={StationsPlaced}";
+        $"microwavespent={MicrowaveSpent} pots={PotsBroken}/{PotsPlaced} stations={StationsPlaced} rests={Rests}";
 
     public IReadOnlyList<Station> Stations => _stations;
 
@@ -158,6 +160,28 @@ public sealed partial class Interactables : Node
         _wantMicrowaves = Math.Max(0, stage.Microwaves);
         _wantPots = Math.Clamp(stage.Breakables, 0, 200);
         _placeIn = PlacementDelayFrames;
+    }
+
+    /// <summary>
+    /// The rest room's stations replace the map's: no placement search, the
+    /// room has already put them where they go. Prices follow
+    /// <paramref name="phase"/>, the map just cleared, so the merchant costs
+    /// what it would have cost on that map.
+    /// </summary>
+    public void UseRestRoom(Node3D room, int phase, IEnumerable<Station> stations)
+    {
+        Clear();
+        _map = room;
+        _radius = 16f;
+        _centre = Vector3.Zero;
+        _phase = Math.Max(1, phase);
+        foreach (Station s in stations)
+        {
+            if (s is null || !IsInstanceValid(s)) continue;
+            _stations.Add(s);
+            StationsPlaced++;
+        }
+        GD.Print($"[stations] rest room: {_stations.Count} stations, prices for phase {_phase}");
     }
 
     public void Clear()
@@ -330,7 +354,34 @@ public sealed partial class Interactables : Node
             case Microwave mw when !mw.Used:
                 _microwavePanel.Open(mw);
                 break;
+            case Campfire fire:
+                Rest(fire);
+                break;
         }
+    }
+
+    // ------------------------------------------------------------- campfire
+
+    /// <summary>Rest at a campfire: health back to full. Always works (the
+    /// rest room is safe, so there is nothing to ration); at full health it
+    /// only says so.</summary>
+    public bool Rest(Campfire fire)
+    {
+        Player? p = Player.Instance;
+        if (p is null || !IsInstanceValid(p) || !p.IsAlive) return false;
+        float missing = p.Health.Max - p.Health.Current;
+        fire.Rests++;
+        Rests++;
+        if (missing <= 0.5f)
+        {
+            EventBus.Publish(new PopupRequested(fire.Top, Meta.Loc.T("already at full health"), Campfire.FireTint.Lerp(Colors.White, 0.4f)));
+            GD.Print($"[restroom] rested at full health hp={p.Health.Current:0}/{p.Health.Max:0}");
+            return true;
+        }
+        p.Health.Heal(missing);
+        EventBus.Publish(new PopupRequested(fire.Top + Vector3.Up * 0.6f, Meta.Loc.T("Rested: health full"), new Color(0.55f, 1f, 0.6f), 1.4f));
+        GD.Print($"[restroom] rested: healed {missing:0} hp={p.Health.Current:0}/{p.Health.Max:0}");
+        return true;
     }
 
     private string PromptText(Station s) => s switch
@@ -339,6 +390,9 @@ public sealed partial class Interactables : Node
         Merchant => Meta.Loc.F("{0} — trade with merchant", _keyName),
         Microwave { Used: true } => Meta.Loc.T("microwave (used)"),
         Microwave => Meta.Loc.F("{0} — use microwave · from {1} gold", _keyName, MicrowavePrice(Rarity.Common)),
+        Campfire when Player.Instance is { } pl && pl.Health.Current >= pl.Health.Max - 0.5f
+            => Meta.Loc.F("{0} — rest by the campfire (health full)", _keyName),
+        Campfire => Meta.Loc.F("{0} — rest by the campfire · heal to full", _keyName),
         _ => $"{_keyName} — {Meta.Loc.T(s.Verb)}",
 
     };
@@ -554,6 +608,10 @@ public sealed partial class Interactables : Node
     private float _nextBotAction;
     private float _botClock;
 
+    /// <summary>True when the last <see cref="AutopilotSteer"/> found a wanted
+    /// station in reach: the bot is using it and should stay put.</summary>
+    public bool BotBusy { get; private set; }
+
     /// <summary>
     /// The autopilot's errand: walk to the merchant when it can afford something
     /// there (or has not looked yet and holds enough for the cheapest stock) and
@@ -565,6 +623,7 @@ public sealed partial class Interactables : Node
     public Vector3 AutopilotSteer(Vector3 me, float nearestEnemy, float dt)
     {
         _botClock += dt;
+        BotBusy = false;
         Inventory? inv = Inventory.Current;
         if (inv is null || _stations.Count == 0) return Vector3.Zero;
 
@@ -575,6 +634,7 @@ public sealed partial class Interactables : Node
             if (!IsInstanceValid(s) || !s.Usable || !WantsToUse(s, inv)) continue;
             if (s.InReach(me))
             {
+                BotBusy = true;
                 if (_botClock >= _nextBotAction)
                 {
                     _nextBotAction = _botClock + 0.6f;
@@ -605,6 +665,9 @@ public sealed partial class Interactables : Node
                 return false;
             case Microwave { Used: false }:
                 return BestCook(inv) is not null;
+            case Campfire fire:
+                // Once per room, and again whenever hurt.
+                return fire.Rests == 0 || Player.Instance is { } p && p.Health.Current < p.Health.Max - 0.5f;
             default:
                 return false;
         }
@@ -637,6 +700,10 @@ public sealed partial class Interactables : Node
         {
             TryCook(mw, def);
         }
+        else if (s is Campfire fire)
+        {
+            Rest(fire);
+        }
     }
 
     // ---------------------------------------------------------------- audit
@@ -648,7 +715,8 @@ public sealed partial class Interactables : Node
         foreach (StageDef s in Data.Stages.Run)
         {
             check(s.Breakables is >= 25 and <= 40, $"stage {s.Id} breakables {s.Breakables} outside 25-40");
-            check(s.Merchants == 1, $"stage {s.Id} merchants {s.Merchants} != 1");
+            // The merchant lives in the rest room between maps now (Game/RestRoom).
+            check(s.Merchants == 0, $"stage {s.Id} places {s.Merchants} merchants; the shop belongs to the rest room");
             check(s.Microwaves >= 1, $"stage {s.Id} has no microwave");
         }
         check(MerchantBase.Length == 5 && MicrowaveBase.Length == 5, "station price tables cover every rarity");

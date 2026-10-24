@@ -138,6 +138,7 @@ Useful test flags (all after `--`):
 | `--perf` | every 5 s: FPS, CPU/GPU render ms, draw calls, nodes, live enemies, per-system ms (`Game/Prof`), and a node census every 30 s |
 | `--levelup-shot=x.png`, `--menu-shot=x.png --menu-page=<page>`, `--panel-shot=<prefix>` | capture screens |
 | `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL |
+| `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
 | `--steam-selftest` | Steam transport over a fake in-memory Steam: frames, handshake, relay, ordering, refusal, timeouts. Prints `STEAM SELFTEST PASS/FAIL` |
 | `--steam-test` | let an automated launch (`--menu-shot`) start Steam, for live checks. Without it, automated runs never touch Steam |
@@ -217,7 +218,7 @@ scripts/
   Combat/      DamageInfo, WeaponSystem, WeaponRuntime, Projectile, StatusEffects,
                EnemyAttacks, Weapons/ (behaviours, item procs, effect meshes)
   Actors/      Player, PlayerHealth, PlayerCamera, Enemy, EnemyManager, Pickup,
-               Chest, Merchant, Microwave, MapShrine, CuteShrine, Station
+               Chest, Merchant, Microwave, Campfire, MapShrine, CuteShrine, Station
   Audio/       AudioDirector, SfxSynth, MusicDirector, MusicTracks, Boombox, AudioSettings
   Progression/ XpCurve, Inventory, OfferPool, TomeBook, LevelUpChoices
   UI/          Hud, LevelUpPanel, PauseMenu, StatsPanel, ResultsScreen, BossBar, MainMenu
@@ -269,6 +270,58 @@ dies; that death still publishes `RunEnded(survived: true)`. The pause menu's
 END RUN (`PauseMenu.EndRun`) finishes the run on the spot: a win after the last
 boss, a forfeit before it.
 `--no-final-swarm` restores the instant win; `--difficulty=<id>` forces a tier.
+
+## Rest room between maps, run length, portal countdown
+
+`Game/RestRoom` (+ `StageDirector.RestRoom.cs`, `Actors/Campfire`,
+`UI/RestRoomHud`, `Autopilot.RestRoom.cs`, `Net/NetSession.RestRoom.cs`).
+
+- **Flow:** boss down -> portal -> **rest room** -> CONTINUE portal -> next
+  map. The last map has no portal (its boss is the win, then the Final
+  Swarm), so there is a rest room between every pair of maps and none after
+  the last. `--no-rest-room` restores the direct portal step.
+- **The room** replaces the map node at the same origin: a sand island with a
+  beach hut, palms, a boardwalk, the merchant's stall, a campfire and a
+  microwave, built from primitives, kit props and cube pets. `Arena.UseBounds`
+  points the player's polygon clamp at `RestRoom.Bounds` while it stands.
+- **Merchant:** the maps place none any more (`StageDef.Merchants = 0`, the
+  content audit checks it). The room's stall is the same `Merchant` station
+  run by `Interactables` (`UseRestRoom`): same stock rules, `TryBuy`, panel
+  and run totals, so the merchant quests (Good Custom, Shopping Spree, ...)
+  count as before. Prices are those of the map just cleared.
+- **Campfire:** interact to rest, health back to full. Never runs out.
+- **Clock: paused.** While `StageDirector.InRestRoom`, `Main` skips
+  `RunState.Tick` and the enemy director; the field is cleared on arrival.
+  Shopping costs no difficulty-curve time; `RestClockIn/Out` record it.
+- **Leaving.** Single-player: step into the CONTINUE portal. Co-op: the host
+  moves on when every connected player stands in it ("In the portal 1/2" on
+  every HUD); once anyone is in, a 30 s countdown (`RestExitTimeout`) starts,
+  so one idle player cannot hold the team. A player who arrives downed is
+  revived at full health.
+- **Run length per tier:** `DifficultyTier.Phases` (Normal 3, Hard 3,
+  Nightmare 4, Tempest 4, Abyss 5, Leviathan 5, Endless Tide 5). `Routes`
+  builds that many maps without repeats: Classic uses `Stages.LongOrder`
+  (meadow, shallows, plateau, graveyard, Cinder Reach last); a fixed route
+  gets the unused maps slotted in before its last map; a draw draws more.
+  `Stages.ForPhase(map, i, count)` keeps stepping enemy numbers past phase 3
+  (+25% hp, +0.13 dmg, +0.03 speed per phase); only the last map's boss gets
+  the final share (0.45). Normal is exactly the classic route objects.
+- **Boss portal countdown:** `DifficultyTier.PortalSeconds` (90 / 75 / 60 /
+  50 / 40 / 35 / 30 s), shown on the HUD status line and over the portal.
+  **At zero the portal pulls everyone through** (into the rest room, or the
+  next map with the room off), wherever they stand. The map is already
+  cleared, so the countdown is a hurry-up, not a fail state: overtime
+  pressure exists to end stalled boss fights, and a portal that shut would
+  only strand the run. Co-op: the host decides; clients count down locally
+  and are corrected twice a second. `--portal-seconds=N` overrides it.
+- **Checks:** `--restroom-shot=x.png` (arrival view), `--check-restroom
+  --auto --invulnerable` (map 1 -> room -> map 2: no merchant on the maps, no
+  enemies and a held clock in the room, the bot buys, rests and walks out on
+  its own; `RESTROOM PASS`), `--check-phases [--difficulty=abyss]` (phase
+  count per tier, distinct rising maps for every tier and route; `PHASES
+  PASS`), `--check-portal-timer --portal-seconds=6 [--portal-shot=x.png]`
+  (countdown runs and pulls the player through; `PORTALTIMER PASS`).
+  `tests/coop.ps1` checks that both players pass through the room together.
 
 ## Elements, statuses, megacrits, weapon upgrade rarities
 
@@ -385,6 +438,7 @@ responsive and cannot desync where it matters:
 | Drops (XP, gold, med-packs) | host | The host rolls drops and decides who collects each orb: the first player whose magnet range it enters, or the nearest living player if that one goes down or leaves. Clients animate the magnet and wait for the host's word |
 | Chests | host places; first to ask gets it | `E` sends a request, and the host grants it to the first asker. The winner pays from their own gold and price ladder and rolls from their own pool. Everyone else sees it open with the winner's name |
 | Phase flow (waves → boss → portal → next map, win, Final Swarm) | host | Reliable `Phase`, `Boss` and `BossDown` messages replay the steps. A client's `StageDirector.Tick` only guards falls. The run clock is synced twice a second |
+| Rest room (entering, leaving, the CONTINUE count, the boss portal's countdown) | host | Reliable `RestEnter` when the host takes the boss portal; leaving is the usual `Phase` message. `RestStatus` (in the portal / total / countdown) and `PortalTimer` stream at 4 and 2 Hz, unreliable. Each machine builds its own room, revives and heals its own player, and shops with its own gold |
 | Shrines, merchant, microwave, pots, secrets | each player | Each player has their own set, built from the shared seed, and their own rewards. Pot drops are personal (`Pickup.Personal`) |
 
 Why clients fire their own weapons instead of sending input to the host:
@@ -509,7 +563,11 @@ client: -- --coop-join=127.0.0.1:7777 --auto --invulnerable --phase-seconds=22 -
 Both bots play about 60 s. The host spawns three ranged enemies at 10 s to
 test the mirrored shots. The client goes down on purpose at 20 s, and the
 host's bot walks over and revives it. The boss arrives and the portal opens,
-then both reach map 2. Both bots huddle for a screenshot, the client leaves,
+the host takes the team into the rest room (the client arrives downed on
+purpose and must be revived there, `--coop-down-before-rest`), both bots shop,
+rest and stand in the CONTINUE portal, and the host must leave with
+everyone in it (`rest_exit=all`, `--coop-expect-restroom`); then both reach
+map 2. Both bots huddle for a screenshot, the client leaves,
 and the host checks the run survived that. Each side prints
 `COOP PASS|FAIL role=... players=... enemies_synced=... hits=... ...` with the
 reason on failure. A second scenario has the host quit at 15 s

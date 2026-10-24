@@ -43,6 +43,10 @@ public sealed partial class Arena : Node3D
     /// inside the stage's clear zone, so it can never be buried in terrain.</summary>
     public static Vector3 Centre => Vector3.Zero;
 
+    /// <summary>Point the clamp at a stand-in shape while no arena is in the
+    /// tree (the rest room between maps). The next arena built resets it.</summary>
+    public static void UseBounds(StageDef bounds) => Current = bounds;
+
     /// <summary>Collision for the wall reaches far above anything drawn. The jump
     /// apex is 6 m with an air jump on top, and a wall the player can hop over
     /// leads to a floor that is not there.</summary>

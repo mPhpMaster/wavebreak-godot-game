@@ -579,7 +579,13 @@ public sealed partial class Hud : Control
                 tint = BossTint;
                 break;
             case StageDirector.PhaseState.PortalOpen:
-                status = Loc.T("PORTAL OPEN  —  GO");
+                status = stages.PortalSecondsLeft >= 0f
+                    ? Loc.F("PORTAL OPEN  —  GO  ·  CLOSES IN {0}", RunState.Format(Mathf.Ceil(stages.PortalSecondsLeft)))
+                    : Loc.T("PORTAL OPEN  —  GO");
+                tint = PortalTint;
+                break;
+            case StageDirector.PhaseState.RestRoom:
+                status = Loc.T("REST STOP  ·  CLOCK PAUSED");
                 tint = PortalTint;
                 break;
             default:
