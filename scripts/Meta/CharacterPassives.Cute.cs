@@ -130,6 +130,9 @@ public sealed partial class CharacterPassives
             case PassiveKind.NineLives:
                 if (_livesCooldown > 0f) _livesCooldown -= dt;
                 break;
+            default:
+                TickHeroes(p, dt, alive);   // Meta/CharacterPassives.Heroes.cs
+                break;
         }
     }
 

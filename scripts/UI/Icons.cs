@@ -176,6 +176,10 @@ public static class Icons
         ["undertow_chain"] = "chain",
         ["lantern_moths"] = "lantern",
         ["quarry_bell"] = "bell",
+        // signature weapons (Data/Catalog.Heroes.cs)
+        ["spyglass_glint"] = "spyglass",
+        ["mooring_anchor"] = "mooring",
+        ["skimmer_kite"] = "kite",
     };
 
     public static string ShapeGlyph(AttackShape shape) => shape switch

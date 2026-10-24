@@ -18,7 +18,8 @@ public readonly record struct CharacterInfo(string Name, string Blurb, string St
         return new CharacterInfo(
             hidden ? "???" : Loc.T(c.DisplayName),
             Loc.T(hidden ? "Someone else walks these shores. You have not met them yet." : c.Blurb),
-            hidden ? "" : Loc.F("Starts with {0}", c.StartingWeaponDef.DisplayName) + "\n" + Characters.Describe(c),
+            hidden ? "" : Loc.F(Combat.Weapons.Signatures.Is(c.StartingWeapon) ? "Signature weapon: {0}" : "Starts with {0}",
+                                c.StartingWeaponDef.DisplayName) + "\n" + Characters.Describe(c),
             hidden || c.PassiveName.Length == 0 ? "" : Loc.F("Passive — {0}: {1}", c.PassiveName, c.PassiveText));
     }
 

@@ -319,6 +319,7 @@ public sealed partial class NetSession
 
         line += " " + AwarenessTestCheck(role, problems);   // NetSession.Awareness.cs
         line += " " + PerkTestCheck(role, problems);        // NetSession.Perks.cs
+        line += HeroTestCheck(problems);                     // NetSession.Test.Heroes.cs
         GD.Print(problems.Count == 0 ? $"COOP PASS {line}" : $"COOP FAIL {line} reason=\"{string.Join("; ", problems)}\"");
         if (_main is not null && IsInstanceValid(_main)) GD.Print(_main.Summary());
 

@@ -509,6 +509,49 @@ def g_anchor():
     return im
 
 
+def g_spyglass():
+    """A telescope at an angle with a four-point glint at its lens."""
+    im = canvas(); d = ImageDraw.Draw(im)
+    # three nested tube sections, thinning toward the eyepiece
+    sections = [((96, 404), (214, 286), 58), ((214, 286), (306, 194), 46), ((306, 194), (366, 134), 34)]
+    for a, b, w in sections:
+        thick_line(d, [a, b], w * 2)
+    for (x, y), w in (((214, 286), 70), ((306, 194), 56)):
+        d.line([rot([(x - w, y)], 45, x, y)[0], rot([(x + w, y)], 45, x, y)[0]], fill=0, width=12)
+    # glint
+    gx, gy = 420, 92
+    d.polygon([(gx, gy - 78), (gx + 16, gy - 16), (gx + 78, gy), (gx + 16, gy + 16),
+               (gx, gy + 78), (gx - 16, gy + 16), (gx - 78, gy), (gx - 16, gy - 16)], fill=255)
+    return im
+
+
+def g_mooring():
+    """An anchor inside a rope ring."""
+    im = g_anchor().resize((330, 330), Image.LANCZOS)
+    out = canvas(); out.paste(im, (91, 70))
+    d = ImageDraw.Draw(out)
+    d.ellipse((30, 300, 482, 470), outline=255, width=24)
+    for a in (200, 340):
+        x = 256 + 226 * math.cos(math.radians(a)); y = 385 + 85 * math.sin(math.radians(a))
+        d.rounded_rectangle((x - 18, y - 40, x + 18, y + 10), 8, fill=255)
+    return out
+
+
+def g_kite():
+    """A diamond kite with spars and a ribbon tail on a curving string."""
+    im = canvas(); d = ImageDraw.Draw(im)
+    top, right, bottom, left = (330, 40), (452, 170), (330, 330), (208, 170)
+    d.polygon([top, right, bottom, left], fill=255)
+    d.line([top, bottom], fill=0, width=14)
+    d.line([left, right], fill=0, width=14)
+    pts = [(330, 330), (300, 380), (250, 400), (200, 430), (140, 470)]
+    thick_line(d, pts, 16)
+    for (x, y) in ((292, 386), (214, 420)):
+        d.polygon([(x - 34, y - 26), (x, y), (x - 34, y + 26)], fill=255)
+        d.polygon([(x + 34, y - 26), (x, y), (x + 34, y + 26)], fill=255)
+    return im
+
+
 def g_gem():
     im = canvas(); d = ImageDraw.Draw(im)
     d.polygon([(160, 100), (352, 100), (452, 210), (256, 450), (60, 210)], fill=255)
@@ -660,6 +703,7 @@ PROCEDURAL = {
     "fang": g_fang, "anchor": g_anchor, "gem": g_gem, "spark": g_spark, "comet": g_comet,
     "moon": g_moon, "medkit": g_medkit, "bubble": g_bubble, "buoy": g_buoy, "tome": g_tome,
     "scales": g_scales, "well": g_well, "toggle": g_toggle, "flag": g_flag, "slot": g_slot,
+    "spyglass": g_spyglass, "mooring": g_mooring, "kite": g_kite,
 }
 
 

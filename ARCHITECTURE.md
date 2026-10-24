@@ -487,6 +487,54 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   Q/E, Page Up/Down or the shoulder buttons switch tabs. `ContentAudit.Quests`
   checks ids, rewards, keys and the six-skins-per-character floor.
 
+## Heroes trio and signature weapons
+
+Three more characters (`Meta/Characters.Heroes.cs`), Kenney cube pets
+resolved and hat-fitted like the cute crew (`Visuals/PlayerLooks.Heroes.cs`
+plugs into `ResolveCute`): Sunny the Lookout (parrot), Biscuit the Sea Dog
+and Flick the Kite Fox. Each has a passive (`Meta/CharacterPassives.Heroes.cs`:
+Calm Lookout, Old Salt, Sea Breeze), a stat trade, six skins and quests
+(`Meta/Quests.Heroes.cs`: a gate plus five skin quests each).
+
+Each starts with a **signature weapon**, an ordinary `WeaponDef` in the
+catalogue (`Data/Catalog.Heroes.cs`, appended from `Catalog.Expansion`'s
+static constructor) delivered by `Combat/Weapons/Signatures.cs`:
+
+| Weapon | Plays | What it does | Lv 4 | Max level |
+|---|---|---|---|---|
+| Spyglass Glint | precise | instant thin beam at the enemy nearest the centre of the camera's view (13° sight cone, elites first); a sighted shot is a guaranteed crit, +2.5%/m past 4 m (max +60%), +15% per body pierced; nothing in sight falls back to the nearest enemy | +1 pierce, 19° cone | a bullseye kill reflects into the farthest enemy within 12 m |
+| Mooring Anchor | control | thrown at the nearest enemy; impact, then a rope ring for 3 s (x Duration): chafe ticks, chill-slow, an inward pull at and just past the edge; then hauled home through everything still inside | the haul stuns | the haul drags the ring together, then a second slam |
+| Skimmer Kite | movement | a kite on a string trails low behind you (loops round you when idle); every tick the string and the kite (x2) cut what they touch, scaled 0.7-2.2x by the kite's speed, so turning and running is the aim | +1 kite | every 2 s each kite drops lightning on an enemy near it |
+
+Exclusivity: `OfferPool.BuildCandidates` never offers a signature as a new
+weapon (live system or ledger path), so only its owner holds one; held, it
+levels through the normal rolled upgrade cards, and the card that reaches
+Lv 4 or max level names the milestone (`Signatures.MilestoneLine`). The
+Toggler never lists them. Upgrade lines that matter: damage, attack speed,
+projectiles (more beams / anchors, folded into damage past 3 / kites, max 3),
+area, range, pierce, projectile speed, crit.
+
+Effects (`Combat/Weapons/SignatureFx.cs`) are stepped from
+`Projectile.UpdateAll`, so they pause with the run and run inside the
+audit's fire test: thin bars and small meshes, FxGuard-tracked materials,
+`GraphicsSettings.FxFade`, drawn sizes capped (rope ring at
+`FxGuard.MaxCentredRadius`, flashes at 0.9 m, lines 0.03-0.12 m), the ring
+fading further over a player (`FxGuard.OverPlayer`). Sounds are their own
+(`Audio/AudioDirector.Heroes.cs`, from `SignatureCue` on the bus): glass ting
+and bullseye fifth, rope whoosh / clonk / chain rattle, kite flutter and
+crackle, each rate-limited; a signature's shot swallows the generic shape
+sound (`Signatures.ConsumeFired`). In co-op every hit goes through
+`TakeDamage`/`ReportHit` and `Enemy.ApplyChill/ApplyStun`, so a client's
+signature hits on puppets are forwarded like any other weapon's.
+
+Checks: `ContentAudit.Heroes` (owners, exclusivity over 3000 rolls, held
+upgrades when run with `--character=<hero>`, milestones, icons, skins as real
+repaints, gate quests); `tests/coop.ps1 -Only coop-heroes` (host Flick, guest
+Sunny, `--coop-expect-signature`); `--art-showcase=skins:<id>` lines up a
+character's skins; `--art-showcase=hats:<hat>:3` shows the fourth row.
+Testing a locked hero needs a profile that has it: `--profile=<cfg>` with
+`[unlocks] qh_sunny=true` etc.
+
 ## Map challenges, Toggler, slots, cute shrines
 
 - `Meta/MapChallenges` holds 55 per-map challenges (11 per map): a goal

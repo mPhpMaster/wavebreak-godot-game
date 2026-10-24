@@ -108,7 +108,9 @@ public static partial class ContentAudit
         Check(oneOff.Count == weapons.Count - 1 && !oneOff.Contains(weapons[0]), "toggler: switching one weapon off");
         Check(Toggler.Filter(weapons, w => w.Id, ToggleKind.Weapon).Count == weapons.Count || Toggler.Owned,
               "toggler: an unowned Toggler filtered the pool");
-        Check(Toggler.Entries().Count == weapons.Count + items.Count + Tomes.All.Count, "toggler: page entries");
+        // Signature weapons belong to a character and are never listed (Combat/Weapons/Signatures.cs).
+        int listedWeapons = weapons.Count(w => !Combat.Weapons.Signatures.Is(w.Id));
+        Check(Toggler.Entries().Count == listedWeapons + items.Count + Tomes.All.Count, "toggler: page entries");
 
         // Disabled tomes never come up, in level-ups.
         OfferPool? runPool = OfferPool.Current;

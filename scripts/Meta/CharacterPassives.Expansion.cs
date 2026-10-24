@@ -43,6 +43,7 @@ public sealed partial class CharacterPassives
         if (_kind == PassiveKind.Beacon) EventBus.Subscribe<LevelGained>(OnBeaconLevel);
         if (_kind == PassiveKind.Salvage) EventBus.Subscribe<ChestOpened>(OnSalvageChest);
         ReadyCute();   // Meta/CharacterPassives.Cute.cs
+        ReadyHeroes();   // Meta/CharacterPassives.Heroes.cs
     }
 
     private void ExitExpansion()
@@ -50,6 +51,7 @@ public sealed partial class CharacterPassives
         EventBus.Unsubscribe<LevelGained>(OnBeaconLevel);
         EventBus.Unsubscribe<ChestOpened>(OnSalvageChest);
         ExitCute();
+        ExitHeroes();
     }
 
     private void TickExpansion(Player p, float dt, bool alive)

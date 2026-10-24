@@ -161,6 +161,7 @@ public sealed partial class Projectile : Node3D, IPooled
         Shutdown();
         _pool = new Pool<Projectile>(parent, static () => new Projectile(), capacity, prewarm: 64);
         ExplosionFx.Initialize(parent);
+        Weapons.SignatureFx.Initialize(parent);
     }
 
     /// <summary>Drop every pooled instance. Call when a run ends.</summary>
@@ -175,6 +176,7 @@ public sealed partial class Projectile : Node3D, IPooled
         _pool?.Clear();
         _pool = null;
         ExplosionFx.Shutdown();
+        Weapons.SignatureFx.Shutdown();
     }
 
     /// <summary>
@@ -265,6 +267,7 @@ public sealed partial class Projectile : Node3D, IPooled
         }
 
         ExplosionFx.UpdateAll(dt);
+        Weapons.SignatureFx.UpdateAll(dt);   // signature anchors, kites, glints
     }
 
     // Order in the live list is meaningless, so the tail fills the hole. The

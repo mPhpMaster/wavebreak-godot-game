@@ -135,6 +135,7 @@ public sealed class Offer
               + Plural(def.ProjectilesAtLevel(1))
               + (def.Element != Element.Physical ? "\n" + Loc.F("{0}: {1}", def.Element.ToString(), StatusName(def.Element)) : "")
             : upgrade is not null ? upgrade.Describe() : WeaponDelta(def, currentLevel, next);
+        if (!isNew) effect += Combat.Weapons.Signatures.MilestoneLine(def, next);   // signature milestones
 
         string description = string.IsNullOrWhiteSpace(def.Description)
             ? $"{def.Shape} · {def.Element}"
@@ -428,6 +429,9 @@ public sealed class OfferPool
             WeaponDef def = _weapons[i];
             if (Banished.Count > 0 && Banished.Contains(def)) continue;
             int level;
+            // A signature weapon belongs to one character: it is never offered
+            // new, only levelled once held (Combat/Weapons/Signatures.cs).
+            bool signature = Combat.Weapons.Signatures.Is(def.Id);
 
             if (weapons is not null)
             {
@@ -436,12 +440,14 @@ public sealed class OfferPool
                 // call — which is exactly what "worth offering" means.
                 if (!weapons.CanAdd(def)) continue;
                 level = weapons.LevelOf(def.Id);
+                if (signature && level <= 0) continue;
             }
             else
             {
                 level = inventory?.WeaponLevel(def) ?? 0;
                 if (level > 0 && level >= def.MaxLevel) continue;           // maxed
                 if (level <= 0 && owned >= WeaponSystem.MaxWeapons) continue; // no slot
+                if (signature && level <= 0) continue;
             }
 
             float weight = (level <= 0 ? NewWeaponWeight : WeaponUpgradeWeight)

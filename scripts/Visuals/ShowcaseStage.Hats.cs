@@ -26,7 +26,9 @@ public sealed partial class ShowcaseStage
         {
             CharacterDef c = Characters.All[i];
             if (onlyRow >= 0 && i / perRow != onlyRow) continue;
-            float x = (i % perRow - (perRow - 1) * 0.5f) * dx;
+            // A short last row (the heroes trio's) is centred, not left-aligned.
+            int inRow = Mathf.Min(perRow, n - i / perRow * perRow);
+            float x = (i % perRow - (inRow - 1) * 0.5f) * dx;
             float z = onlyRow >= 0 ? 0f : (i / perRow) * -dz;
             // Models face -Z; turn them to the camera.
             var holder = new Node3D { Position = new Vector3(x, 0f, z), Rotation = new Vector3(0f, Mathf.Pi, 0f) };
@@ -39,7 +41,9 @@ public sealed partial class ShowcaseStage
         if (onlyRow >= 0) rows = 1;
         Label($"hat: {hatId}", new Vector3(0f, 2.8f, -(rows - 1) * dz * 0.5f), 0.8f);
         if (onlyRow >= 0) Camera(new Vector3(0f, 2.3f, 7.5f), new Vector3(0f, 1.2f, 0f), 50f);
-        else Camera(new Vector3(0f, 4.2f, 9.5f), new Vector3(0f, 0.9f, -(rows - 1) * dz * 0.5f), 50f);
+        // Four rows (since the heroes trio) need the camera further back to fit.
+        else Camera(new Vector3(0f, 4.2f + Mathf.Max(0, rows - 3) * 1.6f, 9.5f + Mathf.Max(0, rows - 3) * 2.4f),
+                    new Vector3(0f, 0.9f, -(rows - 1) * dz * 0.5f), 50f);
     }
 
     private static void Wear(Node n, string hatId)

@@ -11,7 +11,9 @@ public enum PassiveKind { None, Momentum, Kindling, Tailwind, GildedFortune, Bul
     // expansion (Meta/CharacterPassives.Expansion.cs)
     Harpoon, Beacon, Surge, BarnacleSkin, Salvage, GullsEye, LowTide, SquallStep,
     // cute crew (Meta/CharacterPassives.Cute.cs)
-    PocketTurret, NightLight, BubbleCharm, BellySlide, CoralBloom, NineLives }
+    PocketTurret, NightLight, BubbleCharm, BellySlide, CoralBloom, NineLives,
+    // heroes trio (Meta/CharacterPassives.Heroes.cs)
+    CalmLookout, OldSalt, SeaBreeze }
 
 /// <summary>One stat tweak a character starts with. Same shape as an item
 /// effect, applied once at run start rather than per stack.</summary>
