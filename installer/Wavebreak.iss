@@ -3,7 +3,10 @@
 ; Output: build\installer\Wavebreak-Setup-<version>.exe
 
 #define AppName "Wavebreak"
-#define AppVersion "1.1.0"
+; build.ps1 passes the version from project.godot (/DAppVersion=...).
+#ifndef AppVersion
+  #define AppVersion "1.1.0"
+#endif
 #define AppPublisher "mPhpMaster"
 #define AppExe "Wavebreak.exe"
 #define Source "..\build\windows"

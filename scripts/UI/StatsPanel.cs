@@ -61,8 +61,6 @@ public sealed partial class StatsPanel : Control
     private HBoxContainer _columns = null!;
     private VBoxContainer _character = null!;
     private VBoxContainer _stats = null!;
-    private VBoxContainer _loadout = null!;
-    private VBoxContainer _settings = null!;
     private float _refresh;
     private bool _available;
     private Label _title = null!;
@@ -159,12 +157,15 @@ public sealed partial class StatsPanel : Control
         };
         _scroll.AddChild(columns);
         _columns = columns;
-        outer.AddChild(_scroll);
+        // Stats on the left, the build (icons, details on hover) in its own box.
+        var body = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass };
+        body.AddThemeConstantOverride("separation", 20);
+        body.AddChild(_scroll);
+        body.AddChild(BuildBox());
+        outer.AddChild(body);
 
-        _character = Column(columns, 210f);
+        _character = Column(columns, 230f);
         _stats = Column(columns, 300f);
-        _loadout = Column(columns, 280f);
-        _settings = Column(columns, 210f);
 
         ActionRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, Visible = false };
         ActionRow.AddThemeConstantOverride("separation", 14);
@@ -204,6 +205,7 @@ public sealed partial class StatsPanel : Control
         Row(_character, "XP", $"{_inventory.XpIntoLevel} / {_inventory.XpForNextLevel}");
         Row(_character, "Kills", _run.Kills.ToString());
         Row(_character, "Gold", _inventory.Gold.ToString());
+        Row(_character, "Seed", _run.Seed.ToString(), Dim);
 
         Section(_character, "HEALTH");
         PlayerHealth health = _player.Health;
@@ -229,71 +231,11 @@ public sealed partial class StatsPanel : Control
             foreach (Stat stat in group) StatRow(stats, stat, into);
         }
 
-        Clear(_loadout);
-        Section(_loadout, Loc.F("WEAPONS  {0}/{1}", _weapons.Weapons.Count, _weapons.Slots));
-        foreach (WeaponRuntime w in _weapons.Weapons)
-        {
-            Color c = Catalog.RarityColor(w.Def.Rarity);
-            float dps = w.Interval > 0f ? w.VolleyDamage(stats) / w.Interval : 0f;
-            Row(_loadout, w.Def.DisplayName, Loc.F("Lv {0}/{1}  ~{2:0} dps", w.Level, w.Def.MaxLevel, dps), c, Icons.For(w.Def));
-        }
-
-        TomeSection();
-
-        Section(_loadout, Loc.F("ITEMS  {0}", _inventory.TotalStacks));
-        if (_inventory.Items.Count == 0) _loadout.AddChild(Text(Loc.T("none yet"), 14, Dim));
-        // Two per row: a late build carries thirty-odd distinct items, which in a
-        // single column would run off the bottom of a 720p screen.
-        var grid = new GridContainer { Columns = 2, MouseFilter = MouseFilterEnum.Ignore };
-        grid.AddThemeConstantOverride("h_separation", 12);
-        grid.AddThemeConstantOverride("v_separation", 0);
-        _loadout.AddChild(grid);
-        foreach (ItemStack item in _inventory.Items)
-        {
-            string label = item.Count > 1 ? $"{Loc.T(item.DisplayName)} x{item.Count}" : Loc.T(item.DisplayName);
-            Label l = Text(label, 13, Catalog.RarityColor(item.Rarity));
-            l.CustomMinimumSize = new Vector2(112f, 0f);
-            l.ClipText = true;
-            grid.AddChild(IconView.Row(Icons.For(item.Def), l, 18f));
-        }
+        RebuildBuild(stats);
 
         CallDeferred(MethodName.FitScroll);
-        Clear(_settings);
-        Section(_settings, "SOUND");
-        _settings.AddChild(Text(Loc.T(AudioSettings.Describe(VolumeChannel.Master)), 13, AudioSettings.Muted ? Worse : Ink));
-        _settings.AddChild(Text(Loc.T(AudioSettings.Describe(VolumeChannel.Sfx)), 13, Ink));
-        _settings.AddChild(Text(Loc.T(AudioSettings.Describe(VolumeChannel.Music)), 13, Ink));
-
-        Section(_settings, "CONTROLS");
-        // Read from the live bindings, so a rebound key shows its new name here.
-        Row(_settings, "Mouse", Loc.T("look"), Dim);
-        foreach ((string action, string label) in ControlRows)
-        {
-            if (!InputMap.HasAction(action)) continue;
-            string a = Loc.T(Keybinds.Describe(Keybinds.Get(action, 0)));
-            InputEvent? second = Keybinds.Get(action, 1);
-            Row(_settings, second is null ? a : $"{a}{(Loc.IsArabic ? "، " : ", ")}{Loc.T(Keybinds.Describe(second))}", Loc.T(label), Dim);
-        }
-        Row(_settings, "Esc", Loc.T("pause menu"), Dim);
-
-        Section(_settings, "RUN");
-        Row(_settings, "Seed", _run.Seed.ToString(), Dim);
     }
 
-    private static readonly (string Action, string Label)[] ControlRows =
-    {
-        ("move_forward", "forward"),
-        ("move_back", "back"),
-        ("move_left", "left"),
-        ("move_right", "right"),
-        ("jump", "jump / double"),
-        ("dash", "dash"),
-        ("slide", "slide / slam"),
-        ("interact", "interact"),
-        ("stats", "this sheet"),
-        ("pause", "pause"),
-        ("mute", "mute"),
-    };
 
     /// <summary>One stat: name, value in its natural unit, and the change from
     /// base coloured by whether it helps. Dash cooldown and enemy strength are

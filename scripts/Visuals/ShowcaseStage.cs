@@ -44,6 +44,7 @@ public sealed partial class ShowcaseStage : Node3D
             case "enemies": Enemies(t); break;
             case "closeup": Closeup(t); break;
             case string w when w.StartsWith("cute"): Cute(t, w); break;   // ShowcaseStage.Cute.cs
+            case string w when w.StartsWith("hats"): Hats(t, w); break;   // ShowcaseStage.Hats.cs
             default: Props(t); break;
         }
 

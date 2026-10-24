@@ -72,6 +72,7 @@ public sealed partial class Enemy
 
         _xTraits = def.Hover > 0f || def.Aura != EnemyAura.None || def.Behavior == EnemyBehavior.Burrower;
         _hoverPhase = (GetInstanceId() % 628) * 0.01f;
+        _hoverFloor = float.NaN;   // pooled: re-probe the ground at the new spot
 
         if (def.Hover > 0f)
         {
@@ -119,6 +120,27 @@ public sealed partial class Enemy
 
     // ----------------------------------------------------------- per frame
 
+    private float _hoverFloor = float.NaN;
+    private float _hoverProbe;
+
+    /// <summary>Height of the ground under a flyer, re-probed with one ray
+    /// every 0.3 s (staggered by instance). Falls back to the player's height
+    /// until the first probe lands or when nothing is below.</summary>
+    private float HoverFloor(float dt, float fallback)
+    {
+        _hoverProbe -= dt;
+        if (_hoverProbe <= 0f || float.IsNaN(_hoverFloor))
+        {
+            _hoverProbe = 0.3f + _hoverPhase * 0.05f;
+            Vector3 at = GlobalPosition;
+            var query = PhysicsRayQueryParameters3D.Create(at + Vector3.Up * 2f, at + Vector3.Down * 80f, WorldLayer);
+            var hit = GetWorld3D().DirectSpaceState.IntersectRay(query);
+            if (hit.Count > 0) _hoverFloor = ((Vector3)hit["position"]).Y;
+            else if (float.IsNaN(_hoverFloor)) return fallback;
+        }
+        return _hoverFloor;
+    }
+
     /// <summary>After the body has moved: hover height, burrow upkeep, auras
     /// given and buffs received.</summary>
     private void StepExpansion(float dt, Vector3 playerPosition, float distance)
@@ -129,9 +151,12 @@ public sealed partial class Enemy
 
         if (def.Hover > 0f)
         {
-            // Hold altitude over the player, dipping to head height to strike.
+            // Hold altitude over the ground below, dipping to head height to
+            // strike. Measured from the floor, not the player: tracking the
+            // player's feet made every flyer leap whenever the player jumped.
             float dip = Mathf.Clamp((distance - 1f) / 4f, 0.35f, 1f);
-            float target = playerPosition.Y + def.Hover * dip + MathF.Sin(_aliveSeconds * 2.1f + _hoverPhase) * 0.18f;
+            float floor = HoverFloor(dt, playerPosition.Y);
+            float target = floor + def.Hover * dip + MathF.Sin(_aliveSeconds * 2.1f + _hoverPhase) * 0.18f;
             Vector3 p = GlobalPosition;
             p.Y = Mathf.Lerp(p.Y, target, MathF.Min(1f, 4f * dt));
             GlobalPosition = p;

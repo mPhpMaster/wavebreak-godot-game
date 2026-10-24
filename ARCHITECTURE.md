@@ -574,7 +574,7 @@ the page with Steam really started, for a one-machine sanity check.
 
 ## Developer panel
 
-`UI/DevPanel*.cs` (widgets in `UI/DevUi.cs`). Ctrl+Shift+Alt+F12 toggles it
+`UI/DevPanel*.cs` (widgets in `UI/DevUi.cs`). Ctrl+Shift+D toggles it
 on the title and in a run; nothing else opens it and no normal UI mentions
 it. It is a CanvasLayer under the tree root, installed by `MainMenu._Ready`
 and `Main._Ready`, so it survives scene changes; it keeps itself the root's

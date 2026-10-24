@@ -14,7 +14,7 @@ namespace Wavebreak.UI;
 /// <summary>
 /// Self-checks and captures for the developer panel.
 ///
-///     -- --check-devpanel            open it with a real Ctrl+Shift+Alt+F12 key event,
+///     -- --check-devpanel            open it with a real Ctrl+Shift+D key event,
 ///                                    press every kind of button, print DEVPANEL lines,
 ///                                    end with DEVPANEL PASS/FAIL and quit
 ///     -- --devpanel-shot=&lt;prefix&gt;    open it in a run and save &lt;prefix&gt;-&lt;tab&gt;.png per tab
@@ -59,8 +59,8 @@ public sealed partial class DevPanel
         foreach (bool down in new[] { true, false })
             Input.ParseInputEvent(new InputEventKey
             {
-                Keycode = Key.F12, PhysicalKeycode = Key.F12, Pressed = down,
-                CtrlPressed = true, ShiftPressed = true, AltPressed = true,
+                Keycode = Key.D, PhysicalKeycode = Key.D, Pressed = down,
+                CtrlPressed = true, ShiftPressed = true,
             });
     }
 
@@ -138,12 +138,12 @@ public sealed partial class DevPanel
         // ---- open with the real chord
         PressChord();
         await Wait(0.3);
-        Expect("Ctrl+Shift+Alt+F12 opens the panel", IsOpen);
+        Expect("Ctrl+Shift+D opens the panel", IsOpen);
         Expect("mouse is free while open", Input.MouseMode == Input.MouseModeEnum.Visible);
         Expect("run pauses while open (default)", tree.Paused);
-        PressKey(Key.F12);
+        PressKey(Key.D);
         await Wait(0.1);
-        Expect("F12 alone does nothing", IsOpen);
+        Expect("D alone does nothing", IsOpen);
 
         // ---- profile
         long pearls = Pearls.Balance;

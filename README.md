@@ -138,7 +138,7 @@ when its window loses focus.
 
 ## Developer panel
 
-**Ctrl+Shift+Alt+F12**, on the title screen or in a run, opens a hidden
+**Ctrl+Shift+D**, on the title screen or in a run, opens a hidden
 panel. It can unlock everything, give Pearls, edit your build, spawn anything
 and jump between stages. A run that uses it does not count toward quests,
 stats or the leaderboard. Its Profile tab can also show direct-IP host and

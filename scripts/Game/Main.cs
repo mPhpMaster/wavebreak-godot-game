@@ -69,7 +69,7 @@ public sealed partial class Main : Node3D
 
         EventBus.Subscribe<LevelGained>(OnLevelGained);
         EventBus.Subscribe<RunEnded>(OnRunEnded);
-        // Ctrl+Shift+Alt+F12 (UI/DevPanel); also runs --check-devpanel.
+        // Ctrl+Shift+D (UI/DevPanel); also runs --check-devpanel.
         UI.DevPanel.Install(this);
 
         // Co-op: remote players, the team panel, and a held start until every

@@ -8,7 +8,7 @@ using Wavebreak.Meta;
 namespace Wavebreak.UI;
 
 /// <summary>
-/// The developer panel: Ctrl+Shift+Alt+F12, anywhere (title or run), and no
+/// The developer panel: Ctrl+Shift+D, anywhere (title or run), and no
 /// other way in. Six tabs: Profile (unlocks, Pearls, shop, tiers), Player,
 /// Build, Spawn, Stage and Info.
 ///
@@ -129,8 +129,8 @@ public sealed partial class DevPanel : CanvasLayer
 
     private static bool IsChord(InputEvent e)
         => e is InputEventKey { Pressed: true, Echo: false } k
-           && (k.Keycode == Key.F12 || k.PhysicalKeycode == Key.F12)
-           && k.CtrlPressed && k.ShiftPressed && k.AltPressed;
+           && (k.Keycode == Key.D || k.PhysicalKeycode == Key.D)
+           && k.CtrlPressed && k.ShiftPressed && !k.AltPressed;
 
     public override void _Input(InputEvent @event)
     {

@@ -22,7 +22,13 @@ public sealed partial class CharacterRig
     public void SetHat(string? hatId)
     {
         if (hatId == _hatId && (_hat is null || IsInstanceValid(_hat))) return;
-        if (_hat is not null && IsInstanceValid(_hat)) _hat.QueueFree();
+        if (_hat is not null && IsInstanceValid(_hat))
+        {
+            // Out of the tree now, not at frame end: the new hat measures the head
+            // and must not count the old one as part of it.
+            _hat.GetParent()?.RemoveChild(_hat);
+            _hat.QueueFree();
+        }
         _hat = null;
         _hatId = hatId;
         if (string.IsNullOrEmpty(hatId) || hatId == Meta.Hats.NoneId) return;
@@ -46,6 +52,27 @@ public sealed partial class CharacterRig
             return;
         }
 
+        // Rigid imported models (the blocky set) have no skeleton but a part
+        // named "head": sit on that part, sized to it, so it nods along.
+        if (Spec.IsImported && FindHeadNode(out MeshInstance3D? headNode))
+        {
+            Aabb hb = headNode!.Mesh.GetAabb();
+            // Hats are authored for round heads (half-width 1); a cube head's
+            // corners stick out past that, so size to the corner, not the face.
+            float half = MathF.Max(hb.Size.X, hb.Size.Z) * 0.5f * 1.35f;
+            var onHead = new Node3D
+            {
+                Name = "Hat",
+                Position = new Vector3(hb.Position.X + hb.Size.X * 0.5f, hb.Position.Y + hb.Size.Y, hb.Position.Z + hb.Size.Z * 0.5f),
+                Rotation = new Vector3(0f, -Spec.SceneYaw, 0f),
+            };
+            mi.Scale = Vector3.One * half;
+            onHead.AddChild(mi);
+            headNode.AddChild(onHead);
+            _hat = onHead;
+            return;
+        }
+
         // Procedural (or an imported model without a head bone): sit on the
         // computed crown under the hips, so lean and bob carry it.
         float h = Spec.Height;
@@ -63,6 +90,10 @@ public sealed partial class CharacterRig
             hr = h * 0.14f * Spec.HeadScale;
             top = h * Spec.HatTop - (_model?.HipsOffset.Y ?? 0f);
         }
+        // Never below the model's real top: the formulas above sank hats into
+        // the cube pets, whose whole body is the head.
+        Aabb body = MeasureScene(_hips);
+        if (body.Size.Y > 0.01f) top = MathF.Max(top, body.Position.Y + body.Size.Y - hr * 0.08f);
         var anchor = new Node3D { Name = "Hat", Position = new Vector3(0f, top, 0f) };
         mi.Scale = Vector3.One * hr;
         anchor.AddChild(mi);
@@ -97,13 +128,34 @@ public sealed partial class CharacterRig
         Transform3D rest = skel.GetBoneGlobalRest(bone);
         Vector3 headInst = skelToInst * rest.Origin;
         float topInst = box.Position.Y + box.Size.Y;
-        float headHeight = MathF.Max(0.01f, topInst - headInst.Y);
+        // Some rigs (the blocky set) put the head bone near the crown, which
+        // made the head look a few centimetres tall and shrank the hat to a
+        // sliver; a head is never less than about a fifth of the body.
+        float headHeight = MathF.Max(topInst - headInst.Y, 0.22f * box.Size.Y);
         Vector3 crownSkel = skelToInst.AffineInverse() * new Vector3(headInst.X, topInst, headInst.Z);
         offset = crownSkel - rest.Origin;
 
         float scale = Spec.SceneScale > 0f ? Spec.SceneScale : 1f;
         halfWidth = headHeight * 0.68f * scale;
         return true;
+    }
+
+    /// <summary>A mesh part named "head" in the imported model, if any.</summary>
+    private bool FindHeadNode(out MeshInstance3D? head)
+    {
+        head = null;
+        Node? inst = _hips.GetChildCount() > 0 ? _hips.GetChild(0) : null;
+        if (inst is null) return false;
+        head = Find(inst);
+        return head is not null;
+
+        static MeshInstance3D? Find(Node n)
+        {
+            if (n is MeshInstance3D m && m.Mesh is not null && n.Name.ToString().ToLowerInvariant() == "head") return m;
+            foreach (Node c in n.GetChildren())
+                if (Find(c) is { } f) return f;
+            return null;
+        }
     }
 
     private static Skeleton3D? FindSkeleton(Node n)
