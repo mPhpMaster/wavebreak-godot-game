@@ -44,6 +44,16 @@ public static class GameplaySettings
     public static bool AutoPick { get; private set; }
     public static AutoPickRule Rule { get; private set; } = AutoPickRule.BestRarity;
 
+    /// <summary>Auto-pick only once the player has reached this level (1 = from
+    /// the first level-up); the early cards stay a choice.</summary>
+    public static int AutoPickFromLevel { get; private set; } = 1;
+
+    /// <summary>The choices offered for <see cref="AutoPickFromLevel"/>.</summary>
+    public static readonly int[] FromLevels = { 1, 5, 10, 15, 20, 30, 40, 50 };
+
+    /// <summary>True when the hand at <paramref name="level"/> resolves itself.</summary>
+    public static bool AutoPickAt(int level) => AutoPick && level >= AutoPickFromLevel;
+
     /// <summary>Raised after any change, so an open panel can follow it.</summary>
     public static event Action? Changed;
 
@@ -72,6 +82,7 @@ public static class GameplaySettings
         CompactLevelUp = cfg.GetValue(Section, "compact_levelup", false).AsBool();
         AutoPick = cfg.GetValue(Section, "auto_pick", false).AsBool();
         Rule = ParseRule(cfg.GetValue(Section, "auto_pick_rule", RuleIds[0]).AsString());
+        AutoPickFromLevel = Math.Clamp(cfg.GetValue(Section, "auto_pick_from_level", 1).AsInt32(), 1, 999);
     }
 
     public static AutoPickRule ParseRule(string id)
@@ -88,6 +99,7 @@ public static class GameplaySettings
     internal static void ForceCompactForTest(bool on) { Load(); CompactLevelUp = on; }
     public static void SetAutoPick(bool on) { Load(); AutoPick = on; Save(); }
     public static void SetRule(AutoPickRule rule) { Load(); Rule = rule; Save(); }
+    public static void SetAutoPickFromLevel(int level) { Load(); AutoPickFromLevel = Math.Max(1, level); Save(); }
 
     private static void Save()
     {
@@ -98,6 +110,7 @@ public static class GameplaySettings
         cfg.SetValue(Section, "compact_levelup", CompactLevelUp);
         cfg.SetValue(Section, "auto_pick", AutoPick);
         cfg.SetValue(Section, "auto_pick_rule", IdOf(Rule));
+        cfg.SetValue(Section, "auto_pick_from_level", AutoPickFromLevel);
         Error err = cfg.Save(Path);
         if (err != Error.Ok) GD.PushWarning($"[settings] could not save {Path}: {err}");
     }

@@ -23,6 +23,7 @@ public sealed partial class GameplayPanel : VBoxContainer
     private CheckButton _compact = null!;
     private OptionButton _auto = null!;
     private OptionButton _rule = null!;
+    private OptionButton _from = null!;
 
     public GameplayPanel(Action? back, float labelWidth = 220f, bool withTitle = true)
     {
@@ -44,13 +45,19 @@ public sealed partial class GameplayPanel : VBoxContainer
         AddChild(Row("Compact level-up", _compact));
 
         _auto = Options(new[] { "Off", "On" }, GameplaySettings.AutoPick ? 1 : 0);
-        _auto.ItemSelected += i => { GameplaySettings.SetAutoPick(i == 1); _rule.Disabled = i != 1; };
+        _auto.ItemSelected += i => { GameplaySettings.SetAutoPick(i == 1); _rule.Disabled = i != 1; _from.Disabled = i != 1; };
         AddChild(Row("Auto-pick on level up", _auto));
 
         _rule = Options(GameplaySettings.RuleNames, (int)GameplaySettings.Rule);
         _rule.Disabled = !GameplaySettings.AutoPick;
         _rule.ItemSelected += i => GameplaySettings.SetRule((AutoPickRule)(int)i);
         AddChild(Row("Auto-pick rule", _rule));
+
+        string[] froms = System.Array.ConvertAll(GameplaySettings.FromLevels, l => l <= 1 ? Loc.T("First level-up") : Loc.F("Level {0}", l));
+        _from = Options(froms, System.Math.Max(0, System.Array.IndexOf(GameplaySettings.FromLevels, GameplaySettings.AutoPickFromLevel)));
+        _from.Disabled = !GameplaySettings.AutoPick;
+        _from.ItemSelected += i => GameplaySettings.SetAutoPickFromLevel(GameplaySettings.FromLevels[i]);
+        AddChild(Row("Auto-pick starts at", _from));
 
         if (_withTitle)
         {
@@ -80,6 +87,8 @@ public sealed partial class GameplayPanel : VBoxContainer
         _auto.Selected = GameplaySettings.AutoPick ? 1 : 0;
         _rule.Selected = (int)GameplaySettings.Rule;
         _rule.Disabled = !GameplaySettings.AutoPick;
+        _from.Selected = System.Math.Max(0, System.Array.IndexOf(GameplaySettings.FromLevels, GameplaySettings.AutoPickFromLevel));
+        _from.Disabled = !GameplaySettings.AutoPick;
     }
 
     private static OptionButton Options(string[] names, int selected)

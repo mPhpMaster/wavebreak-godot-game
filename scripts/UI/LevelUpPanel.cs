@@ -282,7 +282,7 @@ public sealed partial class LevelUpPanel : Control
 
         // Settings > Gameplay > Auto-pick: resolved at once by the player's
         // rule, with a toast saying what was taken (LevelUpPanel.Compact.cs).
-        if (GameplaySettings.AutoPick && AutoPickSeconds <= 0f)
+        if (GameplaySettings.AutoPickAt(Progression.Inventory.Current?.Level ?? 1) && AutoPickSeconds <= 0f)
         {
             AutoResolve(list, onPick);
             return;

@@ -351,8 +351,11 @@ public partial class PlayerCamera : Node3D
     /// automated window, so the check can see a panel hand the mouse back.</summary>
     internal static bool ForceCaptureForTest { get; set; }
 
+    private static ulong _capturedAt;
+
     public static bool TryCaptureMouse()
     {
+        if (Input.MouseMode != Input.MouseModeEnum.Captured) _capturedAt = Time.GetTicksMsec();
         if (ForceCaptureForTest) { Input.MouseMode = Input.MouseModeEnum.Captured; return true; }
         if (Game.Screenshot.Requested || Game.Screenshot.Auto) return false;
         if (!DisplayServer.WindowIsFocused()) return false;
@@ -383,6 +386,10 @@ public partial class PlayerCamera : Node3D
 
         if (captured && @event is InputEventMouseMotion motion)
         {
+            // The first motion after (re)capturing carries everything the free
+            // cursor travelled (a pause menu, settings), which flipped the
+            // camera to its pitch limit. Drop it, and any absurd jump.
+            if (Time.GetTicksMsec() - _capturedAt < 120 || motion.Relative.LengthSquared() > 250f * 250f) return;
             // Right/down on the mouse turns right/looks down, so both axes subtract:
             // Godot's +Y yaw turns left, and negative pitch aims the camera downward.
             // The user's setting scales the camera's own default, read every

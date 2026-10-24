@@ -10,10 +10,8 @@ namespace Wavebreak.UI;
 /// <summary>
 /// A small round minimap in the top-right corner, under the kills and gold.
 ///
-/// It turns with the camera: "up" on the map is where the camera looks, so a
-/// dot to the upper left is ahead and to the left on screen too, and nobody
-/// has to rotate a north-up map in their head mid-fight. A small N on the rim
-/// still shows north.
+/// North is always up: the map stays still and your arrow turns to show where
+/// you face (players found a map that spun with the camera hard to read).
 ///
 /// Shows: you (the arrow), other players (coloured dots with their initial),
 /// enemies (small red dots; elites a little bigger, bosses big and pinned to
@@ -99,7 +97,9 @@ public sealed partial class Minimap : Control
         _centre = Size * 0.5f;
         _scale = (_radius - 7f) / RangeMeters;
         _origin = me.GlobalPosition;
-        float yaw = PlayerCamera.Instance is { } cam && IsInstanceValid(cam) ? cam.Yaw : me.FacingYaw;
+        // North-up and fixed: the map no longer turns with the camera; your
+        // arrow turns instead.
+        const float yaw = 0f;
         _fwd = new Vector2(-MathF.Sin(yaw), -MathF.Cos(yaw));     // world (x, z) the camera looks along
         _right = new Vector2(MathF.Cos(yaw), -MathF.Sin(yaw));
 
@@ -237,8 +237,7 @@ public sealed partial class Minimap : Control
         // You: an arrow at the centre pointing where the camera looks (up),
         // turned by how far your body faces away from it.
         if (Coop.Active && !me.IsAlive) { Sos(_centre); return; }
-        float camYaw = PlayerCamera.Instance is { } cam && IsInstanceValid(cam) ? cam.Yaw : me.FacingYaw;
-        float turn = camYaw - me.FacingYaw;
+        float turn = -me.FacingYaw;   // north-up map: the arrow shows where you face
         Vector2 dir = Vector2.Up.Rotated(turn);
         Vector2 side = new(-dir.Y, dir.X);
         Color mine = Coop.Active && Coop.LocalPeer is { } lp ? Coop.SlotColor(lp.Slot) : new Color(0.62f, 0.98f, 1f);
