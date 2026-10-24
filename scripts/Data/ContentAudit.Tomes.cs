@@ -38,6 +38,7 @@ public static partial class ContentAudit
             Check(Tomes.ById(t.Id) == t && t.DisplayName.Length > 0 && t.Description.Length > 0, $"tome lookup/name {t.Id}");
             Check(t.MaxLevel is >= 1 and <= 10, $"tome {t.Id} max level {t.MaxLevel}");
             Check(t.Weight > 0f, $"tome {t.Id} weight");
+            if (t is PerkDef) continue;   // no stat of its own: ContentAudit.Perks.cs
             Check(t.Op == ModifierOp.Multiplicative ? t.PerLevel > 1f : t.PerLevel > 0f, $"tome {t.Id} step {t.PerLevel} is not an upgrade");
             AuditTomeLevels(t);
         }

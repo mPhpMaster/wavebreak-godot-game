@@ -193,9 +193,11 @@ public sealed class Offer
     internal static Offer ForTome(TomeDef def, int currentLevel)
     {
         int next = currentLevel + 1;
-        string detail = currentLevel <= 0 ? "New tome" : $"Level {currentLevel} → {next}";
-        string detailText = currentLevel <= 0 ? Loc.T("New tome") : Loc.F("Level {0} → {1}", currentLevel, next);
-        string effect = currentLevel <= 0
+        bool perk = def is PerkDef;
+        string detail = currentLevel <= 0 ? (perk ? "New perk" : "New tome") : $"Level {currentLevel} → {next}";
+        string detailText = currentLevel <= 0 ? Loc.T(perk ? "New perk" : "New tome") : Loc.F("Level {0} → {1}", currentLevel, next);
+        string effect = def is PerkDef p ? p.CardText(currentLevel)   // what this level adds, then the total
+            : currentLevel <= 0
             ? Loc.F("{0} per level (max {1})", def.DescribeStep(), def.MaxLevel)
             : $"{def.DescribeTotal(currentLevel)}{(Loc.IsRtl ? " ← " : " → ")}{def.DescribeTotal(next)}";
         string description = string.IsNullOrWhiteSpace(def.Description) ? effect : def.Description;

@@ -693,7 +693,7 @@ public sealed partial class LevelUpPanel : Control
                 _                      => "· WEAPON",
             };
 
-        if (offer.Tome is not null) return "· TOME";
+        if (offer.Tome is not null) return offer.Tome is PerkDef ? "· PERK" : "· TOME";
         return offer.Item is not null ? "· ITEM" : "· SUPPLY";
     }
 

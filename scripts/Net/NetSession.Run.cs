@@ -247,11 +247,15 @@ public sealed partial class NetSession
             if (!IsInstanceValid(r) || r.Down || !r.HasState) continue;
             Vector3 d = r.GlobalPosition - me.GlobalPosition;
             d.Y = 0f;
-            if (d.LengthSquared() <= Coop.ReviveRadius * Coop.ReviveRadius) { helped = true; helper = r.PeerId; break; }
+            // A helper's Lifeline perk reaches further (NetSession.Perks.cs).
+            float reach = Coop.ReviveRadius + PerkNet.ReviveReach(r.PeerId);
+            if (d.LengthSquared() <= reach * reach) { helped = true; helper = r.PeerId; break; }
         }
-        _revive = helped ? _revive + dt : Mathf.Max(0f, _revive - dt * 0.5f);
+        float rate = helped ? PerkNet.ReviveRate(helper) : 1f;
+        _revive = helped ? _revive + dt * rate : Mathf.Max(0f, _revive - dt * 0.5f);
         if (_revive < Coop.ReviveSeconds) return;
         _revive = 0f;
+        if (rate > 1f) PerkNet.BoostedRevives++;
         me.Health.Revive(Coop.ReviveHealth);
         CreditRevive(helper);   // scoreboard (NetSession.Awareness.cs)
     }

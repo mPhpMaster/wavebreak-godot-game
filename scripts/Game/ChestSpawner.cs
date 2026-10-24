@@ -338,8 +338,9 @@ public sealed partial class ChestSpawner : Node
         Opened++;
 
         bool gilded = chest.Tier == ChestTier.Gilded;
+        // Sometimes a perk level instead of an item (Combat/Weapons/PerkProcs.Chests.cs).
         Offer reward = OfferPool.Current is { } pool
-            ? pool.RollChest(inv, player.Stats,
+            ? Combat.Weapons.PerkProcs.RollChestPerk(pool, gilded, Rng) ?? pool.RollChest(inv, player.Stats,
                              gilded ? GildedLuckBonus : StandardLuckBonus,
                              gilded ? Rarity.Rare : Rarity.Common, Rng)
             : null!;
@@ -357,6 +358,7 @@ public sealed partial class ChestSpawner : Node
         else
         {
             if (reward.Item is not null) inv.Add(reward.Item);
+            else if (reward.Tome is not null) Progression.TomeBook.Current?.Add(reward.Tome);
             else reward.Apply(player, inv);
             name = reward.Title;
             rarity = reward.Rarity;

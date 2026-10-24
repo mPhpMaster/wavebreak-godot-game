@@ -50,10 +50,10 @@ public partial class TomeDef : Resource
     }
 
     /// <summary>"+8% Damage" — one level's worth, in the catalogue's wording.</summary>
-    public string DescribeStep() => Catalog.DescribeEffect(new ItemEffect { Stat = Stat, Op = Op, PerStack = PerLevel });
+    public virtual string DescribeStep() => Catalog.DescribeEffect(new ItemEffect { Stat = Stat, Op = Op, PerStack = PerLevel });
 
     /// <summary>"+24% Damage" — the total at a level.</summary>
-    public string DescribeTotal(int level)
+    public virtual string DescribeTotal(int level)
         => Catalog.DescribeEffect(new ItemEffect { Stat = Stat, Op = Op, PerStack = ValueAtLevel(level) });
 }
 
