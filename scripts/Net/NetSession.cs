@@ -504,6 +504,7 @@ public sealed partial class NetSession : Node
         if (!CanStart && !_testMode) return;
         ulong seed = ((ulong)GD.Randi() << 16) ^ GD.Randi();
         string difficulty = DifficultyTiers.Selected.Id;
+        if (EndlessMode.Selected) difficulty = "endless:" + difficulty;
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--seed=")) seed = (ulong)arg["--seed=".Length..].ToInt();
         GD.Print($"[coop] starting run seed={seed} players={Coop.Roster.Count}");
@@ -514,7 +515,8 @@ public sealed partial class NetSession : Node
     private void StartRun(long seed, string difficultyId)
     {
         Coop.Seed = (ulong)seed;
-        Coop.DifficultyId = difficultyId;
+        Coop.Endless = difficultyId.StartsWith("endless:");
+        Coop.DifficultyId = Coop.Endless ? difficultyId["endless:".Length..] : difficultyId;
         Coop.InRun = true;
         Coop.ClearHold();
         if (ViaSteam && Coop.IsHost) SteamLobby.SetJoinable(false);   // no joining mid-run

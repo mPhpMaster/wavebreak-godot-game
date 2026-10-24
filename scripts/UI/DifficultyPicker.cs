@@ -21,6 +21,7 @@ public sealed partial class DifficultyPicker : VBoxContainer
 
     public Button Button { get; }
     private readonly Label _note;
+    private readonly Button _endless;
 
     public DifficultyPicker()
     {
@@ -33,6 +34,11 @@ public sealed partial class DifficultyPicker : VBoxContainer
         _note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _note.CustomMinimumSize = new Vector2(0f, 34f);
         AddChild(_note);
+
+        // Endless: hidden until every tier has been won.
+        _endless = MainMenu.MenuButton("", () => { EndlessMode.Selected = !EndlessMode.Selected; Profile.Save(); Refresh(); });
+        _endless.MouseEntered += () => _endless.GrabFocus();
+        AddChild(_endless);
         Refresh();
     }
 
@@ -49,6 +55,7 @@ public sealed partial class DifficultyPicker : VBoxContainer
         int index = DifficultyTiers.IndexOf(tier);
         Button.Text = Loc.F("DIFFICULTY  ·  {0}", Loc.IsArabic ? Loc.T(tier.Name) : tier.Name.ToUpperInvariant());
         Button.AddThemeColorOverride("font_color", index switch { 0 => Ink, 1 => Hard, _ => Nightmare });
+        Button.Disabled = EndlessMode.Selected;   // endless sets its own tier
 
         string note = tier.Summary;
         int next = -1;
@@ -58,6 +65,13 @@ public sealed partial class DifficultyPicker : VBoxContainer
             note += "\n" + Loc.F("{0}: win a run on {1} to unlock.", DifficultyTiers.All[next].Name, DifficultyTiers.All[next - 1].Name);
         else if (DifficultyTiers.All.Count > 1)
             note += "\n" + Loc.T("Press to change.");
+        _endless.Visible = EndlessMode.Unlocked;
+        _endless.Text = EndlessMode.Selected
+            ? Loc.F("ENDLESS  ·  ON  (best loop {0})", EndlessMode.BestLoop)
+            : Loc.T("ENDLESS  ·  OFF");
+        _endless.AddThemeColorOverride("font_color", EndlessMode.Selected ? Nightmare : InkDim);
+        if (EndlessMode.Selected)
+            note = Loc.T("Endless: starts on Normal, loops the maps forever, one tier harder every loop.");
         _note.Text = note;
     }
 }

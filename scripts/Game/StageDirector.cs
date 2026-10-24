@@ -302,7 +302,7 @@ public sealed partial class StageDirector
                     else
                     {
                         Log($"portal entered -> phase {_index + 2}/{_stages.Count}");
-                        EnterPhase(_index + 1);
+                        EnterPhase(NextIndex());
                     }
                 }
                 break;
@@ -521,7 +521,17 @@ public sealed partial class StageDirector
         // walk to the portal a detour through the boss's corpse.
         Pickup.AttractAll();
 
-        if (_index >= _stages.Count - 1)
+        if (_index >= _stages.Count - 1 && Meta.EndlessMode.Active)
+        {
+            // Endless: no win, no swarm. Raise the tier and go round again from
+            // map one, through a portal and rest room like any other map.
+            Meta.DifficultyTier next = Meta.EndlessMode.NextLoop();
+            Log($"endless loop {Meta.EndlessMode.Loop} cleared; next tier {next.Id}");
+            EventBus.Publish(new PopupRequested(_player.GlobalPosition + new Vector3(0f, 3.2f, 0f),
+                Meta.Loc.F("LOOP {0} CLEARED  ·  {1}", Meta.EndlessMode.Loop, Meta.Loc.T(next.Name)), new Color(1f, 0.55f, 0.3f), 1.6f));
+            _loopRestart = true;   // the portal and rest room lead back to map one
+        }
+        else if (_index >= _stages.Count - 1)
         {
             Won = true;
             bool swarm = Game.FinalSwarm.Enabled;

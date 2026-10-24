@@ -58,6 +58,10 @@ public static class Coop
     public static ulong Seed { get; internal set; }
     public static string DifficultyId { get; internal set; } = "";
 
+    /// <summary>The host started an Endless run (sent as an "endless:" prefix
+    /// on the difficulty id, so the start RPC stays the same).</summary>
+    public static bool Endless { get; internal set; }
+
     public static long LocalId { get; internal set; } = 1;
     public static readonly List<CoopPeer> Roster = new();
 

@@ -123,12 +123,17 @@ public static partial class DifficultyTiers
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--difficulty=") && ById(arg["--difficulty=".Length..]) is { } forced)
                 Active = forced;
+        EndlessMode.BeginRun();   // replaces Active with loop 1's tier when on
     }
+
+    /// <summary>Endless mode steps the tier up mid-run.</summary>
+    internal static void SetActive(DifficultyTier tier) => Active = tier;
 
     /// <summary>The run's last boss is down: record a win on the active tier.
     /// Returns the tier this unlocked, if it unlocked one. Does not save.</summary>
     public static DifficultyTier? RecordWin()
     {
+        if (EndlessMode.Active) return null;   // an endless run never "wins" a tier
         int i = IndexOf(Active);
         bool nextWasLocked = i + 1 < All.Count && !IsUnlocked(i + 1);
         Profile.SetMeta(WonKey(Active), Profile.GetMeta(WonKey(Active)) + 1);

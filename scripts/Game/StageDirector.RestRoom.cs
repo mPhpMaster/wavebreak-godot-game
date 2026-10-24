@@ -64,8 +64,8 @@ public sealed partial class StageDirector
 
     private void EnterRestRoom()
     {
-        if (_index >= _stages.Count - 1) { EnterPhase(_index + 1); return; }
-        _restNext = _index + 1;
+        if (_index >= _stages.Count - 1 && !_loopRestart) { EnterPhase(_index + 1); return; }
+        _restNext = NextIndex();
 
         if (_portal is not null && GodotObject.IsInstanceValid(_portal)) _portal.QueueFree();
         _portal = null;
@@ -149,6 +149,17 @@ public sealed partial class StageDirector
             Net.NetSession.Instance?.SendRestStatus(inside, total, _restCountdown);
         }
     }
+
+    /// <summary>The map after this one; back to the first after an endless
+    /// loop's last boss (which also clears the flag).</summary>
+    private int NextIndex()
+    {
+        if (!_loopRestart) return _index + 1;
+        _loopRestart = false;
+        return 0;
+    }
+
+    private bool _loopRestart;
 
     private void LeaveRestRoom(string why)
     {
