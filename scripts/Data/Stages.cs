@@ -184,6 +184,12 @@ public partial class StageDef : Resource
     /// For theme enemies: list the map's crowd here, including the theme ones.</summary>
     [Export] public string[] EnemyIds { get; set; } = System.Array.Empty<string>();
 
+    /// <summary>Hand-built landforms for this map (Game/Arena.Landforms.cs):
+    /// "" for none (every classic map), "harbour" for Stormwatch's old town,
+    /// cliffs and lighthouse. Built before the random terrain, which then fills
+    /// the space left over.</summary>
+    [Export] public string Layout { get; set; } = "";
+
     // ------------------------------------------------------------ hazard
     // Flat pools on the floor (see Game.MapHazards). Placed after every other
     // feature, so a map with none draws exactly the layout it always did.

@@ -137,7 +137,8 @@ Useful test flags (all after `--`):
 | `--give=id,id` | start holding these weapons and tomes at max; `all_items` adds one of every item |
 | `--perf` | every 5 s: FPS, CPU/GPU render ms, draw calls, nodes, live enemies, per-system ms (`Game/Prof`), and a node census every 30 s |
 | `--levelup-shot=x.png`, `--menu-shot=x.png --menu-page=<page>`, `--panel-shot=<prefix>` | capture screens |
-| `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL |
+| `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL (`--check-boundary` also runs the BLOCKERS checks on maps with blockers) |
+| `--map-tour=<prefix>` | photograph the current map: the start facing N/E/S/W, each zone, the Tab big map, the minimap, an overhead view; use with `--route=beacon` (Stormwatch Harbour first) |
 | `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
 | `--coop-expect-migration`, `--coop-no-migrate`, `--coop-late-join`, `--coop-expect-late-join`, `--coop-toast-shot=x.png`, `--coop-mark-file=P --coop-mark-at=S` | host migration and late-join checks (see "Host migration and late join") |
@@ -224,9 +225,9 @@ scripts/
                Chest, Merchant, Microwave, Campfire, MapShrine, CuteShrine, Station
   Audio/       AudioDirector, SfxSynth, MusicDirector, MusicTracks, Boombox, AudioSettings
   Progression/ XpCurve, Inventory, OfferPool, TomeBook, LevelUpChoices
-  UI/          Hud, LevelUpPanel, PauseMenu, StatsPanel, ResultsScreen, BossBar, MainMenu
+  UI/          Hud, LevelUpPanel, PauseMenu, StatsPanel (+ BigMap), ResultsScreen, BossBar, MainMenu
                pages (Codex, MetaShop, Boombox, Graphics, CoopPage), CoopHud, DevPanel, CuteStyle, Icons,
-               AwarenessLayer (Minimap, TeamTags, PingMarkers, AwarenessAlerts, ScoreboardPanel)
+               AwarenessLayer (Minimap, FogOfWar, TeamTags, PingMarkers, AwarenessAlerts, ScoreboardPanel)
   Data/        Definitions, Catalog*, Stages*, Tomes*, MapShrines, ContentAudit*  <- all content
   Game/        Main, Arena, StageDirector, FinalSwarm, Portal, RunState, spawners,
                Autopilot, Screenshot, PerfProbe/Prof
@@ -408,6 +409,113 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   (`StageDef.BalanceShrines/WishingWells`), separate from `ShrineSpawner`, so
   the autopilot never uses them. `--cute-shrine-shot=<png>` photographs them.
 - `UI/CuteStyle` is the soft pastel look used by these pages.
+## Stormwatch Harbour, blockers, fog of war, the Tab map
+
+### The sixth map
+
+`Data/Stages.Harbour.cs` (the def), `Game/Arena.Landforms.cs` (the layout),
+`Visuals/PropTheme.Harbour.cs` (the `harbour` biome). The biggest map: ten
+sides, in-radius about 181 m (Shallows 155, Rimeglass 143). It is the one map
+built to be *explored*: from the start no line of sight leaves the town.
+
+- **Layout** (`StageDef.Layout = "harbour"`, built before the random terrain,
+  which then fills the space left): Harbour Square (r 24, kept clear for the
+  portal) ringed by six houses at 34 m, a second row of six behind every
+  street out of the square at 62 m, so each street ends at a facade; four
+  20 m cliff spurs on the diagonals (84-150 m) cut the outer belt into four
+  zones you only see from inside: **Lighthouse Point** (north: a walkable
+  headland, 5 m high with 20 degree slopes all round, the lighthouse with a
+  sweeping beam, the keeper's cottage, sea stacks), the **Sunken Quarter**
+  (east: half-drowned houses, the map's ten flooded-street pools placed
+  there through `Arena.NextHazardSpot`), **Coral Canyon** (south: two 70 m
+  rock walls 20 m apart, coral spires) and **the Docks** (west: warehouses,
+  two moored ships, crates). The lighthouse (31 m) is the one thing seen
+  over the roofs: the landmark you steer by. Zones are registered
+  (`MapBlockers.Zone`) for the big map's labels and the line under the
+  minimap.
+- **Cost**: one Jolt box or cylinder per blocker on the arena's single static
+  body (37 shapes), and house bodies, roofs, windows, trims, round parts and
+  cliff rocks each go through one MultiMesh, so the town is a handful of
+  draw calls. Measured with `--perf` in one `--route=beacon --auto` run
+  (same machine, same run, averages over each map): Stormwatch 63.5 FPS,
+  485 draws, 1.46M primitives, physics 3.4 ms; Gravemoor next 67.9 FPS,
+  601 draws; Cinder Reach 55.5 FPS, 820 draws. More primitives (the town's
+  facades and windows), fewer draw calls than the classic maps.
+- **Content**: its own enemy mix (`EnemyIds`: crabs, eels, jellies, gulls,
+  shell-backs; no fire or frost kin, few shooters), boss Undertow Oracle, its
+  own track and remix (`harbour`, `harbour_shanty` in `tools/compose_music.py`),
+  11 map challenges (twists Night and High Tide), quests `qm_map_stormwatch`
+  and `qm_map10_stormwatch`, routes `start:stormwatch` and **Beacon Road**
+  (`--route=beacon`: Stormwatch, Gravemoor, Cinder Reach), all appended after
+  the existing rows because the profile stores route and map-challenge
+  choices as indexes. Classic, `Stages.Run` and `LongOrder` are unchanged.
+
+### Blockers: steering and placement
+
+`Game/MapBlockers` holds the big solids of the current map as oriented boxes
+on the floor plane (empty on every other map). Enemies steer straight at the
+player with no pathfinding, which is fine round a pillar and hopeless round a
+30 m house, so `Actors/Enemy.Blockers.cs` adds one step: when the straight
+line to the player crosses a blocker (grown by 1.4 m), walk to the nearer of
+that box's two silhouette corners (shortest corner-then-target, with
+hysteresis so a crowd does not flip sides), and from there the line clears or
+the next box takes over. That is a visibility-graph walk one box deep, enough
+for a map of separate convex blockers kept at least 8 m apart. The full test
+runs every fourth tick per enemy (staggered); an enemy on a detour never
+coasts through a wall (`CoastThisTick`). The autopilot uses the same corner
+walk (`Game/Autopilot.Blockers.cs`). Placement: the spawn-ring search, chests,
+pots and stations reject points inside a blocker or on its roof; shrines use
+`Arena.ClearSpotNear`, which already sees the reserved footprints.
+
+`--check-boundary` prints `BLOCKERS` lines on such maps (`StageDirector.Blockers.cs`):
+the player runs, jumps and dashes into five blockers and must never get
+inside one; 300 real spawn-point searches must land outside them; no chest
+or shrine stands in one; and twelve runners dropped behind the second row of
+houses must reach the player in the square within 30 s (12/12 with steering,
+0/12 with `MapBlockers.SteeringOff`, the straight-line baseline).
+
+### Fog of war
+
+`UI/FogOfWar` (one node per run, from `AwarenessLayer`), `UI/Minimap.Fog.cs`,
+`Net/NetSession.Fog.cs`. Every map starts unexplored. Two layers:
+
+- **The picture**: the whole map at 1.25 m a pixel (floor, wall band, raised
+  features from `Arena.Features`, blockers as outlined shapes), mixed per
+  pixel with a dark fog by how well it was seen. Soft-edged circles of 32 m
+  are stamped round every player this machine knows about (its own and the
+  teammates' puppets) whenever one has moved 2 m; the texture is uploaded at
+  most about 7 times a second, only when it changed. Unseen ground shows the
+  wall outline at 30% and nothing that stands on it.
+- **The record**: one bit per 5 m cell (761 bytes on Stormwatch). Co-op shares
+  it: a client sends its bits to the host when they changed (at most every
+  2 s, reliable), the host ORs them in and sends the team mask back when it
+  changed, and every 10 s regardless so a late joiner or a migrated session
+  catches up. A mask carries a token (phase and a stable hash of the map id;
+  `string.GetHashCode` differs per process); one for another map is dropped.
+  Worst case well under 1 KB/s per player.
+
+Rules, the same on the minimap and the big map: enemies (bosses too), chests
+and shrines in fog are not drawn; you, teammates, pings and SOS markers
+always are; **the portal is always drawn once open**: it opens at the centre,
+where every map is entered, so it is never in fog, and hiding the way onward
+would only cost time. The rest room has no fog. `--coop-check-fog` (in
+`tests/coop.ps1`) has each side reveal a far probe nobody stands in and
+requires the other side to see it through the mask (`COOPFOG PASS`).
+
+### The Tab sheet
+
+`UI/StatsPanel` (+ `StatsPanel.Map.cs`, `UI/BigMap`): the big map in the
+middle (the fog texture, zone labels once found, revealed chests and shrines,
+the boss when it stands in revealed ground, the portal, pings, teammates with
+names, you with your reveal ring, north up, never mirrored), the stats on one
+side (two columns from 1600 px wide, one scrolling column below), the build
+box (weapons, tomes, items as icons with hover details) on the other. The map
+is as large as the rest leaves: about 470 px at 1280x720, 780 px (the cap) at
+1920x1080. No settings or controls are on it: sound, mouse, gameplay,
+graphics and key bindings live under Settings only. The pause menu is the
+same sheet pinned, with its buttons under it, so it matches. While the sheet
+is up the shrine markers (ShrineHud, a layer above the UI) hide.
+
 ## Online co-op (2-4 players)
 
 `scripts/Net/` plus small `*.Coop.cs` partials next to the code they extend
@@ -785,6 +893,9 @@ has its own layer 30 so it works over the pause menu and the results.
   while down). Settings: "Show minimap" / "Minimap size" under CAMERA & HUD,
   stored in `[hud]` of `settings.cfg` by `Meta/HudSettings` (never in
   automated runs).
+  Under the markers it draws the explored map, and it hides enemies, chests
+  and shrines that stand in unexplored fog (see "Fog of war"); on maps with
+  zones the zone's name sits under the disc.
 - **Name tags** (`UI/TeamTags`): canvas-drawn, so always on top of walls and
   props, unlike the old `Label3D` (still on `RemotePlayer`, hidden). Pill in
   the player's colour, health bar under the name (revive progress while

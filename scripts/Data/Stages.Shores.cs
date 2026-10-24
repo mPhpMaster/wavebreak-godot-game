@@ -179,5 +179,7 @@ public static partial class Stages
             HazardColor = new Color(0.25f, 0.75f, 0.85f), HazardName = "tide pool",
             BossId = "squall_tyrant",
         },
+
+        Stormwatch(),   // Stages.Harbour.cs
     };
 }

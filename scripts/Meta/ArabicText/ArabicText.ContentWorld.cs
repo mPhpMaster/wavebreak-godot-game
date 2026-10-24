@@ -548,7 +548,7 @@ public static partial class ArabicText
         ("Lantern Road", "درب الفانوس"),
         ("Gravemoor, Thornmeadow, Cinder Reach. Start in the dark.", "مقبرة المستنقع، مرج الأشواك، امتداد الجمر. ابدأ في الظلام."),
         ("Tide Draw", "قرعة المدّ"),
-        ("Three of the five maps, in a random order, drawn from the run's seed.", "ثلاث من الخرائط الخمس، بترتيب عشوائي، مسحوبة من بذرة الجولة."),
+        ("Three of the six maps, in a random order, drawn from the run's seed.", "ثلاث من الخرائط الست، بترتيب عشوائي، مسحوبة من بذرة الجولة."),
         ("Start: Thornmeadow", "البداية: مرج الأشواك"),
         ("This map first; the next two are drawn from the rest each run.", "هذه الخريطة أولًا؛ والاثنتان التاليتان تُسحبان من الباقي كل جولة."),
         ("Start: Saltglass Shallows", "البداية: ضحضاح الملح"),

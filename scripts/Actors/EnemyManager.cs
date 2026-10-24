@@ -773,7 +773,7 @@ public sealed partial class EnemyManager : Node3D
 
         last.Y = _groundKnown ? _lastGroundY : around.Y;
         point = last;
-        return _groundKnown;
+        return _groundKnown && !Wavebreak.Game.MapBlockers.Inside(last with { Y = -1f }, 1.5f);
     }
 
     private bool OutsideArena(Vector3 p)
@@ -792,6 +792,8 @@ public sealed partial class EnemyManager : Node3D
     /// </summary>
     private bool SnapToGround(ref Vector3 candidate)
     {
+        // Never inside a cliff or a building, nor on its roof (Game/MapBlockers).
+        if (Wavebreak.Game.MapBlockers.Inside(candidate with { Y = -1f }, 1.5f)) return false;
         if (_navUsable)
         {
             Vector3 onMesh = NavigationServer3D.MapGetClosestPoint(_navMap, candidate);

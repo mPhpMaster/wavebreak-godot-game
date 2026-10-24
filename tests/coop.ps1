@@ -30,6 +30,9 @@
 # Late join (NetSession.Snapshot.cs):
 #   coop-latejoin  host + guest start; a third player joins about 20 s into the
 #                  run, gets the world snapshot, the team's level, and plays.
+# Fog of war (NetSession.Fog.cs): in 'coop' each side reveals a far probe and
+# must see the other's through the shared mask (COOPFOG line), with the Tab
+# big map photographed: tests/shots/coop-fog-host.png / -client.png
 #
 #   ./tests/coop.ps1
 #   ./tests/coop.ps1 -Seconds 90 -Port 17777 -SkipBuild
@@ -126,6 +129,13 @@ function Hud([string]$side) {
     "`"--coop-boss-shot=$(Join-Path $shotDir "coop-boss-$side.png")`" `"--coop-ping-shot=$(Join-Path $shotDir "coop-ping-$side.png")`""
 }
 
+# Shared fog of war (NetSession.Test.Fog.cs): each side reveals a far probe
+# nobody stands in; the other must see it through the FogBits mask. Prints
+# COOPFOG PASS|FAIL; the Tab big map is photographed with both probes.
+function Fog([string]$side) {
+    " --coop-check-fog `"--coop-fog-shot=$(Join-Path $shotDir "coop-fog-$side.png")`""
+}
+
 # 1. A minute of play: sync, hits, kills, shared xp, down + revive, client leaves.
 # The host shortens the first phase so the boss, the portal and the second
 # map (all host-driven) happen inside the minute too.
@@ -133,8 +143,16 @@ function Hud([string]$side) {
 # start on it. At 12 s the client opens a real level-up hand and walks with
 # the move key while it is open (the compact hand must not stop it), then
 # picks with the 1 key.
-Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" --coop-difficulty=hard `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host')" `
-                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest --coop-expect-difficulty=hard --coop-levelup-at=12 `"--coop-levelup-shot=$(Join-Path $shotDir 'coop-levelup-client.png')`" `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client')" ([int]($Seconds + 150)) $true $true
+Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" --coop-difficulty=hard `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host')$(Fog 'host')" `
+                       "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest --coop-expect-difficulty=hard --coop-levelup-at=12 `"--coop-levelup-shot=$(Join-Path $shotDir 'coop-levelup-client.png')`" `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client')$(Fog 'client')" ([int]($Seconds + 150)) $true $true
+foreach ($who in @('host', 'client')) {
+    if ($Only.Count -and $Only -notcontains 'coop') { break }
+    $log = Join-Path $shotDir "coop-$who.log"
+    $fog = (Get-Content $log -ErrorAction SilentlyContinue | Where-Object { $_ -match '^COOPFOG (PASS|FAIL)' } | Select-Object -First 1)
+    if (-not $fog -or $fog -match '^COOPFOG FAIL') { $failures += "[coop] $who fog: $(if ($fog) { $fog.Trim() } else { 'no COOPFOG line' })" }
+    elseif (-not (Test-Path (Join-Path $shotDir "coop-fog-$who.png"))) { $failures += "[coop] $who fog: no screenshot" }
+    Write-Host "[coop] $who : $(if ($fog) { $fog.Trim() } else { 'NO COOPFOG LINE' })" -ForegroundColor $(if ($fog -match 'PASS') { 'Green' } else { 'Red' })
+}
 
 # 2. The host quits mid-run: the lone guest takes over as the host and plays on.
 Invoke-Scenario 'coop-hostleft' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `

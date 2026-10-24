@@ -26,6 +26,7 @@ public static class AwarenessLayer
         var overlay = new CanvasLayer { Name = "AwarenessUI", Layer = 1 };
         main.AddChild(overlay);
         if (main.GetNodeOrNull<CanvasLayer>("UI") is { } ui) main.MoveChild(overlay, ui.GetIndex());
+        overlay.AddChild(new FogOfWar());      // explored area, shared in co-op
         overlay.AddChild(new TeamTags());
         overlay.AddChild(new PingMarkers());
         overlay.AddChild(new Minimap());

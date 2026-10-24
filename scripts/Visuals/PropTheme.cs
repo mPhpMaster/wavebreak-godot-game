@@ -13,7 +13,7 @@ public enum TreeStyle { Round, Pine, Dead, Kelp }
 /// floor darker and less saturated than anything that moves on it, because the
 /// first job of a survivors-like arena is that the crowd reads against it.
 /// </summary>
-public sealed class PropTheme
+public sealed partial class PropTheme
 {
     public string Id = "meadow";
 
@@ -63,7 +63,7 @@ public sealed class PropTheme
     private static readonly Dictionary<string, PropTheme> Presets = new();
 
     /// <summary>Every preset id.</summary>
-    public static readonly string[] Ids = { "meadow", "graveyard", "frost", "ashlands", "tidal" };
+    public static readonly string[] Ids = { "meadow", "graveyard", "frost", "ashlands", "tidal", "harbour" };
 
     /// <summary>A preset by id; unknown ids get the meadow.</summary>
     public static PropTheme Get(string? id)
@@ -76,6 +76,7 @@ public sealed class PropTheme
             "frost" => Frost(),
             "tidal" => Tidal(),
             "graveyard" => Graveyard(),
+            "harbour" => Harbour(),   // PropTheme.Harbour.cs
             _ => Meadow(),
         };
         Presets[id] = t;

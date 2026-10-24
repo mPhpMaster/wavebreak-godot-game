@@ -17,7 +17,7 @@ public static partial class ContentAudit
     {
         // ---- map challenges: shape, references, rewards.
         IReadOnlyList<MapChallengeDef> all = MapChallenges.All;
-        Check(all.Count == 55, $"mapchal: expected 55 map challenges, have {all.Count}");
+        Check(all.Count == 11 * MapChallenges.MapOrder.Length, $"mapchal: expected {11 * MapChallenges.MapOrder.Length} map challenges, have {all.Count}");
         var ids = new HashSet<string>();
         var names = new HashSet<string>();
         foreach (MapChallengeDef c in all)

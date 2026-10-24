@@ -57,6 +57,7 @@ public static class MusicTracks
         new() { Id = "ashlands", Title = "Cinder Stride", Where = "Cinder Reach", Kind = TrackKind.Map, MapId = "cinder", UnlockedBy = "qm_map_cinder" },
         new() { Id = "graveyard", Title = "Gravemoor Lullaby", Where = "Gravemoor", Kind = TrackKind.Map, MapId = "gravemoor", UnlockedBy = "qm_map_gravemoor" },
         new() { Id = "tidal", Title = "Saltglass Drift", Where = "Saltglass Shallows", Kind = TrackKind.Map, MapId = "shallows", UnlockedBy = "qm_map_shallows" },
+        new() { Id = "harbour", Title = "Stormwatch Lanterns", Where = "Stormwatch Harbour", Kind = TrackKind.Map, MapId = "stormwatch", UnlockedBy = "qm_map_stormwatch" },
 
         // ---- remixes: earned by clearing the map
         new() { Id = "meadow_dusk", Title = "Dandelion Dusk", Where = "Thornmeadow remix", Kind = TrackKind.Remix, MapId = "thornmeadow", UnlockedBy = "qm_map_thornmeadow", OpensWhenHeard = false },
@@ -64,6 +65,7 @@ public static class MusicTracks
         new() { Id = "ashlands_forge", Title = "Ember Bounce", Where = "Cinder Reach remix", Kind = TrackKind.Remix, MapId = "cinder", UnlockedBy = "qm_map_cinder", OpensWhenHeard = false },
         new() { Id = "graveyard_waltz", Title = "Lantern Waltz", Where = "Gravemoor remix", Kind = TrackKind.Remix, MapId = "gravemoor", UnlockedBy = "qm_map_gravemoor", OpensWhenHeard = false },
         new() { Id = "tidal_lagoon", Title = "Lagoon Breeze", Where = "Saltglass remix", Kind = TrackKind.Remix, MapId = "shallows", UnlockedBy = "qm_map_shallows", OpensWhenHeard = false },
+        new() { Id = "harbour_shanty", Title = "Lighthouse Shanty", Where = "Stormwatch remix", Kind = TrackKind.Remix, MapId = "stormwatch", UnlockedBy = "qm_map_stormwatch", OpensWhenHeard = false },
 
         // ---- the big moments
         new() { Id = "boss", Title = "Big Wave", Where = "Phase bosses", Kind = TrackKind.Boss, UnlockedBy = "bossfall" },

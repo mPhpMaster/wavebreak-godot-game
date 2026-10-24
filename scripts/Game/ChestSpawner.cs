@@ -537,7 +537,7 @@ public sealed partial class ChestSpawner : Node
             if (d.Length() < spacing) return false;
         }
 
-        if (OverlapsObstacle(g)) return false;
+        if (OverlapsObstacle(g) || MapBlockers.Inside(g with { Y = -1f }, 1.5f)) return false;
         spot = g;
         return true;
     }

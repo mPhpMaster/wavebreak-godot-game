@@ -90,6 +90,7 @@ public sealed partial class Arena : Node3D
         BuildGround();
         BuildWall();
         BuildCentrePad();
+        BuildLandforms();   // Arena.Landforms.cs: hand-built maps only
         BuildTerrain();
         BuildDressing();
     }
@@ -180,6 +181,7 @@ public sealed partial class Arena : Node3D
         for (int i = 0; i < _stage.Ridges; i++) PlaceRidge();
         for (int i = 0; i < _stage.Mounds; i++) PlaceMound();
         for (int i = 0; i < _stage.Landmarks; i++) PlaceLandmark();
+        SnapshotFeatures();   // for the map views
         // Last, so a map without hazards draws exactly the layout it always did.
         if (_stage.HazardPools > 0) PlaceHazards();
     }
@@ -190,7 +192,7 @@ public sealed partial class Arena : Node3D
     {
         var pools = new List<Vector3>();
         for (int i = 0; i < _stage.HazardPools; i++)
-            if (TryPlace(_stage.HazardRadius + 0.5f, out Vector3 at)) pools.Add(at);
+            if (NextHazardSpot(out Vector3 at)) pools.Add(at);
         AddChild(new MapHazards(_stage, pools));
     }
 

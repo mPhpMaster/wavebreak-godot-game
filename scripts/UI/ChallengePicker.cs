@@ -31,6 +31,7 @@ public sealed partial class ChallengePicker : Control
         ["gravemoor"] = (CuteStyle.Lavender, "moon"),
         ["shallows"] = (CuteStyle.Seafoam, "wave"),
         ["cinder"] = (CuteStyle.Peach, "flame"),
+        ["stormwatch"] = (CuteStyle.Coral, "anchor"),
     };
 
     private static readonly Dictionary<string, string> ModifierGlyph = new()
@@ -158,7 +159,8 @@ public sealed partial class ChallengePicker : Control
             string mapId = id;
             (Color color, string glyph) = MapLook[id];
             Button b = CuteStyle.Pill("", color, () => { _map = mapId; RebuildCards(); }, 15);
-            b.CustomMinimumSize = new Vector2(222f, 40f);
+            // Six maps fit 1280 at 184 px a tab; five had 222.
+            b.CustomMinimumSize = new Vector2(MapChallenges.MapOrder.Length > 5 ? 184f : 222f, 40f);
             var inner = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
             inner.AddThemeConstantOverride("separation", 6);
             IconView ic = CuteStyle.Icon(new IconSpec(glyph, color.Darkened(0.05f)), 26f, color);

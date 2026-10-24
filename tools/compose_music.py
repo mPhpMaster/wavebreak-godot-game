@@ -805,6 +805,49 @@ def t_fanfare():
     return tr, dict(reverb_seconds=2.8, target_rms_db=-19, q=2)
 
 
+def t_harbour():
+    """Stormwatch Harbour: D dorian, lamplit and a little stormy."""
+    prog = ["Dm7", "C", "Dm7", "Am7", "Bbmaj7", "C", "Dm7", "Asus4",
+            "F", "C", "Dm7", "Am7", "Bbmaj7", "Gm7", "Asus4", "Dm7",
+            "Gm7", "C", "F", "Dm7", "Bbmaj7", "Am7", "Gm7", "Asus4"]
+    tr = Track("harbour", 96, len(prog), seed=171)
+    play_pads(tr, prog, lo=50, gain=0.55, bright=0.6, send=0.55)
+    play_bass(tr, prog, [(0, 1.3), (1.5, 0.45), (2, 1.3), (3.5, 0.4)], octave=33, gain=0.75)
+    # Concertina-ish organ chords on the off-beats, like a band on the quay.
+    for bar, name in enumerate(prog):
+        for b in (1, 3):
+            for m in voicing(name, 60):
+                tr.add(organ(mtof(m), tr.beats(0.7), tr.rng), bar * 4 + b, pan=-0.2, gain=0.12, send=0.35)
+    play_arp(tr, prog, pluck, 62, step=0.5, order=(0, 2, 1, 2, 0, 2, 1, 3), gain=0.3, pan=0.25, send=0.35, skip_bars=(0, 1, 2, 3))
+    for bar in range(0, len(prog), 4):
+        tr.add(swell(tr.beats(8), tr.rng), bar * 4, pan=0.35 if bar % 8 else -0.35, gain=0.7, send=0.3, humanise=False)
+    drums = {"kick": [(0, 0.6), (2, 0.45)], "snare": [(3, 0.22)], "shaker": eighths(0.32), "tomlo": [(3.5, 0.2)]}
+    play_drums(tr, len(prog), drums, gain=0.6, skip_bars=(0, 1))
+    mel = melody(tr.rng, prog, pcs(2, DORIAN), 65, 84)
+    play_melody(tr, [n for n in mel if 4 * 4 <= n[0] < 16 * 4], bell, gain=0.42, pan=0.15, send=0.5)
+    play_melody(tr, [n for n in mel if n[0] >= 16 * 4], lead, gain=0.5, pan=-0.1, send=0.45)
+    return tr, dict(reverb_seconds=2.8, target_rms_db=-21, master_lp=8000, q=2)
+
+
+def t_harbour_shanty():
+    """Stormwatch remix: a quick three-beat shanty in D minor."""
+    prog = ["Dm", "Dm", "C", "C", "Dm", "Dm", "Am", "Am",
+            "F", "F", "C", "C", "Dm", "Bbmaj7", "Asus4", "Dm"] * 2
+    tr = Track("harbour_shanty", 150, len(prog), beats_per_bar=3, seed=181)
+    play_pads(tr, prog, lo=52, gain=0.32, bright=0.6, send=0.5)
+    play_bass(tr, prog, [(0, 0.9)], octave=33, gain=0.8, fifths=True)
+    for bar, name in enumerate(prog):
+        for b in (1, 2):
+            for m in voicing(name, 60):
+                tr.add(organ(mtof(m), tr.beats(0.45), tr.rng), bar * 3 + b, pan=0.2, gain=0.11, send=0.3)
+    mel = melody(tr.rng, prog, pcs(2, MINOR), 64, 81, beats_per_bar=3)
+    play_melody(tr, mel, pluck, gain=0.55, pan=-0.15, send=0.35)
+    play_melody(tr, [n for n in mel if n[0] >= 16 * 3], lead, gain=0.3, pan=0.25, send=0.45, octave=12)
+    drums = {"kick": [(0, 0.6)], "tomhi": [(2, 0.22)], "shaker": [(1, 0.3), (2, 0.25), (2.5, 0.2)]}
+    play_drums(tr, len(prog), drums, gain=0.6, skip_bars=(0, 1))
+    return tr, dict(reverb_seconds=2.2, target_rms_db=-21, q=2)
+
+
 TRACKS = {
     "title": t_title, "meadow": t_meadow, "frost": t_frost, "ashlands": t_ashlands,
     "graveyard": t_graveyard, "tidal": t_tidal, "boss": t_boss, "swarm": t_swarm,
@@ -813,6 +856,8 @@ TRACKS = {
     "lounge": t_lounge, "meadow_dusk": t_meadow_dusk, "frost_aurora": t_frost_aurora,
     "ashlands_forge": t_ashlands_forge, "graveyard_waltz": t_graveyard_waltz,
     "tidal_lagoon": t_tidal_lagoon, "boss_final": t_boss_final, "shop": t_shop, "fanfare": t_fanfare,
+    # Stormwatch Harbour
+    "harbour": t_harbour, "harbour_shanty": t_harbour_shanty,
 }
 
 
