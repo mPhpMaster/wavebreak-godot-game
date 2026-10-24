@@ -231,8 +231,10 @@ public sealed partial class MainMenu : Node3D
         _shop.OpenToggler = () => ShowPage("toggler");
         _pages["boombox"] = _boombox = new BoomboxPage(() => ShowPage("main"));   // UI/BoomboxPage
         _pages["coop"] = _coop = new CoopPage(() => ShowPage("main"));   // UI/CoopPage
+        _pages["credits"] = BuildCreditsPage();   // UI/MainMenu.Credits
         AddChild(_lineup = new CoopLineup(_coop));   // the lobby's players on the beach
         foreach (Control p in _pages.Values) _root.AddChild(p);
+        AddCreditsButton();
     }
 
     private Control BuildMainPage()
@@ -661,6 +663,7 @@ public sealed partial class MainMenu : Node3D
         if (_page == "boombox" && name != "boombox") _boombox.Closing();
         _page = name;
         foreach (var (key, page) in _pages) page.Visible = key == name;
+        if (_creditsButton is not null) _creditsButton.Visible = name == "main";
 
         // Focus is what makes the page keyboard- and gamepad-usable; every page
         // lands with something focused.
