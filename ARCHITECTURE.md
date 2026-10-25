@@ -490,12 +490,42 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
 
 ## Heroes trio and signature weapons
 
-Three more characters (`Meta/Characters.Heroes.cs`), Kenney cube pets
-resolved and hat-fitted like the cute crew (`Visuals/PlayerLooks.Heroes.cs`
-plugs into `ResolveCute`): Sunny the Lookout (parrot), Biscuit the Sea Dog
-and Flick the Kite Fox. Each has a passive (`Meta/CharacterPassives.Heroes.cs`:
-Calm Lookout, Old Salt, Sea Breeze), a stat trade, six skins and quests
-(`Meta/Quests.Heroes.cs`: a gate plus five skin quests each).
+Three more characters (`Meta/Characters.Heroes.cs`): Sunny the Lookout,
+Biscuit the Sea Dog and Flick the Kite Fox. Each has a passive
+(`Meta/CharacterPassives.Heroes.cs`: Calm Lookout, Old Salt, Sea Breeze), a
+stat trade, six skins and quests (`Meta/Quests.Heroes.cs`: a gate plus five
+skin quests each).
+
+Their bodies are their own, hand-built from `MeshKit` shapes in
+`Visuals/HeroModels.cs` (look ids `hero-sunny`, `hero-biscuit`, `hero-flick`,
+resolved by `PlayerLooks.Heroes.cs`); nothing else wears them. They used to
+be Kenney cube pets, which read as repeats of the cute crew, and no free
+rigged model fitted the brief (searched poly.pizza/Quaternius CC0: the
+animated fox and dogs are realistic quadrupeds, the CC0 birds are not
+animated). Chibi bipeds, 1.5 m, head about a third of the height:
+
+* Sunny: red macaw, navy captain's coat with gold epaulettes, buttons and
+  coat tails, a three-colour crest, long tail feathers, feather hands, a brass
+  spyglass in the right hand (the weapon arm, so the windup raises it);
+* Biscuit: broad tan sea dog, floppy ears and eye patch, striped jersey,
+  sailor collar, red neckerchief, bell-bottoms, an iron anchor slung on his back;
+* Flick: slim orange fox, tall dark-tipped ears, flight goggles on the
+  forehead, a scarf with two streaming ends, a huge white-tipped tail, a kite
+  on his back and a kite spool in his left paw.
+
+How they plug in: `CustomBody` (partial in `HeroModels.cs`) gains jointed
+limbs with the biped part roles, so `CharacterRig.PoseBiped` animates them
+like every procedural hero (idle breathing, walk/run cycle, air tuck, dash,
+slide, slam, flip, weapon-arm windup and strike, hit recoil and flash, death
+fall and dissolve), and a hat anchor (`BuiltModel.HatAnchor/HatRadius`): the
+hat sits on the crown under the hips node, so it leans, bobs and flips with
+the head (`CharacterRig.Hats`). Skins stay `SkinRecolor`s, with a mask:
+`MeshKit.Paint` writes vertex alpha, and the character shader mixes the
+recolour by it, so fur and plumage take a skin's dye fully, clothes partly,
+and eyes, beak, brass, lenses and iron not at all (every other model has
+alpha 1, unchanged). `--art-showcase=lineup[:ids]` stands characters side by
+side (default: the trio beside the five cube-pet crew) and
+`--art-showcase=poses:<id>` shows one in each verb.
 
 Each starts with a **signature weapon**, an ordinary `WeaponDef` in the
 catalogue (`Data/Catalog.Heroes.cs`, appended from `Catalog.Expansion`'s

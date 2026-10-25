@@ -11,7 +11,7 @@ namespace Wavebreak.Visuals;
 /// — outline, far LOD, flash, dissolve, squash and bob — comes from the normal
 /// rig, so a hand-built body behaves exactly like a generated one.
 /// </summary>
-public sealed class CustomBody
+public sealed partial class CustomBody   // + HeroModels.cs: jointed limbs, hat anchor
 {
     public ModelSpec Spec { get; }
     public float H { get; }

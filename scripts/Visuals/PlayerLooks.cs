@@ -85,6 +85,7 @@ public static partial class PlayerLooks
     {
         if (id.StartsWith("proc-")) return Make(id["proc-".Length..]);
         if (ResolveCute(id) is { } cute) return cute;   // Visuals/PlayerLooks.Cute.cs
+        if (ResolveHero(id) is { } hero) return hero;   // Visuals/PlayerLooks.Heroes.cs
         if ((Imported.TryGetValue(id, out string? file) || ExpansionLooks.TryGetValue(id, out file))
             && ArtAssets.Model(file, 1.75f, ArtAssets.ClipsFor(file), "hero:" + id) is { } imported)
         {

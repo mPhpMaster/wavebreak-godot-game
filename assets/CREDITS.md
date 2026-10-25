@@ -18,6 +18,10 @@ were copied in.
 | `icons/{sword,shield,heart,heart_broken,clover,flame,skull,bow,crown,potion,hourglass,pouch,tower,burst,campfire,award,dice,lock}.png` | Board Game Icons | Kenney | https://kenney.nl/assets/board-game-icons | CC0 1.0 |
 | `icons/{target,star,fastforward,gear,expand,question,wrench,up,next}.png` | Game Icons | Kenney | https://kenney.nl/assets/game-icons | CC0 1.0 |
 
+The heroes trio (Sunny, Biscuit, Flick) wear no third-party art: their
+bodies are built in code from primitives (`scripts/Visuals/HeroModels.cs`)
+and are original to this project, CC0 1.0 like the music below.
+
 The Kenney icons above were re-rendered (cropped, rescaled to 128 px, given a
 dark outline) by `tools/make_icons.py`. Every other PNG in `assets/icons/` is an
 original glyph drawn by that script and is CC0 1.0 like the music below.

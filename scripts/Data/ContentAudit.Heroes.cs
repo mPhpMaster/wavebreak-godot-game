@@ -43,7 +43,11 @@ public static partial class ContentAudit
             Check(owners.TryAdd(w, id), $"signature {w} started by both {owners.GetValueOrDefault(w)} and {id}");
             Check(c.Passive is PassiveKind.CalmLookout or PassiveKind.OldSalt or PassiveKind.SeaBreeze && c.PassiveText.Length > 0,
                   $"hero {id} has no hero passive");
-            Check(c.LookId.StartsWith("pet-") && Visuals.PlayerLooks.Get(c.LookId).Id == "hero:" + c.LookId, $"hero {id} look {c.LookId} does not resolve");
+            // A body of their own: hand-built, and worn by nobody else.
+            Check(Visuals.HeroModels.Has(c.LookId) && Visuals.PlayerLooks.Get(c.LookId) is { } look
+                  && look.Id == "hero:" + c.LookId && look.Custom is not null, $"hero {id} look {c.LookId} does not resolve to its own model");
+            Check(c.Skins.All(s => s.LookId == c.LookId), $"hero {id} has a skin on another model");
+            Check(!Characters.All.Any(o => o.Id != id && o.Skins.Any(s => s.LookId == c.LookId)), $"hero {id} look {c.LookId} is worn by another character");
             Check(c.Skins.Count >= 6, $"hero {id} has {c.Skins.Count} skins (want 6+)");
             foreach (SkinDef s in c.Skins.Skip(1))
                 Check(!s.Paint.IsIdentity && Unlocks.SourceOf(s.Id) is not null, $"hero skin {s.Id} is not a repaint earned by a quest");

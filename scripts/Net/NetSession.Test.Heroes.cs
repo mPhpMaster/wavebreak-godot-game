@@ -27,6 +27,33 @@ public partial class NetSession
         if (!hero) problems.Add($"playing {c.Id}, not a hero");
         else if (!held) problems.Add($"{c.Id} does not hold {sig}");
         if (Signatures.Hits == 0) problems.Add($"no {sig} hit landed");
-        return $" hero={c.Id} signature={sig} held={(held ? 1 : 0)} sig_hits={Signatures.Hits}";
+
+        // Looks: the local hero and every remote hero wear their own hand-built
+        // body (Visuals/HeroModels.cs), not a cube pet or the default.
+        string localLook = RigLook(_main?.Player);
+        if (hero && localLook != "hero:" + c.LookId) problems.Add($"local {c.Id} wears {localLook}, not hero:{c.LookId}");
+        var remoteLooks = new List<string>();
+        foreach (RemotePlayer r in _remotes.Values)
+        {
+            if (!IsInstanceValid(r)) continue;
+            string look = RigLook(r);
+            remoteLooks.Add(look);
+            if (!look.StartsWith("hero:hero-")) problems.Add($"remote {r.DisplayName} wears {look}, not a hero body");
+        }
+        return $" hero={c.Id} signature={sig} held={(held ? 1 : 0)} sig_hits={Signatures.Hits}" +
+               $" look={localLook} remote_looks={string.Join(",", remoteLooks)}";
+    }
+
+    /// <summary>The model id of the first rig under <paramref name="n"/>.</summary>
+    private static string RigLook(Node? n)
+    {
+        if (n is null) return "-";
+        if (n is Visuals.CharacterRig rig) return rig.Spec.Id;
+        foreach (Node child in n.GetChildren())
+        {
+            string s = RigLook(child);
+            if (s != "-") return s;
+        }
+        return "-";
     }
 }
