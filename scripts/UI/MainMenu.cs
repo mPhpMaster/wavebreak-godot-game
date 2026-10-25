@@ -501,8 +501,14 @@ public sealed partial class MainMenu : Node3D
 
     private Control BuildSettingsPage()
     {
+        // On its own panel: the rows (label, slider, value) are wider than the
+        // menu's dark strip and used to sit on the bright scene.
+        var root = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+        root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        PanelContainer panel = Panel(44f, 178f, 560f, 450f);
+        root.AddChild(panel);
         var page = new VBoxContainer();
-        Place(page, 60f, 190f, 380f, 520f);
+        panel.AddChild(page);
         page.AddThemeConstantOverride("separation", 6);
 
         page.AddChild(SectionLabel("SOUND"));
@@ -523,10 +529,18 @@ public sealed partial class MainMenu : Node3D
             _volumeSliders.Add((s, channel));
             page.AddChild(Row(name, s, value));
         }
-        _mute = new CheckButton { Text = Loc.T("Mute all"), ButtonPressed = AudioSettings.Muted };
-        _mute.AddThemeFontSizeOverride("font_size", 18);
-        _mute.Toggled += on => { if (on != AudioSettings.Muted) AudioSettings.ToggleMute(); };
-        page.AddChild(Loc.IsRtl ? MuteRow(_mute, n => Row(n, new HBoxContainer(), MakeLabel("", 16, Ink))) : _mute);
+        // A row like the sliders: the label on the reading side, the switch
+        // in the slider column, a short state word where the values are.
+        _mute = new CheckButton { ButtonPressed = AudioSettings.Muted };
+        Label muteState = MakeLabel(AudioSettings.Muted ? "On" : "Off", 16, Ink);
+        _mute.Toggled += on =>
+        {
+            if (on != AudioSettings.Muted) AudioSettings.ToggleMute();
+            muteState.Text = Loc.T(AudioSettings.Muted ? "On" : "Off");
+        };
+        var muteBox = new HBoxContainer();
+        muteBox.AddChild(_mute);
+        page.AddChild(Row("Mute all", muteBox, muteState));
 
         page.AddChild(SectionLabel("CONTROLS & DISPLAY"));
         HSlider sens = Slider(GameSettings.MinSensitivity, GameSettings.MaxSensitivity, GameSettings.SensitivityStep, GameSettings.Sensitivity);
@@ -535,7 +549,8 @@ public sealed partial class MainMenu : Node3D
         page.AddChild(Row("Mouse sensitivity", sens, sensValue));
         page.AddChild(Row("Language", LanguagePicker(), MakeLabel("", 16, Ink)));
 
-        Label keys = MakeLabel("In a run:  - / =  volume   ·   9 / 0  effects   ·   [ / ]  music   ·   M  mute", 14, InkDim);
+        Label keys = MakeLabel("In a run:  - / =  volume   ·   9 / 0  effects   ·   [ / ]  music   ·   M  mute", 15, InkDim);
+        keys.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         page.AddChild(keys);
         // Side by side: with the language row added, three stacked buttons no
         // longer fit above the window's bottom edge.
@@ -553,7 +568,7 @@ public sealed partial class MainMenu : Node3D
         }
         page.AddChild(pages);
         page.AddChild(MenuButton("BACK", () => ShowPage("main")));
-        return page;
+        return root;
     }
 
     /// <summary>English / العربية. Choosing one applies it (locale, layout

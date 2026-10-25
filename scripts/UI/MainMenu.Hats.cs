@@ -129,6 +129,8 @@ public sealed partial class MainMenu
     {
         if (_hero is null || _shownCharacter is null) return;
         string id = CurrentHat.Id;
+        // --hat=<id>: test captures of the title hero in a hat.
+        if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--hat=")) is { } forced) id = forced["--hat=".Length..];
         HatOn(_hero, id);
     }
 

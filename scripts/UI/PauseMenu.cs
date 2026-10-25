@@ -372,11 +372,17 @@ public sealed partial class PauseMenu : Node
             page.AddChild(Row(Loc.T(name), slider, value));
         }
 
-        mute.AddThemeFontSizeOverride("font_size", 18);
-        mute.Toggled += on => { if (on != AudioSettings.Muted) AudioSettings.ToggleMute(); };
-        page.AddChild(Loc.IsRtl
-            ? MainMenu.MuteRow(mute, n => Row(n, new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill }, MainMenu.MakeLabel("", 16, Colors.White)))
-            : mute);
+        // A row like the sliders: label, switch in the slider column, state.
+        mute.Text = "";
+        Label muteState = MainMenu.MakeLabel(AudioSettings.Muted ? "On" : "Off", 16, Colors.White);
+        mute.Toggled += on =>
+        {
+            if (on != AudioSettings.Muted) AudioSettings.ToggleMute();
+            muteState.Text = Loc.T(AudioSettings.Muted ? "On" : "Off");
+        };
+        var muteBox = new HBoxContainer();
+        muteBox.AddChild(mute);
+        page.AddChild(Row(Loc.T("Mute all"), muteBox, muteState));
 
         // Boombox (UI/BoomboxPage on the title screen has the full list).
         Boombox.Load();

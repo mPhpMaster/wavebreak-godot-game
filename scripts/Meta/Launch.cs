@@ -62,6 +62,7 @@ public static class Launch
             else if (arg.StartsWith("--menu-shot=")) MenuShot = arg["--menu-shot=".Length..];
             else if (arg.StartsWith("--menu-page=")) MenuPage = arg["--menu-page=".Length..];
             else if (arg.StartsWith("--lang=")) Language = arg["--lang=".Length..];
+            else if (arg.StartsWith("--hat=") && MenuShot is not null) { }   // title hero hat for captures (MainMenu.Hats)
             else if (arg.StartsWith("--dump-strings=")) DumpStrings = arg["--dump-strings=".Length..];
             else if (arg.StartsWith("--devpanel-menu")) DevPanelMenu = arg.Length > "--devpanel-menu=".Length ? arg["--devpanel-menu=".Length..] : "open";
             else if (arg.StartsWith("--character="))

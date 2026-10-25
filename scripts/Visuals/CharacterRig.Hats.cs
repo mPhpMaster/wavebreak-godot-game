@@ -44,11 +44,21 @@ public sealed partial class CharacterRig
 
         if (Spec.IsImported && FindHeadBone(out Skeleton3D? skel, out int bone, out float halfWidth, out Vector3 offset))
         {
-            var follow = new HatFollower(skel!, bone, offset, Spec.SceneYaw, _hips) { Name = "Hat" };
-            mi.Scale = Vector3.One * halfWidth;
-            follow.AddChild(mi);
-            AddChild(follow);
-            _hat = follow;
+            // On the bone itself (BoneAttachment3D): the hat moves, turns and
+            // scales with the head exactly. The old top-level follower lagged,
+            // ignored the rig's own scale (the 1.9x title hero) and could be
+            // left behind, so hats looked like they floated.
+            var attach = new BoneAttachment3D { Name = "Hat", BoneIdx = bone };
+            skel!.AddChild(attach);
+            Transform3D rest = skel.GetBoneGlobalRest(bone);
+            Basis restInv = rest.Basis.Inverse();
+            // Skeleton scale inside the rig (import scale, SceneScale), so the
+            // hat ends up halfWidth wide in rig space like before.
+            float skelScale = SkeletonScaleInRig(skel);
+            mi.Position = restInv * offset;
+            mi.Basis = (restInv * new Basis(Vector3.Up, -Spec.SceneYaw)).Scaled(Vector3.One * (halfWidth / skelScale));
+            attach.AddChild(mi);
+            _hat = attach;
             return;
         }
 
@@ -202,6 +212,16 @@ public sealed partial class CharacterRig
         }
         foreach (Node c in inst.GetChildren()) Walk(c, Transform3D.Identity);
         return best;
+    }
+
+    /// <summary>Uniform scale from the skeleton up to the hips (excluded).</summary>
+    private float SkeletonScaleInRig(Skeleton3D skel)
+    {
+        Transform3D t = Transform3D.Identity;
+        for (Node? n = skel; n is not null && n != _hips; n = n.GetParent())
+            if (n is Node3D n3) t = n3.Transform * t;
+        float sc = t.Basis.Scale.X;
+        return sc > 1e-5f ? sc : 1f;
     }
 
     private static Skeleton3D? FindSkeleton(Node n)
