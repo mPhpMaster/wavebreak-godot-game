@@ -31,6 +31,10 @@ internal sealed class BuiltModel
     public float Height;
     public float StrideLength = 1f; // metres per full walk cycle
     public float LimbSwing = 0.7f;  // radians at full speed
+    /// <summary>Hand-built heroes (HeroModels): the crown of the head in hips
+    /// space and the head's half-width, so a hat sits exactly on it.</summary>
+    public Vector3? HatAnchor;
+    public float HatRadius;
 }
 
 /// <summary>
@@ -110,6 +114,12 @@ public static class ModelBuilder
         c.Out.StrideLength = b.StrideLength;
         foreach (var (role, side, pivot, kit) in b.Parts)
             c.Parts.Add((new PartDef { Role = role, Side = side, Pivot = pivot }, kit, null));
+        // Jointed arms and legs (HeroModels): posed by the biped animator.
+        foreach (var (role, side, pivot, upper, lower, lowerPivot) in b.Limbs)
+            c.Parts.Add((new PartDef { Role = role, Side = side, Pivot = pivot, LowerPivot = lowerPivot }, upper, lower));
+        if (b.LimbSwing > 0f) c.Out.LimbSwing = b.LimbSwing;
+        c.Out.HatAnchor = b.HatAnchor;
+        c.Out.HatRadius = b.HatRadius;
     }
 
     // ================================================================= biped

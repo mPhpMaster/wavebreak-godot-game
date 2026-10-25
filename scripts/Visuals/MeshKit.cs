@@ -105,7 +105,18 @@ public sealed class MeshKit
         _i.Add(s); _i.Add(s + 2); _i.Add(s + 1); // same winding as Tri()
     }
 
-    private static Color Lin(Color c) => c.SrgbToLinear();
+    /// <summary>How much a skin's recolour may change subsequent shapes, 0..1,
+    /// written to vertex alpha (the character shader mixes by it). 1 by
+    /// default; the hand-built heroes set 0 for eyes, brass and lenses so a
+    /// "golden" plumage does not gild the spyglass too.</summary>
+    public float Paint { get; set; } = 1f;
+
+    private Color Lin(Color c)
+    {
+        Color l = c.SrgbToLinear();
+        l.A = Paint;
+        return l;
+    }
 
     /// <summary>
     /// A grid of (rings+1) x (segs+1) vertices produced by <paramref name="point"/>,

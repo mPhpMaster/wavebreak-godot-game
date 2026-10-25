@@ -7,7 +7,8 @@ using Wavebreak.Visuals;
 namespace Wavebreak.Meta;
 
 /// <summary>
-/// The heroes trio: three harbour folk drawn from the Kenney cube pets, each
+/// The heroes trio: three harbour folk with hand-built bodies of their own
+/// (<see cref="HeroModels"/>: a parrot captain, a sailor dog, a kite fox), each
 /// with a signature weapon only they can hold (<see cref="Signatures"/>), a
 /// passive (<see cref="CharacterPassives"/>, Heroes partial), a stat trade, six
 /// skins and an unlock quest (<see cref="HeroQuests"/>). They are built to play
@@ -27,7 +28,7 @@ public static partial class Characters
 
     public static bool IsHero(string id) => System.Array.IndexOf(HeroIds, id) >= 0;
 
-    /// <summary>A hue rotation for the pets' fur, kept soft: the whole model turns.</summary>
+    /// <summary>A soft hue rotation of the fur or plumage; brass, eyes and iron keep theirs.</summary>
     private static SkinDef HeroShift(string id, string name, string look, Color tint, float turns, float saturation = 1f, float value = 1f)
         => new() { Id = id, Name = name, LookId = look, Tint = tint, Recolor = new SkinRecolor(turns, saturation, value, Colors.White, 0f, 0.10f) };
 
@@ -40,7 +41,7 @@ public static partial class Characters
             DisplayName = "Sunny the Lookout",
             Blurb = "Keeps watch from the crow's nest with a brass spyglass and a very loud voice. Never misses a thing, and rarely misses a shot.",
             StartingWeapon = Signatures.Spyglass,
-            LookId = "pet-parrot",
+            LookId = HeroModels.Sunny,
             Tint = new Color(0.95f, 0.35f, 0.30f),
             Passive = PassiveKind.CalmLookout,
             PassiveName = "Calm Lookout",
@@ -53,11 +54,11 @@ public static partial class Characters
             },
             ExtraSkins = new[]
             {
-                CuteSkin("sunny.macaw", "Golden Macaw", "pet-parrot", new Color(1.00f, 0.82f, 0.25f), 0.85f, 1.10f, 0.95f),
-                CuteSkin("sunny.lagoon", "Blue Lagoon", "pet-parrot", new Color(0.30f, 0.62f, 1.00f), 0.85f, 1.05f, 0.95f),
-                HeroShift("sunny.parakeet", "Parakeet", "pet-parrot", new Color(0.45f, 0.90f, 0.40f), 0.30f, 0.80f, 1.00f),
-                CuteSkin("sunny.petrel", "Storm Petrel", "pet-parrot", new Color(0.42f, 0.46f, 0.58f), 0.85f, 0.85f, 0.55f),
-                CuteSkin("sunny.cockatoo", "Coral Cockatoo", "pet-parrot", new Color(1.00f, 0.78f, 0.82f), 0.80f, 1.30f, 0.55f),
+                CuteSkin("sunny.macaw", "Golden Macaw", HeroModels.Sunny, new Color(1.00f, 0.82f, 0.25f), 0.85f, 1.10f, 0.95f),
+                CuteSkin("sunny.lagoon", "Blue Lagoon", HeroModels.Sunny, new Color(0.30f, 0.62f, 1.00f), 0.85f, 1.05f, 0.95f),
+                HeroShift("sunny.parakeet", "Parakeet", HeroModels.Sunny, new Color(0.45f, 0.90f, 0.40f), 0.30f, 0.80f, 1.00f),
+                CuteSkin("sunny.petrel", "Storm Petrel", HeroModels.Sunny, new Color(0.42f, 0.46f, 0.58f), 0.85f, 0.85f, 0.55f),
+                CuteSkin("sunny.cockatoo", "Coral Cockatoo", HeroModels.Sunny, new Color(1.00f, 0.78f, 0.82f), 0.80f, 1.30f, 0.55f),
             },
         },
         // Control: the bosun who moors anything that comes too close.
@@ -67,7 +68,7 @@ public static partial class Characters
             DisplayName = "Biscuit the Sea Dog",
             Blurb = "The harbour's bosun: knows every knot, every bollard and every rope. Once he has moored something, it stays moored.",
             StartingWeapon = Signatures.Anchor,
-            LookId = "pet-dog",
+            LookId = HeroModels.Biscuit,
             Tint = new Color(0.82f, 0.62f, 0.40f),
             Passive = PassiveKind.OldSalt,
             PassiveName = "Old Salt",
@@ -81,11 +82,11 @@ public static partial class Characters
             },
             ExtraSkins = new[]
             {
-                CuteSkin("biscuit.sailor", "Salty Sailor", "pet-dog", new Color(0.22f, 0.45f, 0.85f), 0.88f, 1.00f, 0.95f),
-                CuteSkin("biscuit.rust", "Rusty Chain", "pet-dog", new Color(0.62f, 0.20f, 0.12f), 0.92f, 0.72f, 1.10f),
-                CuteSkin("biscuit.seafoam", "Seafoam Pup", "pet-dog", new Color(0.55f, 0.95f, 0.82f), 0.85f, 1.15f, 0.80f),
-                CuteSkin("biscuit.midnight", "Midnight Watch", "pet-dog", new Color(0.20f, 0.24f, 0.45f), 0.85f, 0.75f, 0.85f),
-                CuteSkin("biscuit.sandy", "Sandy Paws", "pet-dog", new Color(1.00f, 0.90f, 0.66f), 0.80f, 1.25f, 0.65f),
+                CuteSkin("biscuit.sailor", "Salty Sailor", HeroModels.Biscuit, new Color(0.22f, 0.45f, 0.85f), 0.88f, 1.00f, 0.95f),
+                CuteSkin("biscuit.rust", "Rusty Chain", HeroModels.Biscuit, new Color(0.62f, 0.20f, 0.12f), 0.92f, 0.72f, 1.10f),
+                CuteSkin("biscuit.seafoam", "Seafoam Pup", HeroModels.Biscuit, new Color(0.55f, 0.95f, 0.82f), 0.85f, 1.15f, 0.80f),
+                CuteSkin("biscuit.midnight", "Midnight Watch", HeroModels.Biscuit, new Color(0.20f, 0.24f, 0.45f), 0.85f, 0.75f, 0.85f),
+                CuteSkin("biscuit.sandy", "Sandy Paws", HeroModels.Biscuit, new Color(1.00f, 0.90f, 0.66f), 0.80f, 1.25f, 0.65f),
             },
         },
         // Movement: a fox and a kite, both always going somewhere.
@@ -95,7 +96,7 @@ public static partial class Characters
             DisplayName = "Flick the Kite Fox",
             Blurb = "Chases the sea breeze along the dunes with a kite on a very long string. Stands still for nobody, and the kite never does either.",
             StartingWeapon = Signatures.Kite,
-            LookId = "pet-fox",
+            LookId = HeroModels.Flick,
             Tint = new Color(1.00f, 0.55f, 0.25f),
             Passive = PassiveKind.SeaBreeze,
             PassiveName = "Sea Breeze",
@@ -108,11 +109,11 @@ public static partial class Characters
             },
             ExtraSkins = new[]
             {
-                CuteSkin("flick.arctic", "Arctic Fox", "pet-fox", new Color(0.85f, 0.93f, 1.00f), 0.85f, 1.35f, 0.40f),
-                CuteSkin("flick.ember", "Ember Tail", "pet-fox", new Color(0.95f, 0.22f, 0.18f), 0.85f, 0.95f, 1.00f),
-                CuteSkin("flick.lavender", "Lavender Dusk", "pet-fox", new Color(0.70f, 0.55f, 0.98f), 0.85f, 1.05f, 0.85f),
-                HeroShift("flick.seaglass", "Seaglass", "pet-fox", new Color(0.35f, 0.85f, 0.80f), 0.47f, 0.85f, 1.05f),
-                CuteSkin("flick.nightkite", "Night Kite", "pet-fox", new Color(0.18f, 0.22f, 0.40f), 0.85f, 0.70f, 0.90f),
+                CuteSkin("flick.arctic", "Arctic Fox", HeroModels.Flick, new Color(0.85f, 0.93f, 1.00f), 0.85f, 1.35f, 0.40f),
+                CuteSkin("flick.ember", "Ember Tail", HeroModels.Flick, new Color(0.95f, 0.22f, 0.18f), 0.85f, 0.95f, 1.00f),
+                CuteSkin("flick.lavender", "Lavender Dusk", HeroModels.Flick, new Color(0.70f, 0.55f, 0.98f), 0.85f, 1.05f, 0.85f),
+                HeroShift("flick.seaglass", "Seaglass", HeroModels.Flick, new Color(0.35f, 0.85f, 0.80f), 0.47f, 0.85f, 1.05f),
+                CuteSkin("flick.nightkite", "Night Kite", HeroModels.Flick, new Color(0.18f, 0.22f, 0.40f), 0.85f, 0.70f, 0.90f),
             },
         },
     };

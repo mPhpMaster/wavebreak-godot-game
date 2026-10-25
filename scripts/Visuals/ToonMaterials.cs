@@ -116,7 +116,9 @@ void vertex() {
 }
 void fragment() {
 	vec3 base = COLOR.rgb;
-	if (wb_recolor_on()) base = wb_recolor(base);
+	// Vertex alpha is how much a skin may repaint this shape (MeshKit.Paint):
+	// 1 everywhere except the hand-built heroes' eyes, brass and gear.
+	if (wb_recolor_on()) base = mix(base, wb_recolor(base), COLOR.a);
 	float edge = 0.0;
 	if (dissolve > 0.0) {
 		float n = wb_noise(v_obj * 7.0) * 0.7 + wb_noise(v_obj * 19.0) * 0.3;

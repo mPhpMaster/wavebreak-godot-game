@@ -83,6 +83,19 @@ public sealed partial class CharacterRig
             return;
         }
 
+        // Hand-built heroes (HeroModels) know their own crown: the head is
+        // baked into the body mesh under the hips, so the hat rides the hips
+        // too and nods with every lean, bob, flip and fall.
+        if (!Spec.IsImported && _model?.HatAnchor is { } crown && _model.HatRadius > 0f)
+        {
+            var onCrown = new Node3D { Name = "Hat", Position = crown };
+            mi.Scale = Vector3.One * _model.HatRadius;
+            onCrown.AddChild(mi);
+            _hips.AddChild(onCrown);
+            _hat = onCrown;
+            return;
+        }
+
         // Procedural (or an imported model without a head bone): sit on the
         // computed crown under the hips, so lean and bob carry it.
         float h = Spec.Height;
