@@ -1460,4 +1460,4 @@ Right-to-left layouts mirror the camera target, hero, lighthouse and monsters.
 The boot splash is `assets/splash.png` (icon, name, tagline on the menu's night
 colour), drawn by `installer/make_splash.py` and set under `[application]
 boot_splash/*` in `project.godot`, so the Godot logo never shows. The version
-(`config/version`, the exe's version resources and the installer) is 1.3.2.
+(`config/version`, the exe's version resources and the installer) is 1.3.3.

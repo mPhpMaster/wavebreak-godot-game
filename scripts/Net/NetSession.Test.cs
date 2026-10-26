@@ -35,6 +35,7 @@ public sealed partial class NetSession
     private double _testDownSeen;
     private bool _testReadySent, _testDowned, _testShotTaken, _testDone, _testClientLeft;
     private double _testStartedAt;
+    private bool _testShotForced;
     private float _testDownAt = 20f;
 
     // Lobby difficulty: the host picks --coop-difficulty=<id>; a client with
@@ -185,6 +186,17 @@ public sealed partial class NetSession
                 GD.Print($"[coop-test] spawned 3 x {def.Id} to test mirrored shots");
                 break;
             }
+        }
+
+        // A strong build (perks, signature upgrades) can kill the spitters
+        // before they fire; what this checks is the mirroring, so if nothing has
+        // been mirrored two seconds later, fire one real enemy shot ourselves.
+        if (Coop.IsHost && _testShootersSent && !_testShotForced && t >= 12f && AttacksMirrored == 0 && me is not null)
+        {
+            _testShotForced = true;
+            Vector3 from = me.GlobalPosition + new Vector3(12f, 1.2f, 0f);
+            Combat.EnemyAttacks.Shoot(from, me.GlobalPosition - from, 14f, 1f, 0.35f, 30f, "coop-test");
+            GD.Print("[coop-test] forced one enemy shot to test mirroring");
         }
 
         ProcessLevelUpTest(t, me);   // NetSession.Test.LevelUp.cs
