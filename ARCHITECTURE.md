@@ -509,9 +509,17 @@ animated). Chibi bipeds, 1.5 m, head about a third of the height:
   spyglass in the right hand (the weapon arm, so the windup raises it);
 * Biscuit: broad tan sea dog, floppy ears and eye patch, striped jersey,
   sailor collar, red neckerchief, bell-bottoms, an iron anchor slung on his back;
-* Flick: slim orange fox, tall dark-tipped ears, flight goggles on the
-  forehead, a scarf with two streaming ends, a huge white-tipped tail, a kite
-  on his back and a kite spool in his left paw.
+* Flick (`HeroModels.Flick.cs`, redesigned): a round chibi fox
+  with a bigger head (about 40% of his height), short triangular dark-tipped
+  ears (flattened cones, `FlatCone`), big eyes, a cream lower face and short
+  muzzle, a leather aviator cap (`MeshKit.Dome`, an open-bottomed ellipsoid
+  top) with fleece ear flaps and brass goggles on the brow, a sky-blue scarf,
+  a sky-blue diamond kite on his back, fleece-cuffed flying boots, cream
+  mitten paws and a big white-tipped tail curling up past his right side so
+  he reads as a fox from the front. Three colours: orange, cream and one
+  sky-blue accent (plus leather). The first Flick (tall leaf ears, a small
+  head, thin limbs, dark socks and gloves, a purple vest, goggles worn as a
+  headband) read as a rabbit and looked spindly beside the other two.
 
 How they plug in: `CustomBody` (partial in `HeroModels.cs`) gains jointed
 limbs with the biped part roles, so `CharacterRig.PoseBiped` animates them
@@ -560,8 +568,10 @@ signature hits on puppets are forwarded like any other weapon's.
 
 Checks: `ContentAudit.Heroes` (owners, exclusivity over 3000 rolls, held
 upgrades when run with `--character=<hero>`, milestones, icons, skins as real
-repaints, gate quests); `tests/coop.ps1 -Only coop-heroes` (host Flick, guest
-Sunny, `--coop-expect-signature`); `--art-showcase=skins:<id>` lines up a
+repaints, gate quests); `tests/coop.ps1 -Only coop-heroes` (host Biscuit, guest
+Sunny, `--coop-expect-signature`); `-Only coop-flick` (host Flick, guest Sunny:
+`--coop-expect-look=<look>` and `--coop-expect-remote-look=<look>` prove the
+body on both sides of the wire); `--art-showcase=skins:<id>` lines up a
 character's skins; `--art-showcase=hats:<hat>:3` shows the fourth row.
 Testing a locked hero needs a profile that has it: `--profile=<cfg>` with
 `[unlocks] qh_sunny=true` etc.

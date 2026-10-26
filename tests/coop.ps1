@@ -34,6 +34,8 @@
 #   coop-heroes    the host plays Biscuit, the guest Sunny; each holds its own
 #                  signature weapon and lands hits with it (the guest's reach
 #                  the host). Screenshots coop-heroes-host.png / -client.png
+#   coop-flick     the host plays Flick in his own body; the guest (Sunny)
+#                  sees that body on the host's remote player
 # Late join (NetSession.Snapshot.cs):
 #   coop-latejoin  host + guest start; a third player joins about 20 s into the
 #                  run, gets the world snapshot, the team's level, and plays.
@@ -61,7 +63,7 @@ param(
     [float]$Seconds = 60,
     [int]$Port = 7777,
     [switch]$SkipBuild,
-    # Run only these scenarios (coop, coop-hostleft, coop-fallback, coop-heroes, coop-migrate, coop-latejoin, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
+    # Run only these scenarios (coop, coop-hostleft, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
     [string[]]$Only = @()
 )
 
@@ -239,6 +241,13 @@ foreach ($who in 'host', 'client') {
 }
 Invoke-Scenario 'coop-heroes' "--coop-players=2 --coop-seconds=45 --auto --invulnerable --seed=13 --character=biscuit `"--profile=$heroProfile-host.cfg`" --coop-expect-signature" `
                               "--coop-seconds=45 --coop-down-at=999 --auto --invulnerable --character=sunny `"--profile=$heroProfile-client.cfg`" --coop-expect-signature" 190 $true $true
+
+# 2d. Flick's hand-built body over the wire: the host plays Flick (his own
+# body, --coop-expect-look), the guest plays Sunny and must see Flick's body
+# on the host's remote player (--coop-expect-remote-look). The kite is too
+# short-ranged for the co-op bots, so only the guest expects signature hits.
+Invoke-Scenario 'coop-flick' "--coop-players=2 --coop-seconds=35 --auto --invulnerable --seed=21 --character=flick `"--profile=$heroProfile-host.cfg`" --coop-expect-look=hero-flick" `
+                             "--coop-seconds=35 --coop-down-at=999 --auto --invulnerable --character=sunny `"--profile=$heroProfile-client.cfg`" --coop-expect-signature --coop-expect-look=hero-sunny --coop-expect-remote-look=hero-flick" 170 $true $true
 
 # 3. Host migration with three players: the host quits at 20 s; the guests go on.
 $mig = "--auto --invulnerable --phase-seconds=22 --open-portal-at=34"

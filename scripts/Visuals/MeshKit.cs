@@ -22,7 +22,7 @@ namespace Wavebreak.Visuals;
 /// Shapes are smooth-shaded at low segment counts (soft low-poly), except boxes
 /// and <see cref="Faceted"/> shapes, which keep hard edges for rock and armour.
 /// </summary>
-public sealed class MeshKit
+public sealed partial class MeshKit
 {
     private readonly List<Vector3> _v = new();
     private readonly List<Vector3> _n = new();
