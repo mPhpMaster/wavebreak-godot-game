@@ -96,6 +96,8 @@ public sealed partial class Main : Node3D
             _ = RestRoomCheck.Run(this, restShot);   // --check-restroom / --restroom-shot=
         else if (RunLengthCheck.Requested())
             _ = RunLengthCheck.Run(this);            // --check-phases / --check-portal-timer
+        else if (TotemCheck.Requested)
+            _ = TotemCheck.Run(this);                // --check-totem / --totem-shot= (Tide Totems)
         else if (Trade.TradeCheck.Requested())
             _ = Trade.TradeCheck.Run(this);          // --check-trade (swap meet rules and escrow)
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--map-tour=")) is { } tourArg)

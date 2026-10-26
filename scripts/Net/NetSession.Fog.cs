@@ -34,6 +34,7 @@ public sealed partial class NetSession
     {
         if (FogOfWar.Instance is not { Active: true } fog || Multiplayer.MultiplayerPeer is null) return;
         StepFogTest();   // --coop-check-fog (NetSession.Test.Fog.cs)
+        StepTotemTest(); // --coop-check-totem (NetSession.Test.Totems.cs)
         _fogSendIn -= dt;
         _fogResendIn -= dt;
         if (_fogSendIn > 0f) return;

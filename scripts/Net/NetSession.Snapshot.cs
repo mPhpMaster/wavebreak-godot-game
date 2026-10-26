@@ -155,6 +155,7 @@ public sealed partial class NetSession
         GD.Print($"[coop] world snapshot to {Coop.NameOf(peer)}: phase {st.PhaseIndex + 1} {st.State}, " +
                  $"{enemies} enemies, {pickups} orbs, {chests} chests{(lateJoin ? $", level {d[WsLevel]}" : "")}");
         RpcId(peer, MethodName.WorldSnap, d.ToArray());
+        SendTotems(peer);   // NetSession.Totems.cs
     }
 
     /// <summary>The team's average level (rounded down), without <paramref name="except"/>.</summary>

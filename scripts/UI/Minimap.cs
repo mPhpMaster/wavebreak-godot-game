@@ -171,7 +171,12 @@ public sealed partial class Minimap : Control
         if (CuteShrineSpawner.Instance is { } cute)
             foreach (CuteShrine s in cute.Shrines)
                 if (IsInstanceValid(s) && !s.Spent && FogOfWar.IsRevealed(s.GlobalPosition) && Inside(s.GlobalPosition) is Vector2 at) Diamond(at, 4.5f, CuteShrineDot);
+        foreach (Vector3 t in TotemIcon.Visible())   // Tide Totems (UI/TotemIcon)
+            if (Inside(t) is Vector2 at) { TotemIcon.Draw(this, at, 4.6f); TotemsDrawn++; }
     }
+
+    /// <summary>Tide Totem markers drawn so far (the totem self-check).</summary>
+    public static int TotemsDrawn;
 
     private void DrawEnemies()
     {
