@@ -217,6 +217,7 @@ public sealed partial class StageDirector
             all &= pass;
             GD.Print($"BOUNDARY map={stage.Id} sides={sides} inradius={stage.InRadius:0.0} " +
                      $"worst={worst:0.00} limit={limit:0.00} {(pass ? "PASS" : "FAIL")}");
+            all &= CheckTotemPlacement(stage);   // Tide Totems (StageDirector.Totems.cs)
             // Maps with big blockers: walls, spawn ring, finds, pathing (StageDirector.Blockers.cs).
             if (MapBlockers.Count > 0) all &= await CheckBlockers(stage);
         }

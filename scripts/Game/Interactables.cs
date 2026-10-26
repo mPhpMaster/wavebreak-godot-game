@@ -99,7 +99,8 @@ public sealed partial class Interactables : Node
 
     public string SummaryFields =>
         $"merchantbuys={MerchantBuys} merchantspent={MerchantSpent} microwaves={MicrowaveUses} " +
-        $"microwavespent={MicrowaveSpent} pots={PotsBroken}/{PotsPlaced} stations={StationsPlaced} rests={Rests}";
+        $"microwavespent={MicrowaveSpent} pots={PotsBroken}/{PotsPlaced} stations={StationsPlaced} rests={Rests} " +
+        $"totems={TotemUses}/{TotemsPlaced}";
 
     public IReadOnlyList<Station> Stations => _stations;
 
@@ -159,6 +160,7 @@ public sealed partial class Interactables : Node
         _wantMerchants = Math.Max(0, stage.Merchants);
         _wantMicrowaves = Math.Max(0, stage.Microwaves);
         _wantPots = Math.Clamp(stage.Breakables, 0, 200);
+        _wantTotems = TotemCountFor(stage);   // Interactables.Totems.cs
         _placeIn = PlacementDelayFrames;
     }
 
@@ -399,6 +401,9 @@ public sealed partial class Interactables : Node
             case Trader trader:
                 Trade.SwapMeet.Interact(trader);   // co-op trading (Game/Trade)
                 break;
+            case TideTotem totem when !totem.Used:
+                UseTotem(totem);                   // Interactables.Totems.cs
+                break;
         }
     }
 
@@ -436,6 +441,7 @@ public sealed partial class Interactables : Node
             => Meta.Loc.F("{0} — rest by the campfire (health full)", _keyName),
         Campfire => Meta.Loc.F("{0} — rest by the campfire · heal to full", _keyName),
         Trader => Trade.SwapMeet.Prompt(_keyName),
+        TideTotem => Meta.Loc.F("{0} — call the tide (pull all XP and gold)", _keyName),
         _ => $"{_keyName} — {Meta.Loc.T(s.Verb)}",
 
     };
@@ -452,7 +458,7 @@ public sealed partial class Interactables : Node
         foreach (Station s in _stations)
         {
             if (!IsInstanceValid(s) || !s.InReach(at)) continue;
-            if (s is Microwave { Used: true }) continue;
+            if (s is Microwave { Used: true } or TideTotem { Used: true }) continue;
             float sq = (s.GlobalPosition - at).LengthSquared();
             if (sq < bestSq) { best = s; bestSq = sq; }
         }
@@ -478,6 +484,7 @@ public sealed partial class Interactables : Node
         for (int i = 0; i < _wantMerchants; i++) PlaceStation(space, new Merchant(), start, 0.2f, 0.7f);
         for (int i = 0; i < _wantMicrowaves; i++) PlaceStation(space, new Microwave(), start, 0.15f, 0.85f);
         PlacePots(space, start);
+        PlaceTotems(space, start);   // Interactables.Totems.cs (own rng: the rest is unchanged)
     }
 
     private void PlaceStation(PhysicsDirectSpaceState3D space, Station station, Vector3 start, float minFrac, float maxFrac)
@@ -708,6 +715,8 @@ public sealed partial class Interactables : Node
                 return false;
             case Microwave { Used: false }:
                 return BestCook(inv) is not null;
+            case TideTotem totem:
+                return BotWantsTotem(totem);
             case Campfire fire:
                 // Once per room, and again whenever hurt.
                 return fire.Rests == 0 || Player.Instance is { } p && p.Health.Current < p.Health.Max - 0.5f;
@@ -747,6 +756,10 @@ public sealed partial class Interactables : Node
         {
             Rest(fire);
         }
+        else if (s is TideTotem totem)
+        {
+            UseTotem(totem);
+        }
     }
 
     // ---------------------------------------------------------------- audit
@@ -770,5 +783,6 @@ public sealed partial class Interactables : Node
         }
         for (int r = 0; r < MerchantBase.Length; r++)
             check(MicrowaveBase[r] < MerchantBase[r], $"microwave dearer than merchant at rarity {r}");
+        TotemAudit(check);   // Interactables.Totems.cs
     }
 }

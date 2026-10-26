@@ -273,6 +273,8 @@ public sealed partial class DevPanel
         Expect("spawn every hidden shrine kind", SecretSpawner.Kinds.All(k => Did($"secret_{k.Id}")));
         int stations = Interactables.Instance!.StationsPlaced;
         Expect("spawn merchant + microwave", Did("merchant") && Did("microwave") && Interactables.Instance.StationsPlaced == stations + 2);
+        int totems = Interactables.Instance.TotemsPlaced;
+        Expect("spawn tide totem", Did("totem") && Interactables.Instance.TotemsPlaced == totems + 1);
         int pots = Interactables.Instance.PotsPlaced;
         Expect("spawn pots", Did("pots") && Interactables.Instance.PotsPlaced == pots + 6);
         int pickups = Pickup.ActiveCount;

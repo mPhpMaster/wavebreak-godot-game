@@ -27,7 +27,7 @@ public partial class Station : Node3D
     private float _markerHeight;
 
     /// <summary>Where prompts and popups are anchored.</summary>
-    public Vector3 Top => GlobalPosition + Vector3.Up * 2.3f;
+    public virtual Vector3 Top => GlobalPosition + Vector3.Up * 2.3f;
 
     /// <summary>False once a station has nothing left to give (microwave used,
     /// merchant sold out). The marker and light go out with it.</summary>

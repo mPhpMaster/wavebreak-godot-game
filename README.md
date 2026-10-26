@@ -30,7 +30,7 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Characters | 24 with passives, 151 skins, 22 hats. The heroes trio each bring a signature weapon: Sunny the Lookout (Spyglass Glint, a precise beam at whatever you look at), Biscuit the Sea Dog (Mooring Anchor, a ring that holds a crowd until it is hauled in) and Flick the Kite Fox (Skimmer Kite, a kite you steer by running) |
 | Quests | 327 (18 secret), which unlock characters, weapons, items, skins and Pearls |
 | Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 66 map challenges, the Toggler, leaderboard |
-| Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests |
+| Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests; Tide Totems (1-3 per map: press E once and every XP orb and coin on the map flies to you) |
 | Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full and a microwave. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |
 | Level-up | Three cards with icons (a perk card shows what the level adds and the total); reroll (R), banish (B) and skip (X); optional compact hand that keeps the game running, and auto-pick by a rule (Settings > Gameplay) |
 | Music | 21 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
@@ -90,6 +90,9 @@ Title screen → **CO-OP**.
   their own gold.
 - Shrines, the microwave and pots are each player's own; the merchant is at
   the rest stop.
+- Tide Totems are shared: whoever wakes one first gets every XP orb and coin
+  on the map (the XP is still shared, the gold is theirs), and it sleeps for
+  everyone.
 - After each boss the whole team goes to the rest stop together; a downed
   player arrives revived. Everyone shops with their own gold. The next map
   starts when everyone stands in the CONTINUE portal (the count is on

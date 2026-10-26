@@ -263,6 +263,7 @@ public sealed partial class Pickup : Node3D, IPooled
         _speed = AttractStartSpeed;
         _settled = false;
         _attracted = false;
+        _tide = false;   // Pickup.Totem.cs
         _velocity = launch;
 
         // Orbs rest at a fixed height above the floor rather than at whatever
@@ -376,7 +377,10 @@ public sealed partial class Pickup : Node3D, IPooled
 
         if (_attracted && playerAlive)
         {
-            _speed = MathF.Min(AttractMaxSpeed, _speed + AttractAcceleration * dt);
+            // Called by a Tide Totem (Pickup.Totem.cs): a faster ramp and ceiling,
+            // so the far side of the biggest map arrives in a few seconds.
+            _speed = _tide ? MathF.Min(TideMaxSpeed, _speed + TideAcceleration * dt)
+                           : MathF.Min(AttractMaxSpeed, _speed + AttractAcceleration * dt);
 
             Vector3 to = target - position;
             float distance = to.Length();

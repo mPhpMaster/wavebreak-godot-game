@@ -118,6 +118,8 @@ public sealed partial class BigMap : Control
         if (CuteShrineSpawner.Instance is { } cute)
             foreach (CuteShrine sh in cute.Shrines)
                 if (IsInstanceValid(sh) && !sh.Spent && FogOfWar.IsRevealed(sh.GlobalPosition)) Diamond(Map(sh.GlobalPosition), s * 1.2f, CuteShrineDot);
+        foreach (Vector3 t in TotemIcon.Visible())   // Tide Totems (UI/TotemIcon)
+            TotemIcon.Draw(this, Map(t), s * 1.3f);
     }
 
     private void DrawBoss()

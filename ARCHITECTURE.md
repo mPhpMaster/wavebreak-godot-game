@@ -141,6 +141,7 @@ Useful test flags (all after `--`):
 | `--validate-content`, `--check-pause=<dir>`, `--check-chests=<dir>`, `--check-boundary`, `--check-input-guards`, `--check-devpanel`, `--check-graphics`, `--check-walk` | self-checks printing PASS/FAIL (`--check-boundary` also runs the BLOCKERS checks on maps with blockers) |
 | `--map-tour=<prefix>` | photograph the current map: the start facing N/E/S/W, each zone, the Tab big map, the minimap, an overhead view; use with `--route=beacon` (Stormwatch Harbour first) |
 | `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
+| `--check-totem`, `--totem-shot=<prefix>` | Tide Totem self-check (`TOTEM PASS`; no `--auto`, add `--invulnerable`) and its captures (see "Tide Totems") |
 | `--check-trade`, `--swap-meet`, `--rest-exit-seconds=N` | swap meet: rules and escrow self-check (`TRADE PASS`), build the stall in single-player (captures), shorten the co-op rest room's countdown (see "Swap meet") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
 | `--coop-expect-migration`, `--coop-no-migrate`, `--coop-late-join`, `--coop-expect-late-join`, `--coop-toast-shot=x.png`, `--coop-mark-file=P --coop-mark-at=S` | host migration and late-join checks (see "Host migration and late join") |
@@ -224,7 +225,7 @@ scripts/
   Combat/      DamageInfo, WeaponSystem, WeaponRuntime, Projectile, StatusEffects,
                EnemyAttacks, Weapons/ (behaviours, item procs, effect meshes)
   Actors/      Player, PlayerHealth, PlayerCamera, Enemy, EnemyManager, Pickup,
-               Chest, Merchant, Microwave, Campfire, MapShrine, CuteShrine, Station
+               Chest, Merchant, Microwave, Campfire, TideTotem, MapShrine, CuteShrine, Station
   Audio/       AudioDirector, SfxSynth, MusicDirector, MusicTracks, Boombox, AudioSettings
   Progression/ XpCurve, Inventory, OfferPool, TomeBook, LevelUpChoices
   UI/          Hud, LevelUpPanel, PauseMenu, StatsPanel (+ BigMap), ResultsScreen, BossBar, MainMenu
@@ -771,6 +772,83 @@ graphics and key bindings live under Settings only. The pause menu is the
 same sheet pinned, with its buttons under it, so it matches. While the sheet
 is up the shrine markers (ShrineHud, a layer above the UI) hide.
 
+## Tide Totems
+
+`Actors/TideTotem`, `Game/Interactables.Totems.cs`, `Actors/Pickup.Totem.cs`,
+`Game/TideWhoosh`, `Audio/SfxSynth.Totem.cs`, `UI/TotemIcon`,
+`Net/NetSession.Totems.cs`. A map structure: walk up, press E ("E — call the
+tide (pull all XP and gold)"), and every experience orb and coin lying
+anywhere on the map flies to you.
+
+- **The model**: three carved sea faces stacked on a driftwood plinth (a
+  pufferfish, a clam holding a pearl, a conch with a pearl tip), each with
+  glowing sea-glass eyes front and back, about 3.6 m tall (twice a hero).
+  Idle: the station marker bobbing above it, an aqua light, pulsing eyes and a
+  pulsing ring of water on the ground. Used: the colours grey, the eyes close
+  to sleepy lines, cracks show, the light and marker go out. It is a
+  `Station`, so `Interactables` handles reach, focus (chests keep the key) and
+  the prompt like the merchant's and the microwave's.
+- **How many and where**: by map size (`TotemCountFor`, in-radius under
+  135 m one, under 165 m two, else three): Thornmeadow and Gravemoor 1;
+  Rimeglass, Cinder Reach and the Shallows 2; Stormwatch Harbour 3. Placed after the
+  pots with their own rng (the stations' and pots' rolls are unchanged), one
+  per sector of the map at 30-76% of the radius: the arena's terrain
+  footprints first (`Arena.ClearSpotNear`: mounds, platforms, pools), then the
+  stations' rules (physics ground, flat, 3.4 m headroom, no prop boxes, no
+  blocker, clear of chests and stations), at least 22 m from the start and the
+  centre (the portal), and 4 m outside every shrine's ring (charge rings
+  included) and friendly shrine. Never in the rest room (`UseRestRoom` places
+  none). `--check-boundary` prints a `TOTEMS` line per map: the count, none in
+  a blocker, none near a shrine, inside the walls, at least 20 m apart.
+- **Cost and balance: free, once.** It adds nothing to the run's economy; it
+  only fetches what is already on the floor, which a Magnet item (bigger
+  pickup range, all the time) does a little of every second. Charging gold to
+  fetch gold would make it arithmetic instead of a decision. Once per totem
+  and one to three per map makes it a "when": after a big fight on the far
+  side, or before the boss. **Med-packs are left where they are**, so a totem
+  never stands in for finding a heal.
+- **The pull** (`Pickup.CallTide`): latches every XP orb and coin to the
+  caller with a faster chase (`TideMaxSpeed` 85 m/s, ramp 150 m/s²) than the
+  magnet's 30 m/s, so the far side of Stormwatch (about 300 m) arrives in
+  under five seconds; the self-check measures about 1.8 s on Thornmeadow.
+- **The whoosh** (`TideWhoosh`, 0.8 s): two thin rings of water racing out
+  along the ground to 7 m and a twisting translucent spout round the totem.
+  It stays on the ground and round the totem, and fades through
+  `GraphicsSettings.FxFade`, so the weapon-effects opacity option turns it
+  down too. The sound (`SfxSynth.BuildTotem`, 1.35 s): a soft conch "hoo"
+  rising a fifth, a wave of filtered noise rushing in, and four glassy shell
+  chimes, played positionally at the totem, so teammates hear it from afar.
+  Popup: "The tide answers!" (teammates: "<name> called the tide").
+- **Maps**: an upright aqua totem marker (`UI/TotemIcon`) on the minimap and
+  the Tab big map for awake totems on revealed ground, the chest and shrine
+  rule (see "Fog of war").
+- **Co-op** (`NetSession.Totems.cs`): shared, unlike the other stations. The
+  host places the totems and sends `TotemPlaced` (id, spot, facing, asleep)
+  to everyone, and the whole list again after a world snapshot (late join,
+  host migration). E sends `TotemAsk`; the host grants the first asker,
+  latches every networked orb to that peer (its collector loop flies and pays
+  them as usual: XP shared, gold to the collector) and sends `TotemFired`
+  (id, peer) to everyone, which puts the totem to sleep everywhere and plays
+  the whoosh; the caller's machine also pulls its own pot drops and shows its
+  copies of the orbs flying in. A later asker hears `TotemNo`.
+- **Autopilot**: wakes a totem within 50 m when at least 25 orbs and coins lie
+  out of its pickup range (`BotTotemOrbs`).
+- **Developer panel**: Spawn tab, STATIONS & PICKUPS: "Tide Totem" (synced in
+  co-op; the host's panel only).
+- **Tests**: `--check-totem` drops 40 XP orbs, 20 coins and 3 med-packs 60-140
+  m away, presses the real E at a placed totem and requires everything but the
+  med-packs collected within 5 s, gold and XP paid, the totem asleep and
+  refusing a second call, a minimap marker drawn while awake, and no totem in
+  the rest room after (`TOTEM PASS`). `--totem-shot=<prefix>` saves
+  `-idle`, `-prompt`, `-whoosh`, `-asleep`, `-minimap` and `-map` PNGs (add
+  `--lang=ar` for the Arabic prompt). In `tests/coop.ps1` (`coop`,
+  `--coop-check-totem`, `NetSession.Test.Totems.cs`) the host puts a totem by
+  the guest and drops 24 orbs and 12 coins far away; the guest presses E. The
+  host must latch them all to the guest, see every one collected by the guest
+  and the totem asleep; the guest must see them arrive, be paid the coins and
+  have the map's placed totems (`COOPTOTEM PASS` on both,
+  `tests/shots/coop-totem-client.png`).
+
 ## Online co-op (2-4 players)
 
 `scripts/Net/` plus small `*.Coop.cs` partials next to the code they extend
@@ -808,6 +886,7 @@ responsive and cannot desync where it matters:
 | Phase flow (waves → boss → portal → next map, win, Final Swarm) | host | Reliable `Phase`, `Boss` and `BossDown` messages replay the steps. A client's `StageDirector.Tick` only guards falls. The run clock is synced twice a second |
 | Rest room (entering, leaving, the CONTINUE count, the boss portal's countdown) | host | Reliable `RestEnter` when the host takes the boss portal; leaving is the usual `Phase` message. `RestStatus` (in the portal / total / countdown) and `PortalTimer` stream at 4 and 2 Hz, unreliable. Each machine builds its own room, revives and heals its own player, and shops with its own gold |
 | Trades at the swap meet | host decides; each side moves only its own goods | The host validates both offers and runs the escrow; each machine removes and adds only its own player's gold, items and tomes (see "Swap meet") |
+| Tide Totems | host places; first to ask wakes it | `E` sends a request; the host latches every networked orb and coin to the asker and tells everyone the totem sleeps (see "Tide Totems") |
 | Shrines, merchant, microwave, pots, secrets | each player | Each player has their own set, built from the shared seed, and their own rewards. Pot drops are personal (`Pickup.Personal`) |
 
 Why clients fire their own weapons instead of sending input to the host:

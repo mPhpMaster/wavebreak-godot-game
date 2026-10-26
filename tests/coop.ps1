@@ -53,6 +53,12 @@
 # Fog of war (NetSession.Fog.cs): in 'coop' each side reveals a far probe and
 # must see the other's through the shared mask (COOPFOG line), with the Tab
 # big map photographed: tests/shots/coop-fog-host.png / -client.png
+# Tide Totem (NetSession.Totems.cs, NetSession.Test.Totems.cs): in 'coop' the
+# host puts a totem by the guest and drops orbs and coins far away; the guest
+# presses E at it. The host must latch every orb to the guest and see them all
+# collected by the guest and the totem asleep; the guest must see them arrive,
+# be paid the coins and see the totem asleep (COOPTOTEM line on each side,
+# tests/shots/coop-totem-client.png)
 #
 #   ./tests/coop.ps1
 #   ./tests/coop.ps1 -Seconds 90 -Port 17777 -SkipBuild
@@ -160,7 +166,8 @@ $clientPerks = "--give=perk_lifeline --coop-check-perks"
 # nobody stands in; the other must see it through the FogBits mask. Prints
 # COOPFOG PASS|FAIL; the Tab big map is photographed with both probes.
 function Fog([string]$side) {
-    " --coop-check-fog `"--coop-fog-shot=$(Join-Path $shotDir "coop-fog-$side.png")`""
+    " --coop-check-fog `"--coop-fog-shot=$(Join-Path $shotDir "coop-fog-$side.png")`" --coop-check-totem" +
+    $(if ($side -eq 'client') { " `"--coop-totem-shot=$(Join-Path $shotDir 'coop-totem-client.png')`"" } else { '' })
 }
 
 # 1. A minute of play: sync, hits, kills, shared xp, down + revive, client leaves.
@@ -170,6 +177,7 @@ function Fog([string]$side) {
 # start on it. At 12 s the client opens a real level-up hand and walks with
 # the move key while it is open (the compact hand must not stop it), then
 # picks with the 1 key.
+Remove-Item (Join-Path $shotDir 'coop-totem-client.png') -ErrorAction SilentlyContinue
 Invoke-Scenario 'coop' "--coop-players=2 --coop-seconds=$Seconds --auto --invulnerable --seed=7 --phase-seconds=22 --open-portal-at=36 --coop-expect-phase=2 --coop-expect-restroom `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-host.png')`" --coop-difficulty=hard `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-host.png')`" $(Hud 'host')$(Fog 'host') $hostPerks" `
                        "--coop-seconds=$Seconds --auto --invulnerable --phase-seconds=22 --coop-expect-phase=2 --coop-expect-restroom --coop-down-before-rest --coop-expect-difficulty=hard --coop-levelup-at=12 `"--coop-levelup-shot=$(Join-Path $shotDir 'coop-levelup-client.png')`" `"--coop-rest-shot=$(Join-Path $shotDir 'coop-rest-client.png')`" `"--coop-down-shot=$(Join-Path $shotDir 'coop-down-client.png')`" $(Hud 'client')$(Fog 'client') $clientPerks" ([int]($Seconds + 150)) $true $true
 foreach ($who in @('host', 'client')) {
@@ -179,6 +187,10 @@ foreach ($who in @('host', 'client')) {
     if (-not $fog -or $fog -match '^COOPFOG FAIL') { $failures += "[coop] $who fog: $(if ($fog) { $fog.Trim() } else { 'no COOPFOG line' })" }
     elseif (-not (Test-Path (Join-Path $shotDir "coop-fog-$who.png"))) { $failures += "[coop] $who fog: no screenshot" }
     Write-Host "[coop] $who : $(if ($fog) { $fog.Trim() } else { 'NO COOPFOG LINE' })" -ForegroundColor $(if ($fog -match 'PASS') { 'Green' } else { 'Red' })
+    $totem = (Get-Content $log -ErrorAction SilentlyContinue | Where-Object { $_ -match '^COOPTOTEM (PASS|FAIL)' } | Select-Object -First 1)
+    if (-not $totem -or $totem -match '^COOPTOTEM FAIL') { $failures += "[coop] $who totem: $(if ($totem) { $totem.Trim() } else { 'no COOPTOTEM line' })" }
+    elseif ($who -eq 'client' -and -not (Test-Path (Join-Path $shotDir 'coop-totem-client.png'))) { $failures += "[coop] client totem: no screenshot" }
+    Write-Host "[coop] $who : $(if ($totem) { $totem.Trim() } else { 'NO COOPTOTEM LINE' })" -ForegroundColor $(if ($totem -match 'PASS') { 'Green' } else { 'Red' })
 }
 
 # 2. The host quits mid-run: the lone guest takes over as the host and plays on.

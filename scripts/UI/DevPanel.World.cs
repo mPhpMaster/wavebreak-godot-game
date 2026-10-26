@@ -134,6 +134,8 @@ public sealed partial class DevPanel
         right.AddChild(DevUi.Flow(
             Reg("merchant", DevUi.Btn("Merchant", () => SpawnStation(new Merchant(), "merchant"))),
             Reg("microwave", DevUi.Btn("Microwave", () => SpawnStation(new Microwave(), "microwave"))),
+            Reg("totem", DevUi.Btn("Tide Totem", () => Act("Tide Totem", () =>
+                Interactables.Instance?.SpawnTotemAt(NextSpot()) is not null ? "A tide totem is placed." : null))),
             Reg("pots", DevUi.Btn("6 pots", () => Act("Pots", () =>
                 Interactables.Instance?.SpawnPotsAt(NextSpot(), 6) is > 0 ? "6 breakable pots placed." : null))),
             Reg("pickup_xp", DevUi.Btn("10 XP gems", () => SpawnPickups(PickupKind.Xp, 10, 10f, "XP gems"))),
