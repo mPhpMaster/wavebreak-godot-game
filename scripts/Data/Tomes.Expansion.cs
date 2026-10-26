@@ -47,7 +47,7 @@ public static partial class Tomes
                "Patient, small, and always fed. Heal for a share of the damage you deal.", new Color(0.80f, 0.25f, 0.30f))),
         T(Tome("tome_fracture", "Tome of Fracture", Rarity.Uncommon, Stat.CritDamage, ModifierOp.Additive, 0.10f, 5, 0.6f,
                "Where shells crack, and how far. Critical hits hit harder.", new Color(1.00f, 0.70f, 0.55f))),
-        T(Tome("tome_updrafts", "Tome of Updrafts", Rarity.Common, Stat.JumpHeight, ModifierOp.Additive, 0.10f, 5, 0.65f,
+        T(Tome("tome_updrafts", "Tome of Updrafts", Rarity.Common, Stat.JumpHeight, ModifierOp.Additive, 0.15f, 8, 0.85f,
                "Gulls never flap when they do not have to. Jump higher, stay up longer.", new Color(0.92f, 0.95f, 1.00f))),
         T(Tome("tome_second_thoughts", "Tome of Second Thoughts", Rarity.Rare, Stat.Rerolls, ModifierOp.Flat, 1f, 3, 0.35f,
                "Margins full of crossings-out. One more reroll per level.", new Color(0.70f, 0.80f, 0.70f))),

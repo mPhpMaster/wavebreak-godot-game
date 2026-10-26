@@ -61,7 +61,7 @@ public sealed class StatSheet
         Stat.Knockback       => 1f,
 
         Stat.MoveSpeed       => 6f,     // metres/second
-        Stat.JumpHeight      => 6f,
+        Stat.JumpHeight      => 3.5f,   // lowered from 6: height is now earned (Tome of Updrafts)
         Stat.DashCooldown    => 2.5f,   // seconds
 
         Stat.PickupRange     => 4f,
