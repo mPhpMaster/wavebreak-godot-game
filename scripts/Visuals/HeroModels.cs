@@ -45,15 +45,16 @@ public sealed partial class CustomBody
 ///     coat tails, a crest of three colours, a long tail and a brass spyglass;
 ///   * Biscuit: a broad tan sea dog with floppy ears, a striped jersey, a
 ///     sailor collar, a red neckerchief and an iron anchor slung on his back;
-///   * Flick: a slim orange fox with tall ears, flight goggles, a scarf whose
-///     two ends stream behind, a huge white-tipped tail and a kite spool.
+///   * Flick: a round chibi fox in a leather aviator cap with goggles, a
+///     sky-blue scarf, a kite on his back and a big white-tipped tail
+///     (HeroModels.Flick.cs).
 ///
 /// Chibi proportions (the head is about a third of the height) so the face
 /// reads from the game camera. Skins repaint through <see cref="SkinRecolor"/>:
 /// fur and plumage take the dye fully, clothes partly, and eyes, brass,
 /// lenses and iron not at all (<see cref="MeshKit.Paint"/>).
 /// </summary>
-public static class HeroModels
+public static partial class HeroModels
 {
     public const string Sunny = "hero-sunny", Biscuit = "hero-biscuit", Flick = "hero-flick";
     public static readonly string[] LookIds = { Sunny, Biscuit, Flick };
@@ -453,141 +454,5 @@ public static class HeroModels
                      l.Sph(w + V(0f, -0.04f, -0.01f), 0.07f, cream);
                  });
         }
-    }
-
-    // =============================================================== Flick
-
-    private static void BuildFlick(CustomBody b)
-    {
-        Color fur = new(1.00f, 0.50f, 0.16f), furLight = new(1.00f, 0.66f, 0.30f);
-        Color white = new(1.00f, 0.97f, 0.92f), sock = new(0.26f, 0.16f, 0.14f), innerEar = new(1.00f, 0.80f, 0.74f);
-        Color scarf = new(0.14f, 0.74f, 0.78f), scarfBand = new(1.00f, 0.88f, 0.30f);
-        Color vest = new(0.40f, 0.30f, 0.62f), shorts = new(0.46f, 0.34f, 0.24f);
-        Color lens = new(0.45f, 0.92f, 1.00f), wood = new(0.70f, 0.48f, 0.28f);
-        const float hip = 0.27f;
-        Pen p = Body(b, hip);
-        b.LimbSwing = 0.85f;
-
-        // Slim body: a little purple flight vest over orange fur, white chest.
-        p.Paint = 1f;
-        p.Ell(V(0f, 0.43f, 0f), V(0.14f, 0.16f, 0.12f), fur, furLight);
-        p.Paint = 0.3f;
-        p.Ell(V(0f, 0.43f, 0.01f), V(0.145f, 0.13f, 0.125f), vest, vest.Lightened(0.12f));
-        p.Paint = 0.5f;
-        p.Ell(V(0f, 0.44f, -0.07f), V(0.075f, 0.12f, 0.07f), white);
-        p.Paint = 0.3f;
-        p.Ell(V(0f, 0.30f, 0f), V(0.13f, 0.07f, 0.11f), shorts);
-        p.Paint = 0f;
-        p.Cyl(V(0f, 0.31f, 0f), Vector3.Up, 0.128f, 0.128f, 0.03f, Leather, null, 14);
-        p.Box(Basis.Identity, V(0.06f, 0.33f, -0.115f), V(0.07f, 0.06f, 0.03f), Leather.Lightened(0.15f));
-
-        // The tail: big, bushy, curling up behind, white tip. Its own silhouette.
-        p.Paint = 1f;
-        Vector3[] spine = { V(0f, 0.30f, 0.10f), V(0f, 0.30f, 0.22f), V(0f, 0.38f, 0.32f), V(0f, 0.52f, 0.36f), V(0f, 0.64f, 0.33f) };
-        float[] radius = { 0.05f, 0.085f, 0.105f, 0.095f, 0.07f };
-        for (int i = 0; i < spine.Length; i++)
-        {
-            Color c = i == spine.Length - 1 ? white : fur;
-            Vector3 dir = i + 1 < spine.Length ? spine[i + 1] - spine[i] : spine[i] - spine[i - 1];
-            Basis bb = MeshKit.BasisAlong(dir.Normalized());
-            float r = radius[i];
-            p.Ell(bb, spine[i], V(r, r * 1.35f, r), c, i == spine.Length - 2 ? white : (i == spine.Length - 1 ? white : furLight));
-        }
-        p.Sph(V(0f, 0.70f, 0.30f), 0.045f, white);
-
-        // Scarf: wrapped round the neck, two long ends streaming back.
-        p.Paint = 0.3f;
-        p.Cyl(V(0f, 0.55f, 0f), Vector3.Up, 0.125f, 0.115f, 0.06f, scarf, scarf.Lightened(0.15f), 14);
-        p.Cyl(V(0f, 0.57f, 0f), Vector3.Up, 0.127f, 0.12f, 0.016f, scarfBand, null, 14);
-        p.Leaf(V(0.05f, 0.56f, 0.10f), V(0.13f, 0.50f, 0.36f), 0.075f, 0.02f, V(0f, 1f, 0.2f), scarf, scarfBand);
-        p.Leaf(V(-0.03f, 0.56f, 0.11f), V(-0.06f, 0.60f, 0.40f), 0.07f, 0.02f, V(0f, 1f, -0.1f), scarf, scarfBand);
-
-        // Head: orange, a white muzzle running to a pointed snout, black nose,
-        // tall ears with dark tips and pale insides.
-        Vector3 hc = V(0f, 0.75f, -0.01f);
-        p.Paint = 1f;
-        p.Ell(hc, V(0.18f, 0.17f, 0.17f), fur, furLight, 0f, 16, 10);
-        p.Paint = 0.5f;
-        for (int side = -1; side <= 1; side += 2)
-            p.Ell(new Basis(Vector3.Up, side * 0.4f), hc + V(side * 0.08f, -0.06f, -0.12f), V(0.08f, 0.07f, 0.06f), white);
-        p.Ell(hc + V(0f, -0.06f, -0.17f), V(0.06f, 0.05f, 0.08f), white);
-        p.Paint = 0f;
-        p.Sph(hc + V(0f, -0.035f, -0.245f), 0.026f, Ink, 0.1f, 8, 5);
-        p.Sph(hc + V(-0.008f, -0.028f, -0.265f), 0.007f, White, 0.6f, 5, 3);
-        Eyes(p, hc + V(-0.078f, 0.02f, -0.15f), hc + V(0.078f, 0.02f, -0.15f), 0.04f, new Color(0.18f, 0.10f, 0.06f));
-        Eyes2Blush(p, hc + V(-0.125f, -0.05f, -0.11f), hc + V(0.125f, -0.05f, -0.11f), 0.024f);
-        for (int side = -1; side <= 1; side += 2)
-        {
-            Vector3 root = hc + V(side * 0.10f, 0.12f, 0.01f), tip = hc + V(side * 0.16f, 0.34f, 0.03f);
-            p.Paint = 1f;
-            p.Leaf(root, tip, 0.10f, 0.04f, V(0f, 0f, -1f), fur, sock);
-            p.Paint = 0.3f;
-            p.Leaf(root + V(0f, 0.01f, -0.018f), tip + V(-side * 0.008f, -0.06f, -0.018f), 0.055f, 0.012f, V(0f, 0f, -1f), innerEar);
-        }
-        // Flight goggles pushed up on the forehead: a leather strap round the
-        // head, two brass rims, glassy lenses.
-        p.Paint = 0f;
-        p.Cyl(hc + V(0f, 0.065f, 0f), V(0f, 1f, 0.25f), 0.182f, 0.176f, 0.035f, Leather, null, 16);
-        for (int side = -1; side <= 1; side += 2)
-        {
-            Vector3 g = hc + V(side * 0.062f, 0.10f, -0.145f);
-            Vector3 face = V(side * 0.25f, 0.55f, -1f).Normalized();
-            p.Cyl(g - face * 0.02f, face, 0.05f, 0.048f, 0.035f, Brass, Brass.Lightened(0.15f), 12);
-            p.Cyl(g + face * 0.012f, face, 0.036f, 0.036f, 0.008f, lens, lens.Lightened(0.3f), 12, 0.5f);
-        }
-        p.Tube(hc + V(-0.02f, 0.11f, -0.17f), hc + V(0.02f, 0.11f, -0.17f), 0.012f, 0.012f, Brass, null, 6);
-        Hat(b, hc + V(0f, 0.16f, 0f), 0.17f);
-
-        // Legs: orange thighs, dark socks, white-toed feet.
-        for (int side = -1; side <= 1; side += 2)
-        {
-            float x = side * 0.07f;
-            Limb(b, false, side, V(x, hip, 0f), V(x, hip * 0.5f, 0f),
-                 u => { u.Paint = 1f; u.Tube(V(x, hip + 0.015f, 0f), V(x, hip * 0.5f, 0f), 0.05f, 0.042f, fur, furLight); },
-                 l =>
-                 {
-                     l.Paint = 0.4f;
-                     l.Tube(V(x, hip * 0.5f, 0f), V(x, 0.05f, 0f), 0.042f, 0.036f, sock);
-                     l.Ell(V(x, 0.03f, -0.03f), V(0.05f, 0.032f, 0.08f), sock);
-                     l.Paint = 0.5f;
-                     l.Sph(V(x, 0.03f, -0.095f), 0.03f, white, 0f, 8, 5);
-                 });
-        }
-
-        // Arms: fur with dark gloves; the left paw holds the kite spool, its
-        // string running up out of reach.
-        for (int side = -1; side <= 1; side += 2)
-        {
-            float x = side * 0.17f;
-            int s = side;
-            Limb(b, true, side, V(x, 0.53f, 0f), V(x + side * 0.015f, 0.43f, 0f),
-                 u => { u.Paint = 1f; u.Tube(V(x, 0.53f, 0f), V(x + s * 0.015f, 0.43f, 0f), 0.04f, 0.036f, fur, furLight); },
-                 l =>
-                 {
-                     Vector3 e = V(x + s * 0.015f, 0.43f, 0f), w = V(x + s * 0.02f, 0.34f, 0f);
-                     l.Paint = 0.4f;
-                     l.Tube(e, w, 0.036f, 0.034f, sock);
-                     l.Sph(w + V(0f, -0.03f, 0f), 0.045f, sock);
-                     if (s < 0)
-                     {
-                         // Spool: a wooden reel across the paw, string wound on it.
-                         l.Paint = 0f;
-                         Vector3 c = w + V(0f, -0.035f, -0.055f);
-                         l.Cyl(c - V(0.05f, 0f, 0f), V(1f, 0f, 0f), 0.045f, 0.045f, 0.012f, wood, null, 12);
-                         l.Cyl(c + V(0.038f, 0f, 0f), V(1f, 0f, 0f), 0.045f, 0.045f, 0.012f, wood, null, 12);
-                         l.Cyl(c - V(0.04f, 0f, 0f), V(1f, 0f, 0f), 0.028f, 0.028f, 0.08f, White, null, 10);
-                         l.Tube(c + V(0f, 0.025f, -0.01f), c + V(0.02f, 0.30f, -0.22f), 0.004f, 0.004f, White, null, 4);
-                         l.Paint = 1f;
-                     }
-                 });
-        }
-        // A small diamond kite strapped on the back, above the tail.
-        p.Paint = 0.2f;
-        var kb = new Basis(Vector3.Right, -0.25f) * new Basis(Vector3.Back, Mathf.Pi * 0.25f);
-        p.Box(kb, V(0f, 0.47f, 0.16f), V(0.17f, 0.17f, 0.012f), new Color(1.00f, 0.32f, 0.36f));
-        p.Box(kb, V(0f, 0.47f, 0.168f), V(0.085f, 0.085f, 0.012f), scarfBand);
-        p.Paint = 0f;
-        p.Tube(V(0f, 0.355f, 0.13f), V(0f, 0.59f, 0.19f), 0.006f, 0.006f, wood, null, 4);
-        p.Tube(V(-0.12f, 0.475f, 0.165f), V(0.12f, 0.475f, 0.165f), 0.006f, 0.006f, wood, null, 4);
     }
 }

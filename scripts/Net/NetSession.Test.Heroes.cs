@@ -17,9 +17,29 @@ public partial class NetSession
 {
     private static bool ExpectSignature => OS.GetCmdlineUserArgs().Contains("--coop-expect-signature");
 
+    /// <summary><c>--coop-expect-look=&lt;lookId&gt;</c>: this player must wear
+    /// that body, and <c>--coop-expect-remote-look=&lt;lookId&gt;</c>: some remote
+    /// player must (so a redesigned hero is proved on both sides of the wire,
+    /// even when its signature is too short-ranged for the co-op bots to land).</summary>
+    private static string? ArgValue(string flag)
+    {
+        foreach (string a in OS.GetCmdlineUserArgs())
+            if (a.StartsWith(flag + "=")) return a[(flag.Length + 1)..];
+        return null;
+    }
+
     private string HeroTestCheck(List<string> problems)
     {
-        if (!ExpectSignature) return "";
+        string? wantLocal = ArgValue("--coop-expect-look"), wantRemote = ArgValue("--coop-expect-remote-look");
+        if (!ExpectSignature && wantLocal is null && wantRemote is null) return "";
+        if (!ExpectSignature)
+        {
+            string mine = RigLook(_main?.Player);
+            var others = _remotes.Values.Where(IsInstanceValid).Select(r => RigLook(r)).ToList();
+            if (wantLocal is not null && mine != "hero:" + wantLocal) problems.Add($"local look {mine}, expected hero:{wantLocal}");
+            if (wantRemote is not null && !others.Contains("hero:" + wantRemote)) problems.Add($"no remote wears hero:{wantRemote} ({string.Join(",", others)})");
+            return $" look={mine} remote_looks={string.Join(",", others)}";
+        }
         Meta.CharacterDef c = Meta.Characters.ForThisRun();
         string sig = c.StartingWeapon;
         bool hero = Meta.Characters.IsHero(c.Id);
@@ -40,6 +60,8 @@ public partial class NetSession
             remoteLooks.Add(look);
             if (!look.StartsWith("hero:hero-")) problems.Add($"remote {r.DisplayName} wears {look}, not a hero body");
         }
+        if (wantLocal is not null && localLook != "hero:" + wantLocal) problems.Add($"local look {localLook}, expected hero:{wantLocal}");
+        if (wantRemote is not null && !remoteLooks.Contains("hero:" + wantRemote)) problems.Add($"no remote wears hero:{wantRemote}");
         return $" hero={c.Id} signature={sig} held={(held ? 1 : 0)} sig_hits={Signatures.Hits}" +
                $" look={localLook} remote_looks={string.Join(",", remoteLooks)}";
     }
