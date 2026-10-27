@@ -68,6 +68,23 @@ public static class Coop
     /// on the difficulty id, so the start RPC stays the same).</summary>
     public static bool Endless { get; internal set; }
 
+    /// <summary>The host's route (sent after an "@" on the difficulty id).</summary>
+    public static string RouteId { get; internal set; } = "";
+
+    /// <summary>Pack tier, endless flag and route into the start/late-join string.</summary>
+    public static string PackStart(string tierId, bool endless, string routeId)
+        => (endless ? "endless:" : "") + tierId + (routeId.Length > 0 ? "@" + routeId : "");
+
+    /// <summary>Inverse of <see cref="PackStart"/>; sets DifficultyId, Endless and RouteId.</summary>
+    public static void UnpackStart(string packed)
+    {
+        int at = packed.IndexOf('@');
+        RouteId = at >= 0 ? packed[(at + 1)..] : "";
+        string tier = at >= 0 ? packed[..at] : packed;
+        Endless = tier.StartsWith("endless:");
+        DifficultyId = Endless ? tier["endless:".Length..] : tier;
+    }
+
     public static long LocalId { get; internal set; } = 1;
     public static readonly List<CoopPeer> Roster = new();
 

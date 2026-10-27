@@ -79,6 +79,8 @@ public sealed partial class CoopPage : Control
     private Label _difficulty = null!;
     private readonly List<Button> _arrows = new();
     private readonly List<Button> _difficultyArrows = new();
+    private Label _route = null!;
+    private readonly List<Button> _routeArrows = new();
     private Label _status = null!;
     private Label _note = null!;
     private Label _players = null!;
@@ -134,6 +136,8 @@ public sealed partial class CoopPage : Control
         _hatName = Picker(column, "Hat", () => CycleHat(-1), () => CycleHat(+1), _arrows);
         // The host picks the difficulty for everyone; a client sees it here.
         _difficulty = Picker(column, "Difficulty", () => StepDifficulty(-1), () => StepDifficulty(+1), _difficultyArrows);
+        // ...and the route (which maps, in which order).
+        _route = Picker(column, "Route", () => StepRoute(-1), () => StepRoute(+1), _routeArrows);
 
         // The same panel as the PLAY page: name, blurb, starting weapon and
         // stats, passive.
@@ -400,6 +404,17 @@ public sealed partial class CoopPage : Control
             arrow.Disabled = Coop.InRun || Launch.Automated;
         }
 
+        RouteDef route = Coop.IsClient && Routes.ById(Coop.RouteId) is { } hostRoute ? hostRoute : Routes.Selected;
+        string routeName = Loc.T(route.Name);
+        _route.Text = Coop.IsClient ? Loc.F("{0} (the host picks)", routeName) : routeName;
+        _route.TooltipText = Loc.T(route.Blurb);
+        _route.MouseFilter = MouseFilterEnum.Pass;
+        foreach (Button arrow in _routeArrows)
+        {
+            arrow.Visible = !Coop.IsClient;
+            arrow.Disabled = Coop.InRun || Launch.Automated;
+        }
+
         string status;
         bool warn = false;
         if (active)
@@ -586,6 +601,16 @@ public sealed partial class CoopPage : Control
         }
         Profile.Save();
         if (Coop.IsHost) NetSession.Instance?.SetLobbyDifficulty(DifficultyTiers.Selected.Id);
+        Refresh();
+    }
+
+    /// <summary>Host (or no session yet): the next route; saved to the profile.</summary>
+    private void StepRoute(int step)
+    {
+        if (Coop.IsClient || Coop.InRun) return;
+        Routes.Cycle(step);
+        Profile.Save();
+        if (Coop.IsHost) NetSession.Instance?.SetLobbyRoute();
         Refresh();
     }
 

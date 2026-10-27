@@ -65,10 +65,9 @@ public static class RunLengthCheck
                 CheckRoute(Expect, $"{tier.Id}/{r.Id}", maps, quiet: true);
             }
         Expect("every tier x route builds the right number of distinct, rising maps", ok);
-        Expect("Normal has 3 phases", Routes.PhasesFor(DifficultyTiers.All[0]) == 3);
-        if (active.Id == "normal")
-            Expect("a Normal run plays the classic route objects unchanged", ReferenceEquals(route, Stages.Run));
-        Expect("Abyss has 5 phases", Routes.PhasesFor(DifficultyTiers.ById("abyss")!) == 5);
+        Expect("Normal has 4 phases", Routes.PhasesFor(DifficultyTiers.All[0]) == 4);
+        Expect("Abyss has 6 phases (every map)", Routes.PhasesFor(DifficultyTiers.ById("abyss")!) == 6);
+        Expect("the long map order includes Stormwatch Harbour", System.Array.IndexOf(Stages.LongOrder, "stormwatch") >= 0);
         GD.Print(ok ? "PHASES PASS" : "PHASES FAIL");
     }
 

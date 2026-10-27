@@ -113,7 +113,8 @@ public static class Routes
     {
         Profile.EnsureLoaded();
         Launch.Parse();
-        RouteDef route = Launch.SkipsMenu || Net.Coop.InRun ? All[0] : Selected;   // co-op: every machine plays Classic
+        // Co-op: every machine plays the host's route (Net.Coop.RouteId).
+        RouteDef route = Net.Coop.InRun ? (ById(Net.Coop.RouteId) ?? All[0]) : Launch.SkipsMenu ? All[0] : Selected;
         if (MapChallenges.RouteOverride is { } forcedRoute && ById(forcedRoute) is { } mr) route = mr;   // map challenge
         string[]? explicitMaps = null;
         foreach (string arg in OS.GetCmdlineUserArgs())
@@ -155,7 +156,7 @@ public static class Routes
             // The classic three plus the extra maps they need, all in rising
             // order: Gravemoor before Shallows, so a 4-map run adds the harder one.
             var keep = new HashSet<string>(route.MapIds);
-            foreach (string id in new[] { "gravemoor", "shallows", "rimeglass", "thornmeadow", "cinder" })
+            foreach (string id in new[] { "gravemoor", "stormwatch", "shallows", "rimeglass", "thornmeadow", "cinder" })
             {
                 if (keep.Count >= phases) break;
                 keep.Add(id);

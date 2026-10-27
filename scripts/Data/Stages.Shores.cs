@@ -59,7 +59,7 @@ public static partial class Stages
     /// gentle meadow first, the open beach, the cold plateau, the crowded
     /// graveyard, and Cinder Reach always last.
     /// </summary>
-    public static readonly string[] LongOrder = { "thornmeadow", "shallows", "rimeglass", "gravemoor", "cinder" };
+    public static readonly string[] LongOrder = { "thornmeadow", "shallows", "rimeglass", "gravemoor", "stormwatch", "cinder" };
 
     /// <summary>
     /// <paramref name="map"/> as played in phase <paramref name="index"/> of a

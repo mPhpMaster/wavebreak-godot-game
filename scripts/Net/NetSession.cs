@@ -499,6 +499,15 @@ public sealed partial class NetSession : Node
 
     /// <summary>Host: the difficulty picked on the CO-OP page. Clients get it
     /// with the roster and cannot change it.</summary>
+    /// <summary>Host: the route changed in the lobby; tell everyone.</summary>
+    public void SetLobbyRoute()
+    {
+        if (!Coop.IsHost || Coop.InRun) return;
+        Coop.RouteId = Routes.Selected.Id;
+        BroadcastRoster();
+        Changed?.Invoke();
+    }
+
     public void SetLobbyDifficulty(string tierId)
     {
         if (!Coop.IsHost || Coop.InRun || DifficultyTiers.ById(tierId) is null) return;
@@ -522,7 +531,7 @@ public sealed partial class NetSession : Node
     {
         var sb = new StringBuilder();
         // Lobby-wide facts first, on a line of their own: the host's difficulty.
-        sb.Append("@|").Append(Coop.DifficultyId).Append('\n');
+        sb.Append("@|").Append(Coop.DifficultyId).Append('|').Append(Routes.Selected.Id).Append('\n');
         // Hosts who left mid-run, for their scoreboard lines (host migration).
         foreach (KeyValuePair<long, string> d in Coop.Departed)
             sb.Append("~|").Append(d.Key).Append('|').Append(d.Value).Append('\n');
@@ -544,6 +553,7 @@ public sealed partial class NetSession : Node
             if (f[0] == "@")
             {
                 if (f.Length > 1) Coop.DifficultyId = f[1];
+                if (f.Length > 2) Coop.RouteId = f[2];
                 continue;
             }
             if (f[0] == "~")
@@ -576,7 +586,7 @@ public sealed partial class NetSession : Node
         // The tier picked in the lobby (Coop.DifficultyId); the host's own
         // selection if the lobby never set one.
         string difficulty = DifficultyTiers.ById(Coop.DifficultyId) is { } lobbyTier ? lobbyTier.Id : DifficultyTiers.Selected.Id;
-        if (EndlessMode.Selected) difficulty = "endless:" + difficulty;
+        difficulty = Coop.PackStart(difficulty, EndlessMode.Selected, Routes.Selected.Id);
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--seed=")) seed = (ulong)arg["--seed=".Length..].ToInt();
         GD.Print($"[coop] starting run seed={seed} players={Coop.Roster.Count}");
@@ -587,8 +597,7 @@ public sealed partial class NetSession : Node
     private void StartRun(long seed, string difficultyId)
     {
         Coop.Seed = (ulong)seed;
-        Coop.Endless = difficultyId.StartsWith("endless:");
-        Coop.DifficultyId = Coop.Endless ? difficultyId["endless:".Length..] : difficultyId;
+        Coop.UnpackStart(difficultyId);
         Coop.InRun = true;
         Coop.ClearHold();
         // The lobby stays joinable: players can join a run in progress
