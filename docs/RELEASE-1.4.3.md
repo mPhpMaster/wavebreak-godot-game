@@ -1,4 +1,4 @@
-# Wavebreak 1.4.3 candidate verification
+# Wavebreak 1.4.3 release verification
 
 This release carries the authorized expedition polish. Version 1.4.2 remains the
 published baseline until the final 1.4.3 assets have been uploaded and checked.
@@ -79,3 +79,34 @@ fix and must not be uploaded.
   and all-map resources/rest checks using the isolated exported executable.
 - Windows export preset metadata is now synchronized by build.ps1 from the
   project version, so ProductVersion/FileVersion also report 1.4.3.0.
+
+
+## Published and verified
+
+Release: https://github.com/mPhpMaster/wavebreak-godot-game/releases/tag/v1.4.3
+
+Code/tag commit: `4417ab63dc6c228359ab636bbaf0312b49f74dce`.
+Both `main` and `codex/expedition-polish` were pushed. A documentation-only commit
+may follow the release tag to record this verification.
+
+| Asset | Bytes | SHA-256 |
+|---|---:|---|
+| Wavebreak-1.4.3-windows.zip | 97164930 | 06f01239ed252de3dd601bebe8e236d3b82c60eef961c1bfd8df1c093a54d578 |
+| Wavebreak-Setup-1.4.3.exe | 75658864 | 9bd43906c878efe62aa78111e0f6a400af2f75718363a62ffa79a497b1ed0f02 |
+| SHA256SUMS.txt | 188 | f40ad7d2083bdbc88f5f47cd04c17aa1dcb84af7e462cc25a5f1af13272421d2 |
+
+All three GitHub-uploaded asset sizes and server SHA-256 digests match local files.
+The public installer and portable download URLs return HTTP 200. GitHub's latest
+release endpoint reports v1.4.3, draft=false and prerelease=false. The portable
+manifest validates every one of 191 files and Windows ProductVersion 1.4.3.0;
+embedded helper contents/BOM/parser checks also pass.
+
+The final staged export was rebuilt after synchronizing Windows metadata; it
+includes the final dynamic-target validation fix. GPU startup/prewarming passes
+54 real stages with no ERROR/SCRIPT ERROR, releases its overlay and resumes play.
+Source evidence: `%TEMP%/wavebreak-loading-prewarm-final.log`.
+
+The user's running game was not closed/restarted or replaced. Everyone joining
+co-op must use the published 1.4.3 package (protocol wavebreak-coop-10).
+Human listening/playtest, live Steam and installation over an actual player copy
+remain the explicit acceptance limits recorded above.

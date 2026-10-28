@@ -1,8 +1,8 @@
 # Requested-work audit — Wavebreak 1.4.3
 
-The 36-item acceptance list is implemented in the current release candidate.
-Version 1.4.2 is the previous published baseline. Final publication evidence is
-recorded in RELEASE-1.4.3.md once the release assets are verified.
+The authorized polish implementation is included in published release 1.4.3.
+Version 1.4.2 is the previous published baseline. Verified publication evidence is
+recorded in RELEASE-1.4.3.md, including uploaded digests and HTTP 200 downloads.
 
 | Scope | Implementation / evidence |
 |---|---|
@@ -28,3 +28,4 @@ unverified. These limits must remain explicit and are not replaced by automated
 checks. No third-party outreach or interruption of the user's live game occurred.
 Android/Roblox remain postponed; web remains cancelled. Ancient Portal was only
 evaluated and is not included in this release.
+
