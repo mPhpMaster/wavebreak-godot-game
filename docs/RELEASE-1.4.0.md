@@ -25,3 +25,5 @@ Validation completed before publication:
 The earlier severe warm-play stall did not reproduce in balanced final measurements; its cause remains unconfirmed. Cold-load spikes remain. Manual listening/player feel, live Steam peer acceptance and running the installer over an actual installation remain unverified. No real installation was replaced and no user game session was stopped.
 
 See [full verification](EXPEDITION-FIX-VERIFICATION.md), [performance data](EXPEDITION-SOAK-PERFORMANCE.json) and [updater behavior](UPDATER.md).
+
+Publication verified at 2026-10-28T02:38:24Z: GitHub lists v1.4.0 as the latest stable release. All three uploaded asset digests and sizes match local files. Both Windows download URLs returned HTTP200, and the actual exported updater assembly accepted the live latest-release metadata with both installer and portable assets. Release code commit: `5d7260c7e87e73763a5e9d58731cfeb5f25b24d5`.
