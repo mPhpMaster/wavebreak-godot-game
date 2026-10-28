@@ -1,5 +1,7 @@
 # Wavebreak
 
+[![Sponsor](https://img.shields.io/badge/Sponsor-PayPal-0070ba?logo=paypal&logoColor=white)](https://paypal.me/mfsafadi)
+
 A 3D survivors-like made in **Godot 4.7.1 (.NET / C#)**. You wash up on a
 shore with one weapon. Then you run, jump, dash, slide and slam through
 waves of cute monsters, build up weapons, items, tomes and perks, beat a
@@ -295,6 +297,11 @@ powershell -ExecutionPolicy Bypass -File build.ps1 -Run
 The test flags, self-checks and how the code is organised are in
 [ARCHITECTURE.md](ARCHITECTURE.md). Third-party assets and their licences are
 in [assets/CREDITS.md](assets/CREDITS.md).
+
+## Support
+
+If you enjoy Wavebreak and want to support its development:
+**[paypal.me/mfsafadi](https://paypal.me/mfsafadi)** 💙
 
 ## License
 
