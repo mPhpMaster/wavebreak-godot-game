@@ -34,6 +34,10 @@ public sealed partial class SwimmingCheck : Node
         if (_step == 0 && _elapsed > 0.3f)
         {
             _map = Arena.Current;
+            // Measure idle depth control without autopilot movement or a random shotgun kick.
+            Main.Instance!.Enemies.ClearField(999);
+            Main.Instance.Enemies.Quiet = true;
+            _player.MoveOverride = static () => Vector3.Zero;
             Check(_player.IsSwimming && _map.Underwater, "map enables swimming");
             ReefGeometryCheck.Run(_player, Check);
             _player.Teleport(new Vector3(0f, 2f, 0f));

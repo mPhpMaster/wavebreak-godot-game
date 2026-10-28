@@ -36,7 +36,7 @@ public sealed partial class WeaponSystem
         foreach (IDamageable target in live)
         {
             if (!target.IsAlive) continue;
-            float distance = origin.DistanceSquaredTo(target.Position);
+            float distance = TargetGeometry.DistanceSquared(target, origin);
             if (distance > limit) continue;
             int index = count;
             if (index == _sightCandidates.Length)

@@ -36,7 +36,8 @@ public sealed partial class Enemy
         toPlayer.Y = 0f;
 
         float goalDistance = toPlayer.Length();
-        float distance = playerPosition.DistanceTo(position);
+        bool leviathan = _def?.Id == Visuals.ReefLeviathanModels.Id;
+        float distance = playerPosition.DistanceTo(leviathan ? AimPoint : position);
         Vector3 heading = goalDistance > .001f ? toPlayer / goalDistance : Vector3.Zero;
         heading = SteerAroundBlockers(position, heading, pursuit, goalDistance);   // Enemy.Blockers.cs
 
@@ -80,7 +81,8 @@ public sealed partial class Enemy
         float verticalSpeed = velocity.Y;
         bool swimming = Game.Arena.Current.Underwater;
         if (swimming)
-            verticalSpeed = StatusHeld ? 0f : Mathf.Clamp((playerPosition.Y + (_def?.Hover ?? 0f) - position.Y) * 2f, -3.5f, 3.5f);
+            verticalSpeed = StatusHeld ? 0f : Mathf.Clamp((playerPosition.Y + (_def?.Hover ?? 0f)
+                - (leviathan ? _halfHeight : 0) - position.Y) * 2f, -3.5f, 3.5f);
         else if (IsOnFloor()) { if (verticalSpeed < 0f) verticalSpeed = 0f; }
         else verticalSpeed -= Gravity * dt;
 

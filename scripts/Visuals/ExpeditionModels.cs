@@ -32,7 +32,7 @@ public static class ExpeditionModels
         foreach (int side in new[] { -1, 1 })
         {
             Limb(b, true, side, new Vector3(side * 0.23f, 0.71f, 0f),
-                new Vector3(side * 0.27f, 0.54f, -0.015f), 0.17f, coat, hands, fish);
+                new Vector3(side * 0.27f, 0.54f, -0.015f), fish ? .26f : .17f, coat, hands, fish);
             Limb(b, false, side, new Vector3(side * 0.11f, 0.46f, 0f),
                 new Vector3(side * 0.11f, 0.25f, 0f), 0.22f, coat.Darkened(0.25f), boots, false);
         }
@@ -48,7 +48,10 @@ public static class ExpeditionModels
         upper.Tube(Vector3.Zero, (bend - joint) * b.H, width * b.H, width * b.H, upperColor);
         lower.Tube(Vector3.Zero, (end - bend) * b.H, width * b.H, width * b.H, lowerColor);
         lower.Ellipsoid(new Transform3D(Basis.Identity, (end - bend) * b.H),
-            new Vector3(fin ? 0.115f : width, 0.055f, arm ? 0.06f : 0.13f) * b.H, lowerColor);
+            new Vector3(fin ? .07f : width, fin ? .07f : .055f, arm ? .07f : .13f) * b.H, lowerColor);
+        if (arm && fin)
+            lower.Ellipsoid(new Transform3D(Basis.Identity, ((end - bend) + new Vector3(side * .05f, .01f, .025f)) * b.H),
+                new Vector3(.035f, .05f, .035f) * b.H, lowerColor);
         if (arm) ExpeditionEquipment.Add(lower, (end - bend) * b.H, b.H, fin, side);
         b.Limb(arm, side, joint * b.H - b.HipsOffset, bend * b.H - b.HipsOffset, upper, lower);
     }

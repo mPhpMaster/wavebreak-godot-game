@@ -271,7 +271,11 @@ public sealed partial class EnemyManager
         Enemy? enemy = pool.Get();
         if (enemy is null) return null;               // pool at capacity; try again later
 
-        if (!TryFindSpawnPoint(around, out Vector3 point)
+        EnemyDef spawnDefinition = _defs[defIndex];
+        bool found = spawnDefinition.Id == Visuals.ReefLeviathanModels.Id
+            ? TryLeviathanSpawn(spawnDefinition, around, out Vector3 point)
+            : TryFindSpawnPoint(around, out point);
+        if (!found
             || Visuals.CityGiantModels.IsGiant(_defs[defIndex]) && Game.MapBlockers.Inside(point, _defs[defIndex].Radius + 0.3f))
         {
             pool.Release(enemy);

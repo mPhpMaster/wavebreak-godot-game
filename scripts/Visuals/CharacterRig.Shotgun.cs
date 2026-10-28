@@ -37,12 +37,22 @@ public sealed partial class CharacterRig
             : Swimming ? (Velocity.LengthSquared() > .16f ? Velocity.Normalized() : GlobalBasis.Y.Normalized())
             : -GlobalBasis.Z.Normalized();
         Vector3 local = (_hips.GlobalBasis.Inverse() * worldForward).Normalized();
-        Vector3 up = Mathf.Abs(local.Dot(Vector3.Up)) > .95f ? Vector3.Forward : Vector3.Up;
+        Vector3 worldUp = Mathf.Abs(worldForward.Dot(Vector3.Up)) > .95f ? Vector3.Back : Vector3.Up;
+        Vector3 up = (_hips.GlobalBasis.Inverse() * worldUp).Normalized();
         Basis aim = Basis.LookingAt(local, up);
         Vector3 gripCentre = (ShotgunModel.RightGrip + ShotgunModel.LeftGrip) * .5f;
-        _shotgun.Transform = new Transform3D(aim.Scaled(Vector3.One * _model.Height),
-            (new Vector3(0, .205f, -.06f) - aim * gripCentre) * _model.Height
-            - local * (_shotgunKick * .025f * _model.Height));
+        Vector3 origin = (new Vector3(0, .22f, -.29f) - aim * gripCentre) * _model.Height
+            - local * (_shotgunKick * .025f * _model.Height);
+        for (int pass = 0; pass < 6; pass++)
+            foreach (Part arm in _parts)
+            {
+                if (arm.Def.Role is not (PartRole.ArmL or PartRole.ArmR)) continue;
+                Vector3 offset = aim * (arm.Def.Role == PartRole.ArmR ? ShotgunModel.RightGrip : ShotgunModel.LeftGrip) * _model.Height;
+                Vector3 reach = origin + offset - arm.Def.Pivot;
+                float limit = (arm.Def.LowerPivot.Length() + .26f * _model.Height) * .98f;
+                if (reach.Length() > limit) origin -= reach.Normalized() * (reach.Length() - limit);
+            }
+        _shotgun.Transform = new Transform3D(aim.Scaled(Vector3.One * _model.Height), origin);
         ShotgunGripError = 0;
         for (int i = 0; i < _parts.Length; i++)
         {
@@ -56,7 +66,7 @@ public sealed partial class CharacterRig
     private void SolveShotgunArm(ref Part arm, Vector3 target)
     {
         Vector3 start = arm.Def.Pivot, reach = target - start;
-        float upper = arm.Def.LowerPivot.Length(), lower = .17f * _model.Height;
+        float upper = arm.Def.LowerPivot.Length(), lower = .26f * _model.Height;
         float distance = Mathf.Clamp(reach.Length(), Mathf.Abs(upper - lower) + .001f, (upper + lower) * .999f);
         Vector3 direction = reach.Normalized();
         float along = (upper * upper - lower * lower + distance * distance) / (2 * distance);

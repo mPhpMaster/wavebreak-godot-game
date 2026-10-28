@@ -133,6 +133,7 @@ public sealed class ModelSpec
 
     /// <summary>Yaw (radians) applied to the imported scene so it faces -Z.</summary>
     public float SceneYaw;
+    public float ScenePitch;
 
     /// <summary>
     /// Wrap an imported, animated character as a spec. Example:

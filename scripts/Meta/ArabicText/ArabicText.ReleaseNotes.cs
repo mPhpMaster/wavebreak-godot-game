@@ -4,6 +4,12 @@ public static partial class ArabicText
 {
     internal static readonly (string En, string Ar)[] ReleaseNotes =
     {
+        ("Shotgun grip correction and the huge Reef Leviathan", "تصحيح قبضة الشوتغن وليفايثان الشعاب العملاق"),
+        ("Nori holds the shotgun upright relative to the world while swimming. The barrel clears the face, with distinct trigger and foregrip hand positions.", "يحمل نوري الشوتغن بوضع صحيح أثناء السباحة، بعيداً عن الوجه، مع موضع واضح ليد المقبض الخلفي وأخرى على المقدمة."),
+        ("The first Reef boss encounter now always uses the downloaded Leviathan model instead of falling back to an older generic boss.", "يستخدم قتال بوس الشعاب الأول الآن نموذج الليفايثان المحمّل دائماً، دون الرجوع إلى بوس قديم بديل."),
+        ("The Leviathan is four times larger and swims horizontally. Collision, weapon hit detection, attack reach, underwater spawn clearance and depth tracking match its huge size.", "أصبح الليفايثان أكبر بأربع مرات ويسبح أفقياً، مع ضبط التصادم وإصابات الأسلحة ومدى الهجوم ومساحة ظهوره وتتبع العمق بما يناسب حجمه العملاق."),
+        ("Cave sharks remain separate cave guardians. Mild shotgun recoil and reliable diving are preserved.", "تبقى قروش الكهف حراساً منفصلين، مع الحفاظ على ارتداد الشوتغن الخفيف وإصلاح الغوص."),
+        ("Co-op protocol 12 keeps the giant boss model and collision consistent. All players must update together.", "يوحّد بروتوكول التعاون 12 نموذج البوس العملاق وتصادمه، ويجب تحديث اللعبة لدى جميع اللاعبين معاً."),
         ("Reliable diving, two-hand shotgun and Windows update repair", "إصلاح الغوص وقبضة الشوتغن وتحديثات ويندوز"),
         ("Nori now holds the shotgun with both hands. Its muzzle follows the firing direction while swimming or standing.", "يمسك نوري الشوتغن باليدين، وتتبع الفوهة اتجاه الإطلاق أثناء السباحة والوقوف."),
         ("Shotgun kick is much gentler and cannot accumulate with attack-speed upgrades. Swimming keeps full directional control while firing.", "أصبح ارتداد الشوتغن أخف بكثير ولا يتراكم مع تطوير سرعة الإطلاق، مع الحفاظ على التحكم باتجاه السباحة أثناء الإطلاق."),

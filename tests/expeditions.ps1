@@ -97,6 +97,24 @@ won_normal=1
         if (-not $hostProcess.HasExited) { Stop-Process -Id $hostProcess.Id }
         $hostProcess.Dispose()
     }
+    $bossPort = Get-Random -Minimum 39000 -Maximum 49000
+    $bossHostLog = Join-Path $evidence 'coop-leviathan-host.log'
+    $bossClientLog = Join-Path $evidence 'coop-leviathan-client.log'
+    $bossHostArgs = '--headless --path "' + $taskRoot + '" --audio-driver Dummy --quit-after 3000 --log-file "' + $bossHostLog +
+        '" -- --coop-host=' + $bossPort + ' --coop-players=2 --seed=42 --route=reef-dive --check-coop-leviathan --invulnerable --character=nori'
+    $bossHost = Start-Process -FilePath $Godot -ArgumentList $bossHostArgs -PassThru -WindowStyle Hidden
+    try {
+        Start-Sleep -Milliseconds 800
+        & $Godot --headless --path $taskRoot --audio-driver Dummy --quit-after 3000 --log-file $bossClientLog -- `
+            "--coop-join=127.0.0.1:$bossPort" --route=reef-dive --check-coop-leviathan --invulnerable --character=nori *> (Join-Path $evidence 'coop-leviathan-stdout.log')
+        if (-not $bossHost.WaitForExit(30000)) { throw 'Co-op Leviathan host timed out' }
+        Assert-Evidence $bossHostLog 'COOP LEVIATHAN PASS'
+        Assert-Evidence $bossClientLog 'COOP LEVIATHAN PASS'
+    }
+    finally {
+        if (-not $bossHost.HasExited) { Stop-Process -Id $bossHost.Id }
+        $bossHost.Dispose()
+    }
     }
 
     if ($Render -or $RenderOnly) {

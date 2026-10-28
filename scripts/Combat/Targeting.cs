@@ -64,6 +64,7 @@ public static class Targeting
     private static ulong _frame = ulong.MaxValue;
     private static bool _gridBuilt;
     private static bool _useGrid;
+    private static readonly List<IDamageable> LargeTargets = new();
 
     /// <summary>Everything alive this frame. Read-only; the list is rebuilt in
     /// place, so callers must not hold on to it across frames.</summary>
@@ -81,6 +82,7 @@ public static class Targeting
     {
         Revision++;
         LiveTargets.Clear();
+        LargeTargets.Clear();
         ReleaseCells();
         _gridBuilt = false;
         _useGrid = false;
@@ -89,6 +91,7 @@ public static class Targeting
         if (Source is not null)
         {
             Source(LiveTargets);
+            foreach (IDamageable target in LiveTargets) if (TargetGeometry.ExtraRadius(target) > 0) LargeTargets.Add(target);
             return;
         }
 
@@ -102,7 +105,11 @@ public static class Targeting
         for (int i = 0; i < alive.Count; i++)
         {
             Enemy enemy = alive[i];
-            if (enemy.IsAlive) LiveTargets.Add(enemy);
+            if (enemy.IsAlive)
+            {
+                LiveTargets.Add(enemy);
+                if (TargetGeometry.ExtraRadius(enemy) > 0) LargeTargets.Add(enemy);
+            }
         }
     }
 
@@ -117,6 +124,7 @@ public static class Targeting
     {
         Source = null;
         LiveTargets.Clear();
+        LargeTargets.Clear();
         ReleaseCells();
         _frame = ulong.MaxValue;
         _gridBuilt = false;
@@ -175,6 +183,8 @@ public static class Targeting
             }
         }
 
+        foreach (IDamageable target in LargeTargets)
+            if (!into.Contains(target)) AddIfInside(target, centre, reachSq, into);
         return into.Count;
     }
 
@@ -238,9 +248,7 @@ public static class Targeting
     {
         if (!target.IsAlive) return;
 
-        Vector3 d = target.Position - centre;
-        if (!Game.Arena.Current.Underwater && !Game.Arena.IsCity) d.Y = 0f;
-        if (d.LengthSquared() <= reachSq) into.Add(target);
+        if (TargetGeometry.DistanceSquared(target, centre) <= reachSq) into.Add(target);
     }
 
     private static void Consider(IDamageable target, Vector3 from, ref float bestSq, ref IDamageable? best)
@@ -250,7 +258,7 @@ public static class Targeting
         Vector3 d = target.Position - from;
         if (!Game.Arena.Current.Underwater && !Game.Arena.IsCity) d.Y = 0f;
 
-        float sq = d.LengthSquared();
+        float sq = TargetGeometry.DistanceSquared(target, from);
         if (sq >= bestSq) return;
 
         bestSq = sq;

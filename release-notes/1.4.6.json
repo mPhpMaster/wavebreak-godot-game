@@ -1,0 +1,11 @@
+{
+  "Version": "1.4.6",
+  "Title": "Shotgun grip correction and the huge Reef Leviathan",
+  "Changes": [
+    "Nori holds the shotgun upright relative to the world while swimming. The barrel clears the face, with distinct trigger and foregrip hand positions.",
+    "The first Reef boss encounter now always uses the downloaded Leviathan model instead of falling back to an older generic boss.",
+    "The Leviathan is four times larger and swims horizontally. Collision, weapon hit detection, attack reach, underwater spawn clearance and depth tracking match its huge size.",
+    "Cave sharks remain separate cave guardians. Mild shotgun recoil and reliable diving are preserved.",
+    "Co-op protocol 12 keeps the giant boss model and collision consistent. All players must update together."
+  ]
+}

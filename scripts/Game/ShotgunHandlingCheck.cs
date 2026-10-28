@@ -63,6 +63,14 @@ public sealed partial class ShotgunHandlingCheck : Node
             player.ShotgunFeedback(Vector3.Forward); await Wait(.03f);
             Require(!player.IsSwimming && player.ShotgunRecoilSpeed <= .35f && rig.ShotgunGripError < .02f,
                 "land uses the same two-hand grip with a smaller bounded kick");
+            foreach (string arg in OS.GetCmdlineUserArgs())
+                if (arg.StartsWith("--shotgun-shot="))
+                {
+                    Camera3D camera = GetViewport().GetCamera3D()!;
+                    camera.GlobalPosition = player.GlobalPosition + new Vector3(3, 1.6f, -3);
+                    camera.LookAt(player.CenterPosition); await Wait(.2f);
+                    await Screenshot.Capture(GetTree(), this, arg["--shotgun-shot=".Length..] + ".land.png");
+                }
             GD.Print("SHOTGUN HANDLING PASS"); GetTree().Quit();
         }
         catch (Exception error) { GD.Print("SHOTGUN HANDLING FAIL " + error); GetTree().Quit(1); }
@@ -84,5 +92,8 @@ public sealed partial class ShotgunHandlingCheck : Node
         camera.LookAt(player.CenterPosition); camera.MakeCurrent(); await Wait(.2f);
         Require(rig.ShotgunGripError < .02f, "both palms stay on the weapon grips in the captured pose");
         await Screenshot.Capture(GetTree(), this, path);
+        camera.GlobalPosition = player.GlobalPosition + new Vector3(3, .5f, 0);
+        camera.LookAt(player.CenterPosition); await Wait(.1f);
+        await Screenshot.Capture(GetTree(), this, path + ".side.png");
     }
 }

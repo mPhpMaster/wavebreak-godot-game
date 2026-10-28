@@ -85,9 +85,9 @@ public sealed partial class StageDirector
     {
         if (Stage.BossId is { Length: > 0 } wanted)
             foreach (EnemyDef def in _roster)
-                // A map's signature boss still waits for its unlock time, so a
-                // route that opens on that map does not field it in phase 1.
-                if (def.IsBoss && def.Id == wanted && def.UnlockAtSeconds <= _run.Seconds
+                // Reef's explicit encounter must not be replaced by a generic roster unlock gate.
+                if (def.IsBoss && def.Id == wanted
+                    && (wanted == Visuals.ReefLeviathanModels.Id || def.UnlockAtSeconds <= _run.Seconds)
                     && EnemyMapEligibility.Allows(def, Stage)) return def;
 
         EnemyDef? best = null, bestFresh = null, earliest = null, earliestFresh = null;

@@ -41,8 +41,10 @@ public sealed partial class CaveUiCheck
         Check(!_selection.Visible.Contains(far) && !_selection.Visible.Contains(vertical) && !_selection.Visible.Contains(boss),
             "distance is full 3D and dedicated boss UI is not duplicated");
         Check(!NearbyEnemySelection.Nearby(unrevealed, unrevealed.AimPoint + Vector3.Back), "fog hides enemy bars even within the proximity radius");
-        normal.TakeDamage(new DamageInfo { Amount = normal.Health * 0.5f, CanCrit = false, Knockback = 0 });
-        Check(Mathf.Abs(normal.Health / normal.MaxHealth - 0.5f) < 0.001f, "bar health source responds to actual current/max health changes");
+        float healthBefore = normal.Health;
+        normal.TakeDamage(new DamageInfo { Amount = healthBefore * 0.5f, CanCrit = false, Knockback = 0 });
+        Check(Mathf.Abs(normal.Health / normal.MaxHealth - healthBefore * .5f / normal.MaxHealth) < 0.001f,
+            "bar health source responds to actual current/max health changes");
         await Wait(0.2f); await Capture("health");
         if (_prefix is not null) Check(ReefCheckHelpers.Find<EnemyHealthBars>(GetTree().Root) is { BarsDrawn: > 0 }, "rendered nearby bars are present");
         var wall = Wall(origin + new Vector3(-1.5f, 1.5f, -3), new Vector3(8, 12, 0.6f));

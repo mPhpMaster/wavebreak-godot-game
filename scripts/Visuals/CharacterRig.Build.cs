@@ -150,7 +150,7 @@ public sealed partial class CharacterRig
             visual.AddChild(inst);
         }
         _hips.AddChild(visual);
-        visual.Rotation = new Vector3(0f, spec.SceneYaw, 0f);
+        visual.Rotation = new Vector3(spec.ScenePitch, spec.SceneYaw, 0f);
 
         float scale = spec.SceneScale;
         if (scale <= 0f)
@@ -162,6 +162,12 @@ public sealed partial class CharacterRig
                 spec.SceneOffset = new Basis(Vector3.Up, spec.SceneYaw)
                     * new Vector3(-box.GetCenter().X * scale, -box.Position.Y * scale, -box.GetCenter().Z * scale);
             spec.SceneScale = scale; // measured once per spec
+            if (spec.PreserveSceneRootTransform && spec.ScenePitch != 0)
+            {
+                Aabb oriented = new Transform3D(Basis.FromEuler(new Vector3(spec.ScenePitch, spec.SceneYaw, 0)), Vector3.Zero)
+                    * new Aabb(box.Position * scale, box.Size * scale);
+                spec.SceneOffset = new Vector3(-oriented.GetCenter().X, -oriented.Position.Y, -oriented.GetCenter().Z);
+            }
         }
         visual.Scale = Vector3.One * scale;
         if (spec.PreserveSceneRootTransform) visual.Position = spec.SceneOffset;

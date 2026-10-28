@@ -11,7 +11,8 @@ public static class ReefLeviathanModels
     public static ModelSpec For(EnemyDef def)
     {
         if (_spec is not null) return _spec;
-        if (ResourceLoader.Load<PackedScene>(Path) is not { } scene) return ReefMarineModels.For(def);
+        PackedScene scene = ResourceLoader.Load<PackedScene>(Path)
+            ?? throw new System.InvalidOperationException("The licensed Leviathan scene is missing: " + Path);
         Node3D sample = scene.Instantiate<Node3D>();
         AnimationPlayer? player = FindPlayer(sample);
         string? swim = null;
@@ -21,7 +22,8 @@ public static class ReefLeviathanModels
         var spec = ModelSpec.FromScene(scene, def.Height, id: "boss:wertt-leviathan");
         spec.PreserveSceneRootTransform = true;
         spec.NativeSwimmingClip = true;
-        spec.SceneAlbedoFloor = .55f;
+        spec.ScenePitch = -Mathf.Pi * .5f;
+        spec.SceneAlbedoFloor = .8f;
         if (swim is not null)
             foreach (AnimSlot slot in new[] { AnimSlot.Idle, AnimSlot.Walk, AnimSlot.Run, AnimSlot.Dash, AnimSlot.Jump, AnimSlot.Fall })
                 spec.Clips[slot] = swim;
