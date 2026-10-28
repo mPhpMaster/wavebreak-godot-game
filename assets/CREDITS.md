@@ -20,20 +20,22 @@ were copied in.
 
 The heroes trio (Sunny, Biscuit, Flick) wear no third-party art: their
 bodies are built in code from primitives (`scripts/Visuals/HeroModels.cs`)
-and are original to this project, CC0 1.0 like the music below.
+and are original to this project, under the project licence (CC BY-NC 4.0,
+see `LICENSE`) like the music below.
 
 The Kenney icons above were re-rendered (cropped, rescaled to 128 px, given a
 dark outline) by `tools/make_icons.py`. Every other PNG in `assets/icons/` is an
-original glyph drawn by that script and is CC0 1.0 like the music below.
+original glyph drawn by that script and is under the project licence
+(CC BY-NC 4.0) like the music below.
 
-CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
+CC0 1.0 (the Kenney and Quaternius packs): https://creativecommons.org/publicdomain/zero/1.0/
 
 ## Music
 
 Every file in `assets/music/` is original to this project: the notes were composed
 for it and rendered with no samples by `tools/compose_music.py`, which uses
-numpy/scipy synthesis and ffmpeg/libvorbis. It is dedicated to the public domain
-under CC0 1.0, like the art above. To change a track, edit the script and re-run
+numpy/scipy synthesis and ffmpeg/libvorbis. It is © 2026 Mohammad Al-Safadi
+(sensei / hlaCk) under the project licence, CC BY-NC 4.0 (see `LICENSE`). To change a track, edit the script and re-run
 `python tools/compose_music.py [--only name]`.
 
 | File | Use | Key / tempo | Length |
@@ -73,3 +75,9 @@ Which track plays where, and how each unlocks in the Boombox, is
 - License: CC0 1.0, bundled in `kenney/reef-pickups/License.txt`.
 - Files: `jewel.glb` (XP), `coin-gold.glb` (gold), original `Textures/colormap.png`.
 - Retrieved 2026-10-27 from the official free download; no payment or bundled software.
+
+## Steam
+
+| File | What | Owner | Licence |
+|---|---|---|---|
+| `thirdparty/steamworks/win64/steam_api64.dll` | Steamworks API runtime (co-op lobbies) | Valve Corporation | Steamworks SDK Access Agreement; redistributed with the game, not covered by this repository's licence |
