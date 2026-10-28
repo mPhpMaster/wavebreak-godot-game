@@ -1,0 +1,42 @@
+Wavebreak
+Copyright (c) 2026 Mohammad Al-Safadi (sensei / hlaCk, github.com/mPhpMaster)
+
+This work (the source code, scenes, scripts, generated music, icons and
+documentation in this repository, except the third-party files listed below)
+is licensed under the Creative Commons Attribution-NonCommercial 4.0
+International License (CC BY-NC 4.0).
+
+Full legal text: https://creativecommons.org/licenses/by-nc/4.0/legalcode
+Summary:         https://creativecommons.org/licenses/by-nc/4.0/
+
+In short:
+
+  You MAY    copy, share, modify and build on this work, for any purpose that
+             is not commercial.
+
+  You MUST   give credit: keep this notice, name the author as
+             "Mohammad Al-Safadi (sensei / hlaCk)" with a link to
+             https://github.com/mPhpMaster/wavebreak-godot-game,
+             and say whether you changed anything.
+
+  You MAY NOT sell this work or anything made from it, or use it primarily
+             for commercial advantage or monetary compensation (paid games,
+             paid downloads, paid access, ads-funded redistribution, etc.).
+
+The summary above is for convenience only; the legal code linked above is the
+license.
+
+Third-party material (keeps its own license, not covered by the above):
+
+  - assets/kenney/       Kenney asset packs - CC0 1.0 (public domain)
+  - assets/quaternius/   Quaternius asset packs - CC0 1.0 (public domain)
+  - assets/fonts/        Noto Sans Arabic UI - SIL Open Font License 1.1
+                         (see assets/fonts/OFL.txt)
+  - thirdparty/steamworks/  steam_api64.dll - Valve Corporation, distributed
+                         under the Steamworks SDK Access Agreement; not
+                         licensed by this repository
+  - Godot Engine (not included in source; used to build) - MIT License
+
+See assets/CREDITS.md for the full list.
+
+For commercial licensing, contact the author through GitHub.

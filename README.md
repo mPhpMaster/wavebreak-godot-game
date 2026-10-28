@@ -2,8 +2,10 @@
 
 A 3D survivors-like made in **Godot 4.7.1 (.NET / C#)**. You wash up on a
 shore with one weapon. Then you run, jump, dash, slide and slam through
-waves of cute monsters, build up weapons, items and tomes, beat a boss on
-each of three maps, and hold the line through the Final Swarm.
+waves of cute monsters, build up weapons, items, tomes and perks, beat a
+boss on every map (4 on Normal, up to all 6 on the hardest tiers), rest and
+trade between maps, and hold the line through the Final Swarm. Alone, or
+online with up to three friends on Steam.
 
 ![Gameplay](docs/screenshots/gameplay.png)
 
@@ -23,18 +25,19 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 
 | | |
 |---|---|
-| Maps | 6: Thornmeadow, Rimeglass Plateau, Cinder Reach, Gravemoor, Saltglass Shallows and Stormwatch Harbour (the biggest: an old town, cliffs, a lighthouse, docks and a coral canyon you cannot see across). Each has its own enemies, hazards, boss and music; a run is 3 maps on Normal and Hard, 4 on Nightmare and Tempest, 5 from Abyss up |
+| Maps | 6: Thornmeadow, Rimeglass Plateau, Cinder Reach, Gravemoor, Saltglass Shallows and Stormwatch Harbour (the biggest: an old town, cliffs, a lighthouse, docks and a coral canyon you cannot see across). Each has its own enemies, hazards, boss and music; a run is 4 maps on Normal and Hard, 5 on Nightmare and Tempest, all 6 from Abyss up |
 | Weapons / items / tomes | 33 / 98 / 26, with elements, status effects, megacrits and upgrade rarities. Three are signature weapons that only their hero can hold |
 | Perks | 15 levelled rules picked like tomes (and sometimes found in chests): chain lightning every Nth hit, shield bubbles from elites, a chilling dash wake, stomps, crits that heal, orbiting XP motes, gold-fuelled damage, a refused lethal blow, a chest-finding beacon, a knock-back pulse, armour for standing still, speed-fuelled attack speed, a cornered damage boost, and two team perks (Crew Beacon buffs nearby allies; Lifeline speeds up the revives you give). Perks share the tome slots |
 | Enemies | 53, including phase bosses with move sets |
-| Characters | 24 with passives, 151 skins, 22 hats. The heroes trio each bring a signature weapon: Sunny the Lookout (Spyglass Glint, a precise beam at whatever you look at), Biscuit the Sea Dog (Mooring Anchor, a ring that holds a crowd until it is hauled in) and Flick the Kite Fox (Skimmer Kite, a kite you steer by running) |
+| Characters | 24 with passives, 151 skins, 22 hats. The heroes trio have their own original models (a macaw lookout, a sailor sea-dog and a chibi aviator fox) and each bring a signature weapon that also levels up from chests and the merchant: Sunny the Lookout (Spyglass Glint, a precise beam at whatever you look at), Biscuit the Sea Dog (Mooring Anchor, a ring that holds a crowd until it is hauled in) and Flick the Kite Fox (Skimmer Kite, a kite you steer by running) |
 | Quests | 327 (18 secret), which unlock characters, weapons, items, skins and Pearls |
 | Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 66 map challenges, the Toggler, leaderboard |
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests; Tide Totems (1-3 per map: press E once and every XP orb and coin on the map flies to you) |
-| Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full and a microwave. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |
+| Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full, a microwave and (in co-op) the Swap Meet, where two players trade gold, items and tomes. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |
 | Level-up | Three cards with icons (a perk card shows what the level adds and the total); reroll (R), banish (B) and skip (X); optional compact hand that keeps the game running, and auto-pick by a rule (Settings > Gameplay) |
 | Music | 21 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
-| Co-op | Online, 2-4 players with Steam friends: lobbies, invites, no ports (see [Co-op](#co-op-2-4-players)) |
+| Co-op | Online, 2-4 players with Steam friends: public or invite-only lobbies, joining mid-run, host migration, the host picks the difficulty and the route (see [Co-op](#co-op-2-4-players)) |
+| Modes | Seven difficulty tiers (Normal to Endless Tide) and Endless mode (unlocked after the last tier: loops the maps forever, one tier harder each loop) |
 | Languages | English and Arabic (full right-to-left layout) |
 | Settings | Full graphics page (presets, display, scaling/FSR, AA, shadows, effects, FOV, shake, UI scale, weapon-effect opacity, FPS counter), audio, key bindings |
 
@@ -223,6 +226,7 @@ Title screen → **CO-OP**.
 | Compact level-up | Single-player uses the small docked hand and keeps the game running while you choose (co-op always does) |
 | Auto-pick on level up | Off / On: every level-up takes a card at once, and a short note says which |
 | Auto-pick rule | Best rarity first, Prefer weapons, Prefer items, Prefer tomes, Upgrade what I have, Random |
+| Auto-pick starts at | First level-up, or from level 5, 10, 15, 20, 30, 40 or 50 |
 
 ## Controls
 
@@ -281,13 +285,29 @@ dotnet build
 Godot_v4.7.1-stable_mono_win64.exe --path .
 ```
 
-Release and installer:
+Release, portable zip and installer in one step (Inno Setup 6 for the installer;
+the version comes from `config/version` in `project.godot`):
 
 ```bash
-Godot_v4.7.1-stable_mono_win64_console.exe --headless --path . --export-release "Windows Desktop" build/windows/Wavebreak.exe
-"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/Wavebreak.iss
+powershell -ExecutionPolicy Bypass -File build.ps1 -Run
 ```
 
 The test flags, self-checks and how the code is organised are in
 [ARCHITECTURE.md](ARCHITECTURE.md). Third-party assets and their licences are
 in [assets/CREDITS.md](assets/CREDITS.md).
+
+## License
+
+Wavebreak is © 2026 Mohammad Al-Safadi (sensei / hlaCk) and licensed under
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — see
+[LICENSE](LICENSE).
+
+- **You may** copy, share, modify and build on it for non-commercial use.
+- **You must** credit "Mohammad Al-Safadi (sensei / hlaCk)" with a link to
+  this repository, and say if you changed it.
+- **You may not** sell it or anything made from it, or use it for commercial
+  gain.
+
+Third-party assets keep their own licences (Kenney and Quaternius: CC0;
+Noto Sans Arabic UI: OFL; Steam's `steam_api64.dll`: Valve's Steamworks
+terms). See [assets/CREDITS.md](assets/CREDITS.md).

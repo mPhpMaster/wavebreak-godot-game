@@ -91,7 +91,8 @@ classes, and lets someone tune them without touching C#.
 | `EnemyDef.Cost` | per enemy | how the director's budget converts into threat — swarm vs. squad |
 | `EnemyDef.UnlockAtSeconds` | per enemy | paces which threats appear when |
 | `RunState.TargetSeconds` | 900 | nominal run length; the stage table is tuned to land near it |
-| `StageDef.PhaseSeconds` | 210 | waves per map before its boss arrives; 3 maps x (3:30 + ~2 min boss) ~ 15 min |
+| `StageDef.PhaseSeconds` | 210 | waves per map before its boss arrives; 4 maps on Normal x (3:30 + ~2 min boss) ~ 20 min |
+| `StatSheet.BaseValue(JumpHeight)` | 3.5 m | jump apex; Tome of Updrafts adds +15% per level (8 levels), items and some heroes add more |
 | `StageDef.Radius` | 130-165 m | maps are 2-3x the old 60 m disc; spawns stay on a ring around the player, so density near the player is unchanged |
 | `StageDef.Enemy*Scale` | 1 / 1.25 / 1.55 hp | per-map step on top of the clock curve; phase 1 is exactly 1 so the opening is untouched |
 | `StageDef.BossHealthScale` | 0.55 (0.45 last) | phase bosses are mandatory gates and weapons aim at the nearest enemy, so they carry less than the full time-curve health |
@@ -307,14 +308,16 @@ boss, a forfeit before it.
   every HUD); once anyone is in, a 30 s countdown (`RestExitTimeout`) starts,
   so one idle player cannot hold the team. A player who arrives downed is
   revived at full health.
-- **Run length per tier:** `DifficultyTier.Phases` (Normal 3, Hard 3,
-  Nightmare 4, Tempest 4, Abyss 5, Leviathan 5, Endless Tide 5). `Routes`
-  builds that many maps without repeats: Classic uses `Stages.LongOrder`
-  (meadow, shallows, plateau, graveyard, Cinder Reach last); a fixed route
-  gets the unused maps slotted in before its last map; a draw draws more.
-  `Stages.ForPhase(map, i, count)` keeps stepping enemy numbers past phase 3
-  (+25% hp, +0.13 dmg, +0.03 speed per phase); only the last map's boss gets
-  the final share (0.45). Normal is exactly the classic route objects.
+- **Run length per tier:** `DifficultyTier.Phases` (Normal 4, Hard 4,
+  Nightmare 5, Tempest 5, Abyss 6, Leviathan 6, Endless Tide 6: every map).
+  `Routes` builds that many maps without repeats: Classic uses
+  `Stages.LongOrder` (meadow, shallows, plateau, graveyard, Stormwatch
+  Harbour, Cinder Reach last); a fixed route gets the unused maps slotted in
+  before its last map; a draw draws more. `Stages.ForPhase(map, i, count)`
+  keeps stepping enemy numbers past phase 3 (+25% hp, +0.13 dmg, +0.03 speed
+  per phase); only the last map's boss gets the final share (0.45).
+  `--check-phases` checks the counts and that every tier x route builds
+  distinct, rising maps.
 - **Boss portal countdown:** `DifficultyTier.PortalSeconds` (90 / 75 / 60 /
   50 / 40 / 35 / 30 s), shown on the HUD status line and over the portal.
   **At zero the portal pulls everyone through** (into the rest room, or the
@@ -454,8 +457,13 @@ on scene-tree order, so hit registration changes when you reparent a node.
 `Data/Stages.Shores.cs` adds Gravemoor (graveyard, pentagon, sunken graves that
 slow and gnaw) and Saltglass Shallows (tidal, 12 sides, tide pools that slow).
 The pools are `Game/MapHazards`, placed last so maps without hazards keep their
-layout. `Meta/Routes` picks the run's 3 maps: Classic (= `Stages.Run`), fixed
-routes, seeded draws, and "start on X". A non-classic map is copied with the
+layout. `Meta/Routes` picks the run's maps (as many as the tier's `Phases`):
+Classic (`Stages.Run` extended through `Stages.LongOrder`), fixed routes,
+seeded draws ("Tide Draw"), "start on X" and Beacon Road. In co-op every
+machine plays the host's route: the host picks it in the lobby next to the
+difficulty, it rides in the roster line (`@|tier|route`) and in the start
+string (`Coop.PackStart`: `[endless:]tier[@route]`), so late joiners get it
+too. A non-classic map is copied with the
 classic numbers for its phase (`Stages.ForPhase`), so a route changes the ground,
 not the difficulty curve. `Meta/Challenges` and `ChallengeRuntime` are stackable
 run modifiers; every multiplier is exactly 1 when none is active. Automated runs
@@ -1461,3 +1469,11 @@ The boot splash is `assets/splash.png` (icon, name, tagline on the menu's night
 colour), drawn by `installer/make_splash.py` and set under `[application]
 boot_splash/*` in `project.godot`, so the Godot logo never shows. The version
 (`config/version`, the exe's version resources and the installer) is 1.3.4.
+
+## License
+
+`LICENSE`: CC BY-NC 4.0, © 2026 Mohammad Al-Safadi (sensei / hlaCk). Free to
+copy, share and modify for non-commercial use with credit and a link to the
+repository; no selling. Third-party files keep their own licences (Kenney and
+Quaternius CC0, Noto Sans Arabic UI OFL, Valve's `steam_api64.dll` under the
+Steamworks terms); `assets/CREDITS.md` lists them.
