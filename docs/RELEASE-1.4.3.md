@@ -75,3 +75,7 @@ fix and must not be uploaded.
   into that export and repackaged after the final network/test correction.
 - Installer compression changed from ultra64 to max: same payload, lower build
   memory/time. Both versions' own source paths remain supported by build.ps1.
+- Exported game binary passed bundled notes, Classic-after-Reef start, steering
+  and all-map resources/rest checks using the isolated exported executable.
+- Windows export preset metadata is now synchronized by build.ps1 from the
+  project version, so ProductVersion/FileVersion also report 1.4.3.0.

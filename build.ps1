@@ -29,6 +29,12 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $version = (Select-String -Path "$root\project.godot" -Pattern '^config/version="([^"]+)"').Matches[0].Groups[1].Value
 Write-Host "Wavebreak $version" -ForegroundColor Cyan
 & "$root\tools\verify-release-notes.ps1" -Version $version -Root $root
+$windowsVersion = ($version -split '[-+]')[0] + '.0'
+$presetPath = Join-Path $root 'export_presets.cfg'
+$preset = [IO.File]::ReadAllText($presetPath)
+$preset = $preset -replace 'application/file_version="[^"]*"', ('application/file_version="' + $windowsVersion + '"')
+$preset = $preset -replace 'application/product_version="[^"]*"', ('application/product_version="' + $windowsVersion + '"')
+[IO.File]::WriteAllText($presetPath, $preset, [Text.UTF8Encoding]::new($false))
 
 function Step($name, [scriptblock]$body) {
     Write-Host "==> $name" -ForegroundColor Yellow
