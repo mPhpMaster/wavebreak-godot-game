@@ -1,0 +1,11 @@
+{
+  "Version": "1.4.2",
+  "Title": "Clearer menus & classic adventures",
+  "Changes": [
+    "Redesigned the expedition screen with clearer destination cards and simpler controls.",
+    "Choose your character after selecting a Reef or City expedition, before starting the run.",
+    "Classic Play starts in Thornmeadow, even after choosing a Reef or City expedition.",
+    "A new What's New window shows changes once per version and can be reopened from the main menu.",
+    "Flick now wields Stormfang Blades: twin returning blades that hit enemies while standing or moving."
+  ]
+}

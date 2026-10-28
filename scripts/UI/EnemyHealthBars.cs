@@ -17,7 +17,6 @@ public sealed partial class EnemyHealthBars : Control
     public override void _Ready()
     {
         Name = "NearbyEnemyHealthBars"; MouseFilter = MouseFilterEnum.Ignore;
-        ProcessPriority = 100;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _minimap = GetParent().GetNodeOrNull<Minimap>("Minimap");
     }
@@ -29,11 +28,7 @@ public sealed partial class EnemyHealthBars : Control
         if (_refresh > 0) return;
         _refresh = 0.05f;
         _selection.Refresh(Player.Instance, GetViewport().GetCamera3D(), EnemyManager.Instance?.AliveList);
-    }
-
-    public override void _Process(double delta)
-    {
-        if (_selection.Visible.Count > 0 || BarsDrawn > 0) QueueRedraw();
+        QueueRedraw();
     }
 
     public override void _Draw()

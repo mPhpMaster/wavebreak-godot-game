@@ -39,6 +39,6 @@ public static class HeroQuests
         Q("qh_flick_kills2", "Dune Runner", "Defeat 4,000 enemies as Flick the Kite Fox.", Metric.CharacterKills, 4000, RewardKind.Skin, "flick.nightkite", "flick"),
         Q("qh_flick_win", "High Flyer", "Win a run as Flick the Kite Fox.", Metric.CharacterWins, 1, RewardKind.Skin, "flick.ember", "flick"),
         Q("qh_flick_hard", "Into the Gale", "Win a run as Flick the Kite Fox on Hard or Nightmare.", Metric.CharacterHardWins, 1, RewardKind.Skin, "flick.lavender", "flick"),
-        Q("qh_flick_kite", "String Theory", "Defeat 1,500 enemies with the Skimmer Kite.", Metric.WeaponKills, 1500, RewardKind.Skin, "flick.seaglass", "skimmer_kite"),
+        Q("qh_flick_kite", "String Theory", "Defeat 1,500 enemies with the Stormfang Blades.", Metric.WeaponKills, 1500, RewardKind.Skin, "flick.seaglass", "skimmer_kite"),
     };
 }

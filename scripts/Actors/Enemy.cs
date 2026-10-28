@@ -222,8 +222,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         ResetCityGiant();
 
         CollisionLayer = EnemyLayer | (IsCityGiant ? 1u << 6 : 0u);
-        CollisionMask = WorldLayer | EnemyLayer;
-        CollisionPriority = IsCityGiant ? 10f : 1f;
+        CollisionMask = WorldLayer;
         if (_collision is not null) _collision.Disabled = false;
 
         ApplyFlash(0f);

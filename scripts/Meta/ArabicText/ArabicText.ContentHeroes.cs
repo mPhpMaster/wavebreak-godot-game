@@ -6,6 +6,16 @@ public static partial class ArabicText
     internal static readonly (string En, string Ar)[] ContentHeroes =
     {
         // ---- signature weapons
+        ("Stormfang Blades", "شفرات ناب العاصفة"),
+        ("Flick throws twin storm blades at nearby enemies. They cut on the way out and back, even while standing still. Movement adds up to 25% damage.",
+         "يرمي فليك شفرتين نحو الأعداء القريبين، تصيبان أثناء الذهاب والعودة حتى وهو واقف. الحركة تزيد الضرر حتى 25%."),
+        ("Crosswind", "الريح المتقاطعة"),
+        ("Returning blades deal 50% more damage.", "الشفرات العائدة تسبب ضررًا إضافيًا بنسبة 50%."),
+        ("Storm Blades", "شفرات العاصفة"),
+        ("Each volley gains a third blade and lightning damage.", "كل رمية تكسب شفرة ثالثة وضرر البرق."),
+        ("Chases the sea breeze with twin returning storm blades. Quick on his feet, dangerous on both passes.",
+         "يطارد نسيم البحر بشفرتين مرتدتين. خفيف الحركة وخطير أثناء الذهاب والعودة."),
+        ("Defeat 1,500 enemies with the Stormfang Blades.", "اهزم 1,500 عدو بشفرات ناب العاصفة."),
         ("Spyglass Glint", "بريق المنظار"),
         ("Sunny's brass spyglass, turned round to throw the sun instead of catch it. Whatever you are looking at is struck by a thin beam: a guaranteed critical hit, harder the farther away it is, and harder again for every body it passes through.",
          "منظار صني النحاسي، مقلوبًا ليرمي الشمس بدل أن يلتقطها. كل ما تنظر إليه يُضرب بشعاع رفيع: ضربة حاسمة مضمونة، أقوى كلما كان أبعد، وأقوى أيضًا مع كل جسد يخترقه."),

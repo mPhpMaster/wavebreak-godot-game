@@ -4,6 +4,12 @@ public static partial class ArabicText
 {
     internal static readonly (string En, string Ar)[] ReleaseNotes =
     {
+        ("Clearer menus & classic adventures", "قوائم أوضح ومغامرات كلاسيكية"),
+        ("Redesigned the expedition screen with clearer destination cards and simpler controls.", "تصميم جديد لشاشة الرحلات مع بطاقات وجهات أوضح وخيارات أبسط."),
+        ("Choose your character after selecting a Reef or City expedition, before starting the run.", "اختر شخصيتك بعد تحديد رحلة الشعاب أو المدينة وقبل بدء الجولة."),
+        ("Classic Play starts in Thornmeadow, even after choosing a Reef or City expedition.", "يبدأ اللعب الكلاسيكي في ثورنميدو، حتى بعد اختيار رحلة الشعاب أو المدينة."),
+        ("A new What's New window shows changes once per version and can be reopened from the main menu.", "نافذة «ما الجديد» تعرض التغييرات مرة واحدة لكل إصدار، ويمكن إعادة فتحها من القائمة الرئيسية."),
+        ("Flick now wields Stormfang Blades: twin returning blades that hit enemies while standing or moving.", "يحمل فليك الآن نصلي العاصفة: نصلان يعودان إليه ويصيبان الأعداء أثناء الوقوف أو الحركة."),
         ("WHAT'S NEW", "ما الجديد"),
         ("LET'S PLAY", "لنلعب"),
         ("Version {0}", "الإصدار {0}"),

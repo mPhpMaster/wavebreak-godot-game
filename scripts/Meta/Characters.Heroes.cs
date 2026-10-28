@@ -94,7 +94,7 @@ public static partial class Characters
         {
             Id = "flick",
             DisplayName = "Flick the Kite Fox",
-            Blurb = "Chases the sea breeze along the dunes with a kite on a very long string. Stands still for nobody, and the kite never does either.",
+            Blurb = "Chases the sea breeze with twin returning storm blades. Quick on his feet, dangerous on both passes.",
             StartingWeapon = Signatures.Kite,
             LookId = HeroModels.Flick,
             Tint = new Color(1.00f, 0.55f, 0.25f),

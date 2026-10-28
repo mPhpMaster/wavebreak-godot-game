@@ -58,7 +58,7 @@ public sealed partial class ExpeditionMenuCheck : Node
             if (Phase == 2)
             {
                 Button(_menu, "CLASSIC PLAY & CHARACTER DETAILS")!.EmitSignal(Godot.Button.SignalName.Pressed);
-                Require(_menu.CurrentPage == "play" && Routes.Selected.Id == ClassicRoute && Profile.SelectedCharacter == ClassicHero, "return to classic selection works");
+                Require(_menu.CurrentPage == "play" && Routes.Selected.Id == "classic" && Profile.SelectedCharacter == ClassicHero, "return to classic selection works");
                 GD.Print("EXPEDITION MENU PASS"); GetTree().Quit(); return;
             }
             ClassicHero = Profile.SelectedCharacter;

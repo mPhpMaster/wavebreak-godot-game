@@ -72,8 +72,7 @@ public sealed partial class Enemy
         Vector3 goal = CityNavigation.Next(GlobalPosition, target, _cityPath, dt);
         Vector3 direction = (goal - GlobalPosition) with { Y = 0f };
         direction = direction.LengthSquared() > 0.01f ? direction.Normalized() : Vector3.Zero;
-        float walkingSpeed = Mathf.Min(_speed, _def?.IsBoss == true ? .65f : .5f);
-        Vector3 desired = flat.Length() > 11f && !StatusHeld && _cityWindup <= 0f ? direction * walkingSpeed : Vector3.Zero;
+        Vector3 desired = flat.Length() > 11f && !StatusHeld && _cityWindup <= 0f ? direction * _speed : Vector3.Zero;
         // No stepping through buildings, even at long distances.
         Velocity = new Vector3(desired.X, IsOnFloor() ? 0f : Velocity.Y - Gravity * dt, desired.Z);
         MoveAndSlide();

@@ -12,7 +12,7 @@ public sealed partial class MainMenu
 {
     private static readonly (string Heading, string[] Names)[] CreditSections =
     {
-        ("BUILT BY", new[] { "sensei (hlaCk)", "Claude AI" }),
+        ("BUILT BY", new[] { "sensei (hlaCk)", "Claude AI", "Codex" }),
         ("IDEA", new[] { "sensei (hlaCk)", "Megabonk", "Minigore", "Ahmed Hus (Random)", "adamix57/ttv", "IcyG" }),
         ("FREE ASSETS", new[] { "Kenney (CC0)", "Quaternius (CC0)", "Noto Sans Arabic UI (OFL)", "Godot Engine (MIT)" }),
     };

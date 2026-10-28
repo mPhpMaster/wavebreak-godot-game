@@ -179,7 +179,7 @@ public static class Icons
         // signature weapons (Data/Catalog.Heroes.cs)
         ["spyglass_glint"] = "spyglass",
         ["mooring_anchor"] = "mooring",
-        ["skimmer_kite"] = "kite",
+        ["skimmer_kite"] = "chakram",
     };
 
     public static string ShapeGlyph(AttackShape shape) => shape switch
@@ -202,6 +202,7 @@ public static class Icons
         Color c = Readable(ElementColor(def.Element).Lerp(def.Tint, 0.4f));
         string glyph = WeaponGlyph(def);
         string? badge = ElementGlyph(def.Element);
+        if (def.Id == "skimmer_kite") badge = "bolt";
         // A bolt-shaped lightning weapon does not need a bolt badge as well.
         if (badge == glyph) badge = null;
         return new IconSpec(glyph, c, badge, c);

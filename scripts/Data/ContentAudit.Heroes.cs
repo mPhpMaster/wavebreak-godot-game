@@ -28,6 +28,7 @@ public static partial class ContentAudit
 {
     private static void AuditHeroes(WeaponSystem system)
     {
+        AuditStormBlades(system);
         Line($"heroes ids={string.Join(",", Characters.HeroIds)} signatures={string.Join(",", Catalog.SignatureIds)}");
         Check(Catalog.SignatureIds.Count == 3 && Characters.HeroIds.Length == 3, "heroes: want 3 heroes and 3 signatures");
 

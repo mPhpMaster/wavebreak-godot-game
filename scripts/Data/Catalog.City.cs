@@ -16,7 +16,7 @@ public static partial class Catalog
         float hp, bool elite, bool boss) => new()
     {
         Id = id, DisplayName = name, Height = height, Radius = radius,
-        Health = hp, Damage = boss ? 32f : 19f, MoveSpeed = boss ? 0.65f : 0.5f,
+        Health = hp, Damage = boss ? 32f : 19f, MoveSpeed = boss ? 3.1f : 2.4f,
         AttackRange = 14f, AttackCooldown = 4.8f, KnockbackResist = 1f,
         XpValue = boss ? 85 : 30, GoldValue = boss ? 65 : 18,
         Cost = elite ? 14 : 7, IsElite = elite, IsBoss = boss,

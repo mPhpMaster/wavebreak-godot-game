@@ -175,14 +175,6 @@ public static class Routes
         {
             foreach (string id in route.MapIds)
                 if (Stages.ById(id) is { } s) maps.Add(s);
-            if (route.Id == "reef-dive")
-            {
-                foreach (string id in new[] { "cinder", "gravemoor", "rimeglass" })
-                {
-                    if (maps.Count >= phases) break;
-                    if (Stages.ById(id) is { } extension) maps.Add(extension);
-                }
-            }
             // Longer than the route: the unused maps, in rising order, go in
             // before its last map (the route's finale stays the finale).
             // Shorter: drop from the middle, keeping the start and the finale.

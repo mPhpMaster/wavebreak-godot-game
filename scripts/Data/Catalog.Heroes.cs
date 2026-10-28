@@ -57,16 +57,15 @@ public static partial class Catalog
             DamagePerLevel = 0.28f, CooldownPerLevel = -0.05f, ProjectilesEveryNLevels = 3, MaxLevel = 8,
         },
 
-        // Movement: a kite on a string that skims behind you. Range is the
-        // string's length, Radius the half-width it cuts; the hit grows with
-        // how fast the kite is moving, so it is steered by running.
+        // Keep the saved signature id while replacing the trailing kite with
+        // automatically aimed blades that hit on their outward and return passes.
         new WeaponDef
         {
-            Id = Signatures.Kite, DisplayName = "Skimmer Kite",
-            Description = "Flick's kite, flown low over the surf on a very long string. You steer it by running: the string cuts whatever it sweeps through, the kite hits harder still, and the faster it flies the deeper both bite.",
-            Rarity = Rarity.Rare, Shape = AttackShape.Melee, Element = Element.Physical,
-            Damage = 6f, Cooldown = 0.3f, Projectiles = 1, ProjectileSpeed = 0f, Range = 5.5f, Radius = 0.35f,
-            Knockback = 1.2f, CritChance = 0.06f, ProcCoefficient = 0.35f, SpreadDegrees = 0f,
+            Id = Signatures.Kite, DisplayName = "Stormfang Blades",
+            Description = "Flick throws twin storm blades at nearby enemies. They cut on the way out and back, even while standing still. Movement adds up to 25% damage.",
+            Rarity = Rarity.Rare, Shape = AttackShape.Projectile, Element = Element.Physical,
+            Damage = 16f, Cooldown = 1.2f, Projectiles = 2, ProjectileSpeed = 22f, Range = 14f, Radius = 0.65f,
+            Knockback = 1.8f, CritChance = 0.06f, ProcCoefficient = 0.35f, SpreadDegrees = 10f,
             Tint = new Color(1.00f, 0.62f, 0.45f),
             DamagePerLevel = 0.26f, CooldownPerLevel = -0.04f, ProjectilesEveryNLevels = 4, MaxLevel = 8,
         },
