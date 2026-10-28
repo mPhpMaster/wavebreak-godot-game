@@ -5,7 +5,7 @@
 #define AppName "Wavebreak"
 ; build.ps1 passes the version from project.godot (/DAppVersion=...).
 #ifndef AppVersion
-  #define AppVersion "1.4.0"
+  #define AppVersion "1.4.1"
 #endif
 #define AppPublisher "mPhpMaster"
 #define AppExe "Wavebreak.exe"
