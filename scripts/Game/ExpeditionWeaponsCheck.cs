@@ -38,7 +38,8 @@ public sealed partial class ExpeditionWeaponsCheck : Node
             Require(target.Hits > 0, "pellets hit a target above the swimmer in three dimensions");
             Require(_player.ShotgunRecoilBursts == recoil + 1 && bubbles, "one shot applies recoil and a bubble burst");
             await Wait(.06f);
-            Require(_player.Velocity.Dot(new Vector3(0, 3, -6).Normalized()) < -1, "recoil visibly pushes the swimmer opposite the shot");
+            Require(_player.ShotgunRecoilSpeed <= .8f && _player.Velocity.Length() < 2,
+                "shotgun kick stays mild instead of overpowering swimming");
             for (int frame = 0; frame < 120; frame++)
             { Targeting.Refresh(); shotgun.Tick(1f / 60, system); Projectile.UpdateAll(1f / 60); }
             Require(system.ShotsFired - shots == 12, "base firing interval is approximately two seconds");

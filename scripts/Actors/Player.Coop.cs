@@ -25,5 +25,6 @@ public sealed partial class Player
     }
 
     /// <summary>Planar velocity plus vertical, for the remote rig's stride.</summary>
-    public Vector3 NetVelocity => new(_moveVelocity.X + _externalVelocity.X, Velocity.Y, _moveVelocity.Z + _externalVelocity.Z);
+    public Vector3 NetVelocity => IsSwimming ? Velocity
+        : new(_moveVelocity.X + _externalVelocity.X, Velocity.Y, _moveVelocity.Z + _externalVelocity.Z);
 }

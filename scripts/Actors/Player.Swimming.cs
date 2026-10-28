@@ -18,6 +18,7 @@ public sealed partial class Player
     public const float SwimFloor = 0.7f;
     public const float BreachSpeed = 7f;
     private float _normalCameraPitch = 8f;
+    private float _swimVerticalVelocity;
 
     private bool UpdateSwimmingMode()
     {
@@ -27,6 +28,7 @@ public sealed partial class Player
         IsBreaching = false;
         SwimmingBoostActive = false;
         _swimWeaponRecoil = Vector3.Zero;
+        _swimVerticalVelocity = 0;
         MotionMode = swim ? MotionModeEnum.Floating : MotionModeEnum.Grounded;
         FloorSnapLength = swim ? 0f : 0.4f;
         Velocity = Vector3.Zero;
@@ -62,7 +64,7 @@ public sealed partial class Player
         _slideCooldown = Mathf.Max(0f, _slideCooldown - dt);
         if (!IsBreaching && CenterPosition.Y > WaterSurfaceHeight.At(GlobalPosition) + 0.8f)
             IsBreaching = true;
-        if (IsBreaching) { SwimmingBoostActive = false; StepBreach(wish, speed, dt); FinishSwimVisuals(wish, speed, alive, dt); return; }
+        if (IsBreaching) { SwimmingBoostActive = false; StepBreach(wish, speed, dive, dt); FinishSwimVisuals(wish, speed, alive, dt); return; }
 
         Data.SwimmingIntent intent = SwimmingNavigation.WithVertical(wish, rise, dive);
         wish = intent.Direction;
@@ -89,16 +91,28 @@ public sealed partial class Player
         else
         {
             _moveVelocity = _moveVelocity.MoveToward((wish with { Y = 0f }) * speed, 18f * dt);
-            y = Mathf.MoveToward(Velocity.Y, wish.Y * speed, 20f * dt);
+            y = Mathf.MoveToward(_swimVerticalVelocity, wish.Y * speed, 20f * dt);
         }
+        _swimVerticalVelocity = y;
         _externalVelocity = _externalVelocity.MoveToward(Vector3.Zero, 12f * dt);
         Vector3 current = ReefCurrents.VelocityAt(GlobalPosition);
         Velocity = new Vector3(_moveVelocity.X + _externalVelocity.X, y, _moveVelocity.Z + _externalVelocity.Z) + current + SwimmingRecoil(dt);
+        Vector3 beforeMove = GlobalPosition;
         MoveAndSlide();
         KeepInsideArena();
         Vector3 at = GlobalPosition;
         float floor = ReefCavePath.Floor(at) + SwimFloor;
-        if (at.Y < floor) { GlobalPosition = at with { Y = floor }; Velocity = Velocity with { Y = Mathf.Max(0f, Velocity.Y) }; }
+        if (at.Y < floor)
+        {
+            // A high coastal cliff is a side wall, not a floor that can launch the swimmer above water.
+            if (floor > WaterSurfaceHeight.At(at) - BodyHeight)
+            {
+                GlobalPosition = beforeMove; _moveVelocity = Vector3.Zero;
+                Velocity = Velocity with { Y = Mathf.Min(0, Velocity.Y) };
+                _swimVerticalVelocity = Mathf.Min(0, _swimVerticalVelocity);
+            }
+            else { GlobalPosition = at with { Y = floor }; Velocity = Velocity with { Y = Mathf.Max(0f, Velocity.Y) }; _swimVerticalVelocity = Velocity.Y; }
+        }
         float line = WaterSurfaceHeight.At(GlobalPosition) - BodyHeight * 0.5f;
         if (GlobalPosition.Y > line)
         {
@@ -114,12 +128,13 @@ public sealed partial class Player
         FinishSwimVisuals(wish, speed, alive, dt);
     }
 
-    private void StepBreach(Vector3 wish, float speed, float dt)
+    private void StepBreach(Vector3 wish, float speed, bool dive, float dt)
     {
         _requestedDash = false;
         _moveVelocity = _moveVelocity.MoveToward((wish with { Y = 0f }) * speed, 6f * dt);
         _externalVelocity = _externalVelocity.MoveToward(Vector3.Zero, 12f * dt);
-        Velocity = new Vector3(_moveVelocity.X + _externalVelocity.X, Velocity.Y - _gravity * dt,
+        float vertical = dive ? Mathf.Min(Velocity.Y, -speed) : Velocity.Y;
+        Velocity = new Vector3(_moveVelocity.X + _externalVelocity.X, vertical - _gravity * dt,
             _moveVelocity.Z + _externalVelocity.Z);
         MoveAndSlide();
         KeepInsideArena();
@@ -129,6 +144,7 @@ public sealed partial class Player
             IsBreaching = false;
             WaterEntries++;
             Velocity = Velocity with { Y = Mathf.Max(-6f, Velocity.Y * 0.25f) };
+            _swimVerticalVelocity = Velocity.Y;
             _moveVelocity *= 0.8f;
             WaterTransitionFx.Spawn(GetParent(), GlobalPosition with { Y = WaterSurfaceHeight.At(GlobalPosition) }, true, impact);
         }

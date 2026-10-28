@@ -322,6 +322,9 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         if (OS.GetCmdlineUserArgs().Contains("--check-scoreboard")) AddChild(new Game.ScoreboardCheck());
         if (OS.GetCmdlineUserArgs().Contains("--check-overlay-regression")) AddChild(new Game.OverlayRegressionCheck());
         if (OS.GetCmdlineUserArgs().Contains("--check-expedition-weapons")) AddChild(new Game.ExpeditionWeaponsCheck(this));
+        if (OS.GetCmdlineUserArgs().Contains("--check-shotgun-handling")) AddChild(new Game.ShotgunHandlingCheck());
+        if (OS.GetCmdlineUserArgs().Contains("--check-dive-control")) AddChild(new Game.DiveControlCheck());
+        if (OS.GetCmdlineUserArgs().Contains("--check-coop-shotgun")) AddChild(new Game.CoopShotgunCheck());
         if (OS.GetCmdlineUserArgs().Contains("--check-leviathan")) AddChild(new Game.GuardianCheck(this, true));
         if (OS.GetCmdlineUserArgs().Contains("--check-guardian")) AddChild(new Game.GuardianCheck(this));
         if (OS.GetCmdlineUserArgs().Contains("--check-hook-targets")) AddChild(new Game.HookTargetsCheck(this));

@@ -43,6 +43,8 @@ try {
     Run-Headless 'hook-controls' @('--route=skyline-run', '--check-hook-controls', '--auto', '--invulnerable', '--character=vesper') 'HOOK CONTROLS PASS'
     Run-Headless 'hook-targets' @('--route=skyline-run', '--check-hook-targets', '--auto', '--invulnerable', '--character=vesper') 'HOOK TARGETS PASS'
     Run-Headless 'swim-dash-steering' @('--route=reef-dive', '--check-swim-dash', '--invulnerable', '--character=nori') 'SWIM DASH PASS'
+    Run-Headless 'dive-control' @('--route=reef-dive', '--check-dive-control', '--invulnerable', '--character=nori') 'DIVE CONTROL PASS' 2500
+    Run-Headless 'shotgun-handling' @('--route=reef-dive', '--check-shotgun-handling', '--invulnerable', '--character=nori') 'SHOTGUN HANDLING PASS' 4500
     Run-Headless 'expedition-weapons' @('--route=reef-dive', '--check-expedition-weapons', '--invulnerable', '--character=nori') 'EXPEDITION WEAPONS PASS'
     Run-Headless 'cave-guardian' @('--route=reef-dive', '--check-guardian', '--invulnerable', '--character=nori') 'GUARDIAN PASS'
     Run-Headless 'leviathan' @('--route=reef-dive', '--check-leviathan', '--invulnerable', '--character=nori') 'LEVIATHAN PASS'

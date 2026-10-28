@@ -1,0 +1,13 @@
+{
+  "Version": "1.4.5",
+  "Title": "Reliable diving, two-hand shotgun and Windows update repair",
+  "Changes": [
+    "Nori now holds the shotgun with both hands. Its muzzle follows the firing direction while swimming or standing.",
+    "Shotgun kick is much gentler and cannot accumulate with attack-speed upgrades. Swimming keeps full directional control while firing.",
+    "Dive input brings you back through the surface. Weapon recoil and currents no longer accumulate into vertical swimming speed.",
+    "Coastal walls no longer lift swimmers above the sea through the seabed fallback.",
+    "Co-op players see the shotgun aim and firing pose. Everyone in a session must use this updated version.",
+    "Fixed installed updates failing at Handoff in Program Files. Earlier affected versions need the standalone installer once; future updates use the repaired updater.",
+    "Update failures now include the helper's actual error details."
+  ]
+}

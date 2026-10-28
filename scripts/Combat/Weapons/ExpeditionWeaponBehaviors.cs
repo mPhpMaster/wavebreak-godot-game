@@ -13,6 +13,7 @@ internal sealed class ReefShotgun : IWeaponBehavior
     {
         Vector3 origin = system.MuzzlePosition;
         Vector3 heading = system.AimAt(origin, weapon.Def.Range * (1 + weapon.Bonus.Range));
+        if (system.Body is Player owner) origin = owner.PrepareShotgunMuzzle(heading);
         Vector3 right = heading.Cross(Vector3.Up).Normalized();
         if (right.LengthSquared() < .1f) right = Vector3.Right;
         Vector3 up = right.Cross(heading).Normalized();

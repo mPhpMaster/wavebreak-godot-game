@@ -29,6 +29,7 @@ public sealed partial class Player
     public void Teleport(Vector3 position)
     {
         _swimWeaponRecoil = Vector3.Zero;
+        _swimVerticalVelocity = 0;
         ReleaseHook();
         _cityBallistic = false;
         CoreStrikeFeedback = "";

@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$RequestPath, [switch]$NoUi, [ValidateRange(1,120)][int]$WaitSeconds = 120)
+param([Parameter(Mandatory)][string]$RequestPath, [switch]$NoUi, [switch]$PrepareOnly, [ValidateRange(1,120)][int]$WaitSeconds = 120)
 $ErrorActionPreference = 'Stop'
 $stage = [IO.Path]::GetFullPath($PSScriptRoot).TrimEnd('\')
 $stageId = [IO.Path]::GetFileName($stage)
@@ -89,10 +89,13 @@ try {
         Initialize-UpdateProgress ($request.language -eq 'ar')
         $ui = $true
     }
-    Assert-NoLinks $root (Join-Path $root '.wavebreak-update.lock')
-    $rootLock = [IO.File]::Open((Join-Path $root '.wavebreak-update.lock'), [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+    if ($request.mode -eq 'portable') {
+        Assert-NoLinks $root (Join-Path $root '.wavebreak-update.lock')
+        $rootLock = [IO.File]::Open((Join-Path $root '.wavebreak-update.lock'), [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+    }
     Set-UpdateStatus 'waiting'
     [IO.File]::WriteAllText((Join-Path $stage 'ready.json'), (@{ stage=$stageId } | ConvertTo-Json -Compress))
+    if ($PrepareOnly) { Set-UpdateStatus 'prepared'; exit 0 }
     $timer = [Diagnostics.Stopwatch]::StartNew()
     while ($true) {
         Assert-NotCancelled
@@ -121,6 +124,13 @@ try {
         $start = [Diagnostics.ProcessStartInfo]::new()
         $start.FileName = $asset; $start.UseShellExecute = $true; $start.WorkingDirectory = $stage
         $start.Arguments = '/DIR="' + $root + '" /LOG="' + (Join-Path $stage 'installer.log') + '"'
+        $programFiles = [Environment]::GetFolderPath('ProgramFiles')
+        $programFilesX86 = [Environment]::GetFolderPath('ProgramFilesX86')
+        if (($programFiles -and $root.StartsWith($programFiles + '\', [StringComparison]::OrdinalIgnoreCase)) -or
+            ($programFilesX86 -and $root.StartsWith($programFilesX86 + '\', [StringComparison]::OrdinalIgnoreCase))) {
+            $start.Verb = 'runas'
+            $start.Arguments += ' /ALLUSERS'
+        }
         $installer = [Diagnostics.Process]::Start($start)
         if ($null -eq $installer) { throw 'The installer did not start.' }
         Set-UpdateStatus 'installer_started'

@@ -72,6 +72,7 @@ public sealed partial class UpdatePanel : PanelContainer
             ? "DOWNLOAD & INSTALL closes the game after verification. Installed copies use the setup wizard; portable copies update in place."
             : "Automatic installation is unavailable for development or store-managed copies. Open RELEASES.");
         if (state.Problem != UpdateProblem.None) _detail.Text += "\n" + Loc.F("Update error: {0}", state.Problem.ToString());
+        if (state.Detail.Length > 0) _detail.Text += "\n" + Loc.T(state.Detail);
         if (UpdateRuntime.RecoveryNote.Length > 0) _detail.Text += "\n" + Loc.T(UpdateRuntime.RecoveryNote);
         _progress.Value = state.TotalBytes > 0 ? 100d * state.CompletedBytes / state.TotalBytes : 0;
         _progress.Visible = state.Phase is UpdatePhase.Downloading or UpdatePhase.Preparing;

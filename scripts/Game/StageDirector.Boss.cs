@@ -164,6 +164,8 @@ public sealed partial class StageDirector
     /// would end a run without a death or a win.</summary>
     private void GuardFall()
     {
+        if (Arena.Current.Underwater && ReefCavePath.Floor(_player.GlobalPosition) > WaterSurfaceHeight.At(_player.GlobalPosition) - 2f)
+            return; // Coastal cliffs are lateral obstacles, not a missing submerged floor.
         float floor = Arena.Current.Underwater ? ReefCavePath.Floor(_player.GlobalPosition) - 8f : -20f;
         if (_player.GlobalPosition.Y > floor) return;
         Log("player fell out of the world; returned to centre");

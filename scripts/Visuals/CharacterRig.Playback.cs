@@ -133,6 +133,7 @@ public sealed partial class CharacterRig
         if (Swimming && !_dying && !Spec.NativeSwimmingClip)
         {
             PoseSwimming(dt);
+            PoseShotgun(dt);
             return;
         }
         if (_swimWasActive) EndSwimmingAnimation();
@@ -160,6 +161,7 @@ public sealed partial class CharacterRig
             case BodyType.Serpent: PoseSerpent(dt); break;
             default: PoseBiped(dt); break;
         }
+        PoseShotgun(dt);
     }
 
     private const float DeathDuration = 0.7f;

@@ -56,6 +56,8 @@ public sealed class WindowsUpdateHandoff : IUpdateHandoff
         if (File.Exists(cancelFile)) File.Delete(cancelFile);
         string ready = Path.Combine(prepared.Stage, "ready.json");
         if (File.Exists(ready)) File.Delete(ready);
+        string status = Path.Combine(prepared.Stage, "status.json");
+        if (File.Exists(status)) File.Delete(status);
         string powershell = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.System),
             "WindowsPowerShell", "v1.0", "powershell.exe");
         var start = new ProcessStartInfo(powershell)
@@ -81,6 +83,13 @@ public sealed class WindowsUpdateHandoff : IUpdateHandoff
                     await File.WriteAllTextAsync(_pendingPath, JsonSerializer.Serialize(new
                     { stage = Path.GetFileName(prepared.Stage), version = release.Version.ToString() }, JsonOptions), cancel);
                     return true;
+                }
+                if (File.Exists(status))
+                {
+                    using JsonDocument report = JsonDocument.Parse(await File.ReadAllTextAsync(status, cancel));
+                    if (report.RootElement.GetProperty("phase").GetString() == "failed")
+                        throw new UpdateException(UpdateProblem.Handoff,
+                            report.RootElement.GetProperty("detail").GetString() ?? "Updater could not prepare installation.");
                 }
                 if (helper.HasExited) break;
                 await Task.Delay(100, cancel);

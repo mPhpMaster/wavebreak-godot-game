@@ -4,6 +4,14 @@ public static partial class ArabicText
 {
     internal static readonly (string En, string Ar)[] ReleaseNotes =
     {
+        ("Reliable diving, two-hand shotgun and Windows update repair", "إصلاح الغوص وقبضة الشوتغن وتحديثات ويندوز"),
+        ("Nori now holds the shotgun with both hands. Its muzzle follows the firing direction while swimming or standing.", "يمسك نوري الشوتغن باليدين، وتتبع الفوهة اتجاه الإطلاق أثناء السباحة والوقوف."),
+        ("Shotgun kick is much gentler and cannot accumulate with attack-speed upgrades. Swimming keeps full directional control while firing.", "أصبح ارتداد الشوتغن أخف بكثير ولا يتراكم مع تطوير سرعة الإطلاق، مع الحفاظ على التحكم باتجاه السباحة أثناء الإطلاق."),
+        ("Dive input brings you back through the surface. Weapon recoil and currents no longer accumulate into vertical swimming speed.", "يعيدك زر الغوص عبر السطح إلى الماء، ولم يعد ارتداد السلاح والتيارات يتراكمان في سرعة السباحة العمودية."),
+        ("Coastal walls no longer lift swimmers above the sea through the seabed fallback.", "لم تعد معالجة قاع البحر ترفع السباح فوق السطح عند الجدران الساحلية."),
+        ("Co-op players see the shotgun aim and firing pose. Everyone in a session must use this updated version.", "يرى لاعبو التعاون تصويب الشوتغن وحركة إطلاقه، ويجب أن يستخدم جميع اللاعبين هذا الإصدار المحدّث."),
+        ("Fixed installed updates failing at Handoff in Program Files. Earlier affected versions need the standalone installer once; future updates use the repaired updater.", "أُصلح فشل تسليم التحديث للمثبّت في Program Files. تحتاج الإصدارات السابقة المتأثرة إلى المثبّت المستقل مرة واحدة، ثم تستخدم التحديثات التالية المحدّث المصحّح."),
+        ("Update failures now include the helper's actual error details.", "تعرض أخطاء التحديث الآن تفاصيل الخطأ الفعلي من مساعد التثبيت."),
         ("Scoreboard, build inspection and enemy habitat fixes", "إصلاح الإحصاءات وتفاصيل المعدات وظهور الأعداء"),
         ("All player statistics now appear together in the scoreboard without a view dropdown.", "تظهر جميع إحصاءات اللاعبين معاً في لوحة واحدة دون قائمة لتبديل العرض."),
         ("Tab opens only the scoreboard. Escape takes priority when opening the pause menu.", "يفتح Tab لوحة الإحصاءات فقط، وتكون الأولوية لزر Escape عند فتح قائمة الإيقاف."),

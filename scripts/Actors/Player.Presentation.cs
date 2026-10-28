@@ -12,10 +12,11 @@ public sealed partial class Player
 
     private void UpdateFacing(Vector3 wish, float dt)
     {
-        Vector3 heading = _dashTime > 0f ? _dashDirection
+        Vector3 heading = _shotgunFacingFor > 0 ? _shotgunFacing : _dashTime > 0f ? _dashDirection
                         : _moveVelocity.LengthSquared() > 0.25f ? _moveVelocity
                         : wish.LengthSquared() > 0.01f ? wish
                         : Vector3.Zero;
+        _shotgunFacingFor = Mathf.Max(0, _shotgunFacingFor - dt);
 
         if (heading != Vector3.Zero)
         {

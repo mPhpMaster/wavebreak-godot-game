@@ -8,16 +8,7 @@ internal static class ExpeditionEquipment
     {
         if (fish)
         {
-            if (side < 0) return;
-            hand.Box(new Transform3D(Basis.Identity, grip + new Vector3(0, 0, -.1f) * scale),
-                new Vector3(.12f, .09f, .22f) * scale, new Color(.2f, .3f, .35f));
-            for (int barrel = -1; barrel <= 1; barrel += 2)
-            {
-                Vector3 from = grip + new Vector3(barrel * .027f, .015f, -.15f) * scale;
-                Vector3 to = grip + new Vector3(barrel * .027f, .015f, -.48f) * scale;
-                hand.Tube(from, to, .025f * scale, .025f * scale, Colors.Silver);
-                hand.Sphere(to, .019f * scale, new Color(.04f, .07f, .08f));
-            }
+            // Nori's separate weapon node is held by both hands through rig IK.
             return;
         }
         hand.Box(new Transform3D(Basis.Identity, grip), new Vector3(.045f, .045f, .13f) * scale, new Color(.16f, .2f, .24f));

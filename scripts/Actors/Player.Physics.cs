@@ -114,7 +114,7 @@ public sealed partial class Player
         Velocity = new Vector3(
             _moveVelocity.X + _externalVelocity.X,
             velocity.Y,
-            _moveVelocity.Z + _externalVelocity.Z);
+            _moveVelocity.Z + _externalVelocity.Z) + SwimmingRecoil(dt);
 
         if (!grounded) _lastFallSpeed = Mathf.Max(0f, -Velocity.Y);
 
