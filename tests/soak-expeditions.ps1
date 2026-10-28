@@ -1,5 +1,6 @@
 param(
     [string]$Godot = 'D:\tools\godot\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe',
+    [switch]$Exported,
     [ValidateSet('city','reef')][string[]]$Maps = @('city','reef'),
     [ValidateSet('reference','tuned')][string[]]$Modes = @('reference','tuned'),
     [ValidateRange(90,180)][int]$Seconds = 120,
@@ -16,10 +17,12 @@ foreach ($map in $Maps) {
     foreach ($mode in $Modes) {
         $prefix = Join-Path $OutputDirectory ($map + '-' + $mode)
         $log = $prefix + '.log'
-        $command = '"' + $Godot + '" --path "' + $taskRoot + '" --windowed --resolution 1920x1080 --audio-driver Dummy -- --auto --invulnerable --seed=' + $seed + ' --perf-user-graphics --route=' + $route + ' --character=' + $hero + ' --soak-seconds=' + $Seconds + ' --perf-soak="' + $prefix + '"'
+        $projectArguments = if ($Exported) { '' } else { ' --path "' + $taskRoot + '"' }
+        $runDirectory = if ($Exported) { Split-Path -Parent ([IO.Path]::GetFullPath($Godot)) } else { $taskRoot }
+        $command = '"' + $Godot + '"' + $projectArguments + ' --windowed --resolution 1920x1080 --audio-driver Dummy -- --auto --invulnerable --seed=' + $seed + ' --perf-user-graphics --route=' + $route + ' --character=' + $hero + ' --soak-seconds=' + $Seconds + ' --perf-soak="' + $prefix + '"'
         if ($mode -eq 'reference') { $command += ' --perf-reference' }
         $timer = [Diagnostics.Stopwatch]::StartNew()
-        & (Join-Path $PSScriptRoot 'run-offscreen.ps1') -Command $command -WorkDir $taskRoot -DesktopName ('WBSoak' + $map + $mode) -TimeoutSec ($Seconds + 80) -Out $log
+        & (Join-Path $PSScriptRoot 'run-offscreen.ps1') -Command $command -WorkDir $runDirectory -DesktopName ('WBSoak' + $map + $mode) -TimeoutSec ($Seconds + 80) -Out $log
         $code = $LASTEXITCODE
         $contents = Get-Content -LiteralPath $log -Raw
         if ($code -ne 0 -or -not $contents.Contains('SOAK COMPLETE') -or $contents -match '(?m)^(ERROR:|SCRIPT ERROR:)') { throw "Soak incomplete: $log" }

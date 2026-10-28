@@ -137,10 +137,14 @@ public sealed partial class UpdateCheck : Node
         Check(!quit && handoff.Calls == 1 && coordinator.Snapshot.Phase == UpdatePhase.Failed && coordinator.HasPrepared, "failed handoff keeps game open and verified payload retryable");
         await coordinator.InstallAsync(false, "ar");
         Check(!quit && handoff.Calls == 2, "verified handoff retry never exits without acknowledgement");
+        handoff.Result = true; handoff.BeforeReturn = coordinator.Cancel;
+        await coordinator.InstallAsync(false, "ar");
+        Check(!quit && coordinator.Snapshot.Phase == UpdatePhase.Cancelled
+            && File.Exists(Path.Combine(handoff.Stage, "cancel.request")), "cancellation at helper acknowledgement prevents quit and cancels the helper");
         var cancelled = new UpdateCoordinator(context, new UpdateFixtureSource("downloading"), handoff);
         await cancelled.CheckAsync();
         Task download = cancelled.DownloadAsync(true, false, "en");
         await Task.Delay(20); cancelled.Cancel(); await download;
-        Check(cancelled.Snapshot.Phase == UpdatePhase.Cancelled && handoff.Calls == 2, "cancelled download cannot reach automatic handoff");
+        Check(cancelled.Snapshot.Phase == UpdatePhase.Cancelled && handoff.Calls == 3, "cancelled download cannot reach automatic handoff");
     }
 }

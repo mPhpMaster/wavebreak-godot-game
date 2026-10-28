@@ -288,6 +288,7 @@ public sealed partial class MainMenu : Node3D
         if (colon >= 0) { arg = name[(colon + 1)..]; name = name[..colon]; }
         bool secrets = arg == "secrets";
         if (!_pages.ContainsKey(name)) name = "main";
+        if (_page == "updates" && name != "updates" && _updates?.Busy == true) _updates.Cancel();
         if (_page == "boombox" && name != "boombox") _boombox.Closing();
         if (name == "main" && _page is "expeditions" or "coop") RestoreExpeditionClassic();
         _page = name;

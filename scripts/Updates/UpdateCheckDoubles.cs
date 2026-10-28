@@ -15,6 +15,10 @@ internal sealed class UpdateCheckHandler : HttpMessageHandler
 internal sealed class UpdateCheckHandoff : IUpdateHandoff
 {
     internal int Calls;
+    internal bool Result;
+    internal Action? BeforeReturn;
+    internal string Stage = "";
     public Task<bool> StartAsync(UpdateContext context, UpdateRelease release, PreparedUpdate prepared,
-        bool restart, string language, CancellationToken cancel) { Calls++; return Task.FromResult(false); }
+        bool restart, string language, CancellationToken cancel)
+    { Calls++; Stage = prepared.Stage; BeforeReturn?.Invoke(); return Task.FromResult(Result); }
 }

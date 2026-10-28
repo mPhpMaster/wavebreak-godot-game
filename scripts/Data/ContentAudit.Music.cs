@@ -37,9 +37,18 @@ public static partial class ContentAudit
             }
             using (FileAccess? f = FileAccess.Open(MusicDir + t.Id + ".ogg", FileAccess.ModeFlags.Read))
             {
-                long size = f is null ? 0 : (long)f.GetLength();
-                bytes += size;
-                Check(size is > 0 and <= 1_200_000, $"music: {t.Id}.ogg is {size / 1024} KB (keep under ~1 MB)");
+                if (f is not null)
+                {
+                    long size = (long)f.GetLength();
+                    bytes += size;
+                    Check(size is > 0 and <= 1_200_000, $"music: {t.Id}.ogg is {size / 1024} KB (keep under ~1 MB)");
+                }
+                else
+                {
+                    // Exports remap OGG files to imported resources; source size budgets apply before export.
+                    Check(!OS.HasFeature("editor") && stream is AudioStreamOggVorbis,
+                        $"music: {t.Id} has neither source audio nor a valid exported stream");
+                }
             }
 
             Check(t.UnlockedBy.Length == 0 || Unlocks.ById(t.UnlockedBy) is not null,

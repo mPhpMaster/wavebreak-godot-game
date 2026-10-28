@@ -109,6 +109,7 @@ public sealed class UpdateCoordinator
                 throw new UpdateException(UpdateProblem.Integrity, "Download the current release again before installation.");
             if (!await _handoff.StartAsync(Context, release, prepared, restart, language, operation.Token))
                 throw new UpdateException(UpdateProblem.Handoff, "Updater did not confirm readiness.");
+            operation.Token.ThrowIfCancellationRequested();
             QuitRequested?.Invoke();
         }
         catch (OperationCanceledException) { Set(new(UpdatePhase.Cancelled, Context.Version, release)); }
@@ -116,7 +117,17 @@ public sealed class UpdateCoordinator
         finally { if (ReferenceEquals(_operation, operation)) _operation = null; }
     }
 
-    public void Cancel() => _operation?.Cancel();
+    public void Cancel()
+    {
+        if (_operation is not { } operation) return;
+        operation.Cancel();
+        if (Snapshot.Phase != UpdatePhase.HandingOff || _prepared is not { } prepared) return;
+        try
+        {
+            if (UpdatePaths.IsOwnedStage(prepared.Stage)) File.WriteAllText(Path.Combine(prepared.Stage, "cancel.request"), "cancel");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+    }
     private void Set(UpdateSnapshot value) { Snapshot = value; Changed?.Invoke(); }
     private void Fail(Exception error, UpdateProblem fallback, UpdateRelease? release = null)
         => Set(new(UpdatePhase.Failed, Context.Version, release, Problem: error is UpdateException update ? update.Problem : fallback,
