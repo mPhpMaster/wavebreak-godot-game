@@ -9,8 +9,8 @@ namespace Wavebreak.Data;
 ///
 /// <see cref="Run"/> stays the default route (Thornmeadow, Rimeglass, Cinder)
 /// and is untouched: automated runs and the smoke test play it exactly as
-/// before. <see cref="All"/> is every map, for route building, the boundary
-/// check and the codex.
+/// before. <see cref="All"/> is the standard map pool, for route building,
+/// the boundary check and the codex. Opt-in side maps resolve via ById.
 ///
 /// A map's enemy multipliers belong to the phase it is played in, not to the
 /// map: Gravemoor played first must open as gently as Thornmeadow does. So
@@ -26,7 +26,7 @@ public static partial class Stages
     /// <summary>Maps that are not on the classic route.</summary>
     public static IReadOnlyList<StageDef> Extra => _extra ??= BuildExtra();
 
-    /// <summary>Every map, classic route first, then the extras.</summary>
+    /// <summary>Standard map pool, classic route first, then the extras.</summary>
     public static IReadOnlyList<StageDef> All
     {
         get
@@ -40,6 +40,8 @@ public static partial class Stages
 
     public static StageDef? ById(string id)
     {
+        if (id == Lumenreef.Id) return Lumenreef;
+        if (id == Bellspire.Id) return Bellspire;
         foreach (StageDef s in All) if (s.Id == id) return s;
         return null;
     }

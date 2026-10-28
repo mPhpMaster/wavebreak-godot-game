@@ -76,6 +76,7 @@ public sealed partial class BigMap : Control
         DrawBoss();
         DrawPortal();
         DrawPings();
+        DrawCaveMarkers();
         DrawPlayers();
         DrawRect(_rect, Frame, false, 2f);
         // North badge, top centre.

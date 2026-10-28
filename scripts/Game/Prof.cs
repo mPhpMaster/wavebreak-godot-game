@@ -8,7 +8,7 @@ namespace Wavebreak.Game;
 public static class Prof
 {
     public static bool On;
-    private static readonly Dictionary<string, (double Ms, int Calls)> Totals = new();
+    private static readonly Dictionary<string, (double Ms, int Calls, double Peak)> Totals = new();
 
     public readonly struct Timer : System.IDisposable
     {
@@ -20,7 +20,7 @@ public static class Prof
             if (_name is null) return;
             double ms = (Stopwatch.GetTimestamp() - _start) * 1000.0 / Stopwatch.Frequency;
             Totals.TryGetValue(_name, out var t);
-            Totals[_name] = (t.Ms + ms, t.Calls + 1);
+            Totals[_name] = (t.Ms + ms, t.Calls + 1, System.Math.Max(t.Peak, ms));
         }
     }
 
@@ -29,11 +29,11 @@ public static class Prof
     /// <summary>Per-call averages since the last report, highest first.</summary>
     public static string Report(int frames)
     {
-        var list = new List<(string, double, int)>();
-        foreach (var (k, v) in Totals) list.Add((k, v.Ms, v.Calls));
+        var list = new List<(string, double, int, double)>();
+        foreach (var (k, v) in Totals) list.Add((k, v.Ms, v.Calls, v.Peak));
         list.Sort((a, b) => b.Item2.CompareTo(a.Item2));
         var sb = new System.Text.StringBuilder();
-        foreach (var (k, ms, calls) in list) sb.Append($"{k}={ms / System.Math.Max(1, frames):0.00}ms/f({calls}) ");
+        foreach (var (k, ms, calls, peak) in list) sb.Append($"{k}={ms / System.Math.Max(1, frames):0.00}ms/f({calls},peak={peak:0.00}ms) ");
         Totals.Clear();
         return sb.ToString();
     }

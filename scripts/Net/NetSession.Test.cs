@@ -358,7 +358,7 @@ public sealed partial class NetSession
         {
             if (!IsInstanceValid(r) || !r.HasState) continue;
             Vector3 d = r.GlobalPosition - me;
-            d.Y = 0f;
+            if (!Arena.Current.Underwater) d.Y = 0f;
             if (r.Down)
             {
                 // A downed teammate comes first: stand on them.
@@ -377,14 +377,15 @@ public sealed partial class NetSession
             var fwd = new Vector3(-Mathf.Sin(yaw), 0f, -Mathf.Cos(yaw));
             var right = new Vector3(Mathf.Cos(yaw), 0f, -Mathf.Sin(yaw));
             Vector3 spot = nearest.GlobalPosition - fwd * 2.6f + right * 1.2f - me;
-            spot.Y = 0f;
+            if (!Arena.Current.Underwater) spot.Y = 0f;
             return spot.Length() > 0.6f ? spot.Normalized() * 3f : Vector3.Zero;
         }
 
         float dist = Mathf.Sqrt(nearestSq);
         if (dist > 14f)
         {
-            Vector3 to = (nearest.GlobalPosition - me) with { Y = 0f };
+            Vector3 to = nearest.GlobalPosition - me;
+            if (!Arena.Current.Underwater) to.Y = 0f;
             return wish + to.Normalized() * Mathf.Min(3f, (dist - 14f) * 0.3f + 0.8f);
         }
         return wish;

@@ -392,12 +392,10 @@ public sealed partial class MusicDirector : Node
     public static string TrackForStage(string stageId, int phase)
     {
         string theme = "";
-        foreach (StageDef s in Stages.All)
+        if (Stages.ById(stageId) is { } s)
         {
-            if (s.Id != stageId) continue;
             theme = s.Theme ?? "";
             if (s.MusicKey.Length > 0 && Load(s.MusicKey) is not null) return s.MusicKey;
-            break;
         }
         // The catalogue's own map track (MusicTracks: one per map).
         if (MusicTracks.ForMap(stageId) is { } own && Load(own.Id) is not null) return own.Id;

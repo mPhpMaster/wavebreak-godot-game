@@ -77,6 +77,7 @@ public sealed partial class Minimap : Control
 
     public override void _Process(double delta)
     {
+        using var timing = Wavebreak.Game.Prof.Scope("UI.minimap");
         if (_layoutVersion != HudSettings.Version) Layout();
         bool want = HudSettings.Minimap && Player.Instance is { } p && IsInstanceValid(p) && Main.Instance is not null;
         if (Visible != want) Visible = want;
@@ -115,6 +116,7 @@ public sealed partial class Minimap : Control
         DrawEnemies();
         DrawPortal();
         DrawPings();
+        DrawCaveMarkers(me);
         DrawPlayers(me);
 
         // Rim and the north badge on top.

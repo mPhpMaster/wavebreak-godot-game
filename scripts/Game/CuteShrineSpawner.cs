@@ -117,7 +117,7 @@ public sealed partial class CuteShrineSpawner : Node
                 float d = Mathf.Lerp(inner, outer, MathF.Sqrt(rng.Float()));
                 Vector3 c = rng.OnUnitCircleXZ() * d;
                 if (arena is not null) c = arena.ClearSpotNear(c, 2.2f);
-                c.Y = 0f;
+                c.Y = stage.Underwater ? UnderwaterTerrain.Height(c) : 0f;
                 float flat = new Vector2(c.X, c.Z).Length();
                 if (flat < inner * 0.8f || flat > arenaRadius * 0.8f) continue;
                 float spacing = attempt < 40 ? CuteShrines.MinSpacing : CuteShrines.MinSpacing * 0.5f;
@@ -132,6 +132,7 @@ public sealed partial class CuteShrineSpawner : Node
             avoid.Add(at);
             var shrine = new CuteShrine(kind) { Position = at, Rotation = new Vector3(0f, rng.Range(0f, Mathf.Tau), 0f) };
             map.AddChild(shrine);
+            if (stage.Underwater) Visuals.ReefPlacement.Ground(shrine, 2f);
             self._shrines.Add(shrine);
             self.Placed++;
             GD.Print($"[cute-shrine] placed {kind} at=({at.X:0.0},{at.Z:0.0})");

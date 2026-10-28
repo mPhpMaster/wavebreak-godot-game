@@ -67,6 +67,7 @@ public partial class StageDef : Resource
     /// <summary><see cref="Visuals.PropTheme"/> id: floor shader, sky, fog,
     /// sun, and the props scattered over the map.</summary>
     [Export] public string Theme { get; set; } = "meadow";
+    [Export] public bool Underwater { get; set; }
 
     /// <summary>Theme prop density. Below 1 keeps lanes open: the scatter is
     /// visual (no collision), but a field too thick to see enemies through is

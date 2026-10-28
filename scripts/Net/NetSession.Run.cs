@@ -88,15 +88,15 @@ public sealed partial class NetSession
         if (_main is null || _remotes.ContainsKey(p.Id)) return;
         var r = new RemotePlayer(p);
         _main.AddChild(r);
-        r.Place(Arena.Centre + Coop.SlotOffset(p.Slot) + Vector3.Up * 0.3f);
+        r.Place(ReefArrival.Position(Arena.Centre + Coop.SlotOffset(p.Slot) + Vector3.Up * 0.3f, !_go));
         _remotes[p.Id] = r;
     }
 
     /// <summary>Put every remote avatar on its arrival spot (new map).</summary>
-    public void PlaceRemotes()
+    public void PlaceRemotes(bool first = false)
     {
         foreach (RemotePlayer r in _remotes.Values)
-            if (IsInstanceValid(r)) r.Place(Arena.Centre + Coop.SlotOffset(r.Slot) + Vector3.Up * 0.3f);
+            if (IsInstanceValid(r)) r.Place(ReefArrival.Position(Arena.Centre + Coop.SlotOffset(r.Slot) + Vector3.Up * 0.3f, first));
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -194,6 +194,7 @@ public sealed partial class NetSession
         if (_stateTimer <= 0f && me is not null && IsInstanceValid(me))
         {
             _stateTimer = StateInterval;
+            SendGrapple(me);
             int flags = me.NetPoseFlags | (me.IsAlive ? 0 : 16);
             float cam = PlayerCamera.Instance?.Yaw ?? 0f;
             Rpc(MethodName.PState, me.GlobalPosition, me.FacingYaw, me.NetVelocity, flags,
@@ -246,7 +247,7 @@ public sealed partial class NetSession
         {
             if (!IsInstanceValid(r) || r.Down || !r.HasState) continue;
             Vector3 d = r.GlobalPosition - me.GlobalPosition;
-            d.Y = 0f;
+            if (!Arena.Current.Underwater) d.Y = 0f;
             // A helper's Lifeline perk reaches further (NetSession.Perks.cs).
             float reach = Coop.ReviveRadius + PerkNet.ReviveReach(r.PeerId);
             if (d.LengthSquared() <= reach * reach) { helped = true; helper = r.PeerId; break; }

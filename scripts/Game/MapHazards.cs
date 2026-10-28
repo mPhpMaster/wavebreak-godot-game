@@ -97,10 +97,11 @@ public sealed partial class MapHazards : Node3D
     private bool Inside(Vector3 at)
     {
         // Only near the floor: jumping over a pool is how you cross it dry.
-        if (at.Y > 1.2f) return false;
+        if (!_stage.Underwater && at.Y > 1.2f) return false;
         float r2 = _stage.HazardRadius * _stage.HazardRadius;
         foreach (Vector3 pool in _pools)
         {
+            if (_stage.Underwater && at.Y > pool.Y + 1.2f) continue;
             float dx = at.X - pool.X, dz = at.Z - pool.Z;
             if (dx * dx + dz * dz < r2) return true;
         }

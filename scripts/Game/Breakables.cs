@@ -306,6 +306,12 @@ public sealed partial class Breakables : Node3D
 
     private static readonly Mesh?[] Meshes = new Mesh?[3];
 
+    internal static void PrepareMeshes()
+    {
+        using var timing = Prof.Scope("Startup.breakableMeshes");
+        for (int variant = 0; variant < Meshes.Length; variant++) _ = PotMesh(variant);
+    }
+
     /// <summary>Built once per process and shared by every map.</summary>
     private static Mesh PotMesh(int variant)
     {

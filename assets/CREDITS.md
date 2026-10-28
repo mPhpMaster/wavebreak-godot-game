@@ -66,3 +66,10 @@ Which track plays where, and how each unlocks in the Boombox, is
 | File | Font | Author | Source | Licence |
 |---|---|---|---|---|
 | `fonts/NotoSansArabicUI-SemiBold.ttf` | Noto Sans Arabic UI SemiBold (Arabic fallback for the default font) | The Noto Project Authors | https://github.com/notofonts/arabic | SIL Open Font License 1.1 (`fonts/OFL.txt`) |
+
+## Reef pickups: Kenney Platformer Kit 4.1
+
+- Author: Kenney (https://kenney.nl). Source: https://kenney.nl/assets/platformer-kit
+- License: CC0 1.0, bundled in `kenney/reef-pickups/License.txt`.
+- Files: `jewel.glb` (XP), `coin-gold.glb` (gold), original `Textures/colormap.png`.
+- Retrieved 2026-10-27 from the official free download; no payment or bundled software.

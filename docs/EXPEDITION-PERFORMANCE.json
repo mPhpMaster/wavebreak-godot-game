@@ -1,0 +1,253 @@
+{
+  "city_before": {
+    "source": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\wavebreak-user-before-city.log",
+    "phases": [
+      {
+        "map": "bellspire",
+        "phase": 0,
+        "n": 1130,
+        "mean_ms": 7.08,
+        "p50_ms": 7.14,
+        "p95_ms": 7.41,
+        "cpu_ms": 0.9,
+        "gpu_ms": 6.98,
+        "physics_ms": 1.29,
+        "draws": 292,
+        "prims": 746499,
+        "alloc_kb_frame": 5.53,
+        "enemies": 4
+      },
+      {
+        "map": "bellspire",
+        "phase": 1,
+        "n": 1228,
+        "mean_ms": 6.52,
+        "p50_ms": 6.67,
+        "p95_ms": 8.33,
+        "cpu_ms": 1.35,
+        "gpu_ms": 6.34,
+        "physics_ms": 1.64,
+        "draws": 374,
+        "prims": 761815,
+        "alloc_kb_frame": 5.34,
+        "enemies": 4
+      },
+      {
+        "map": "bellspire",
+        "phase": 2,
+        "n": 1153,
+        "mean_ms": 6.94,
+        "p50_ms": 6.77,
+        "p95_ms": 7.58,
+        "cpu_ms": 1.23,
+        "gpu_ms": 6.8,
+        "physics_ms": 2.09,
+        "draws": 414,
+        "prims": 627713,
+        "alloc_kb_frame": 5.54,
+        "enemies": 2
+      }
+    ],
+    "actual_seed": 715693311,
+    "comparison_status": "exploratory; seed flag was ignored without --shot before the harness fix"
+  },
+  "city_after": {
+    "source": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\wavebreak-performance-final\\city.log",
+    "phases": [
+      {
+        "map": "bellspire",
+        "phase": 0,
+        "n": 1088,
+        "mean_ms": 7.35,
+        "p50_ms": 7.41,
+        "p95_ms": 8.33,
+        "cpu_ms": 1.91,
+        "gpu_ms": 7.16,
+        "physics_ms": 1.8,
+        "draws": 344,
+        "prims": 196041,
+        "alloc_kb_frame": 2.95,
+        "enemies": 4
+      },
+      {
+        "map": "bellspire",
+        "phase": 1,
+        "n": 1189,
+        "mean_ms": 6.73,
+        "p50_ms": 6.42,
+        "p95_ms": 8.85,
+        "cpu_ms": 1.84,
+        "gpu_ms": 6.57,
+        "physics_ms": 1.56,
+        "draws": 257,
+        "prims": 191949,
+        "alloc_kb_frame": 2.84,
+        "enemies": 4
+      },
+      {
+        "map": "bellspire",
+        "phase": 2,
+        "n": 1194,
+        "mean_ms": 6.71,
+        "p50_ms": 6.67,
+        "p95_ms": 7.14,
+        "cpu_ms": 1.78,
+        "gpu_ms": 6.58,
+        "physics_ms": 1.03,
+        "draws": 333,
+        "prims": 181372,
+        "alloc_kb_frame": 2.89,
+        "enemies": 2
+      },
+      {
+        "map": "bellspire",
+        "phase": 3,
+        "n": 1250,
+        "mean_ms": 6.4,
+        "p50_ms": 6.06,
+        "p95_ms": 9.52,
+        "cpu_ms": 1.4,
+        "gpu_ms": 6.25,
+        "physics_ms": 1.26,
+        "draws": 158,
+        "prims": 75497,
+        "alloc_kb_frame": 5.22,
+        "enemies": 4
+      }
+    ],
+    "actual_seed": 3959581323,
+    "comparison_status": "exploratory; seed flag was ignored without --shot before the harness fix"
+  },
+  "reef_before": {
+    "source": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\wavebreak-user-before-reef.log",
+    "phases": [
+      {
+        "map": "lumenreef",
+        "phase": 0,
+        "n": 1170,
+        "mean_ms": 6.85,
+        "p50_ms": 6.68,
+        "p95_ms": 7.14,
+        "cpu_ms": 1.31,
+        "gpu_ms": 6.67,
+        "physics_ms": 1.81,
+        "draws": 381,
+        "prims": 1617717,
+        "alloc_kb_frame": 5.54,
+        "enemies": 11
+      },
+      {
+        "map": "lumenreef",
+        "phase": 1,
+        "n": 1341,
+        "mean_ms": 5.97,
+        "p50_ms": 5.83,
+        "p95_ms": 6.67,
+        "cpu_ms": 0.98,
+        "gpu_ms": 5.84,
+        "physics_ms": 0.77,
+        "draws": 187,
+        "prims": 553098,
+        "alloc_kb_frame": 4.39,
+        "enemies": 0
+      },
+      {
+        "map": "lumenreef",
+        "phase": 2,
+        "n": 1171,
+        "mean_ms": 6.83,
+        "p50_ms": 6.67,
+        "p95_ms": 7.14,
+        "cpu_ms": 1.38,
+        "gpu_ms": 6.69,
+        "physics_ms": 1.08,
+        "draws": 399,
+        "prims": 1622718,
+        "alloc_kb_frame": 4.85,
+        "enemies": 1
+      }
+    ],
+    "actual_seed": 1474092304,
+    "comparison_status": "exploratory; seed flag was ignored without --shot before the harness fix"
+  },
+  "reef_after": {
+    "source": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\wavebreak-performance-final\\reef.log",
+    "phases": [
+      {
+        "map": "lumenreef",
+        "phase": 0,
+        "n": 1156,
+        "mean_ms": 6.93,
+        "p50_ms": 6.67,
+        "p95_ms": 8.33,
+        "cpu_ms": 1.57,
+        "gpu_ms": 6.68,
+        "physics_ms": 2.22,
+        "draws": 363,
+        "prims": 426022,
+        "alloc_kb_frame": 6.24,
+        "enemies": 13
+      },
+      {
+        "map": "lumenreef",
+        "phase": 1,
+        "n": 1336,
+        "mean_ms": 5.99,
+        "p50_ms": 6.06,
+        "p95_ms": 6.25,
+        "cpu_ms": 0.97,
+        "gpu_ms": 5.87,
+        "physics_ms": 0.7,
+        "draws": 182,
+        "prims": 198981,
+        "alloc_kb_frame": 4.4,
+        "enemies": 0
+      },
+      {
+        "map": "lumenreef",
+        "phase": 2,
+        "n": 1289,
+        "mean_ms": 6.21,
+        "p50_ms": 6.25,
+        "p95_ms": 6.45,
+        "cpu_ms": 1.53,
+        "gpu_ms": 6.09,
+        "physics_ms": 1.12,
+        "draws": 469,
+        "prims": 373431,
+        "alloc_kb_frame": 4.57,
+        "enemies": 1
+      }
+    ],
+    "actual_seed": 1909872336,
+    "comparison_status": "exploratory; seed flag was ignored without --shot before the harness fix"
+  },
+  "conditions": {
+    "engine": "Godot 4.7.1 .NET",
+    "renderer": "Forward+ Vulkan",
+    "gpu": "NVIDIA GTX 1060 6GB",
+    "requested_window": [
+      1920,
+      1080
+    ],
+    "captured_window": [
+      1920,
+      1064
+    ],
+    "render_scale": 1,
+    "msaa": "4x",
+    "shadows": "high",
+    "ssao": true,
+    "glow": true,
+    "fog": true,
+    "prop_density": 1.25,
+    "ui_scale": 1.2,
+    "seed": null,
+    "warmup_seconds": 2,
+    "sample_seconds": 8,
+    "audio_driver": "Dummy",
+    "initial_city_giants": 4,
+    "initial_reef_enemies": 20,
+    "seed_note": "Historical tours were not controlled by seed; use the matched 120-second comparisons in EXPEDITION-SOAK-PERFORMANCE.json."
+  }
+}

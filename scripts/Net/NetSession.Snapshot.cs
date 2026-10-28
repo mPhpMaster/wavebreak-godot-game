@@ -79,16 +79,16 @@ public sealed partial class NetSession
         string difficulty = Coop.Endless ? "endless:" + Coop.DifficultyId : Coop.DifficultyId;
         GD.Print($"[coop] {p.Name} joins the run in progress (slot {p.Slot})");
         Popup(Loc.F("{0} joined the game", p.Name), new Color(0.55f, 1f, 0.65f));
-        RpcId(p.Id, MethodName.JoinRun, (long)Coop.Seed, difficulty);
+        RpcId(p.Id, MethodName.JoinRun, (long)Coop.Seed, difficulty, Coop.RouteId);
     }
 
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void JoinRun(long seed, string difficultyId)
+    private void JoinRun(long seed, string difficultyId, string routeId)
     {
         if (!Coop.IsClient || Coop.InRun) return;
         LateJoined = true;
         GD.Print("[coop] joining a run in progress");
-        StartRun(seed, difficultyId);
+        StartRun(seed, difficultyId, routeId);
     }
 
     // ------------------------------------------------------------ host side
@@ -156,6 +156,8 @@ public sealed partial class NetSession
                  $"{enemies} enemies, {pickups} orbs, {chests} chests{(lateJoin ? $", level {d[WsLevel]}" : "")}");
         RpcId(peer, MethodName.WorldSnap, d.ToArray());
         SendTotems(peer);   // NetSession.Totems.cs
+        SendReefHarvest(peer);
+        SendCaveDiscovery(peer);
     }
 
     /// <summary>The team's average level (rounded down), without <paramref name="except"/>.</summary>

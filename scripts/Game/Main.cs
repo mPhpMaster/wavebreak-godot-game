@@ -47,6 +47,8 @@ public sealed partial class Main : Node3D
     {
         Instance = this;
         Screenshot.ParseArgs();
+        if (System.Array.Exists(OS.GetCmdlineUserArgs(), arg => arg.StartsWith("--perf-"))) Prof.On = true;
+        using var startup = Prof.Scope("Startup.mainReady");
         Meta.Loc.Init(this);
         // Graphics settings at run start (automated runs: the fixed defaults).
         Meta.GraphicsSettings.Load();
@@ -54,18 +56,18 @@ public sealed partial class Main : Node3D
         if (Visuals.ArtShowcase.Intercept(this)) return;
 
         // Co-op: the host's seed, so every machine builds the same maps.
-        Run = new RunState(Net.Coop.InRun ? Net.Coop.Seed : Screenshot.Requested ? Screenshot.Seed : (ulong)GD.Randi());
+        Run = new RunState(Net.Coop.InRun ? Net.Coop.Seed : Screenshot.Requested || Screenshot.SeedRequested ? Screenshot.Seed : (ulong)GD.Randi());
         GD.Print($"[wavebreak] seed {Run.Seed}");
 
-        BuildWorld();
-        Meta.RunMeta.Attach(this);
+        using (Prof.Scope("Startup.buildWorld")) BuildWorld();
+        using (Prof.Scope("Startup.meta")) Meta.RunMeta.Attach(this);
 
         // The arena is built by the stage director, not here: it is rebuilt on
         // every phase change, and the thing that rebuilds it should be the only
         // thing that ever creates one.
         // The route (Meta/Routes) is Data.Stages.Run unless the player picked another.
         _stages = new StageDirector(this, Run, _enemies, _player, _camera, Meta.Routes.ForRun(Run.Seed), Catalog.Enemies);
-        _stages.Begin();
+        using (Prof.Scope("Startup.stageBegin")) _stages.Begin();
 
         EventBus.Subscribe<LevelGained>(OnLevelGained);
         EventBus.Subscribe<RunEnded>(OnRunEnded);

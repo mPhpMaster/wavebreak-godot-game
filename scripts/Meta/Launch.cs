@@ -31,6 +31,7 @@ public static class Launch
 
     public static string? ProfilePath { get; private set; }
     public static string? CharacterId { get; private set; }
+    public static string? MenuExpeditionCheck { get; private set; }
     public static string? MenuShot { get; private set; }
     public static string MenuPage { get; private set; } = "main";
     public static bool SecretTest { get; private set; }
@@ -50,7 +51,7 @@ public static class Launch
     /// player's real profile unless a path was given explicitly — a smoke test
     /// that quietly hands out unlocks on the developer's machine would make the
     /// menu lie about what the player has earned.</summary>
-    public static bool Automated => SkipsMenu || MenuShot is not null;
+    public static bool Automated => SkipsMenu || MenuShot is not null || MenuExpeditionCheck is not null;
 
     public static void Parse()
     {
@@ -58,7 +59,8 @@ public static class Launch
         _parsed = true;
         foreach (string arg in OS.GetCmdlineUserArgs())
         {
-            if (arg.StartsWith("--profile=")) ProfilePath = arg["--profile=".Length..];
+            if (arg.StartsWith("--menu-expedition-check=")) MenuExpeditionCheck = arg["--menu-expedition-check=".Length..];
+            else if (arg.StartsWith("--profile=")) ProfilePath = arg["--profile=".Length..];
             else if (arg.StartsWith("--menu-shot=")) MenuShot = arg["--menu-shot=".Length..];
             else if (arg.StartsWith("--menu-page=")) MenuPage = arg["--menu-page=".Length..];
             else if (arg.StartsWith("--lang=")) Language = arg["--lang=".Length..];
@@ -80,6 +82,8 @@ public static class Launch
                 SecretTest = true;
                 SkipsMenu = true;
             }
+            else if (arg.StartsWith("--menu-review=")) { } // Menu test captures do not skip the title.
+            else if (arg.StartsWith("--update-fixture=")) { }
             else if (arg == "--latin-report") { }   // Game/Screenshot: a capture diagnostic, menu or run
             // Net/Steam: allow Steam in an automated run; join a lobby at start (menu flags).
             else if (arg == "--steam-test" || arg.StartsWith("--steam-test=") || arg.StartsWith("--connect-lobby")) { }

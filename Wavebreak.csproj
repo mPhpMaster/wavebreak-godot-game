@@ -8,5 +8,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Steamworks.NET" Version="2024.8.0" />
+    <EmbeddedResource Include="updater\ApplyUpdate.ps1" LogicalName="Wavebreak.ApplyUpdate.ps1" />
+    <EmbeddedResource Include="updater\UpdatePortable.ps1" LogicalName="Wavebreak.UpdatePortable.ps1" />
+    <EmbeddedResource Include="updater\UpdateProgress.ps1" LogicalName="Wavebreak.UpdateProgress.ps1" />
   </ItemGroup>
 </Project>

@@ -38,6 +38,55 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Languages | English and Arabic (full right-to-left layout) |
 | Settings | Full graphics page (presets, display, scaling/FSR, AA, shadows, effects, FOV, shake, UI scale, weapon-effect opacity, FPS counter), audio, key bindings |
 
+## Optional underwater expedition
+
+In the run setup's **Route & Challenges** page, clear any selected map
+challenge and cycle **Route** to **Reef Dive (side map)**. The expedition starts
+in **Lumenreef Basin**, then visits Saltglass Shallows and Stormwatch Harbour.
+Higher difficulties insert extra maps before the harbour finale.
+
+The expedition opens with a safe skyfall and splash into roughly 70 metres of
+water. Look and move forward/back to swim in 3D; strafe stays lateral.
+**Hold Jump (Space)** to rise and **hold Slide (Ctrl / C)** to dive. Reinforcing
+an upward/downward look direction adds a modest 12% boost. Releasing movement
+holds your depth. An upward dash can breach the moving surface, arc under
+gravity and splash back in. There is no normal jump, air jump, slide, slam or
+oxygen timer in this map. The HUD shows your rebound rise/dive keys in English
+or Arabic. Movement returns to normal when leaving for the rest stop or another
+map. Marine enemies pursue vertically; glowing brine hurts near the seabed.
+Kelp, luminous coral, dense bubble streams, animated surface waves and moving
+caustic light dress the water. A continuous collision mesh forms deep valleys,
+ridges and enclosing natural rock cliffs. Dedicated swimming strokes replace
+the running animation, with full-body pitch. Saltglass's music accompanies the expedition.
+
+A 261-metre winding cave connects a natural cliff entrance to an interior
+seabed chimney, with wider chambers, guards and one-time treasure. The wreck
+and cliff ledges offer additional chests. Grounded shrines and useful crystals
+and reef herbs appear on the seabed, ledges, cliff walls and in the cave;
+their nearby interaction prompt shows the reward. Harvests deplete once per map.
+Marine models replace land silhouettes throughout the reef, including bosses.
+Water audio and lighting respond to depth; breaching exposes the sky and sun.
+XP jewels and gold coins use Kenney CC0 models; dropped gold settles on real supports.
+Cave entrance/exit markers start hidden and appear independently after nearby,
+unobstructed discovery. The minimap and Tab map show signed height relative to
+you: up/+ means above, down/- below, and = the same height. Discovered portals
+stay marked, with distant minimap markers pinned to its rim. Nearby ordinary
+and elite enemies show health bars within 14 m in 3D; walls, fog, distance and
+screen clutter hide them. Bosses retain their existing dedicated bar.
+
+For co-op, the host selects Reef Dive before opening CO-OP and starting the
+lobby. The host's route is sent to all peers, including late joiners; swimming
+pose and full vertical velocity ride on player state. All peers need this build
+(protocol 6). Harvest depletion, cave claims and discovered cave portals are host-owned and included in
+late-join state. Other co-op runs retain Classic; standard random draws keep their
+original map pool. For development use `--route=reef-dive`, or `--route=lumenreef`
+for only the basin. `--check-swim --route=reef-dive --invulnerable --seed=42`
+checks the real swimming controller, depth limits, pose flags and transitions.
+Additional focused flags: `--check-swim-pose`, `--check-breach`,
+`--check-reef-systems`, `--check-reef-expedition`. Validation and remaining
+manual acceptance limits are recorded in [the reef handoff](docs/UNDERWATER-IMPLEMENTATION.md).
+Side maps resolve through `Stages.ById`; `Stages.All` remains the standard pool.
+
 ## Co-op (2-4 players)
 
 Co-op runs through **Steam**: you play with your Steam friends, and nobody
@@ -207,6 +256,21 @@ panel. It can unlock everything, give Pearls, edit your build, spawn anything
 and jump between stages. A run that uses it does not count toward quests,
 stats or the leaderboard. Its Profile tab can also show direct-IP host and
 join rows on the CO-OP page, for testing co-op without Steam.
+
+## Special expeditions
+
+The title screen's **SPECIAL MAPS: REEF & CITY** opens direct starts for
+Lumenreef Basin and Bellspire Ward. Both maps accept every unlocked character.
+Nori the Reef Runner and Vesper the Skyline Scout are available immediately on
+fresh and existing profiles. Selecting the reef chooses Nori; selecting the city
+chooses Vesper, with manual overrides retained afterward. In Bellspire, hold
+**LMB/RMB** for independent left/right hooks, release either separately, use
+**Space** for an attached boost, and **Dash (Shift / controller X)** to strike a
+nearby giant core while airborne at speed. Away from an eligible core, Dash
+performs its normal burst. Speed streaks follow actual tethered velocity.
+The city now spans a 350-metre radius and four outer districts.
+See [the expedition guide](docs/CITY-EXPEDITIONS.md) for
+controls, co-op details and `tests/expeditions.ps1 -Render` verification.
 
 ## Building from source
 

@@ -29,8 +29,10 @@ public static class Keybinds
         ("move_left", "Move left"),
         ("move_right", "Move right"),
         ("jump", "Jump"),
-        ("dash", "Dash"),
+        ("dash", "Dash / core strike (city)"),
         ("slide", "Slide / slam"),
+        ("city_hook_left", "Left hook (city)"),
+        ("city_hook_right", "Right hook (city)"),
         ("interact", "Interact (chests, shrines)"),
         ("stats", "Character sheet (hold)"),
         ("scoreboard", "Scoreboard (hold)"),
@@ -56,10 +58,39 @@ public static class Keybinds
 
     /// <summary>Capture the shipped defaults, then apply the saved overrides.
     /// Idempotent: the title screen and a run may both call it.</summary>
+    private static void AddHookAction(string name, MouseButton mouse, Key key, JoyButton button)
+    {
+        if (InputMap.HasAction(name)) return;
+        InputMap.AddAction(name);
+        InputMap.ActionAddEvent(name, new InputEventMouseButton { ButtonIndex = mouse });
+        InputMap.ActionAddEvent(name, new InputEventKey { PhysicalKeycode = key });
+        InputMap.ActionAddEvent(name, new InputEventJoypadButton { ButtonIndex = button });
+    }
+
+    private static void AddCityAction(string name, Key key, JoyButton button)
+    {
+        if (InputMap.HasAction(name)) return;
+        InputMap.AddAction(name);
+        InputMap.ActionAddEvent(name, new InputEventKey { PhysicalKeycode = key });
+        InputMap.ActionAddEvent(name, new InputEventJoypadButton { ButtonIndex = button });
+    }
+
     public static void Load()
     {
         if (_loaded) return;
         _loaded = true;
+        AddHookAction("city_hook_left", MouseButton.Left, Key.Q, JoyButton.LeftShoulder);
+        AddHookAction("city_hook_right", MouseButton.Right, Key.V, JoyButton.RightShoulder);
+        AddCityAction("dash", Key.Shift, JoyButton.X);
+        bool dashPad = false;
+        foreach (InputEvent entry in InputMap.ActionGetEvents("dash")) dashPad |= entry is InputEventJoypadButton;
+        if (!dashPad) InputMap.ActionAddEvent("dash", new InputEventJoypadButton { ButtonIndex = JoyButton.X });
+        if (InputMap.HasAction("jump"))
+        {
+            bool hasPad = false;
+            foreach (InputEvent entry in InputMap.ActionGetEvents("jump")) hasPad |= entry is InputEventJoypadButton;
+            if (!hasPad) InputMap.ActionAddEvent("jump", new InputEventJoypadButton { ButtonIndex = JoyButton.A });
+        }
 
         foreach (var (action, _) in Actions)
         {
@@ -170,7 +201,8 @@ public static class Keybinds
     public static string Describe(InputEvent? ev) => ev switch
     {
         InputEventKey k => OS.GetKeycodeString(k.PhysicalKeycode != Key.None
-                               ? DisplayServer.KeyboardGetKeycodeFromPhysical(k.PhysicalKeycode)
+                               ? DisplayServer.GetName() == "headless" ? k.PhysicalKeycode
+                                   : DisplayServer.KeyboardGetKeycodeFromPhysical(k.PhysicalKeycode)
                                : k.Keycode) is { Length: > 0 } s ? s : "?",
         InputEventMouseButton m => m.ButtonIndex switch
         {

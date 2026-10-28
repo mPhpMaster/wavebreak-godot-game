@@ -369,7 +369,7 @@ public static partial class Characters
     public static CharacterDef ForThisRun()
     {
         Profile.EnsureLoaded();
-        string? wanted = Launch.CharacterId ?? (Launch.Automated ? null : Profile.SelectedCharacter);
+        string? wanted = Launch.CharacterId ?? (Launch.Automated && Launch.MenuExpeditionCheck is null ? null : Profile.SelectedCharacter);
         CharacterDef? def = ById(wanted);
         if (def is null || !def.IsAvailable)
         {

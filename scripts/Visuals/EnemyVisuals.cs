@@ -66,6 +66,8 @@ public static class EnemyVisuals
     /// <summary>The spec for a definition, cached per id.</summary>
     public static ModelSpec SpecFor(EnemyDef def)
     {
+        if (CityGiantModels.IsGiant(def)) return CityGiantModels.For(def);
+        if (Game.Arena.Current.Underwater) return ReefMarineModels.For(def);
         string key = def.Id + (def.IsElite ? "+e" : "") + (def.IsBoss ? "+b" : "");
         if (Specs.TryGetValue(key, out ModelSpec? s)) return s;
         s = ImportedFor(def) ?? Authored(def) ?? Classified(def);

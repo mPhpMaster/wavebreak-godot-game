@@ -21,6 +21,7 @@ public static class Screenshot
     public static string? Path { get; private set; }
     public static float AfterSeconds { get; private set; } = 5f;
     public static ulong Seed { get; private set; } = 1;
+    public static bool SeedRequested { get; private set; }
     public static bool Requested => Path is not null;
 
     /// <summary>--auto: drive the player with the autopilot and take level-up
@@ -47,7 +48,10 @@ public static class Screenshot
             else if (arg.StartsWith("--shot-after="))
                 AfterSeconds = arg["--shot-after=".Length..].ToFloat();
             else if (arg.StartsWith("--seed="))
-                Seed = (ulong)arg["--seed=".Length..].ToInt();
+            {
+                if (ulong.TryParse(arg["--seed=".Length..], out ulong seed))
+                { Seed = seed; SeedRequested = true; }
+            }
             else if (arg == "--auto")
                 Auto = true;
             else if (arg == "--show-stats")

@@ -75,7 +75,12 @@ public sealed partial class Interactables
 
     private void PlaceTotems(PhysicsDirectSpaceState3D space, Vector3 start)
     {
-        if (_wantTotems <= 0 || _map is null || Net.Coop.IsClient) return;   // the host's are sent to clients
+        foreach (int _ in TotemPlacementSteps(space, start)) { }
+    }
+
+    private IEnumerable<int> TotemPlacementSteps(PhysicsDirectSpaceState3D space, Vector3 start)
+    {
+        if (_wantTotems <= 0 || _map is null || Net.Coop.IsClient) yield break;   // the host's are sent to clients
         var rng = new Rng(Rng.Seed ^ 0x7071DE70UL ^ (ulong)_phase);
         Arena? arena = _map as Arena;
         float offset = rng.Range(0f, Mathf.Tau);
@@ -103,11 +108,13 @@ public sealed partial class Interactables
             if (found is not { } at)
             {
                 GD.Print("[totem] no valid spot found; totem dropped");
+                yield return 0;
                 continue;
             }
             Vector3 to = _centre - at; to.Y = 0f;
             AddTotem(new TideTotem(), at, to.LengthSquared() > 0.01f ? MathF.Atan2(to.X, to.Z) : 0f, 0, false);
             placed++;
+            yield return 1;
         }
         GD.Print($"[totem] placed {placed}/{_wantTotems} phase={_phase}");
     }
@@ -150,6 +157,7 @@ public sealed partial class Interactables
         _map.AddChild(totem);
         totem.GlobalPosition = at;
         totem.Rotation = new Vector3(0f, yaw, 0f);
+        if (Arena.Current.Underwater) Visuals.ReefActorSupport.Ground(totem, new Vector3(1.1f, 1f, 1.1f));
         _stations.Add(totem);
         StationsPlaced++;
         TotemsPlaced++;

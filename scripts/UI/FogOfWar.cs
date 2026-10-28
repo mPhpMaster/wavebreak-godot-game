@@ -104,6 +104,7 @@ public sealed partial class FogOfWar : Node
 
     public override void _Process(double delta)
     {
+        using var timing = Prof.Scope("UI.fog");
         float dt = (float)delta;
         if (Main.Instance is not { } main || main.Stages is null) return;
         if (main.Stages.InRestRoom) { Active = false; return; }
@@ -274,6 +275,7 @@ public sealed partial class FogOfWar : Node
 
     private void Reset(Main main)
     {
+        using var timing = Prof.Scope("Startup.fogReset");
         _arenaVersion = Arena.FeaturesVersion;
         StageDef s = Arena.Current;
         Extent = s.Radius + 4f;

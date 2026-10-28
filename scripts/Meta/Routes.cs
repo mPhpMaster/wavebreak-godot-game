@@ -69,6 +69,12 @@ public static class Routes
         // --route=beacon forces Stormwatch Harbour first (tests, captures).
         list.Add(new("beacon", "Beacon Road", "Stormwatch Harbour, Gravemoor, Cinder Reach. Follow the lighthouse into the dark.",
                      new[] { "stormwatch", "gravemoor", "cinder" }));
+        list.Add(new("reef-dive", "Reef Dive (side map)",
+            "Lumenreef Basin, Saltglass Shallows, Stormwatch Harbour. Swim through an optional underwater expedition.",
+            new[] { "lumenreef", "shallows", "stormwatch" }));
+        list.Add(new("skyline-run", "Bellspire Ascent (side map)",
+            "Bellspire Ward, Stormwatch Harbour, Cinder Reach. Grapple through a city under siege by stone wardens.",
+            new[] { "bellspire", "stormwatch", "cinder" }));
         return list;
     }
 
@@ -113,11 +119,13 @@ public static class Routes
     {
         Profile.EnsureLoaded();
         Launch.Parse();
-        RouteDef route = Launch.SkipsMenu || Net.Coop.InRun ? All[0] : Selected;   // co-op: every machine plays Classic
-        if (MapChallenges.RouteOverride is { } forcedRoute && ById(forcedRoute) is { } mr) route = mr;   // map challenge
+        RouteDef route = Net.Coop.InRun ? ById(Net.Coop.RouteId) ?? All[0]
+            : Launch.SkipsMenu ? All[0] : Selected;
+        if (!Net.Coop.InRun && MapChallenges.RouteOverride is { } forcedRoute && ById(forcedRoute) is { } mr) route = mr;
         string[]? explicitMaps = null;
         foreach (string arg in OS.GetCmdlineUserArgs())
         {
+            if (Net.Coop.InRun) break; // The host's route is authoritative on every peer.
             if (!arg.StartsWith("--route=")) continue;
             string v = arg["--route=".Length..];
             if (ById(v) is { } r) route = r;

@@ -68,6 +68,7 @@ public sealed partial class Enemy
     {
         if (_dead) return;
         UpdateFlash(dt);
+        StepCityPuppet(dt);
         _aliveSeconds += dt;
         StepStatus(dt);
         if (_dead) return;
@@ -77,6 +78,7 @@ public sealed partial class Enemy
         if (GlobalPosition.DistanceSquaredTo(target) > 36f) GlobalPosition = target;
         else GlobalPosition = GlobalPosition.Lerp(target, 1f - MathF.Exp(-14f * dt));
         Rotation = new Vector3(0f, Mathf.LerpAngle(Rotation.Y, _netYaw, 1f - MathF.Exp(-12f * dt)), 0f);
+        UpdateMarinePose(_netVel);
     }
 
     /// <summary>Client: this player's weapon hit the puppet.</summary>
@@ -90,7 +92,8 @@ public sealed partial class Enemy
             info.Amount = 0f;
             return;
         }
-        Net.NetSession.Instance?.QueueHit(NetId, sent, info.Knockback, info.Direction);
+        if (info.Source == "core_strike") Net.NetSession.Instance?.QueueCoreStrike(NetId, sent);
+        else Net.NetSession.Instance?.QueueHit(NetId, sent, info.Knockback, info.Direction);
 
         float amount = MathF.Min(sent, _health);
         info.Amount = amount;
@@ -106,6 +109,7 @@ public sealed partial class Enemy
     internal void NetKill(Vector3 at)
     {
         if (_dead) return;
+        ResetCityGiant();
         _dead = true;
         _health = 0f;
         int xp = _def?.XpValue ?? 0;

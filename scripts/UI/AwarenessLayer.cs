@@ -30,6 +30,9 @@ public static class AwarenessLayer
         overlay.AddChild(new TeamTags());
         overlay.AddChild(new PingMarkers());
         overlay.AddChild(new Minimap());
+        overlay.AddChild(new EnemyHealthBars());
+        overlay.AddChild(new GrappleSpeedLines());
+        overlay.AddChild(new CityTraversalHint());
         overlay.AddChild(new AwarenessAlerts());
 
         var top = new CanvasLayer { Name = "ScoreboardUI", Layer = 30 };

@@ -26,7 +26,7 @@ public static partial class ContentAudit
         var starts = new Dictionary<string, string>();
         foreach (CharacterDef c in Characters.All)
         {
-            if (c.Passive != PassiveKind.None && !passives.TryAdd(c.Passive, c.Id))
+            if (!Characters.IsExpedition(c.Id) && c.Passive != PassiveKind.None && !passives.TryAdd(c.Passive, c.Id))
                 Check(false, $"passive {c.Passive} shared by {passives[c.Passive]} and {c.Id}");
             if (!starts.TryAdd(c.StartingWeapon, c.Id) && Characters.IsCuteCrew(c.Id))
                 Check(false, $"cute {c.Id} starts with {c.StartingWeapon}, as does {starts[c.StartingWeapon]}");

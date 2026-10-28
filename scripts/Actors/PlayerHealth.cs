@@ -334,6 +334,7 @@ public sealed partial class PlayerHealth : Node, IDamageable
     {
         if (_dead) return;
 
+        _owner?.ReleaseHook();
         _dead = true;
         Current = 0f;
         Shield = 0f;

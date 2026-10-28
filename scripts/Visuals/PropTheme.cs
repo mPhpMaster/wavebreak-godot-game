@@ -63,7 +63,7 @@ public sealed partial class PropTheme
     private static readonly Dictionary<string, PropTheme> Presets = new();
 
     /// <summary>Every preset id.</summary>
-    public static readonly string[] Ids = { "meadow", "graveyard", "frost", "ashlands", "tidal", "harbour" };
+    public static readonly string[] Ids = { "meadow", "graveyard", "frost", "ashlands", "tidal", "harbour", "underwater" };
 
     /// <summary>A preset by id; unknown ids get the meadow.</summary>
     public static PropTheme Get(string? id)
@@ -72,6 +72,7 @@ public sealed partial class PropTheme
         if (Presets.TryGetValue(id, out PropTheme? t)) return t;
         t = id switch
         {
+            "underwater" => Underwater(),
             "ashlands" => Ashlands(),
             "frost" => Frost(),
             "tidal" => Tidal(),

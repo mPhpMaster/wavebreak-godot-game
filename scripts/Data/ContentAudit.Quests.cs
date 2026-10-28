@@ -64,7 +64,7 @@ public static partial class ContentAudit
         // rest keep the six-skin floor. AuditCute checks the crew's own wiring.
         foreach (CharacterDef c in Characters.All)
         {
-            int floor = Characters.IsCuteCrew(c.Id) ? 3 : 6;
+            int floor = Characters.IsExpedition(c.Id) ? 1 : Characters.IsCuteCrew(c.Id) ? 3 : 6;
             Check(c.Skins.Count >= floor, $"character {c.Id} has only {c.Skins.Count} skins (want {floor}+)");
         }
         AuditCute();

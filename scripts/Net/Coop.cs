@@ -32,7 +32,7 @@ public static class Coop
 
     /// <summary>Protocol tag; a client from another build is turned away
     /// instead of desyncing halfway into a run.</summary>
-    public const string Protocol = "wavebreak-coop-3";   // 2: hats and the host's difficulty in the lobby; 3: host migration, late join
+    public const string Protocol = "wavebreak-coop-8";   // 8: independent dual grapples and attached boost state
 
     /// <summary>A teammate standing within this many metres of a downed
     /// player for <see cref="ReviveSeconds"/> brings them back.</summary>
@@ -63,6 +63,7 @@ public static class Coop
     /// <summary>Run seed, chosen by the host; every peer builds the same maps from it.</summary>
     public static ulong Seed { get; internal set; }
     public static string DifficultyId { get; internal set; } = "";
+    public static string RouteId { get; internal set; } = "classic";
 
     /// <summary>The host started an Endless run (sent as an "endless:" prefix
     /// on the difficulty id, so the start RPC stays the same).</summary>
@@ -163,6 +164,7 @@ public static class Coop
         Departed.Clear();
         LocalId = 1;
         DifficultyId = "";
+        RouteId = "classic";
         ClearHold();
     }
 }

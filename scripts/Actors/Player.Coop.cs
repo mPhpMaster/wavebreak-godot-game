@@ -14,12 +14,13 @@ public sealed partial class Player
     {
         get
         {
+            if (IsSwimming) return IsBreaching ? 64 | (int)Visuals.RigPose.Air : 32 | 8 | (int)Visuals.RigPose.Locomotion;
             Visuals.RigPose pose = _dashTime > 0f ? Visuals.RigPose.Dash
                 : _slamming ? Visuals.RigPose.Slam
                 : _sliding ? Visuals.RigPose.Slide
                 : !IsOnFloor() ? Visuals.RigPose.Air
                 : Visuals.RigPose.Locomotion;
-            return (int)pose | (IsOnFloor() ? 8 : 0);
+            return (int)pose | (IsOnFloor() ? 8 : 0) | (Grappling ? 128 : 0);
         }
     }
 

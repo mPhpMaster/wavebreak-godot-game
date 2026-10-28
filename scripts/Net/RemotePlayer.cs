@@ -32,6 +32,7 @@ public sealed partial class RemotePlayer : Node3D, IDamageable
     /// <summary>Which way their camera faces (the automated test huddles on it).</summary>
     public float CameraYaw { get; private set; }
     public bool HasState { get; private set; }
+    public bool IsSwimming => _swimming && Game.Arena.Current.Underwater;
 
     private Node3D _yawNode = null!;
     private CharacterRig _rig = null!;
@@ -46,6 +47,8 @@ public sealed partial class RemotePlayer : Node3D, IDamageable
     private RigPose _pose = RigPose.Locomotion;
     private bool _grounded = true;
     private float _tilt;
+    private bool _swimming;
+    private bool _breaching;
 
     public RemotePlayer(CoopPeer peer)
     {
@@ -138,11 +141,13 @@ public sealed partial class RemotePlayer : Node3D, IDamageable
 
         // Beam and pinging ring while down (DownFlare).
         AddChild(new DownFlare(this, color));
+        AddChild(new SwimmerWake(this, () => _netVel, () => _swimming && !Down && Game.Arena.Current.Underwater));
     }
 
     /// <summary>A state packet from the owner.</summary>
     public void ApplyState(Vector3 pos, float yaw, Vector3 vel, int flags, float health, float range, float revive, float cameraYaw)
     {
+        bool previousAir = _breaching, previousWater = _swimming, existed = HasState;
         if (!HasState) GlobalPosition = pos;
         HasState = true;
         _netPos = pos;
@@ -151,6 +156,10 @@ public sealed partial class RemotePlayer : Node3D, IDamageable
         _netAt = Time.GetTicksMsec() / 1000.0;
         _pose = (RigPose)(flags & 7);
         _grounded = (flags & 8) != 0;
+        _swimming = (flags & 32) != 0;
+        _breaching = (flags & 64) != 0;
+        if (existed && Game.Arena.Current.Underwater && ((previousAir && _swimming) || (previousWater && _breaching)))
+            WaterTransitionFx.Spawn(GetParent(), pos with { Y = Game.WaterSurfaceHeight.At(pos) }, previousAir, vel.Length());
         bool down = (flags & 16) != 0;
         Health01 = Mathf.Clamp(health, 0f, 1f);
         PickupRange = Mathf.Max(0.5f, range);
@@ -165,11 +174,14 @@ public sealed partial class RemotePlayer : Node3D, IDamageable
         GlobalPosition = at;
         _netPos = at;
         _netVel = Vector3.Zero;
+        _swimming = Game.Arena.Current.Underwater;
+        _breaching = false;
     }
 
     public override void _Process(double delta)
     {
         float dt = (float)delta;
+        DrawGrapple();
         if (HasState)
         {
             // Dead reckoning on the last velocity, at most a fifth of a second
@@ -187,6 +199,8 @@ public sealed partial class RemotePlayer : Node3D, IDamageable
         _rig.Velocity = Down ? Vector3.Zero : _netVel;
         _rig.Grounded = _grounded;
         _rig.Pose = Down ? RigPose.Locomotion : _pose;
+        SwimmingPresentation.Apply(_rig, (_swimming || _breaching) && !Down && Game.Arena.Current.Underwater,
+            _netVel, Time.GetTicksMsec() / 1000f, _breaching, dt);
 
         _reviveRing.Visible = Down;
         if (Down)

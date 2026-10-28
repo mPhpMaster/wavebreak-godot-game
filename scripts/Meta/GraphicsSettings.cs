@@ -47,7 +47,9 @@ public sealed class GraphicsConfig
 ///
 /// Stored in the shared <c>user://settings.cfg</c> under <c>[graphics]</c>,
 /// load-then-write like <see cref="GameSettings"/> so no section erases another.
-/// Automated launches never load or save: they always run on the defaults,
+/// Automated launches never save and normally use the defaults. The explicit
+/// --perf-user-graphics flag permits a read-only load for same-quality profiling.
+/// Default automated launches run on the defaults,
 /// which are the "High" preset and are exactly what the game looked like before
 /// this page existed (engine defaults for AA, scale and shadows, the theme's own
 /// glow and fog). So tests and captures stay stable.
@@ -150,7 +152,7 @@ public static class GraphicsSettings
         if (_loaded) return;
         _loaded = true;
         Launch.Parse();
-        if (Launch.Automated) return; // fixed defaults for tests and captures
+        if (Launch.Automated && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--perf-user-graphics") < 0) return; // benchmark may read, never save
 
         var cfg = new ConfigFile();
         if (cfg.Load(Path) != Error.Ok) return;

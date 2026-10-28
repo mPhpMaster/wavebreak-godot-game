@@ -81,6 +81,7 @@ public sealed partial class MainMenu : Node3D
     {
         Launch.Parse();
         Loc.Init(this);
+        if (Updates.UpdateCheck.Requested) { AddChild(new Updates.UpdateCheck()); return; }
         if (Launch.DumpStrings is { } dump)
         {
             LocContent.Dump(dump);
@@ -135,6 +136,7 @@ public sealed partial class MainMenu : Node3D
         BuildBackdrop();
         BuildUi();
         GraphicsSettings.ApplyAll(this);
+        if (Updates.UpdateFixtures.Requested) Engine.MaxFps = 5;
         // Launched from a Steam invite (+connect_lobby <id>): start Steam and
         // go straight to the CO-OP page, which joins.
         if (Net.SteamApp.Allowed && Net.SteamLobby.TakeCommandLineLobby() is var lobby && lobby != 0)
@@ -145,6 +147,7 @@ public sealed partial class MainMenu : Node3D
         }
         ShowPage(DevReturnPage ?? (Launch.MenuShot is not null ? Launch.MenuPage : CoopPage.OpenOnTitle ? "coop" : "main"));
         DevReturnPage = null;
+        if (Launch.MenuExpeditionCheck is not null) AddChild(new Game.ExpeditionMenuCheck(this));
         DevPanel.Install(this);
         Net.SteamLobby.JoinRequested += OnSteamJoinRequested;
 
@@ -219,6 +222,7 @@ public sealed partial class MainMenu : Node3D
 
         _pages["main"] = BuildMainPage();
         _pages["play"] = BuildCharacterPage();
+        _pages["expeditions"] = BuildExpeditionPage();
         _pages["codex"] = BuildCodexPage();
         _pages["settings"] = BuildSettingsPage();
         _pages["keys"] = BuildKeysPage();
@@ -232,6 +236,7 @@ public sealed partial class MainMenu : Node3D
         _pages["boombox"] = _boombox = new BoomboxPage(() => ShowPage("main"));   // UI/BoomboxPage
         _pages["coop"] = _coop = new CoopPage(() => ShowPage("main"));   // UI/CoopPage
         _pages["credits"] = BuildCreditsPage();   // UI/MainMenu.Credits
+        AddUpdates(_pages["main"]);
         AddChild(_lineup = new CoopLineup(_coop));   // the lobby's players on the beach
         foreach (Control p in _pages.Values) _root.AddChild(p);
         AddCreditsButton();
@@ -267,404 +272,12 @@ public sealed partial class MainMenu : Node3D
         page.AddChild(stats);
         _pearls = MakeLabel("", 15, Gold);
         page.AddChild(_pearls);
-        return page;
+        return WrapMainExpeditions(page);
     }
 
     // ------------------------------------------------------------ characters
 
-    private Control BuildCharacterPage()
-    {
-        var page = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
-        page.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-
-        Label heading = MakeLabel("CHOOSE WHO WASHES UP", 20, InkDim);
-        Place(heading, 60f, 196f, 400f, 28f);
-        page.AddChild(heading);
-
-        var list = new VBoxContainer();
-        Place(list, 60f, 236f, 340f, 460f);
-        // 6, not 10: seven characters and Back must fit above the window's edge.
-        list.AddThemeConstantOverride("separation", 6);
-        page.AddChild(list);
-
-        // The roster outgrew the column: it scrolls, and follows keyboard focus.
-        VBoxContainer charList = CharacterScroll(list);
-
-        foreach (CharacterDef def in Characters.All)
-        {
-            CharacterDef c = def;
-            bool open = c.IsAvailable;
-            bool hidden = !open && Unlocks.ById(c.UnlockedBy) is { Secret: true };
-            string label = open ? Loc.T(c.DisplayName) : hidden ? "???" : Loc.F("{0}  ·  locked", c.DisplayName);
-            // Clicking picks the character; the run starts only from START RUN,
-            // so the skin and hat can be chosen first.
-            Button b = MenuButton(label, () => PickCharacter(c));
-            if (!open) b.AddThemeColorOverride("font_color", Locked);
-            b.MouseEntered += () => b.GrabFocus();
-            _charButtons.Add(b);
-            charList.AddChild(b);
-        }
-        _difficulty = new DifficultyPicker();
-        _difficulty.Changed += () => _runButton.Text = RouteBarText();
-        list.AddChild(_difficulty);
-
-        // Route & challenges (UI/ChallengePicker), above the character panel: the
-        // panel grows with skin, hat and passive rows and would cover it below.
-        _runButton = MenuButton("", () => ShowPage("run"));
-        Place(_runButton, 470f, 186f, 520f, 42f);
-        _runButton.MouseEntered += () => _runButton.GrabFocus();
-        page.AddChild(_runButton);
-        _difficulty.Button.FocusNeighborRight = _difficulty.Button.GetPathTo(_runButton);
-        _startButton = MenuButton("START RUN", () => { if (_shownCharacter is { } sel) StartRun(sel); });
-        _startButton.AddThemeColorOverride("font_color", Gold);
-        _startButton.AddThemeColorOverride("font_focus_color", Gold);
-        _startButton.AddThemeColorOverride("font_hover_color", Gold);
-        list.AddChild(MenuButton("BACK", () => ShowPage("main")));
-
-        var panel = Panel(470f, 236f, 520f, 300f);
-        page.AddChild(panel);
-        var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 8);
-        panel.AddChild(box);
-        _charName = MakeLabel("", 30, Ink);
-        _charLook = MakeLabel("", 14, InkDim);
-        _charBlurb = MakeLabel("", 17, Ink);
-        _charBlurb.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _charStats = MakeLabel("", 16, Accent);
-        _charStats.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _charLock = MakeLabel("", 16, Gold);
-        _charLock.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _charPassive = MakeLabel("", 16, Gold);
-        _charPassive.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        foreach (Label l in new[] { _charName, _charLook, _charBlurb, _charStats, _charPassive, _charLock }) box.AddChild(l);
-
-        // Skin picker: the arrow buttons and the left/right keys both cycle it.
-        // The buttons take no focus so the up/down character list keeps it.
-        var skinRow = new HBoxContainer();
-        skinRow.AddThemeConstantOverride("separation", 10);
-        // Right to left, "previous" sits on the right and points that way.
-        Button prev = SkinArrow(Loc.IsRtl ? ">" : "<", -1);
-        Button next = SkinArrow(Loc.IsRtl ? "<" : ">", +1);
-        _skinLabel = MakeLabel("", 18, Ink);
-        _skinLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        _skinLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        skinRow.AddChild(prev);
-        skinRow.AddChild(_skinLabel);
-        skinRow.AddChild(next);
-        box.AddChild(skinRow);
-        BuildHatRow(box);
-        // Last in the panel, under the skin and hat it applies to.
-        _startButton.CustomMinimumSize = new Vector2(0f, 46f);
-        box.AddChild(_startButton);
-        return page;
-    }
-
-    private Button SkinArrow(string text, int step)
-    {
-        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(44f, 36f) };
-        b.AddThemeFontSizeOverride("font_size", 20);
-        b.Pressed += () => CycleSkin(step);
-        return b;
-    }
-
-    private void CycleSkin(int step)
-    {
-        if (_shownCharacter is not { } c) return;
-        int n = c.Skins.Count;
-        _skinIndex = ((_skinIndex + step) % n + n) % n;
-        ShowSkin();
-    }
-
-    private void ShowSkin()
-    {
-        if (_shownCharacter is not { } c) return;
-        SkinDef skin = c.Skins[_skinIndex];
-        int n = c.Skins.Count;
-        if (skin.IsAvailable)
-        {
-            _skinLabel.Text = Loc.F("skin: {0}   ({1}/{2})", skin.Name, _skinIndex + 1, n);
-            _skinLabel.AddThemeColorOverride("font_color", Ink);
-        }
-        else
-        {
-            UnlockDef? source = Unlocks.ById(Unlocks.SourceOf(skin.Id));
-            string how = source is null ? "" : " — " + Loc.T(source.Secret && !Profile.IsUnlocked(source.Id) ? source.Hint : source.Description);
-            _skinLabel.Text = Loc.F("skin: {0}  ·  locked{1}   ({2}/{3})", skin.Name, how, _skinIndex + 1, n);
-            _skinLabel.AddThemeColorOverride("font_color", Locked);
-        }
-        _skinLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        ShowHeroSkin(skin);
-        ShowHat();
-    }
-
-    private void ShowCharacter(CharacterDef c)
-    {
-        bool open = c.IsAvailable;
-        UnlockDef? source = Unlocks.ById(c.UnlockedBy);
-        bool hidden = !open && source is { Secret: true };
-
-        // Name, blurb, starting weapon and stats, passive: UI/CharacterInfo,
-        // shared with the CO-OP page.
-        CharacterInfo info = CharacterInfo.Of(c);
-        info.Into(_charName, _charBlurb, _charStats, null);
-        _charPassive.Text = info.Passive;
-        _charLook.Text = Loc.F("look: {0}   ·   id: {1}", Loc.Ltr(c.LookId), Loc.Ltr(c.Id));
-        _charLook.AutoTranslateMode = AutoTranslateModeEnum.Disabled; // ids, a developer line
-        _charLock.Text = open ? Loc.T("Pick a skin and a hat, then press START RUN")
-            : hidden ? Loc.F("Secret — {0}", source!.Hint)
-            : Loc.F("Locked — {0}", source?.Description ?? "");
-        if (open) TintHero(c);
-
-        if (_shownCharacter != c)
-        {
-            _shownCharacter = c;
-            SkinDef chosen = c.SelectedSkin;
-            _skinIndex = 0;
-            for (int i = 0; i < c.Skins.Count; i++) if (c.Skins[i].Id == chosen.Id) _skinIndex = i;
-        }
-        ShowSkin();
-    }
-
-    /// <summary>Make <paramref name="c"/> the selection: the panel, hero, skin
-    /// and hat rows follow it, its button turns gold, and START RUN is enabled
-    /// when it is unlocked. Focus moves to START RUN so Enter twice still plays.</summary>
-    private void PickCharacter(CharacterDef c, bool focusStart = true)
-    {
-        ShowCharacter(c);
-        for (int i = 0; i < _charButtons.Count; i++)
-        {
-            CharacterDef each = Characters.All[i];
-            Color colour = each == c ? Gold : each.IsAvailable ? Ink : Locked;
-            _charButtons[i].AddThemeColorOverride("font_color", colour);
-        }
-        _startButton.Disabled = !c.IsAvailable;
-        if (focusStart && c.IsAvailable) _startButton.GrabFocus();
-    }
-
-    /// <summary>Route and modifiers, plus the selected tier's run length.</summary>
-    private static string RouteBarText()
-    {
-        DifficultyTier tier = EndlessMode.Selected ? DifficultyTiers.All[0] : DifficultyTiers.Selected;
-        return ChallengePicker.Summary() + "  ·  " + Loc.F("{0} maps, portal {1} s", tier.Phases, tier.PortalSeconds);
-    }
-
-    private void StartRun(CharacterDef c)
-    {
-        if (!c.IsAvailable) return;
-        Profile.SelectedCharacter = c.Id;
-        // Only a skin the player owns is remembered; picking a locked one
-        // previews it but runs in the last owned choice.
-        if (_shownCharacter == c && c.Skins[_skinIndex] is { IsAvailable: true } skin)
-            Profile.SelectSkin(c.Id, skin.Id);
-        SaveHatChoice(c);
-        Profile.Save();
-        GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile, RunScene);
-    }
-
     // ----------------------------------------------------------------- codex
-
-    private Control BuildCodexPage()
-    {
-        var page = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
-        page.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-
-        _codex = new Codex();
-        Place(_codex, 60f, 196f, 1160f, 450f);
-        page.AddChild(_codex);
-
-        Button back = MenuButton("BACK", () => ShowPage("main"));
-        Place(back, 60f, 660f, 200f, 44f);
-        page.AddChild(back);
-        _codex.BackButton = back;
-        return page;
-    }
-
-    // ----------------------------------------------------------- leaderboard
-
-    private LeaderboardPage _leaderboard = null!;
-    private Button _leaderboardBack = null!;
-
-    private Control BuildLeaderboardPage()
-    {
-        var page = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
-        page.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        _leaderboard = new LeaderboardPage();
-        Place(_leaderboard, 60f, 196f, 1000f, 450f);
-        page.AddChild(_leaderboard);
-        _leaderboardBack = MenuButton("BACK", () => ShowPage("main"));
-        Place(_leaderboardBack, 60f, 660f, 200f, 44f);
-        page.AddChild(_leaderboardBack);
-        return page;
-    }
-
-    // -------------------------------------------------------------- settings
-
-    private Control BuildSettingsPage()
-    {
-        // On its own panel: the rows (label, slider, value) are wider than the
-        // menu's dark strip and used to sit on the bright scene.
-        var root = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
-        root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        PanelContainer panel = Panel(44f, 178f, 560f, 450f);
-        root.AddChild(panel);
-        var page = new VBoxContainer();
-        panel.AddChild(page);
-        page.AddThemeConstantOverride("separation", 6);
-
-        page.AddChild(SectionLabel("SOUND"));
-        foreach (var (name, ch) in new[] { ("Master", VolumeChannel.Master), ("Effects", VolumeChannel.Sfx), ("Music", VolumeChannel.Music) })
-        {
-            VolumeChannel channel = ch;
-            HSlider s = Slider(0, 10, 1, Mathf.Round(AudioSettings.Get(channel) * 10f));
-            Label value = MakeLabel("", 16, Ink);
-            void Show() => value.Text = $"{(int)s.Value}/10";
-            Show();
-            s.ValueChanged += v =>
-            {
-                int steps = (int)Math.Round(v - Math.Round(AudioSettings.Get(channel) * 10f));
-                if (steps != 0) AudioSettings.Nudge(channel, steps);
-                Show();
-                _mute.SetPressedNoSignal(AudioSettings.Muted);
-            };
-            _volumeSliders.Add((s, channel));
-            page.AddChild(Row(name, s, value));
-        }
-        // A row like the sliders: the label on the reading side, the switch
-        // in the slider column, a short state word where the values are.
-        _mute = new CheckButton { ButtonPressed = AudioSettings.Muted };
-        Label muteState = MakeLabel(AudioSettings.Muted ? "On" : "Off", 16, Ink);
-        _mute.Toggled += on =>
-        {
-            if (on != AudioSettings.Muted) AudioSettings.ToggleMute();
-            muteState.Text = Loc.T(AudioSettings.Muted ? "On" : "Off");
-        };
-        var muteBox = new HBoxContainer();
-        muteBox.AddChild(_mute);
-        page.AddChild(Row("Mute all", muteBox, muteState));
-
-        page.AddChild(SectionLabel("CONTROLS & DISPLAY"));
-        HSlider sens = Slider(GameSettings.MinSensitivity, GameSettings.MaxSensitivity, GameSettings.SensitivityStep, GameSettings.Sensitivity);
-        Label sensValue = MakeLabel($"{GameSettings.Sensitivity:0.00}x", 16, Ink);
-        sens.ValueChanged += v => { GameSettings.SetSensitivity((float)v); sensValue.Text = $"{GameSettings.Sensitivity:0.00}x"; };
-        page.AddChild(Row("Mouse sensitivity", sens, sensValue));
-        page.AddChild(Row("Language", LanguagePicker(), MakeLabel("", 16, Ink)));
-
-        Label keys = MakeLabel("In a run:  - / =  volume   ·   9 / 0  effects   ·   [ / ]  music   ·   M  mute", 15, InkDim);
-        keys.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        page.AddChild(keys);
-        // Side by side: with the language row added, three stacked buttons no
-        // longer fit above the window's bottom edge.
-        var pages = new HBoxContainer();
-        pages.AddThemeConstantOverride("separation", 8);
-        pages.AddThemeConstantOverride("separation", 6);
-        foreach (Button b in new[] { MenuButton("GAMEPLAY", () => ShowPage("gameplay")), MenuButton("GRAPHICS", () => ShowPage("graphics")), MenuButton("KEY BINDINGS", () => ShowPage("keys")) })
-        {
-            b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-            b.AddThemeFontSizeOverride("font_size", 16);
-            // Three side by side: tighter margins so they share the column.
-            foreach (string box in new[] { "normal", "hover", "pressed", "focus" })
-                if (b.GetThemeStylebox(box) is StyleBoxFlat flat) { flat.ContentMarginLeft = 10; flat.ContentMarginRight = 8; }
-            pages.AddChild(b);
-        }
-        page.AddChild(pages);
-        page.AddChild(MenuButton("BACK", () => ShowPage("main")));
-        return root;
-    }
-
-    /// <summary>English / العربية. Choosing one applies it (locale, layout
-    /// direction, font fallback) and rebuilds the title on the settings page, so
-    /// every label built in code is redone in the new language at once.</summary>
-    private OptionButton LanguagePicker()
-    {
-        var ob = new OptionButton { FocusMode = Control.FocusModeEnum.All };
-        // Native names are never translated: a player lost in the wrong
-        // language must still find their own.
-        ob.AutoTranslateMode = AutoTranslateModeEnum.Disabled;
-        ob.GetPopup().AutoTranslateMode = AutoTranslateModeEnum.Disabled;
-        for (int i = 0; i < Loc.Codes.Length; i++) ob.AddItem(Loc.NativeNames[i], i);
-        ob.Selected = Math.Max(0, Array.IndexOf(Loc.Codes, Loc.Language));
-        ob.AddThemeFontSizeOverride("font_size", 18);
-        ob.ItemSelected += index =>
-        {
-            string code = Loc.Codes[Math.Clamp((int)index, 0, Loc.Codes.Length - 1)];
-            if (code == Loc.Language) return;
-            Loc.SetLanguage(code, GetTree());
-            DevReturnPage = "settings";
-            GetTree().CallDeferred(SceneTree.MethodName.ReloadCurrentScene);
-        };
-        return ob;
-    }
-
-    private Control BuildKeysPage()
-    {
-        // Wider than the left vignette, so it carries its own backing.
-        var frame = new PanelContainer();
-        var style = new StyleBoxFlat { BgColor = PanelBack, ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 12, ContentMarginBottom = 12 };
-        style.SetCornerRadiusAll(6);
-        frame.AddThemeStyleboxOverride("panel", style);
-        Place(frame, 44f, 180f, 640f, 530f);
-        frame.AddChild(new KeybindPanel(() => ShowPage("settings")));
-        return frame;
-    }
-
-    private Control BuildGraphicsPage()
-    {
-        var frame = new PanelContainer();
-        var style = new StyleBoxFlat { BgColor = PanelBack, ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 12, ContentMarginBottom = 12 };
-        style.SetCornerRadiusAll(6);
-        frame.AddThemeStyleboxOverride("panel", style);
-        Place(frame, 44f, 176f, 700f, 534f);
-        frame.AddChild(_graphics = new GraphicsPanel(() => ShowPage("settings"), 370f));
-        return frame;
-    }
-
-    private GameplayPanel _gameplay = null!;
-
-    private Control BuildGameplayPage()
-    {
-        var frame = new PanelContainer();
-        var style = new StyleBoxFlat { BgColor = PanelBack, ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 12, ContentMarginBottom = 12 };
-        style.SetCornerRadiusAll(6);
-        frame.AddThemeStyleboxOverride("panel", style);
-        Place(frame, 44f, 186f, 560f, 0f);
-        frame.AddChild(_gameplay = new GameplayPanel(() => ShowPage("settings"), 240f));
-        return frame;
-    }
-
-    private static Control Row(string name, Control control, Label value)
-    {
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 14);
-        Label l = MakeLabel(name, 18, Ink);
-        l.CustomMinimumSize = new Vector2(170f, 0f);
-        control.CustomMinimumSize = new Vector2(200f, 28f);
-        control.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-        row.AddChild(l);
-        row.AddChild(control);
-        row.AddChild(value);
-        return row;
-    }
-
-    /// <summary>Right to left, the mute switch sits in a row like the sliders
-    /// (name, then the control under the sliders' start) instead of a lone
-    /// switch at the far edge. <paramref name="row"/> builds the row with an
-    /// empty HBox in the control slot; the switch moves into it, text-less.</summary>
-    internal static Control MuteRow(CheckButton mute, Func<string, Control> row)
-    {
-        string name = mute.Text;
-        mute.Text = "";
-        mute.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
-        mute.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-        Control r = row(name);
-        foreach (Node n in r.GetChildren())
-            if (n is HBoxContainer slot) { slot.AddChild(mute); break; }
-        return r;
-    }
-
-    private static HSlider Slider(double min, double max, double step, double value)
-        => new() { MinValue = min, MaxValue = max, Step = step, Value = value, FocusMode = Control.FocusModeEnum.All };
-
-    // ---------------------------------------------------------------- pages
 
     private void ShowPage(string name)
     {
@@ -676,6 +289,7 @@ public sealed partial class MainMenu : Node3D
         bool secrets = arg == "secrets";
         if (!_pages.ContainsKey(name)) name = "main";
         if (_page == "boombox" && name != "boombox") _boombox.Closing();
+        if (name == "main" && _page is "expeditions" or "coop") RestoreExpeditionClassic();
         _page = name;
         foreach (var (key, page) in _pages) page.Visible = key == name;
         if (_creditsButton is not null) _creditsButton.Visible = name == "main";
@@ -684,6 +298,12 @@ public sealed partial class MainMenu : Node3D
         // lands with something focused.
         switch (name)
         {
+            case "updates":
+                _updatePanel?.FocusFirst();
+                break;
+            case "expeditions":
+                OpenExpeditions();
+                break;
             case "run":
                 _runPicker.Open(arg);
                 break;
@@ -697,6 +317,7 @@ public sealed partial class MainMenu : Node3D
                 _coop.Open();
                 break;
             case "play":
+                _difficulty.Refresh();
                 _runButton.Text = RouteBarText();
                 int i = Math.Max(0, IndexOfCharacter(arg.Length > 0 ? arg : Profile.SelectedCharacter));
                 _charButtons[i].GrabFocus();
@@ -743,7 +364,11 @@ public sealed partial class MainMenu : Node3D
         ShowPage("coop");
     }
 
-    public override void _ExitTree() => Net.SteamLobby.JoinRequested -= OnSteamJoinRequested;
+    public override void _ExitTree()
+    {
+        Net.SteamLobby.JoinRequested -= OnSteamJoinRequested;
+        StopUpdates();
+    }
 
     private static int IndexOfCharacter(string id)
     {
@@ -764,6 +389,7 @@ public sealed partial class MainMenu : Node3D
         if (@event.IsActionPressed("ui_cancel") && _page != "main")
         {
             GetViewport().SetInputAsHandled();
+            if (_page == "updates" && _updatePanel?.CancelBusy() == true) return;
             if (_page == "coop") CoopPage.LeaveSession();   // same as BACK
             ShowPage(_page switch { "run" => "play", "toggler" => "shop", "keys" or "graphics" or "gameplay" => "settings", _ => "main" });
         }

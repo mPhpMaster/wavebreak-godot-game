@@ -83,6 +83,7 @@ public static partial class PlayerLooks
 
     private static ModelSpec? Resolve(string id)
     {
+        if (ExpeditionModels.Resolve(id) is { } expedition) return expedition;
         if (id.StartsWith("proc-")) return Make(id["proc-".Length..]);
         if (ResolveCute(id) is { } cute) return cute;   // Visuals/PlayerLooks.Cute.cs
         if (ResolveHero(id) is { } hero) return hero;   // Visuals/PlayerLooks.Heroes.cs

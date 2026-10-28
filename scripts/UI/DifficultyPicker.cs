@@ -19,6 +19,7 @@ public sealed partial class DifficultyPicker : VBoxContainer
     private static readonly Color Hard = new(1.00f, 0.62f, 0.30f);
     private static readonly Color Nightmare = new(1.00f, 0.36f, 0.34f);
 
+    public bool Compact { get; set; }
     public Button Button { get; }
     private readonly Label _note;
     private readonly Button _endless;
@@ -59,7 +60,7 @@ public sealed partial class DifficultyPicker : VBoxContainer
         int index = DifficultyTiers.IndexOf(tier);
         Button.Text = Loc.F("DIFFICULTY  ·  {0}", Loc.IsArabic ? Loc.T(tier.Name) : tier.Name.ToUpperInvariant());
         Button.AddThemeColorOverride("font_color", index switch { 0 => Ink, 1 => Hard, _ => Nightmare });
-        Button.Disabled = EndlessMode.Selected;   // endless sets its own tier
+        Button.Disabled = !Compact && EndlessMode.Selected;   // endless sets its own tier
 
         string note = tier.Summary;
         int next = -1;
@@ -69,7 +70,9 @@ public sealed partial class DifficultyPicker : VBoxContainer
             note += "\n" + Loc.F("{0}: win a run on {1} to unlock.", DifficultyTiers.All[next].Name, DifficultyTiers.All[next - 1].Name);
         else if (DifficultyTiers.All.Count > 1)
             note += "\n" + Loc.T("Press to change.");
-        _endless.Visible = EndlessMode.Unlocked;
+        _note.Visible = !Compact;
+        Button.TooltipText = note;
+        _endless.Visible = !Compact && EndlessMode.Unlocked;
         _endless.Text = EndlessMode.Selected
             ? Loc.F("ENDLESS  ·  ON  (best loop {0})", EndlessMode.BestLoop)
             : Loc.T("ENDLESS  ·  OFF");
