@@ -175,6 +175,14 @@ public sealed partial class NetSession
         Changed?.Invoke();
     }
 
+    public void SetLobbyRoute()
+    {
+        if (!Coop.IsHost || Coop.InRun) return;
+        Coop.RouteId = Routes.Selected.Id;
+        BroadcastRoster();
+        Changed?.Invoke();
+    }
+
     /// <summary>The host's Start button: enabled with 2-4 players, all ready.</summary>
     public bool CanStart => Coop.IsHost && !Coop.InRun && Coop.Roster.Count >= 2
                             && Coop.Roster.TrueForAll(p => p.Ready);
@@ -190,7 +198,7 @@ public sealed partial class NetSession
     {
         var sb = new StringBuilder();
         // Lobby-wide facts first, on a line of their own: the host's difficulty.
-        sb.Append("@|").Append(Coop.DifficultyId).Append('\n');
+        sb.Append("@|").Append(Coop.DifficultyId).Append('|').Append(Routes.Selected.Id).Append('\n');
         // Hosts who left mid-run, for their scoreboard lines (host migration).
         foreach (KeyValuePair<long, string> d in Coop.Departed)
             sb.Append("~|").Append(d.Key).Append('|').Append(d.Value).Append('\n');
@@ -212,6 +220,7 @@ public sealed partial class NetSession
             if (f[0] == "@")
             {
                 if (f.Length > 1) Coop.DifficultyId = f[1];
+                if (f.Length > 2) Coop.RouteId = Routes.ById(f[2])?.Id ?? "classic";
                 continue;
             }
             if (f[0] == "~")
@@ -248,7 +257,7 @@ public sealed partial class NetSession
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--seed=")) seed = (ulong)arg["--seed=".Length..].ToInt();
         GD.Print($"[coop] starting run seed={seed} players={Coop.Roster.Count}");
-        string route = Routes.Selected.Id is "reef-dive" or "skyline-run" ? Routes.Selected.Id : "classic";
+        string route = Routes.Selected.Id;
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg is "--route=reef-dive" or "--route=skyline-run") route = arg["--route=".Length..];
         Rpc(MethodName.StartRun, (long)seed, difficulty, route);
@@ -257,10 +266,9 @@ public sealed partial class NetSession
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void StartRun(long seed, string difficultyId, string routeId)
     {
-        Coop.RouteId = routeId is "reef-dive" or "skyline-run" ? routeId : "classic";
         Coop.Seed = (ulong)seed;
-        Coop.Endless = difficultyId.StartsWith("endless:");
-        Coop.DifficultyId = Coop.Endless ? difficultyId["endless:".Length..] : difficultyId;
+        Coop.UnpackStart(difficultyId);
+        Coop.RouteId = Routes.ById(routeId)?.Id ?? "classic";
         Coop.InRun = true;
         Coop.ClearHold();
         // The lobby stays joinable: players can join a run in progress

@@ -79,6 +79,8 @@ public sealed partial class CoopPage : Control
     private Label _difficulty = null!;
     private readonly List<Button> _arrows = new();
     private readonly List<Button> _difficultyArrows = new();
+    private Label _route = null!;
+    private readonly List<Button> _routeArrows = new();
     private Label _status = null!;
     private Label _note = null!;
     private Label _players = null!;
@@ -134,6 +136,8 @@ public sealed partial class CoopPage : Control
         _hatName = Picker(column, "Hat", () => CycleHat(-1), () => CycleHat(+1), _arrows);
         // The host picks the difficulty for everyone; a client sees it here.
         _difficulty = Picker(column, "Difficulty", () => StepDifficulty(-1), () => StepDifficulty(+1), _difficultyArrows);
+        // ...and the route (which maps, in which order).
+        _route = Picker(column, "Route", () => StepRoute(-1), () => StepRoute(+1), _routeArrows);
 
         // The same panel as the PLAY page: name, blurb, starting weapon and
         // stats, passive.
@@ -291,85 +295,6 @@ public sealed partial class CoopPage : Control
         Refresh();
     }
 
-    // ------------------------------------------------------------ actions
-
-    private void Retry()
-    {
-        _hint = null;
-        if (SteamApp.TryInit(GetTree()))
-        {
-            Coop.Notice = null;
-            SteamLobby.ConsumePendingJoin();
-            _hostSteam.GrabFocus();
-        }
-        RefreshFriends();
-        Refresh();
-    }
-
-    private void HostSteam()
-    {
-        if (!SteamApp.TryInit(GetTree())) { Refresh(); return; }
-        Coop.Notice = null;
-        _hint = null;
-        _readyOn = false;
-        SteamLobby.Host();
-        Refresh();
-    }
-
-    private void Invite()
-    {
-        // The overlay may not hook a game Steam did not launch, so the
-        // friends-list route is always shown alongside.
-        SteamLobby.OpenInviteDialog();
-        _hint = Loc.T("No Steam window? Invite from your Steam friends list: right-click a friend, Invite to Lobby.");
-        Refresh();
-    }
-
-    private void JoinFriend(SteamLobby.FriendGame f)
-    {
-        _hint = null;
-        _readyOn = false;
-        SteamLobby.Join(f.Lobby, f.Name);
-        Refresh();
-    }
-
-    private void HostDirect()
-    {
-        if (!int.TryParse(_port.Text.Trim(), out int port) || port is < 1 or > 65535)
-        {
-            Coop.Notice = Loc.T("The port must be a number from 1 to 65535.");
-            Refresh();
-            return;
-        }
-        Coop.Notice = null;
-        SaveSettings();
-        NetSession.Ensure(GetTree()).Host(port);
-    }
-
-    private void JoinDirect()
-    {
-        if (!NetSession.ParseAddress(_address.Text, out _, out _))
-        {
-            Coop.Notice = Loc.T("Enter an address like 192.168.1.20:7777.");
-            Refresh();
-            return;
-        }
-        Coop.Notice = null;
-        _readyOn = false;
-        SaveSettings();
-        NetSession.Ensure(GetTree()).Join(_address.Text.Trim());
-    }
-
-    private void ToggleReady()
-    {
-        if (!Coop.IsClient) return;
-        _readyOn = !_readyOn;
-        NetSession.Instance?.SetReady(_readyOn);
-        Refresh();
-    }
-
-    // ------------------------------------------------------------ view
-
     private void Refresh()
     {
         if (!IsInsideTree() || _status is null) return;
@@ -395,6 +320,17 @@ public sealed partial class CoopPage : Control
         _difficulty.MouseFilter = MouseFilterEnum.Pass;
         _difficulty.AddThemeColorOverride("font_color", DifficultyTiers.IndexOf(tier) switch { 0 => Accent, 1 => Gold, _ => Warn });
         foreach (Button arrow in _difficultyArrows)
+        {
+            arrow.Visible = !Coop.IsClient;
+            arrow.Disabled = Coop.InRun || Launch.Automated;
+        }
+
+        RouteDef route = Coop.IsClient && Routes.ById(Coop.RouteId) is { } hostRoute ? hostRoute : Routes.Selected;
+        string routeName = Loc.T(route.Name);
+        _route.Text = Coop.IsClient ? Loc.F("{0} (the host picks)", routeName) : routeName;
+        _route.TooltipText = Loc.T(route.Blurb);
+        _route.MouseFilter = MouseFilterEnum.Pass;
+        foreach (Button arrow in _routeArrows)
         {
             arrow.Visible = !Coop.IsClient;
             arrow.Disabled = Coop.InRun || Launch.Automated;
@@ -509,146 +445,4 @@ public sealed partial class CoopPage : Control
         return new ColorRect { Color = fallback with { A = 0.35f }, CustomMinimumSize = size, SizeFlagsVertical = SizeFlags.ShrinkCenter };
     }
 
-    // ------------------------------------------------------------ character, skin, hat, difficulty
-
-    private Label Picker(VBoxContainer column, string name, Action prev, Action next, List<Button> arrows)
-    {
-        var value = MainMenu.MakeLabel("", 17, Accent);
-        value.AutoTranslateMode = AutoTranslateModeEnum.Disabled;
-        value.HorizontalAlignment = HorizontalAlignment.Center;
-        value.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        value.ClipText = true;
-        // Right to left, "previous" sits on the right and points that way.
-        Button a = Arrow(Loc.IsRtl ? ">" : "<", prev, arrows);
-        Button b = Arrow(Loc.IsRtl ? "<" : ">", next, arrows);
-        column.AddChild(Row(name, a, value, b));
-        return value;
-    }
-
-    private static Button Arrow(string text, Action pressed, List<Button> arrows)
-    {
-        var b = new Button { Text = text, FocusMode = FocusModeEnum.All, CustomMinimumSize = new Vector2(40f, 34f) };
-        b.AddThemeFontSizeOverride("font_size", 18);
-        b.Pressed += pressed;
-        arrows.Add(b);
-        return b;
-    }
-
-    private static CharacterDef Current()
-        => Characters.ById(Profile.SelectedCharacter) is { IsAvailable: true } c ? c : Characters.Default;
-
-    private void CycleCharacter(int step)
-    {
-        var open = new List<CharacterDef>();
-        foreach (CharacterDef c in Characters.All) if (c.IsAvailable) open.Add(c);
-        if (open.Count == 0) return;
-        int i = Math.Max(0, open.IndexOf(Current()));
-        Profile.SelectedCharacter = open[((i + step) % open.Count + open.Count) % open.Count].Id;
-        LookChanged();
-    }
-
-    private void CycleSkin(int step)
-    {
-        CharacterDef c = Current();
-        var open = new List<SkinDef>();
-        foreach (SkinDef s in c.Skins) if (s.IsAvailable) open.Add(s);
-        if (open.Count == 0) return;
-        int i = Math.Max(0, open.IndexOf(c.SelectedSkin));
-        Profile.SelectSkin(c.Id, open[((i + step) % open.Count + open.Count) % open.Count].Id);
-        LookChanged();
-    }
-
-    /// <summary>Owned hats only (the PLAY page previews and sells the rest).</summary>
-    private void CycleHat(int step)
-    {
-        CharacterDef c = Current();
-        var owned = new List<HatDef>();
-        foreach (HatDef h in Hats.All) if (h.IsOwned) owned.Add(h);
-        if (owned.Count == 0) return;
-        int i = Math.Max(0, owned.IndexOf(Hats.SelectedFor(c.Id)));
-        Hats.Select(c.Id, owned[((i + step) % owned.Count + owned.Count) % owned.Count]);
-        LookChanged();
-    }
-
-    /// <summary>Host (or no session yet): the next unlocked tier that way.
-    /// The choice is the profile's, so the PLAY page shows it too.</summary>
-    private void StepDifficulty(int step)
-    {
-        if (Coop.IsClient || Coop.InRun) return;
-        int n = DifficultyTiers.All.Count;
-        int start = DifficultyTiers.IndexOf(DifficultyTiers.Selected);
-        for (int k = 1; k <= n; k++)
-        {
-            int i = ((start + step * k) % n + n) % n;
-            if (!DifficultyTiers.IsUnlocked(i)) continue;
-            DifficultyTiers.Select(i);
-            break;
-        }
-        Profile.Save();
-        if (Coop.IsHost) NetSession.Instance?.SetLobbyDifficulty(DifficultyTiers.Selected.Id);
-        Refresh();
-    }
-
-    private void LookChanged()
-    {
-        Profile.Save();
-        NetSession.Instance?.SendLook();
-        Refresh();
-    }
-
-    private static string SkinName(CharacterDef c, string skinId)
-    {
-        foreach (SkinDef s in c.Skins) if (s.Id == skinId) return Loc.T(s.Name);
-        return Loc.T(c.Skins[0].Name);
-    }
-
-    private static LineEdit Field(string text, int maxLength)
-    {
-        var f = new LineEdit { Text = text, MaxLength = maxLength, FocusMode = FocusModeEnum.All, CustomMinimumSize = new Vector2(150f, 40f) };
-        f.AddThemeFontSizeOverride("font_size", 18);
-        f.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        return f;
-    }
-
-    private static Control Row(string name, params Control[] controls)
-    {
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 8);
-        Label l = MainMenu.MakeLabel(name, 16, Ink);
-        l.CustomMinimumSize = new Vector2(100f, 0f);
-        l.VerticalAlignment = VerticalAlignment.Center;
-        row.AddChild(l);
-        foreach (Control c in controls)
-        {
-            if (c is Button b && b.CustomMinimumSize.X < 1f) b.CustomMinimumSize = new Vector2(110f, 44f);
-            row.AddChild(c);
-        }
-        return row;
-    }
-
-    // ------------------------------------------------------------ settings
-
-    private string _savedPort = Coop.DefaultPort.ToString();
-    private string _savedAddress = "127.0.0.1:" + Coop.DefaultPort;
-
-    private void LoadSettings()
-    {
-        var cfg = new ConfigFile();
-        if (cfg.Load(SettingsPath) != Error.Ok) return;
-        string name = cfg.GetValue("coop", "name", "").AsString();
-        if (name.Length > 0) NetSession.PlayerName = NetSession.CleanName(name);
-        _savedPort = cfg.GetValue("coop", "port", _savedPort).AsString();
-        _savedAddress = cfg.GetValue("coop", "address", _savedAddress).AsString();
-    }
-
-    private void SaveSettings()
-    {
-        if (Launch.Automated) return;
-        var cfg = new ConfigFile();
-        cfg.Load(SettingsPath);   // keep the other sections
-        cfg.SetValue("coop", "name", NetSession.PlayerName);
-        cfg.SetValue("coop", "port", _port?.Text.Trim() ?? _savedPort);
-        cfg.SetValue("coop", "address", _address?.Text.Trim() ?? _savedAddress);
-        cfg.Save(SettingsPath);
-    }
 }

@@ -163,7 +163,7 @@ public static class Routes
             // The classic three plus the extra maps they need, all in rising
             // order: Gravemoor before Shallows, so a 4-map run adds the harder one.
             var keep = new HashSet<string>(route.MapIds);
-            foreach (string id in new[] { "gravemoor", "shallows", "rimeglass", "thornmeadow", "cinder" })
+            foreach (string id in new[] { "gravemoor", "stormwatch", "shallows", "rimeglass", "thornmeadow", "cinder" })
             {
                 if (keep.Count >= phases) break;
                 keep.Add(id);

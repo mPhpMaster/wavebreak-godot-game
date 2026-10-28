@@ -76,7 +76,7 @@ public sealed partial class NetSession
         LateJoins++;
         AddRemote(p);
         PeakPlayers = Mathf.Max(PeakPlayers, Coop.Roster.Count);
-        string difficulty = Coop.Endless ? "endless:" + Coop.DifficultyId : Coop.DifficultyId;
+        string difficulty = Coop.PackStart(Coop.DifficultyId, Coop.Endless, Coop.RouteId);
         GD.Print($"[coop] {p.Name} joins the run in progress (slot {p.Slot})");
         Popup(Loc.F("{0} joined the game", p.Name), new Color(0.55f, 1f, 0.65f));
         RpcId(p.Id, MethodName.JoinRun, (long)Coop.Seed, difficulty, Coop.RouteId);
