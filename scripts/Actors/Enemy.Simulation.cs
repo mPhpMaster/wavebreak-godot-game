@@ -31,12 +31,14 @@ public sealed partial class Enemy
         }
 
         Vector3 position = GlobalPosition;
-        Vector3 toPlayer = playerPosition - position;
+        Vector3 pursuit = Game.PlatformRoutes.Next(position, playerPosition);
+        Vector3 toPlayer = pursuit - position;
         toPlayer.Y = 0f;
 
-        float distance = toPlayer.Length();
-        Vector3 heading = distance > 0.001f ? toPlayer / distance : Vector3.Zero;
-        heading = SteerAroundBlockers(position, heading, playerPosition, distance);   // Enemy.Blockers.cs
+        float goalDistance = toPlayer.Length();
+        float distance = playerPosition.DistanceTo(position);
+        Vector3 heading = goalDistance > .001f ? toPlayer / goalDistance : Vector3.Zero;
+        heading = SteerAroundBlockers(position, heading, pursuit, goalDistance);   // Enemy.Blockers.cs
 
         // Ease off the throttle inside striking distance. Enemies that keep
         // driving forward at full speed shove each other through the player and
@@ -223,3 +225,6 @@ public sealed partial class Enemy
     }
 
 }
+
+
+

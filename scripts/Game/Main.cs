@@ -43,7 +43,23 @@ public sealed partial class Main : Node3D
     public UI.Hud Hud => _hud;
     public UI.ResultsScreen Results => _results;
 
-    public override void _Ready()
+    private bool _loading;
+    public override void _Ready() => _ = InitializeRun();
+
+    private async System.Threading.Tasks.Task InitializeRun()
+    {
+        try { await BuildRun(); }
+        catch (System.Exception error)
+        {
+            GD.PushError($"Expedition loading failed: {error}");
+            _loading = true; GetTree().Paused = true;
+            var panel = GetNodeOrNull<UI.RunLoadingPanel>("RunLoading");
+            if (panel is null) { panel = new UI.RunLoadingPanel(); AddChild(panel); }
+            panel.ShowFailure();
+        }
+    }
+
+    private async System.Threading.Tasks.Task BuildRun()
     {
         Instance = this;
         Screenshot.ParseArgs();
@@ -55,11 +71,20 @@ public sealed partial class Main : Node3D
         Meta.GraphicsSettings.ApplyAll(this);
         if (Visuals.ArtShowcase.Intercept(this)) return;
 
+        UI.RunLoadingPanel? loading = null;
+        if ((!Meta.Launch.Automated || System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-loading") >= 0) && !Net.Coop.InRun)
+        {
+            _loading = true; GetTree().Paused = true;
+            loading = new UI.RunLoadingPanel(); AddChild(loading);
+            await loading.Step("Preparing expedition", 0);
+        }
+
         // Co-op: the host's seed, so every machine builds the same maps.
         Run = new RunState(Net.Coop.InRun ? Net.Coop.Seed : Screenshot.Requested || Screenshot.SeedRequested ? Screenshot.Seed : (ulong)GD.Randi());
         GD.Print($"[wavebreak] seed {Run.Seed}");
 
         using (Prof.Scope("Startup.buildWorld")) BuildWorld();
+        if (loading is not null) await loading.Step("Building the map", 35);
         using (Prof.Scope("Startup.meta")) Meta.RunMeta.Attach(this);
 
         // The arena is built by the stage director, not here: it is rebuilt on
@@ -68,6 +93,12 @@ public sealed partial class Main : Node3D
         // The route (Meta/Routes) is Data.Stages.Run unless the player picked another.
         _stages = new StageDirector(this, Run, _enemies, _player, _camera, Meta.Routes.ForRun(Run.Seed), Catalog.Enemies);
         using (Prof.Scope("Startup.stageBegin")) _stages.Begin();
+
+        if (loading is not null)
+        {
+            await RunPrewarming.Prepare(this, loading);
+            loading.QueueFree(); GetTree().Paused = false; _loading = false;
+        }
 
         EventBus.Subscribe<LevelGained>(OnLevelGained);
         EventBus.Subscribe<RunEnded>(OnRunEnded);
@@ -80,7 +111,9 @@ public sealed partial class Main : Node3D
         // Minimap, team name tags, boss toast, down alert, scoreboard (UI/AwarenessLayer).
         UI.AwarenessLayer.Install(this);
 
-        if (Screenshot.Requested)
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-loading") >= 0)
+            AddChild(new StartupCheck(loading?.StepsCompleted ?? 0));
+        else if (Screenshot.Requested)
             _ = RunScreenshot();
         else if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-graphics") >= 0)
             _ = GraphicsCheck.Run(this);
@@ -315,7 +348,7 @@ public sealed partial class Main : Node3D
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        if (Run.Over) return;
+        if (_loading || Run is null || _stages is null || Run.Over) return;
 
         // The rest room between maps holds the run clock and the enemy
         // director (Game/StageDirector.RestRoom.cs).
@@ -417,3 +450,6 @@ public sealed partial class Main : Node3D
         Instance = null;
     }
 }
+
+
+

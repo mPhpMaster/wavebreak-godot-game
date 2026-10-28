@@ -1,5 +1,6 @@
 param(
     [string]$Godot = 'D:\tools\godot\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe',
+    [string]$From = '',
     [switch]$Render,
     [switch]$SkipBuild,
     [switch]$CoopOnly,
@@ -21,6 +22,7 @@ function Assert-Evidence([string]$Path, [string]$Marker) {
 }
 
 function Run-Headless([string]$Name, [string[]]$GameArgs, [string]$Marker, [int]$Frames = 1200) {
+    if ($From -and -not $script:resuming) { if ($Name -eq $From) { $script:resuming = $true } else { return } }
     $log = Join-Path $evidence ($Name + '.log')
     & $Godot --headless --path $taskRoot --audio-driver Dummy --quit-after $Frames -- @GameArgs *> $log
     Assert-Evidence $log $Marker
@@ -33,6 +35,15 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
     }
     if (-not $CoopOnly -and -not $RenderOnly) {
+    Run-Headless 'scoreboard-polish' @('--check-scoreboard', '--auto', '--invulnerable') 'SCOREBOARD PASS'
+    Run-Headless 'all-map-resources' @('--check-resource-polish', '--auto', '--invulnerable') 'RESOURCES PASS' 2400
+    Run-Headless 'platform-pursuit' @('--check-platform-pursuit', '--auto', '--invulnerable') 'PLATFORM PURSUIT PASS'
+    Run-Headless 'hook-controls' @('--route=skyline-run', '--check-hook-controls', '--auto', '--invulnerable', '--character=vesper') 'HOOK CONTROLS PASS'
+    Run-Headless 'hook-targets' @('--route=skyline-run', '--check-hook-targets', '--auto', '--invulnerable', '--character=vesper') 'HOOK TARGETS PASS'
+    Run-Headless 'swim-dash-steering' @('--route=reef-dive', '--check-swim-dash', '--invulnerable', '--character=nori') 'SWIM DASH PASS'
+    Run-Headless 'expedition-weapons' @('--route=reef-dive', '--check-expedition-weapons', '--invulnerable', '--character=nori') 'EXPEDITION WEAPONS PASS'
+    Run-Headless 'cave-guardian' @('--route=reef-dive', '--check-guardian', '--invulnerable', '--character=nori') 'GUARDIAN PASS'
+    Run-Headless 'leviathan' @('--route=reef-dive', '--check-leviathan', '--invulnerable', '--character=nori') 'LEVIATHAN PASS'
     Run-Headless 'city' @('--route=skyline-run', '--check-city', '--auto', '--invulnerable', '--character=vesper') 'CITY PASS'
     Run-Headless 'rooftop-acquisition' @('--route=skyline-run', '--check-rooftops', '--auto', '--invulnerable', '--character=vesper') 'ROOFTOP PASS'
     Run-Headless 'dual-hooks' @('--route=skyline-run', '--check-dual-hooks', '--auto', '--invulnerable', '--character=vesper') 'DUALHOOK PASS' 2400
@@ -107,3 +118,5 @@ won_normal=1
     Write-Output "EXPEDITIONS PASS evidence=$evidence"
 }
 finally { Pop-Location }
+
+

@@ -101,7 +101,7 @@ public static partial class ContentAudit
 
         // Let whatever is still in the air land or expire, so the next test
         // starts with an empty pool and is not credited with these hits.
-        for (int frame = 0; frame < 600 && Projectile.ActiveCount > 0; frame++)
+        for (int frame = 0; frame < 600 && (Projectile.ActiveCount > 0 || Combat.Weapons.SignatureFx.LiveCount > 0); frame++)
         {
             Targeting.Refresh();
             Projectile.UpdateAll(dt);

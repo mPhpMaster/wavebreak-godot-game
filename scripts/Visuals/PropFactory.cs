@@ -24,9 +24,8 @@ namespace Wavebreak.Visuals;
 /// enemies reshapes every fight, and that is a level-design decision. Pass
 /// <c>collide: true</c> to give the large ones simple static colliders.
 /// </summary>
-public static class PropFactory
+public static partial class PropFactory
 {
-    public enum Kind { Rock, Tree, Crystal, Pillar, Arch, Wall, Mushroom, Grass, Flower }
 
     private const int Variants = 4;
     private static readonly Dictionary<string, Mesh> Cache = new();
@@ -39,16 +38,16 @@ public static class PropFactory
     /// <paramref name="clearRadius"/> keeps the spawn point open.
     /// </summary>
     public static Node3D Scatter(Node3D parent, Rng rng, float radius, PropTheme theme, float density = 1f,
-                                 float clearRadius = 6f, bool collide = false)
+                                 float clearRadius = 6f, bool collide = false, bool collectibleResources = false)
     {
-        Node3D node = Scatter(rng, radius, theme, density, clearRadius, collide);
+        Node3D node = Scatter(rng, radius, theme, density, clearRadius, collide, collectibleResources);
         parent.AddChild(node);
         return node;
     }
 
     /// <inheritdoc cref="Scatter(Node3D, Rng, float, PropTheme, float, float, bool)"/>
     public static Node3D Scatter(Rng rng, float radius, PropTheme theme, float density = 1f,
-                                 float clearRadius = 6f, bool collide = false)
+                                 float clearRadius = 6f, bool collide = false, bool collectibleResources = false)
     {
         var root = new Node3D { Name = "Props" };
         float area100 = Mathf.Pi * radius * radius / 100f * density;
@@ -69,7 +68,7 @@ public static class PropFactory
 
         foreach (var (kind, count, minS, maxS) in big)
         {
-            if (count <= 0) continue;
+            if (count <= 0 || collectibleResources && kind is Kind.Crystal or Kind.Mushroom) continue;
             var xforms = new List<Transform3D>[Variants];
             for (int v = 0; v < Variants; v++) xforms[v] = new List<Transform3D>();
             float footprint = Footprint(kind);
@@ -125,7 +124,7 @@ public static class PropFactory
         int grass = (int)(theme.Grass * area100);
         if (grass > 0) root.AddChild(Cover(rng, radius, clearRadius * 0.5f, grass, PropMesh(Kind.Grass, theme, 0),
                                            theme.GrassA, theme.GrassB, null, 0.7f, 1.5f, "Grass"));
-        int flowers = (int)(theme.Flowers * area100);
+        int flowers = collectibleResources ? 0 : (int)(theme.Flowers * area100);
         if (flowers > 0) root.AddChild(Cover(rng, radius, clearRadius, flowers, PropMesh(Kind.Flower, theme, 0),
                                              Colors.White, Colors.White, theme.FlowerColors, 0.8f, 1.3f, "Flowers"));
 
@@ -493,98 +492,5 @@ public static class PropFactory
         k.Sway = 0f;
     }
 
-    // ================================================================ floor
-
-    /// <summary>
-    /// A visual floor disc with the theme's ground shader. No collider: the map
-    /// keeps its own (it already has one, and two would fight).
-    /// </summary>
-    public static MeshInstance3D BuildFloor(float radius, PropTheme theme)
-    {
-        var mesh = new CylinderMesh { TopRadius = radius, BottomRadius = radius, Height = 0.2f, RadialSegments = 64, Rings = 1 };
-        return new MeshInstance3D
-        {
-            Name = "Floor",
-            Mesh = mesh,
-            Position = new Vector3(0f, -0.1f + 0.003f, 0f),
-            MaterialOverride = FloorMaterial(theme),
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-        };
-    }
-
-    private static readonly Dictionary<string, ShaderMaterial> Floors = new();
-
-    /// <summary>The theme's floor material, for maps that build their own ground
-    /// geometry (ramps, platforms) and want it to match. World-space, so it
-    /// tiles seamlessly across separate meshes.</summary>
-    public static ShaderMaterial FloorMaterial(PropTheme t)
-    {
-        if (Floors.TryGetValue(t.Id, out ShaderMaterial? m) && GodotObject.IsInstanceValid(m)) return m;
-        m = new ShaderMaterial { Shader = ToonMaterials.FloorShader };
-        m.SetShaderParameter("color_a", t.FloorA);
-        m.SetShaderParameter("color_b", t.FloorB);
-        m.SetShaderParameter("color_patch", t.FloorPatch);
-        m.SetShaderParameter("color_line", t.FloorLine);
-        m.SetShaderParameter("patch_amount", t.PatchAmount);
-        m.SetShaderParameter("line_strength", t.LineStrength);
-        m.SetShaderParameter("slab_size", t.SlabSize);
-        // Ember cracks glow; stone joints do not.
-        m.SetShaderParameter("line_glow", t.Id == "ashlands" ? 0.9f : 0f);
-        Floors[t.Id] = m;
-        return m;
-    }
-
-    // ============================================================ sky & light
-
-    /// <summary>Sky, ambient, fog, glow and tonemapping for the theme.</summary>
-    public static WorldEnvironment MakeWorldEnvironment(PropTheme t) => new()
-    {
-        Name = "Environment",
-        Environment = MakeEnvironment(t),
-    };
-
-    public static Godot.Environment MakeEnvironment(PropTheme t) => new()
-    {
-        BackgroundMode = Godot.Environment.BGMode.Sky,
-        Sky = new Sky
-        {
-            SkyMaterial = new ProceduralSkyMaterial
-            {
-                SkyTopColor = t.SkyTop,
-                SkyHorizonColor = t.SkyHorizon,
-                GroundHorizonColor = t.GroundHorizon,
-                GroundBottomColor = t.GroundHorizon.Darkened(0.4f),
-                SunAngleMax = 25f,
-                SkyCurve = 0.12f,
-            },
-        },
-        AmbientLightSource = Godot.Environment.AmbientSource.Color,
-        AmbientLightColor = t.Ambient,
-        AmbientLightEnergy = t.AmbientEnergy,
-        TonemapMode = Godot.Environment.ToneMapper.Filmic,
-        TonemapWhite = 6f,
-        FogEnabled = t.FogDensity > 0f,
-        FogLightColor = t.Fog,
-        FogDensity = t.FogDensity,
-        FogSkyAffect = 0.4f,
-        FogAerialPerspective = 0.3f,
-        GlowEnabled = true,
-        GlowIntensity = t.Glow,
-        GlowBloom = 0.05f,
-        GlowHdrThreshold = 1.1f,
-        AdjustmentEnabled = true,
-        AdjustmentSaturation = 1.12f,
-        AdjustmentContrast = 1.05f,
-    };
-
-    public static DirectionalLight3D MakeSun(PropTheme t) => new()
-    {
-        Name = "Sun",
-        Rotation = new Vector3(Mathf.DegToRad(t.SunPitchDegrees), Mathf.DegToRad(t.SunYawDegrees), 0f),
-        LightColor = t.Sun,
-        LightEnergy = t.SunEnergy,
-        ShadowEnabled = true,
-        ShadowBlur = 1.5f,
-        DirectionalShadowMaxDistance = 60f,
-    };
 }
+

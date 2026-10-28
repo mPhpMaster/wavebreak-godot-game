@@ -12,6 +12,7 @@ namespace Wavebreak.UI;
 /// </summary>
 public sealed partial class RestRoomHud : Control
 {
+    internal bool MessageVisible => _panel is not null && _panel.Visible;
     private readonly string _next;
     private Label _team = null!;
     private PanelContainer _panel = null!;
@@ -38,6 +39,7 @@ public sealed partial class RestRoomHud : Control
         _panel.GrowHorizontal = GrowDirection.Both;
         _panel.GrowVertical = GrowDirection.Begin;
         AddChild(_panel);
+        _panel.Visible = !Net.Coop.IsPaused(GetTree()) && !LevelUpPanel.AnyOpen;
 
         var col = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         col.AddThemeConstantOverride("separation", 2);
@@ -58,7 +60,7 @@ public sealed partial class RestRoomHud : Control
     public override void _Process(double delta)
     {
         // Out of the way of the level-up cards and the pause menu.
-        _panel.Visible = !Net.Coop.IsPaused(GetTree());
+        _panel.Visible = !Net.Coop.IsPaused(GetTree()) && !LevelUpPanel.AnyOpen;
         if (RestRoom.Inside < 0)
         {
             _team.Visible = false;

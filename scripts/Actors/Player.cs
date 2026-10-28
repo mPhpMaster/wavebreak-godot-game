@@ -276,7 +276,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         // crowd — you can always walk out of a swarm. Contact damage is resolved
         // by distance, not by collision.
         CollisionLayer = 1;
-        CollisionMask = 1;
+        CollisionMask = 1u | 64u;
 
         MotionMode = MotionModeEnum.Grounded;
         UpDirection = Vector3.Up;
@@ -315,6 +315,16 @@ public sealed partial class Player : CharacterBody3D, IDamageable
             if (perfArg.StartsWith("--perf-tour=")) AddChild(new Game.TraversalPerfTour(this, perfArg["--perf-tour=".Length..]));
         foreach (string soakArg in OS.GetCmdlineUserArgs())
             if (soakArg.StartsWith("--perf-soak=")) AddChild(new Game.TraversalSoak(this, soakArg["--perf-soak=".Length..]));
+        if (OS.GetCmdlineUserArgs().Contains("--check-platform-pursuit")) AddChild(new Game.PlatformPursuitCheck());
+        if (OS.GetCmdlineUserArgs().Contains("--check-swim-dash")) AddChild(new Game.SwimmingDashCheck());
+        if (OS.GetCmdlineUserArgs().Contains("--check-coop-polish")) AddChild(new Game.CoopPolishCheck());
+        if (OS.GetCmdlineUserArgs().Contains("--check-resource-polish")) AddChild(new Game.ResourcePolishCheck());
+        if (OS.GetCmdlineUserArgs().Contains("--check-scoreboard")) AddChild(new Game.ScoreboardCheck());
+        if (OS.GetCmdlineUserArgs().Contains("--check-expedition-weapons")) AddChild(new Game.ExpeditionWeaponsCheck(this));
+        if (OS.GetCmdlineUserArgs().Contains("--check-leviathan")) AddChild(new Game.GuardianCheck(this, true));
+        if (OS.GetCmdlineUserArgs().Contains("--check-guardian")) AddChild(new Game.GuardianCheck(this));
+        if (OS.GetCmdlineUserArgs().Contains("--check-hook-targets")) AddChild(new Game.HookTargetsCheck(this));
+        if (OS.GetCmdlineUserArgs().Contains("--check-hook-controls")) AddChild(new Game.HookControlsCheck(this));
         if (OS.GetCmdlineUserArgs().Contains("--check-rooftops")) AddChild(new Game.RooftopCheck(this));
         if (OS.GetCmdlineUserArgs().Contains("--check-dual-hooks")) AddChild(new Game.DualHookCheck(this));
         if (Meta.Launch.MenuExpeditionCheck is not null) AddChild(new Game.ExpeditionMenuRunCheck());
@@ -416,3 +426,8 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     public void RequestSlide() => _requestedSlide = true;
 
 }
+
+
+
+
+

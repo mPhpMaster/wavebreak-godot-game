@@ -40,7 +40,7 @@ numpy/scipy synthesis and ffmpeg/libvorbis. It is © 2026 Mohammad Al-Safadi
 
 | File | Use | Key / tempo | Length |
 |---|---|---|---|
-| `title.ogg` | title menu (loop) | D major, 80 bpm | 48 s |
+| `title.ogg` | title menu (original music-box waltz rewrite) | D harmonic minor, 3/4, 96 bpm | 60 s |
 | `meadow.ogg` | thornmeadow (loop) | G major, 104 bpm | 74 s |
 | `frost.ogg` | rimeglass (loop) | D dorian, 84 bpm | 69 s |
 | `ashlands.ogg` | cinder (loop) | A minor, 96 bpm | 60 s |
@@ -63,6 +63,12 @@ numpy/scipy synthesis and ffmpeg/libvorbis. It is © 2026 Mohammad Al-Safadi
 Which track plays where, and how each unlocks in the Boombox, is
 `scripts/Audio/MusicTracks.cs`.
 
+The 2026-10-28 title rewrite uses the project's sample-free synthesizer and an
+original authored melody. Reproduce it with `tools/compose_title_waltz.py` after
+rendering the base soundtrack. Its source and output follow the original music
+licence above. Other map tracks were not replaced. Technical audio measurements
+are recorded in `docs/TITLE-WALTZ-AUDIO.json`; human listening is not claimed.
+
 ## Fonts
 
 | File | Font | Author | Source | Licence |
@@ -81,3 +87,20 @@ Which track plays where, and how each unlocks in the Boombox, is
 | File | What | Owner | Licence |
 |---|---|---|---|
 | `thirdparty/steamworks/win64/steam_api64.dll` | Steamworks API runtime (co-op lobbies) | Valve Corporation | Steamworks SDK Access Agreement; redistributed with the game, not covered by this repository's licence |
+
+### Animated cave guardian
+
+`models/quaternius/animated-fish/Shark.fbx`: Animated Fish Pack by Quaternius,
+CC0-1.0. Author upload: https://opengameart.org/content/animated-fish ;
+official pack: https://quaternius.com/packs/animatedfish.html .
+Original License.txt and download provenance accompany the model.
+
+### Animated Reef Leviathan
+
+Sea Levithan, Rigged, Animated, Free by wErT (@wErTT), CC BY 4.0.
+Source: https://sketchfab.com/3d-models/sea-levithan-rigged-animated-free-d8bdc555c8b2472d9a2058dd55036c3d
+License: https://creativecommons.org/licenses/by/4.0/ .
+Modifications: normalized/oriented source geometry with an original looping
+swimming morph animation; incompatible source rig omitted and palette lifted
+for underwater readability. Full provenance/modifications are in ATTRIBUTION.txt.
+

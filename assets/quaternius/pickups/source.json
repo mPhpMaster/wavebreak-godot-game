@@ -1,0 +1,19 @@
+{
+  "License.txt": {
+    "size": 475,
+    "sha256": "9286124e4c2b4172a933d59cfbcabb76a3678fe87da9a37f7f0e8f48ae8c3650",
+    "download": "https://raw.githubusercontent.com/VitexSoftware/ishtaria-client/main/assets/quaternius/ultimate-rpg-items/License.txt"
+  },
+  "Models/mineral.glb": {
+    "size": 90384,
+    "sha256": "2765cb07df13fad9d8a8e2194dd8446bc7afe098ae18097e58ae1059a855f715",
+    "download": "https://raw.githubusercontent.com/VitexSoftware/ishtaria-client/main/assets/quaternius/ultimate-rpg-items/Models/mineral.glb"
+  },
+  "Models/gold_ingots.glb": {
+    "size": 36696,
+    "sha256": "fea904965ac800dde95a79dc5de4c5c4bf8f6532f21ea515e6d87c76cb3e4bb4",
+    "download": "https://raw.githubusercontent.com/VitexSoftware/ishtaria-client/main/assets/quaternius/ultimate-rpg-items/Models/gold_ingots.glb"
+  },
+  "author_source": "https://poly.pizza/bundle/Ultimate-RPG-Items-Bundle-h8mhlZ0dG8",
+  "author_license_source": "https://www.patreon.com/quaternius/posts/ultimate-rpg-29434139"
+}

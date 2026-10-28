@@ -26,6 +26,7 @@ public sealed partial class Player
         IsSwimming = swim;
         IsBreaching = false;
         SwimmingBoostActive = false;
+        _swimWeaponRecoil = Vector3.Zero;
         MotionMode = swim ? MotionModeEnum.Floating : MotionModeEnum.Grounded;
         FloorSnapLength = swim ? 0f : 0.4f;
         Velocity = Vector3.Zero;
@@ -67,13 +68,22 @@ public sealed partial class Player
         wish = intent.Direction;
         SwimmingBoostActive = intent.Reinforced;
         speed *= intent.SpeedScale;
-        if (control && Pressed("dash", _hasDash, ref _requestedDash)) TryDash(wish, speed);
+        if (control && Pressed("dash", _hasDash, ref _requestedDash))
+        {
+            int before = Dashes;
+            Vector3 launch = wish.LengthSquared() > .01f ? wish : -(GetViewport().GetCamera3D()?.GlobalBasis.Z ?? Vector3.Back);
+            TryDash(launch, speed);
+            if (Dashes > before) _dashTime = SwimmingDash.Duration;
+        }
         float y;
         if (_dashTime > 0f)
         {
+            _dashDirection = SwimmingDash.Steer(_dashDirection, wish, dt);
+            float burstSpeed = SwimmingDash.Speed(speed, _dashTime);
             _dashTime = Mathf.Max(0f, _dashTime - dt);
-            _moveVelocity = (_dashDirection with { Y = 0f }) * DashSpeed;
-            y = _dashDirection.Y * DashSpeed;
+            _moveVelocity = (_dashDirection with { Y = 0f }) * burstSpeed;
+            y = _dashDirection.Y * burstSpeed;
+            SwimmingBoostActive = true;
             SpawnAfterimage(dt);
         }
         else
@@ -83,7 +93,7 @@ public sealed partial class Player
         }
         _externalVelocity = _externalVelocity.MoveToward(Vector3.Zero, 12f * dt);
         Vector3 current = ReefCurrents.VelocityAt(GlobalPosition);
-        Velocity = new Vector3(_moveVelocity.X + _externalVelocity.X, y, _moveVelocity.Z + _externalVelocity.Z) + current;
+        Velocity = new Vector3(_moveVelocity.X + _externalVelocity.X, y, _moveVelocity.Z + _externalVelocity.Z) + current + SwimmingRecoil(dt);
         MoveAndSlide();
         KeepInsideArena();
         Vector3 at = GlobalPosition;

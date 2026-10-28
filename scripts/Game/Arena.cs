@@ -88,12 +88,14 @@ public sealed partial class Arena : Node3D
         _body = new StaticBody3D { Name = "Solids" };
         AddChild(_body);
 
+        PlatformRoutes.Begin(this);
         BuildGround();
         BuildWall();
         BuildCentrePad();
         BuildLandforms();   // Arena.Landforms.cs: hand-built maps only
         BuildTerrain();
         BuildDressing();
+        if (!_stage.Underwater) AddChild(new ReefHarvest());
     }
 
     // ---------------------------------------------------------------- floor
@@ -133,6 +135,12 @@ public sealed partial class Arena : Node3D
     private void BuildWall()
     {
         if (_stage.Underwater) return; // The seabed mesh rises into colliding mountain cliffs.
+        StaticBody3D wallBody = _body;
+        if (_stage.Layout == "city")
+        {
+            wallBody = new StaticBody3D { Name = "CityBoundary", CollisionLayer = 1u | HookLayer, CollisionMask = 0 };
+            wallBody.AddToGroup("CityBoundary"); AddChild(wallBody);
+        }
         float visibleHeight = _stage.Layout == "city" ? 80f : WallHeight;
         float solidHeight = _stage.Layout == "city" ? 80f : WallColliderHeight;
         StandardMaterial3D wall = Flat(_stage.Wall, emission: 0.35f);
@@ -153,7 +161,7 @@ public sealed partial class Arena : Node3D
                 Transform = new Transform3D(basis, centre + Vector3.Up * (visibleHeight * 0.5f)),
                 MaterialOverride = wall,
             });
-            _body.AddChild(new CollisionShape3D
+            wallBody.AddChild(new CollisionShape3D
             {
                 Shape = new BoxShape3D { Size = new Vector3(length, solidHeight, 1f) },
                 Transform = new Transform3D(basis, centre + Vector3.Up * (solidHeight * 0.5f - (_stage.Layout == "city" ? 0f : 1f))),
@@ -276,6 +284,8 @@ public sealed partial class Arena : Node3D
         Vector3 rampCentre = platform + rampSide * (size * 0.5f + rampLength * 0.5f - 0.05f);
         AddSolid(ramp, new Transform3D(XAlong(-rampSide), rampCentre + Vector3.Up * (h * 0.5f)),
                  Flat(_stage.Terrain.Darkened(0.12f)));
+
+        PlatformRoutes.Add(new Data.PlatformRoute(platform, rampSide, size * .5f, h, rampLength));
 
         // Two pillars on the far corners, standing on the platform top.
         Vector3 back = -rampSide * (size * 0.5f - 0.9f);
@@ -447,3 +457,4 @@ public sealed partial class Arena : Node3D
     }
 
 }
+

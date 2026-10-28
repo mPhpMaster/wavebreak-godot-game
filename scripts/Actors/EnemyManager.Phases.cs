@@ -52,7 +52,8 @@ public sealed partial class EnemyManager
         // Scaled for this one spawn only; the next Tick recomputes it anyway.
         float hp = DifficultyHp;
         DifficultyHp = hp * MathF.Max(0.01f, healthScale);
-        Enemy? boss = SpawnOne(index, player.GlobalPosition);
+        RefreshTargets();
+        Enemy? boss = SpawnOne(index, Net.Coop.Active ? SpawnAnchor(player.GlobalPosition) : player.GlobalPosition);
         DifficultyHp = hp;
         if (boss is not null)
             Announce(BossTitle(def), new Color(1f, 0.25f, 0.25f), 1.7f);
@@ -88,3 +89,4 @@ public sealed partial class EnemyManager
         _gridValid = false;
     }
 }
+

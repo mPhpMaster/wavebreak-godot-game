@@ -7,6 +7,8 @@ namespace Wavebreak.UI;
 public sealed partial class SwimmingHint : CanvasLayer
 {
     private Label _label = null!;
+    private readonly Game.TraversalPractice _practice = new();
+    private readonly Game.TraversalHelpSession _help = new();
     private float _refresh;
 
     public override void _Ready()
@@ -22,7 +24,7 @@ public sealed partial class SwimmingHint : CanvasLayer
             HorizontalAlignment = HorizontalAlignment.Center,
             MouseFilter = Control.MouseFilterEnum.Ignore,
             AnchorLeft = 0.1f, AnchorRight = 0.9f, AnchorTop = 1f, AnchorBottom = 1f,
-            OffsetTop = -125f, OffsetBottom = -65f,
+            OffsetTop = -185f, OffsetBottom = -95f,
         };
         _label.AddThemeFontSizeOverride("font_size", 18);
         _label.AddThemeColorOverride("font_outline_color", Colors.Black);
@@ -33,7 +35,8 @@ public sealed partial class SwimmingHint : CanvasLayer
     public override void _Process(double delta)
     {
         using var timing = Game.Prof.Scope("UI.swimHint");
-        _label.Visible = Player.Instance is { IsSwimming: true };
+        _help.Tick((float)delta);
+        _label.Visible = _help.Visible && Player.Instance is { IsSwimming: true };
         if (!_label.Visible) return;
         _refresh -= (float)delta;
         if (!Game.PerformanceScenario.Reference && _refresh > 0) return;
@@ -50,5 +53,10 @@ public sealed partial class SwimmingHint : CanvasLayer
         else if (Game.ReefCurrents.VelocityAt(player.GlobalPosition).Length() > 0.5f)
             _label.Text = Loc.T("CURRENT: steer sideways to leave the flow") + "\n"
                 + Loc.F("SWIM  |  Hold {0}: rise  |  Hold {1}: dive", up, down);
+        _practice.Tick(player, false);
+        _label.Text = Loc.T(_practice.Instruction) + "\n" + _label.Text;
+        _label.Text += "\n" + Loc.T("F2: skip help  |  F1: replay help");
     }
 }
+
+

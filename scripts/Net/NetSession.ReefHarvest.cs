@@ -8,7 +8,7 @@ public sealed partial class NetSession
 {
     public void AskReefHarvest(int id)
     {
-        if (_migrating || !Arena.Current.Underwater) return;
+        if (_migrating || ReefHarvest.Instance is null) return;
         if (Coop.IsHost) ResolveReefHarvest(id, Coop.LocalId);
         else RpcId(1, MethodName.ReefHarvestAsk, Arena.Current.Id, id);
     }
@@ -38,7 +38,7 @@ public sealed partial class NetSession
 
     private void SendReefHarvest(long peer)
     {
-        if (Arena.Current.Underwater && ReefHarvest.Instance is { } reef)
+        if (ReefHarvest.Instance is { } reef)
             RpcId(peer, MethodName.ReefHarvestSpent, Arena.Current.Id, reef.SpentIds, false);
         if (ReefCheckHelpers.Find<ReefLandmarks>(GetTree().Root) is { CaveRewards: > 0 })
             RpcId(peer, MethodName.ReefCaveClaimed, Arena.Current.Id);

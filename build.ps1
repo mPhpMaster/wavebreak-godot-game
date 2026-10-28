@@ -11,6 +11,7 @@
 param(
     [string]$Godot = $(if ($env:GODOT) { $env:GODOT } else { 'D:\tools\godot\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe' }),
     [string]$Iscc = $(if ($env:ISCC) { $env:ISCC } else { 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' }),
+    [string]$ExportDirectory = '',
     [switch]$SkipInstaller,
     [switch]$SkipZip,
     [switch]$Run
@@ -47,13 +48,13 @@ Step 'Import assets' {
     & $Godot --headless --path $root --import 2>&1 | Out-Null
 }
 
-$out = "$root\build\windows"
+$out = if ([string]::IsNullOrWhiteSpace($ExportDirectory)) { "$root\build\windows" } else { [IO.Path]::GetFullPath($ExportDirectory) }
 Step 'Export game' {
     if (Get-Process Wavebreak -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$out*" }) {
         throw "Wavebreak.exe from $out is running; close it first."
     }
     New-Item -ItemType Directory -Force $out | Out-Null
-    $log = "$root\build\export.log"
+    $log = Join-Path "$root\build" ('export-' + (Split-Path $out -Leaf) + '.log')
     # One string, each value quoted: Start-Process joins an array with bare
     # spaces, which split the preset name 'Windows Desktop' in two.
     $argLine = "--headless --path `"$root`" --export-release `"Windows Desktop`" `"$out\Wavebreak.exe`""
@@ -98,7 +99,7 @@ if (-not $SkipZip) {
 if (-not $SkipInstaller) {
     Step 'Installer' {
         if (-not (Test-Path $Iscc)) { throw "Inno Setup not found: $Iscc (set -Iscc or `$env:ISCC)" }
-        & $Iscc /Q "/DAppVersion=$version" "$root\installer\Wavebreak.iss"
+        & $Iscc /Q "/DAppVersion=$version" "/DSource=$out" "$root\installer\Wavebreak.iss"
         if ($LASTEXITCODE -ne 0) { throw 'installer build failed' }
         Write-Host "    $root\build\installer\Wavebreak-Setup-$version.exe"
     }
@@ -106,3 +107,4 @@ if (-not $SkipInstaller) {
 
 Write-Host "Build complete: $out" -ForegroundColor Green
 if ($Run) { Start-Process -FilePath "$out\Wavebreak.exe" -WorkingDirectory $out }
+

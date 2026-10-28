@@ -17,7 +17,8 @@ public sealed class NearbyEnemySelection
     public IReadOnlyList<Enemy> Visible => _visible;
     public int RaysLastRefresh { get; private set; }
 
-    public static Vector3 Anchor(Enemy enemy) => enemy.AimPoint + Vector3.Up * ((enemy.Def?.Height ?? 1.6f) * 0.5f + 0.3f);
+    public static Vector3 Anchor(Enemy enemy) => enemy.GetGlobalTransformInterpolated().Origin
+        + (enemy.AimPoint - enemy.GlobalPosition) + Vector3.Up * ((enemy.Def?.Height ?? 1.6f) * 0.5f + 0.3f);
     public static bool Nearby(Enemy enemy, Vector3 player) => GodotObject.IsInstanceValid(enemy)
         && enemy.IsInsideTree() && !enemy.IsPooled && enemy.IsAlive && !enemy.IsBoss
         && enemy.MaxHealth > 0 && enemy.AimPoint.DistanceSquaredTo(player) <= Radius * Radius
@@ -43,3 +44,4 @@ public sealed class NearbyEnemySelection
         }
     }
 }
+

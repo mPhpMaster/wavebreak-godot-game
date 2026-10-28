@@ -12,7 +12,7 @@ public sealed partial class CoopCityCheck : Node
     private float _clock;
     private int _step;
     private Enemy? _giant;
-    private bool _strike;
+    private bool _strike, _targetHookStarted, _sawRemoteMovingTarget;
     private bool _sawRemoteHook;
     private bool _sawHeroes, _sawBoth, _sawBoost;
     private bool _boostFreeze;
@@ -41,6 +41,7 @@ public sealed partial class CoopCityCheck : Node
         _sawHeroes |= Coop.Roster.Any(p => p.CharacterId == "nori") && Coop.Roster.Any(p => p.CharacterId == "vesper");
         _sawBoth |= session.Remotes.Values.Any(remote => remote.LeftHookAttached && remote.RightHookAttached);
         _sawBoost |= session.Remotes.Values.Any(remote => remote.HookBoosts > 0);
+        _sawRemoteMovingTarget |= session.Remotes.Values.Any(remote => remote.GrapplingMovingTarget && remote.MovingHookError < .8f);
         _sawRemoteHook |= session.Remotes.Values.Any(remote => remote.Grappling);
         if (_step == 0 && _clock > 0.6f)
         {
@@ -104,16 +105,32 @@ public sealed partial class CoopCityCheck : Node
             player.SetPhysicsProcess(false);
             _step = 6;
         }
+        if (!_targetHookStarted && _clock > 5.5f)
+        {
+            _giant ??= enemies.Alive.FirstOrDefault(enemy => enemy.Def?.Id == "city_gatewarden");
+            if (_giant is { IsAlive: true })
+            {
+                player.ReleaseHook(); player.Teleport(_giant.GlobalPosition + new Vector3(0, 12, 13));
+                Vector3 from = player.CenterPosition;
+                if (GrappleAnchors.RayTarget(player, from, (_giant.GlobalPosition + Vector3.Up * 16 - from).Normalized(),
+                    from, out Vector3 movingAnchor, out CollisionObject3D? body) && body == _giant)
+                {
+                    Input.ActionPress("city_hook_left"); Input.ActionRelease("city_hook_right");
+                    player.AttachHook(movingAnchor); player.SetPhysicsProcess(true); _targetHookStarted = true;
+                    GD.Print($"COOP MOVING START role={Coop.Mode} target={player.HookEnemyId(HookSide.Left)} attached={player.LeftHookAttached} anchor={movingAnchor}");
+                }
+            }
+        }
         if (_clock < (Coop.IsHost ? 8.5f : 8f)) return;
         bool hurt = _giant is { IsAlive: true, HealthFraction: < 0.9f };
         bool heroes = _sawHeroes;
         bool tells = Coop.IsHost ? session.CityTellsSent > 0 : session.CityTellsReceived > 0;
         bool deathReset = true;
         if (Coop.IsHost) { player.Health.Kill(); deathReset = !player.Grappling; }
-        bool pass = _sawBoth && _sawBoost && deathReset && Arena.IsCity && Coop.RouteId == "skyline-run" && heroes && _sawRemoteHook && hurt && tells
+        bool pass = _sawRemoteMovingTarget && _sawBoth && _sawBoost && deathReset && Arena.IsCity && Coop.RouteId == "skyline-run" && heroes && _sawRemoteHook && hurt && tells
             && (Coop.IsHost ? session.AcceptedCoreStrikes > 0 : _strike);
         GD.Print($"COOP CITY {(pass ? "PASS" : "FAIL")} role={Coop.Mode} route={Coop.RouteId} heroes={heroes} "
-            + $"hook={_sawRemoteHook} hurt={hurt} strike={_strike} accepted={session.AcceptedCoreStrikes} tells_tx={session.CityTellsSent} tells_rx={session.CityTellsReceived} death_reset={deathReset} both={_sawBoth} boost={_sawBoost}");
+            + $"hook={_sawRemoteHook} hurt={hurt} strike={_strike} accepted={session.AcceptedCoreStrikes} tells_tx={session.CityTellsSent} tells_rx={session.CityTellsReceived} death_reset={deathReset} both={_sawBoth} boost={_sawBoost} moving_target={_sawRemoteMovingTarget} local_target_started={_targetHookStarted} local_attached={player.LeftHookAttached} local_target={player.HookEnemyId(HookSide.Left)}");
         SetPhysicsProcess(false); GetTree().Quit(pass ? 0 : 1);
     }
 }

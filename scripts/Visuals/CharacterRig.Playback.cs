@@ -130,7 +130,7 @@ public sealed partial class CharacterRig
 
         if (Spec.Id.StartsWith("reef:", StringComparison.Ordinal) && !_dying)
         { PoseMarine(dt); return; }
-        if (Swimming && !_dying)
+        if (Swimming && !_dying && !Spec.NativeSwimmingClip)
         {
             PoseSwimming(dt);
             return;
@@ -221,3 +221,4 @@ public sealed partial class CharacterRig
     private static readonly StringName PFlash = "flash", PDissolve = "dissolve", PGlow = "glow";
 
 }
+

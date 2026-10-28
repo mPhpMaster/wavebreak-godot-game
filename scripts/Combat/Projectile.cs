@@ -5,58 +5,6 @@ using Wavebreak.Core;
 
 namespace Wavebreak.Combat;
 
-/// <summary>How a spawned projectile behaves once it is in the air.</summary>
-public enum ProjectileMode
-{
-    /// <summary>Flies in a straight line, pierces, expires by range.</summary>
-    Straight,
-
-    /// <summary>Steers toward the nearest live target at a bounded turn rate.</summary>
-    Homing,
-
-    /// <summary>Detonates on first contact (or at end of life) for area damage.</summary>
-    Explosive,
-
-    /// <summary>Pure decoration: no movement, no collision, fades and dies.
-    /// Melee swings damage instantly and use one of these to show the arc.</summary>
-    Cosmetic,
-}
-
-/// <summary>
-/// Everything a weapon has to say about one shot.
-///
-/// Passed as a struct rather than a dozen positional arguments because the five
-/// attack shapes fill in overlapping-but-different subsets of it, and a call site
-/// with nine floats in a row is where a blast radius quietly ends up in the pierce
-/// count.
-/// </summary>
-public struct ProjectileSpec
-{
-    public ProjectileMode Mode;
-    public Vector3 Origin;
-    public Vector3 Direction;
-
-    /// <summary>Metres per second.</summary>
-    public float Speed;
-
-    /// <summary>Metres before the shot gives up. Converted to a lifetime.</summary>
-    public float Range;
-
-    /// <summary>Radius of the shot's own hitbox.</summary>
-    public float HitRadius;
-
-    /// <summary>Area damage radius for <see cref="ProjectileMode.Explosive"/>.</summary>
-    public float BlastRadius;
-
-    /// <summary>Extra targets the shot passes through. 0 dies on first hit.</summary>
-    public int Pierce;
-
-    public Color Tint;
-
-    /// <summary>Explicit lifetime in seconds. 0 derives it from range and speed.</summary>
-    public float Lifetime;
-}
-
 /// <summary>
 /// One shot in flight.
 ///
@@ -297,7 +245,7 @@ public sealed partial class Projectile : Node3D, IPooled
         _age = 0f;
         _retired = false;
 
-        Vector3 dir = FlatDirection(spec.Direction, Vector3.Forward);
+        Vector3 dir = FlightDirection(spec.Direction, Vector3.Forward);
         float speed = MathF.Max(0f, spec.Speed);
         _velocity = dir * speed;
 
@@ -323,7 +271,7 @@ public sealed partial class Projectile : Node3D, IPooled
         // Normalised here rather than at the call sites: an un-normalised column
         // is a scale on the basis, which would silently resize the mesh by the
         // projectile's speed.
-        Vector3 z = -FlatDirection(forward, Vector3.Forward);
+        Vector3 z = -FlightDirection(forward, Vector3.Forward);
         Vector3 x = Vector3.Up.Cross(z);
 
         Basis basis = x.LengthSquared() < 1e-6f
@@ -371,169 +319,6 @@ public sealed partial class Projectile : Node3D, IPooled
         Visible = true;
     }
 
-    // ------------------------------------------------------------------ step
-
-    private void Step(float dt)
-    {
-        _age += dt;
-
-        if (_motion != ProjectileMotion.None) { StepMotion(dt); return; }
-
-        if (_mode == ProjectileMode.Cosmetic)
-        {
-            if (_age >= _life) { Retire(); return; }
-            StepCosmetic();
-            return;
-        }
-
-        if (_age >= _life)
-        {
-            // A grenade that fizzles out mid-air reads as a bug. Expiry detonates.
-            if (_mode == ProjectileMode.Explosive) Detonate(GlobalPosition);
-            else Retire();
-            return;
-        }
-
-        Vector3 next = GlobalPosition + _velocity * dt;
-
-        if (_mode == ProjectileMode.Homing)
-        {
-            Steer(dt);
-            Place(next, _velocity);      // only a seeker's heading changes in flight
-        }
-        else
-        {
-            GlobalPosition = next;
-        }
-
-        Contact(next);
-    }
-
-    private void StepCosmetic()
-    {
-        float t = Mathf.Clamp(_age / _life, 0f, 1f);
-        _mesh.Scale = _cosmeticScale * (0.7f + 0.3f * t);
-        // Starts half see-through: a fast melee or breath weapon lays one of
-        // these every few frames, and solid ones stacked into a white wall.
-        _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.65f + 0.35f * t * t);
-    }
-
-    // Weapons/FxGuard: an effect on the camera's line to the player turns
-    // see-through, and gets its own fade back when it moves off it.
-    private bool _sightFaded;
-    private float _restFade;
-
-    private void KeepOutOfSight()
-    {
-        Vector3 s = _mesh.Scale;
-        float radius = MathF.Max(MathF.Max(MathF.Abs(s.X), MathF.Abs(s.Z)), MathF.Abs(s.Y)) * (_mode == ProjectileMode.Cosmetic ? 0.5f : 1f);
-        float block = Weapons.FxGuard.BlocksView(_mesh.GlobalPosition, radius);
-        if (block > 0f)
-        {
-            if (!_sightFaded) { _restFade = _mesh.Transparency; _sightFaded = true; }
-            _mesh.Transparency = MathF.Max(_mesh.Transparency, block);
-        }
-        else if (_sightFaded)
-        {
-            _sightFaded = false;
-            _mesh.Transparency = _restFade;
-        }
-    }
-
-    private void Contact(Vector3 at)
-    {
-        int count = Targeting.Overlap(at, _hitRadius, ContactBuffer);
-
-        for (int i = 0; i < count; i++)
-        {
-            IDamageable target = ContactBuffer[i];
-            if (_pierced.Contains(target)) continue;
-
-            if (_mode == ProjectileMode.Explosive)
-            {
-                Detonate(at);
-                return;
-            }
-
-            _pierced.Add(target);
-            DamageInfo info = ApplyHit(target, at, 1f);
-
-            // A corpse a pierce shot happened to fly through does not spend a
-            // pierce charge. The target reports that by nullifying the hit.
-            if (info.Nullified) continue;
-
-            if (_pierceLeft-- <= 0)
-            {
-                Retire();
-                return;
-            }
-        }
-    }
-
-    private void Steer(float dt)
-    {
-        if (_lock is null || !_lock.IsAlive)
-            _lock = Targeting.Nearest(GlobalPosition, HomingSeekRange);
-
-        if (_lock is null || !_lock.IsAlive) return;
-
-        Vector3 desired = FlatDirection(_lock.Position - GlobalPosition, Vector3.Zero);
-        if (desired.LengthSquared() < 1e-6f) return;
-
-        float speed = _velocity.Length();
-        if (speed < 0.01f) return;
-
-        // Turning on the flat plane by angle rather than by Slerp: Slerp is
-        // undefined for exactly opposing vectors, which is precisely the case a
-        // seeker that overshot its target hits every time.
-        float current = MathF.Atan2(_velocity.X, _velocity.Z);
-        float target = MathF.Atan2(desired.X, desired.Z);
-        float delta = Mathf.Wrap(target - current, -Mathf.Pi, Mathf.Pi);
-        float turn = Mathf.Clamp(delta, -HomingTurnRate * dt, HomingTurnRate * dt);
-
-        float heading = current + turn;
-        _velocity = new Vector3(MathF.Sin(heading), 0f, MathF.Cos(heading)) * speed;
-    }
-
-    private void Detonate(Vector3 at)
-    {
-        float blast = _blastRadius > 0f ? _blastRadius : _hitRadius;
-        int count = Targeting.Overlap(at, blast, BlastBuffer);
-
-        for (int i = 0; i < count; i++)
-        {
-            IDamageable target = BlastBuffer[i];
-
-            // Full damage at the centre, half at the rim. A flat blast makes
-            // where you put it irrelevant; a steep one makes every explosion feel
-            // like it missed.
-            Vector3 offset = target.Position - at;
-            offset.Y = 0f;
-            float distance = offset.Length();
-            float falloff = blast <= 0.001f ? 1f : Mathf.Lerp(1f, 0.5f, Mathf.Clamp(distance / blast, 0f, 1f));
-
-            ApplyHit(target, at, falloff);
-        }
-
-        ExplosionFx.Play(at, blast, _tint);
-        Retire();
-    }
-
-    private DamageInfo ApplyHit(IDamageable target, Vector3 from, float scale)
-    {
-        DamageInfo info = _template!.Clone();
-        if (scale != 1f) info.Amount *= scale;
-
-        Vector3 push = FlatDirection(target.Position - from, Vector3.Zero);
-        info.Direction = push.LengthSquared() > 1e-6f
-            ? push.Normalized()
-            : FlatDirection(_velocity, Vector3.Forward);
-
-        target.TakeDamage(info);
-        _system?.ReportHit(target, info);
-        return info;
-    }
-
     private void Retire()
     {
         if (_retired) return;
@@ -550,6 +335,12 @@ public sealed partial class Projectile : Node3D, IPooled
 
     /// <summary>Horizontal component, normalised, with a fallback for a vector
     /// that has none. Everything about aiming and hit testing happens on XZ.</summary>
+    internal static Vector3 FlightDirection(Vector3 value, Vector3 fallback)
+    {
+        if (!Game.Arena.Current.Underwater && !Game.Arena.IsCity) value.Y = 0;
+        return value.LengthSquared() > 1e-6f ? value.Normalized() : fallback;
+    }
+
     internal static Vector3 FlatDirection(Vector3 v, Vector3 fallback)
     {
         v.Y = 0f;
@@ -557,197 +348,3 @@ public sealed partial class Projectile : Node3D, IPooled
     }
 }
 
-/// <summary>
-/// The flash an explosion leaves behind: an expanding shell and a brief light.
-///
-/// Separate from <see cref="Projectile"/> and hard-capped, because this is the
-/// one visual in the game that carries an <see cref="OmniLight3D"/>. Lights are
-/// the fastest way to melt a forward+ renderer, so the pool ceiling is the cap on
-/// how many can exist — reaching it drops the flash rather than the frame rate.
-/// </summary>
-internal sealed partial class ExplosionFx : Node3D, IPooled
-{
-    private const float Duration = 0.32f;
-    private const int MaxConcurrent = 16;
-
-    private static Pool<ExplosionFx>? _pool;
-    private static readonly List<ExplosionFx> Live = new(MaxConcurrent);
-
-    private MeshInstance3D _mesh = null!;
-    private OmniLight3D _light = null!;
-    private float _age;
-    private float _radius = 1f;
-    private bool _retired = true;
-
-    public bool IsPooled { get; set; } = true;
-
-    public ExplosionFx()
-    {
-        SetProcess(false);
-        SetPhysicsProcess(false);
-        Visible = false;
-
-        _mesh = new MeshInstance3D
-        {
-            Name = "Shell",
-            Mesh = CombatVisuals.Orb,
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-        };
-        AddChild(_mesh);
-
-        _light = new OmniLight3D
-        {
-            Name = "Flash",
-            ShadowEnabled = false,
-            OmniAttenuation = 1.6f,
-        };
-        AddChild(_light);
-    }
-
-    public static void Initialize(Node parent)
-        => _pool = new Pool<ExplosionFx>(parent, static () => new ExplosionFx(), MaxConcurrent, prewarm: 4);
-
-    public static void Shutdown()
-    {
-        Live.Clear();
-        _pool?.Clear();
-        _pool = null;
-    }
-
-    public static void Play(Vector3 position, float radius, Color tint)
-    {
-        ExplosionFx? fx = _pool?.Get();
-        if (fx is null) return;      // at the light budget: skip the flash, keep the frame
-
-        fx._age = 0f;
-        // The shell is drawn capped and squashed into a low dome: a blast
-        // scaled by area tomes used to swallow the player and the camera.
-        fx._radius = Mathf.Clamp(radius, 0.3f, Weapons.FxGuard.MaxBlobRadius);
-        fx._retired = false;
-
-        fx.GlobalTransform = new Transform3D(Basis.Identity, position);
-        fx._mesh.MaterialOverride = CombatVisuals.Glow(tint, additive: true);
-        fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.25f);
-        fx._mesh.Scale = Flat(fx._radius * 0.35f);
-
-        fx._light.LightColor = tint;
-        fx._light.OmniRange = fx._radius * 2.6f;
-        fx._light.LightEnergy = 4f;
-        fx.Visible = true;
-
-        Live.Add(fx);
-    }
-
-    private static Vector3 Flat(float r) => new(r, r * 0.55f, r);
-
-    public static void UpdateAll(float dt)
-    {
-        for (int i = Live.Count - 1; i >= 0; i--)
-        {
-            ExplosionFx fx = Live[i];
-
-            if (GodotObject.IsInstanceValid(fx) && !fx._retired)
-            {
-                fx._age += dt;
-                if (fx._age < Duration)
-                {
-                    float t = fx._age / Duration;
-                    // Fast out, slow stop: the shell covers most of its radius in
-                    // the first third, which is what reads as a detonation rather
-                    // than an inflating balloon.
-                    float eased = 1f - (1f - t) * (1f - t);
-                    fx._mesh.Scale = Flat(fx._radius * (0.35f + 0.65f * eased));
-                    fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.25f + 0.75f * t);
-                    fx._light.LightEnergy = 4f * (1f - t);
-                    continue;
-                }
-                fx._retired = true;
-                fx.Visible = false;
-            }
-
-            int last = Live.Count - 1;
-            Live[i] = Live[last];
-            Live.RemoveAt(last);
-
-            if (GodotObject.IsInstanceValid(fx)) _pool?.Release(fx);
-        }
-    }
-}
-
-/// <summary>
-/// Shared geometry and materials for everything combat draws.
-///
-/// Every bolt of a given weapon is the same shape in the same colour, so building
-/// a mesh or material per instance would allocate hundreds of copies of identical
-/// data and give the renderer nothing to batch. Meshes are unit-sized and scaled
-/// by the instance; materials are cached by colour.
-/// </summary>
-internal static class CombatVisuals
-{
-    private static readonly Dictionary<(Color Color, bool Additive), StandardMaterial3D> Materials = new();
-
-    /// <summary>Unit bolt: radius 1, length 3, long axis on +Y.</summary>
-    public static readonly CapsuleMesh Bolt = new()
-    {
-        Radius = 1f,
-        Height = 3f,
-        RadialSegments = 6,
-        Rings = 2,
-    };
-
-    /// <summary>Unit sphere, radius 1.</summary>
-    public static readonly SphereMesh Orb = new()
-    {
-        Radius = 1f,
-        Height = 2f,
-        RadialSegments = 8,
-        Rings = 4,
-    };
-
-    /// <summary>Unit cube. Scaled into slabs and wedges.</summary>
-    public static readonly BoxMesh Slab = new() { Size = Vector3.One };
-
-    /// <summary>Flat unit disc, radius 1. The aura footprint.</summary>
-    public static readonly CylinderMesh Disc = new()
-    {
-        TopRadius = 1f,
-        BottomRadius = 1f,
-        Height = 0.06f,
-        RadialSegments = 28,
-        Rings = 1,
-    };
-
-    /// <summary>
-    /// A self-lit material in the given colour.
-    ///
-    /// Unshaded on purpose: a projectile has to be readable against whatever it
-    /// happens to be flying over, and the alternative — relying on scene lighting
-    /// to make a bullet visible — fails exactly when the screen is busiest. The
-    /// colour is pushed past 1 so it blooms rather than sitting flat.
-    /// </summary>
-    /// <param name="color">Base colour. Alpha below 1 gives a translucent field.</param>
-    /// <param name="additive">Add rather than blend. Right for auras and flashes,
-    /// where overlapping copies should build up instead of hiding each other.</param>
-    public static StandardMaterial3D Glow(Color color, bool additive)
-    {
-        (Color color, bool additive) key = (color, additive);
-        if (Materials.TryGetValue(key, out StandardMaterial3D? cached) && GodotObject.IsInstanceValid(cached))
-            return cached;
-
-        StandardMaterial3D material = new()
-        {
-            AlbedoColor = new Color(color.R * 1.35f, color.G * 1.35f, color.B * 1.35f, color.A),
-            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            // Alpha even when opaque: GeometryInstance3D.Transparency, which is
-            // how everything here fades, needs a blendable material to write to.
-            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-            CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-        };
-
-        if (additive) material.BlendMode = BaseMaterial3D.BlendModeEnum.Add;
-        Weapons.FxGuard.Track(material);   // fades out between the camera and the player
-
-        Materials[key] = material;
-        return material;
-    }
-}

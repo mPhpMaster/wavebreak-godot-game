@@ -20,6 +20,8 @@ public sealed partial class SwimPoseCheck : Node
         _time += (float)delta;
         if (_step == 0 && _time > 0.3f)
         {
+            Main.Instance!.SetProcess(false);
+            Main.Instance.Enemies.ClearField(999); Main.Instance.Enemies.Quiet = true;
             Vector3 up = SwimmingNavigation.Wish(new Vector2(0f, -1f), 0f, 0.8f);
             var reinforced = SwimmingNavigation.WithVertical(up, true, false);
             var downward = SwimmingNavigation.WithVertical(-up, false, true);
@@ -90,3 +92,4 @@ public sealed partial class SwimPoseCheck : Node
     public override void _ExitTree()
     { Input.ActionRelease("jump"); Input.ActionRelease("slide"); Input.ActionRelease("move_forward"); }
 }
+

@@ -164,7 +164,7 @@ public static partial class Stages
             DisplayName = "Saltglass Shallows",
             Tagline = "Open sand, slow water. Read the tide pools.",
             LayoutSeed = 9127,
-            Sides = 12, Radius = 160f, ClearRadius = 15f,
+            Sides = 12, Radius = 220f, ClearRadius = 15f,
             Theme = "tidal", PropDensity = 0.55f,
             Wall = new Color(0.25f, 0.80f, 0.85f),
             Terrain = new Color(0.78f, 0.70f, 0.52f),
@@ -185,3 +185,4 @@ public static partial class Stages
         Stormwatch(),   // Stages.Harbour.cs
     };
 }
+

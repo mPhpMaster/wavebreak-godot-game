@@ -203,8 +203,11 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
 
     /// <summary>Place this enemy in the world and make it live. Must be called
     /// after <see cref="Configure"/>.</summary>
+    public int SpawnGeneration { get; private set; }
+
     public void Spawn(Vector3 position)
     {
+        SpawnGeneration++;
         _dead = false;
         _health = _maxHealth;
         _knockback = Vector3.Zero;
@@ -220,9 +223,11 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
         _attackTimer = _attackCooldown * 0.5f;
         ResetBehaviour();
         ResetCityGiant();
+        _woundLevel = -1; RefreshWounds();
 
+        CollisionPriority = IsCityGiant ? 10 : 1;
         CollisionLayer = EnemyLayer | (IsCityGiant ? 1u << 6 : 0u);
-        CollisionMask = WorldLayer;
+        CollisionMask = WorldLayer | EnemyLayer | (IsCityGiant ? 1u << 6 : 0u);
         if (_collision is not null) _collision.Disabled = false;
 
         ApplyFlash(0f);
@@ -266,3 +271,6 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     }
 
 }
+
+
+

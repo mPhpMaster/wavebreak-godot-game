@@ -28,6 +28,7 @@ public sealed partial class Player
     /// <summary>Places the player and clears all momentum and movement state.</summary>
     public void Teleport(Vector3 position)
     {
+        _swimWeaponRecoil = Vector3.Zero;
         ReleaseHook();
         _cityBallistic = false;
         CoreStrikeFeedback = "";

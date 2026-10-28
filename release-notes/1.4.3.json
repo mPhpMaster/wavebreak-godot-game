@@ -1,0 +1,14 @@
+{
+  "Version": "1.4.3",
+  "Title": "Expedition combat and co-op polish",
+  "Changes": [
+    "City hooks acquire rooftops, moving giants and boundary walls, with visible launches, sound and hold-or-toggle controls.",
+    "Jump or dash while attached to boost; Vesper now fights with twin swords and Nori uses a recoiling underwater shotgun.",
+    "Underwater dash now steers and slows smoothly. New sea creatures, clearer cave wayfinding and a more detailed wreck improve Reef exploration.",
+    "Gather crystals, plants and mushrooms across every map. XP and gold use new shared pickup models everywhere.",
+    "Co-op enemies pursue the nearest living player and spawn around the team. Tab shows damage, DPS, healing, kills and downs.",
+    "Both co-op upgrade layouts keep movement active. Rest-room messages no longer block upgrades, and combat effects stop during rest.",
+    "Added staged loading, skippable and replayable traversal practice, clearer objectives, smooth enemy-health tracking and a new original menu waltz.",
+    "Classic Play starts in Thornmeadow. Reef expeditions continue through Saltglass Shallows and Stormwatch Harbour in that order."
+  ]
+}

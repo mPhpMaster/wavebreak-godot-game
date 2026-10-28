@@ -1,0 +1,13 @@
+{
+  "source": "Original project synthesis; no third-party samples or melody",
+  "bpm": 96,
+  "meter": "3/4",
+  "key": "D harmonic minor",
+  "bars": 32,
+  "seconds": 60.0,
+  "peak": 0.3687606681025328,
+  "rms_dbfs": -22.067611990509395,
+  "loop_seam_delta": 0.0026590764951958806,
+  "ogg_bytes": 617322,
+  "human_listening_verified": false
+}

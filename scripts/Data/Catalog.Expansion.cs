@@ -37,6 +37,8 @@ public static partial class Catalog
             ItemList.Add(i);
             ItemsById[i.Id] = i;
         }
+        foreach (WeaponDef weapon in ExpeditionWeapons())
+        { WeaponList.Add(weapon); WeaponsById[weapon.Id] = weapon; ExpansionIds.Add(weapon.Id); }
         AddSignatureWeapons();   // Data/Catalog.Heroes.cs
     }
 

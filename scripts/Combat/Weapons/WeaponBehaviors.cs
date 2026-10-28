@@ -7,15 +7,6 @@ using Wavebreak.Stats;
 namespace Wavebreak.Combat.Weapons;
 
 /// <summary>
-/// How one expansion weapon delivers a volley. Stateless: everything per-shot
-/// lives on the pooled projectiles it spawns, so one instance serves every run.
-/// </summary>
-internal interface IWeaponBehavior
-{
-    void Fire(WeaponRuntime weapon, WeaponSystem system, StatSheet stats);
-}
-
-/// <summary>
 /// The expansion's firing strategies, keyed by weapon id.
 ///
 /// <see cref="AttackShape"/> stays the category the UI, audio and codex read;
@@ -29,6 +20,8 @@ internal static class WeaponBehaviors
 {
     private static readonly Dictionary<string, IWeaponBehavior> ById = new()
     {
+        ["reef_shotgun"] = new ReefShotgun(),
+        ["skyline_swords"] = new SkylineSwords(),
         ["gullwing_chakram"] = new Boomerang(),
         ["circling_shoal"] = new Orbiters(),
         ["brine_wake"] = new Wake(),

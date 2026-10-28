@@ -21,6 +21,7 @@ public sealed partial class GameplayPanel : VBoxContainer
     private readonly bool _withTitle;
 
     private CheckButton _compact = null!;
+    private OptionButton _hooks = null!;
     private OptionButton _auto = null!;
     private OptionButton _rule = null!;
     private OptionButton _from = null!;
@@ -43,6 +44,9 @@ public sealed partial class GameplayPanel : VBoxContainer
         _compact = new CheckButton { ButtonPressed = GameplaySettings.CompactLevelUp, FocusMode = FocusModeEnum.All };
         _compact.Toggled += on => GameplaySettings.SetCompact(on);
         AddChild(Row("Compact level-up", _compact));
+        _hooks = Options(new[] { "Hold to grapple", "Click to toggle grapple" }, GameplaySettings.ToggleCityHooks ? 1 : 0);
+        _hooks.ItemSelected += index => GameplaySettings.SetToggleCityHooks(index == 1);
+        AddChild(Row("City hook control", _hooks));
 
         _auto = Options(new[] { "Off", "On" }, GameplaySettings.AutoPick ? 1 : 0);
         _auto.ItemSelected += i => { GameplaySettings.SetAutoPick(i == 1); _rule.Disabled = i != 1; _from.Disabled = i != 1; };
@@ -63,7 +67,7 @@ public sealed partial class GameplayPanel : VBoxContainer
         {
             Label note = MainMenu.MakeLabel(
                 "Compact level-up: small cards at the bottom of the screen and the game keeps running, so you can keep moving while you choose " +
-                "(pick with 1 / 2 / 3 or a click). Co-op always uses it. " +
+                "(pick with 1 / 2 / 3 or a click). Co-op keeps running with either card size. " +
                 "Auto-pick: every level-up takes a card at once by the rule, and a note shows what it took.", 15, InkDim);
             note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
             note.CustomMinimumSize = new Vector2(_labelWidth + 260f, 0f);
@@ -84,6 +88,7 @@ public sealed partial class GameplayPanel : VBoxContainer
     {
         if (_compact is null) return;
         _compact.SetPressedNoSignal(GameplaySettings.CompactLevelUp);
+        _hooks.Selected = GameplaySettings.ToggleCityHooks ? 1 : 0;
         _auto.Selected = GameplaySettings.AutoPick ? 1 : 0;
         _rule.Selected = (int)GameplaySettings.Rule;
         _rule.Disabled = !GameplaySettings.AutoPick;

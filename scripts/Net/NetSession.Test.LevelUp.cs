@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Godot;
 using Wavebreak.Actors;
 using Wavebreak.Game;
+using Wavebreak.Meta;
+using Wavebreak.UI;
 
 namespace Wavebreak.Net;
 
@@ -27,6 +29,8 @@ public sealed partial class NetSession
     private Func<Vector3>? _luOverride;
     private bool _luOpened, _luCompact = true, _luHeld, _luPicked;
     private float _luMoved;
+    private bool _luLayoutMatches = true, _luRestBlocked;
+    private RestRoomHud? _luRestHud;
 
     private string LevelUpTestFields => _testLevelUpAt < 0f ? "" :
         $"levelup_open={(_luOpened ? 1 : 0)} levelup_compact={(_luCompact ? 1 : 0)} levelup_moved={_luMoved:0.0} levelup_picked={(_luPicked ? 1 : 0)}";
@@ -37,10 +41,11 @@ public sealed partial class NetSession
         if (!_luOpened) problems.Add("the level-up hand never opened");
         else
         {
-            if (!_luCompact) problems.Add("co-op level-up was not the compact hand");
+            if (!_luLayoutMatches) problems.Add("co-op level-up ignored the selected layout");
+            if (_luRestBlocked) problems.Add("rest information overlapped the upgrade hand");
             if (_luHeld) problems.Add("the level-up hand held the player's input");
             if (_luMoved < 1.0f) problems.Add($"the player moved only {_luMoved:0.0} m while the hand was open");
-            if (!_luPicked) problems.Add("pressing 1 did not take a card from the compact hand");
+            if (!_luPicked) problems.Add("pressing 1 did not take a card from the hand");
         }
     }
 
@@ -62,6 +67,8 @@ public sealed partial class NetSession
                 if (t < _testLevelUpAt || !me.IsAlive) return;
                 if (!_main.OpenLevelUpForTest()) return;
                 _luOpened = true;
+                var layer = new CanvasLayer { Layer = 3 }; _main.AddChild(layer);
+                _luRestHud = new RestRoomHud("Thornmeadow"); layer.AddChild(_luRestHud);
                 _luStart = me.GlobalPosition;
                 _luOverride = me.MoveOverride;
                 me.MoveOverride = null;                 // real input from here on
@@ -73,7 +80,9 @@ public sealed partial class NetSession
 
             case 1:
                 _luClock += dt;
-                _luCompact &= panel.CompactOpen;
+                _luCompact = panel.CompactOpen;
+                _luLayoutMatches &= panel.CompactOpen == GameplaySettings.CompactLevelUp && !panel.PausesGame;
+                _luRestBlocked |= _luRestHud?.MessageVisible == true;
                 _luHeld |= Coop.LocalHold;
                 if (_testLevelUpShot is { } shot && _luClock >= 0.9)
                 {
@@ -98,6 +107,7 @@ public sealed partial class NetSession
                 _luClock += dt;
                 if (_luClock < 0.4) return;
                 _luPicked = !panel.IsOpen;
+                _luRestHud?.GetParent().QueueFree();
                 _luPhase = 3;
                 break;
         }

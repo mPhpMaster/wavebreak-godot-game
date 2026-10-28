@@ -1,41 +1,30 @@
-# Requested-work audit — 28 October 2026
+# Requested-work audit — Wavebreak 1.4.3
 
-## Verified published baseline
+The 36-item acceptance list is implemented in the current release candidate.
+Version 1.4.2 is the previous published baseline. Final publication evidence is
+recorded in RELEASE-1.4.3.md once the release assets are verified.
 
-Latest release: 1.4.2. Evidence: docs/RELEASE-1.4.2.md and published GitHub release.
+| Scope | Implementation / evidence |
+|---|---|
+| Loading and performance | Real staged progress and model rendering prewarm. StartupCheck completes 54 steps, removes the overlay, resumes play and starts Thornmeadow. Full-density 1920px performance tour retains scale 1, glow/fog and existing user settings; measured mean frame times roughly 6–9 ms in the sampled scenes. |
+| Help and objectives | Timed F2-skip/F1-replay practice observes actual hooks, boost, core strike and swimming actions. Map/phase objectives and cave/resource progress are visible. Existing one-time rewards remain authoritative. |
+| Hooks and boost | Side-aware reachable roofs, hold/toggle, tether-preserving Jump/Dash boost, traveling tips and original launch audio. Moving giant local anchors and boundary walls. Rooftop, dual-hook, controls and target checks pass. Two actual ENet peers pass core damage, tells, moving anchors, dual hooks and boost. |
+| City and giants | Original plaster/timber facades and colliding gabled roofs; physical crowd collision, giant priority, no knockback, .5/.65 walking speed and health-driven wounds. Actual full-scale navigation and rooftop collision checks pass. |
+| Weapons | Vesper twin swords and Nori six-pellet shotgun, actual 3D hits, recoil/audio/bubbles, two-second base interval and speed upgrades. ExpeditionWeaponsCheck and 21,925 content-audit checks pass. |
+| Swimming | Steerable decaying burst, including exact opposite-direction reversal. SwimmingDashCheck and isolated live swimming/pose/breach checks pass. |
+| Reef art | Licensed Quaternius shark and wErT Leviathan geometry with original portable swim morph loop; full provenance/license notices included. Detailed wreck/ribs/cabin; brighter cave with directional markers and entrance/exit landmarks. Runtime imports/animation and render reviews completed. |
+| Pickups/resources | Shared normalized Quaternius XP/gold geometry on every map. Deterministic collectible crystals/plants/mushrooms, duplicate prevention and host-owned spent state. All-map rebuild/gather checks pass. Decorative collectible-look scatter is replaced by resource instances. |
+| Rest | Both co-op card layouts preserve movement and do not pause/dim. Real two-peer layout tests cover upgrade selection and message overlap. Active projectiles and signature effects are retired on entering rest; targetless combat activation is gated. |
+| Pursuit/spawning | Ground enemies route around platforms and physically climb ramps. Nearest valid living player uses underwater 3D distance; all director and phase-boss spawn paths use the living team's center, safe terrain/distance and occupied-space rejection. Three real peers verify target selection, down exclusion and center math. |
+| Health bars | Selection remains bounded/throttled; projection redraws every rendered frame after camera movement, using interpolated enemy transform when available. |
+| Bounds/routes | Saltglass playable radius extends to 220 with its visible skirt removed. Classic starts Thornmeadow. Reef prefix remains Lumenreef, Saltglass, Stormwatch; longer routes append later maps. Actual classic-after-expedition and route audits pass. |
+| Co-op stats | Team DPS and Tab scoreboard with kills, bosses, downs, terminal deaths, damage, ten-second DPS, restored health, damage taken, level and gold. Three actual peers verify field replication. EN/AR screenshots reviewed. Custom keybindings are preserved; only untouched old Tab/Y pairs migrate. |
+| Music | Original sample-free title waltz replaces only title.ogg; map tracks remain available for the user's review. Technical audio measurements recorded in TITLE-WALTZ-AUDIO.json. |
+| Distribution | Versioned What's New with Arabic; final Windows portable/installer, manifest/embedded-helper/hash verification, Git push and GitHub publication. SHA-256 helper no longer depends on PowerShell's module autoload. |
 
-- Reef map, continuous swimming, surface waves/breach, terrain/mountain borders, long cave, marine enemies and resource collection: existing implementation; previous runtime verification is recorded in UNDERWATER-IMPLEMENTATION.md and EXPEDITION-FIX-VERIFICATION.md. Subjective audio/feel are not automatically verified.
-- Expanded city, large original giants, independent LMB/RMB hooks, attached Space boost and Dash core strike: shipped baseline. This does not include rooftop auto-selection.
-- Map selection, map-default Nori/Vesper with manual character choice, corrected Classic start: shipped.
-- Flick replacement Stormfang Blades: shipped 1.4.2, including saved weapon identity and stationary/3D/outward/return tests.
-- Minigore credits and GitHub update notification/download/Windows handoff: shipped. Mock/temporary-install tests passed; installation over a real player copy is not established.
-- Windows installer/portable release: published and artifact checks recorded in RELEASE-1.4.2.md.
-
-## Explicit unfinished request from this chat
-
-- [x] Hook clicks automatically acquire the nearest suitable high rooftop, at the top of the building. Player.Grapple now calls CityRooftops.Find for each side; Arena registers/clears its roofs. RooftopCheck and DualHookCheck pass in the actual engine, covering low/sky aim, nearest/higher preference, occlusion, reach, side independence, query budget, stable held anchors and teardown. Not yet released.
-
-## Broader authorized polish
-
-All 36 entries in EXPEDITION-POLISH-PLAN.md remain the detailed acceptance list. The plan includes unverified draft code; neither the plan nor a successful release proves those entries complete. They must be reconciled against 1.4.2 before continuing.
-
-- [ ] Loading/prewarming and retained-quality performance checks.
-- [ ] Optional/replayable tutorial, temporary prompts and clear cave/warden objectives.
-- [ ] Hit feedback, target reactions and original main-menu music.
-- [ ] Jump/Dash hook boost, hold/toggle settings, side-aware rooftop targeting, moving giant/boundary anchors, visible traveling hook launch and sound.
-- [ ] Anime-inspired city architecture, giant crowd/collision behavior and navigable platforms.
-- [ ] Vesper dual swords and Nori shotgun with actual attacks, upgrades, sound and effects.
-- [ ] Steerable underwater dash and smooth enemy-health-bar projection.
-- [ ] Recognizable wreck, licensed sea boss/cave guardian assets and clearer cave route/interior.
-- [ ] Global XP/gold visual replacements and collectible vegetation/crystals across maps.
-- [ ] Safe rest-room combat suppression; target-dependent attacks.
-- [ ] Co-op nearest-living-player targeting, averaged spawn anchor, teammate DPS and scoreboard replication.
-- [ ] Saltglass playable-edge consistency, Reef phase-three Harbour and route-count/scaling verification.
-- [ ] Full/compact non-pausing co-op upgrade layouts and rest-panel overlap tests.
-- [ ] Real-engine, EN/AR visual and multiplayer regression checks for the final combined build.
-
-Android/Roblox remain postponed; web cancelled; live Steam/manual listening require real acceptance and are not claimed complete. No third-party outreach is authorized.
-
-## Execution status
-
-Implementation chat was idle at audit start. A resume request with this acceptance scope and rooftop priority was dispatched. Confirm actual active status separately; dispatch alone is not proof of implementation.
+Human new-player sessions and manual listening remain unverified; protocols are
+prepared. Live Steam and installing over a real existing player copy are also
+unverified. These limits must remain explicit and are not replaced by automated
+checks. No third-party outreach or interruption of the user's live game occurred.
+Android/Roblox remain postponed; web remains cancelled. Ancient Portal was only
+evaluated and is not included in this release.

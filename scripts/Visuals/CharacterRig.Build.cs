@@ -143,17 +143,28 @@ public sealed partial class CharacterRig
     {
         _model = new BuiltModel { Height = spec.Height };
         Node3D inst = spec.Scene!.Instantiate<Node3D>();
-        _hips.AddChild(inst);
-        inst.Rotation = new Vector3(0f, spec.SceneYaw, 0f);
+        Node3D visual = inst;
+        if (spec.PreserveSceneRootTransform)
+        {
+            visual = new Node3D { Name = "ImportedNormalization" };
+            visual.AddChild(inst);
+        }
+        _hips.AddChild(visual);
+        visual.Rotation = new Vector3(0f, spec.SceneYaw, 0f);
 
         float scale = spec.SceneScale;
         if (scale <= 0f)
         {
-            Aabb box = MeasureScene(inst);
+            Aabb box = MeasureScene(visual);
+            spec.SceneSourceBounds = box;
             scale = box.Size.Y > 0.001f ? spec.Height / box.Size.Y : 1f;
+            if (spec.PreserveSceneRootTransform)
+                spec.SceneOffset = new Basis(Vector3.Up, spec.SceneYaw)
+                    * new Vector3(-box.GetCenter().X * scale, -box.Position.Y * scale, -box.GetCenter().Z * scale);
             spec.SceneScale = scale; // measured once per spec
         }
-        inst.Scale = Vector3.One * scale;
+        visual.Scale = Vector3.One * scale;
+        if (spec.PreserveSceneRootTransform) visual.Position = spec.SceneOffset;
         _player = FindPlayer(inst);
         if (_player is not null)
         {
@@ -168,6 +179,7 @@ public sealed partial class CharacterRig
         var geoms = new System.Collections.Generic.List<GeometryInstance3D>();
         CollectGeoms(inst, geoms);
         _geoms = geoms.ToArray();
+        if (spec.SceneAlbedoFloor > 0) ImportedMaterialVisibility.Apply(_geoms, spec.SceneAlbedoFloor);
 
         if (spec.Crown)
         {

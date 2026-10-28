@@ -33,6 +33,7 @@ public static class AwarenessLayer
         overlay.AddChild(new EnemyHealthBars());
         overlay.AddChild(new GrappleSpeedLines());
         overlay.AddChild(new CityTraversalHint());
+        overlay.AddChild(new ExpeditionObjectivesHud());
         overlay.AddChild(new AwarenessAlerts());
 
         var top = new CanvasLayer { Name = "ScoreboardUI", Layer = 30 };
@@ -40,3 +41,4 @@ public static class AwarenessLayer
         top.AddChild(new ScoreboardPanel());
     }
 }
+

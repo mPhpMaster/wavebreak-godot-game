@@ -43,18 +43,19 @@ public sealed partial class NetSession
             }
             else
             {
-                (int downs, int level, int taken, int gold) = RunScoreboard.LocalSelf();
-                RpcId(1, MethodName.ScoreSelf, downs, level, taken, gold);
+                (int downs, int level, int taken, int gold, int healed) = RunScoreboard.LocalSelf();
+                RpcId(1, MethodName.ScoreSelf, downs, level, taken, gold, healed);
             }
         }
         StepAwarenessTest();
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void ScoreSelf(int downs, int level, int taken, int gold)
+    private void ScoreSelf(int downs, int level, int taken, int gold, int healed)
     {
         if (!Coop.IsHost) return;
-        RunScoreboard.ApplySelf(Multiplayer.GetRemoteSenderId(), downs, level, taken, gold);
+        RunScoreboard.ApplySelf(Multiplayer.GetRemoteSenderId(), Mathf.Clamp(downs, 0, 1000000), Mathf.Clamp(level, 1, 1000000),
+            Mathf.Clamp(taken, 0, 1000000000), Mathf.Clamp(gold, 0, 1000000000), Mathf.Clamp(healed, 0, 1000000000));
     }
 
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

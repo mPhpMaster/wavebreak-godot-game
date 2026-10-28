@@ -36,6 +36,8 @@ public static partial class Catalog
         baseList.AddRange(BuildExpansionEnemies());
         baseList.AddRange(BuildCuteEnemies());   // Data/Catalog.Enemies3.cs
         baseList.AddRange(CityEnemies());
+        baseList.Add(CaveGuardianDefinition());
+        baseList.Add(LeviathanDefinition(baseList.Find(enemy => enemy.Id == "undertow_oracle")!));
         return baseList;
     }
 

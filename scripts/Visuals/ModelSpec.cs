@@ -44,6 +44,7 @@ public enum HeldItem { None, Sword, Club, Staff, Spear, Shield, Blades, Claws, B
 public sealed class ModelSpec
 {
     public string Id = "model";
+    public bool NativeSwimmingClip;
     public BodyType Body = BodyType.Biped;
 
     /// <summary>Standing height in metres, feet to top of head (not counting hats
@@ -125,6 +126,10 @@ public sealed class ModelSpec
     /// <summary>Uniform scale applied to the imported scene to reach <see cref="Height"/>.
     /// 0 means "measure the scene's AABB once and fit it".</summary>
     public float SceneScale;
+    public bool PreserveSceneRootTransform;
+    public Vector3 SceneOffset;
+    public Aabb SceneSourceBounds;
+    public float SceneAlbedoFloor;
 
     /// <summary>Yaw (radians) applied to the imported scene so it faces -Z.</summary>
     public float SceneYaw;
@@ -181,3 +186,4 @@ public sealed class ModelSpec
 
 /// <summary>Animation slots for imported scenes.</summary>
 public enum AnimSlot { Idle, Walk, Run, Attack, Windup, Hit, Death, Jump, Fall, Dash, Slide, Slam }
+

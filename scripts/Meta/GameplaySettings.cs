@@ -41,6 +41,7 @@ public static class GameplaySettings
     private static bool _loaded;
 
     public static bool CompactLevelUp { get; private set; }
+    public static bool ToggleCityHooks { get; private set; }
     public static bool AutoPick { get; private set; }
     public static AutoPickRule Rule { get; private set; } = AutoPickRule.BestRarity;
 
@@ -80,6 +81,7 @@ public static class GameplaySettings
         var cfg = new ConfigFile();
         if (cfg.Load(Path) != Error.Ok) return;
         CompactLevelUp = cfg.GetValue(Section, "compact_levelup", false).AsBool();
+        ToggleCityHooks = cfg.GetValue(Section, "toggle_city_hooks", false).AsBool();
         AutoPick = cfg.GetValue(Section, "auto_pick", false).AsBool();
         Rule = ParseRule(cfg.GetValue(Section, "auto_pick_rule", RuleIds[0]).AsString());
         AutoPickFromLevel = Math.Clamp(cfg.GetValue(Section, "auto_pick_from_level", 1).AsInt32(), 1, 999);
@@ -94,6 +96,7 @@ public static class GameplaySettings
     public static string IdOf(AutoPickRule rule) => RuleIds[Math.Clamp((int)rule, 0, RuleIds.Length - 1)];
 
     public static void SetCompact(bool on) { Load(); CompactLevelUp = on; Save(); }
+    public static void SetToggleCityHooks(bool on) { Load(); ToggleCityHooks = on; Save(); }
 
     /// <summary>--check-input-guards: switch the layout in memory only.</summary>
     internal static void ForceCompactForTest(bool on) { Load(); CompactLevelUp = on; }
@@ -108,6 +111,7 @@ public static class GameplaySettings
         var cfg = new ConfigFile();
         cfg.Load(Path);   // keep the other sections
         cfg.SetValue(Section, "compact_levelup", CompactLevelUp);
+        cfg.SetValue(Section, "toggle_city_hooks", ToggleCityHooks);
         cfg.SetValue(Section, "auto_pick", AutoPick);
         cfg.SetValue(Section, "auto_pick_rule", IdOf(Rule));
         cfg.SetValue(Section, "auto_pick_from_level", AutoPickFromLevel);

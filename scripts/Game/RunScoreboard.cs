@@ -5,16 +5,6 @@ using Wavebreak.Net;
 
 namespace Wavebreak.Game;
 
-/// <summary>One player's numbers for the run.</summary>
-public sealed class ScoreLine
-{
-    public long Id;
-    public string Name = "";
-    public int Slot;
-    public int Kills, BossKills, Downs, Revives, Level = 1, GoldEarned;
-    public float DamageDealt, DamageTaken;
-}
-
 /// <summary>
 /// Per-player run statistics for the scoreboard (hold Y) and the results
 /// screen.
@@ -36,7 +26,7 @@ public sealed class ScoreLine
 /// Static and reset by <see cref="Begin"/> at every run start, like the
 /// event bus; nothing here outlives the run scene in a way that matters.
 /// </summary>
-public static class RunScoreboard
+public static partial class RunScoreboard
 {
     private static readonly Dictionary<long, ScoreLine> Lines = new();
     private static readonly List<ScoreLine> Sorted = new();
@@ -53,6 +43,7 @@ public static class RunScoreboard
     public static void Begin()
     {
         Lines.Clear();
+        BeginMeters();
         _localTaken = 0f;
         _localGold = 0;
         _dirty = true;
@@ -117,7 +108,9 @@ public static class RunScoreboard
     public static void NoteHit(long by, float amount)
     {
         if (!Authority || by == 0 || amount <= 0f) return;
+        if (!float.IsFinite(amount)) return;
         Line(by).DamageDealt += amount;
+        MeterHit(by, amount);
     }
 
     /// <summary>Host / single-player: <paramref name="by"/> landed a killing blow.</summary>
@@ -139,13 +132,14 @@ public static class RunScoreboard
     }
 
     /// <summary>Host: a client's own numbers arrived.</summary>
-    public static void ApplySelf(long id, int downs, int level, int taken, int gold)
+    public static void ApplySelf(long id, int downs, int level, int taken, int gold, int healed)
     {
         ScoreLine l = Line(id);
         l.Downs = downs;
         l.Level = level;
         l.DamageTaken = taken;
         l.GoldEarned = gold;
+        l.HealingRestored = healed;
         Version++;
     }
 
@@ -155,40 +149,42 @@ public static class RunScoreboard
     public static void RefreshLocal()
     {
         ScoreLine l = Line(Coop.LocalId);
-        (int downs, int level, int taken, int gold) = LocalSelf();
+        (int downs, int level, int taken, int gold, int healed) = LocalSelf();
         if (l.Downs != downs || l.Level != level || (int)l.DamageTaken != taken || l.GoldEarned != gold) Version++;
         l.Downs = downs;
         l.Level = level;
         l.DamageTaken = taken;
         l.GoldEarned = gold;
+        l.HealingRestored = healed;
     }
 
     /// <summary>This player's downs (a death counts in single-player), level,
     /// damage taken and gold earned.</summary>
-    public static (int Downs, int Level, int Taken, int Gold) LocalSelf()
+    public static (int Downs, int Level, int Taken, int Gold, int Healed) LocalSelf()
     {
         Actors.Player? me = Actors.Player.Instance;
         bool valid = me is not null && GodotObject.IsInstanceValid(me) && me.Health is not null;
-        int downs = valid ? me!.Health.Downs : 0;
+        int downs = valid ? me!.Health!.Downs : 0;
         if (!Coop.Active && valid && !me!.IsAlive) downs = Mathf.Max(downs, 1);
         int level = Progression.Inventory.Current?.Level ?? 1;
-        return (downs, level, Mathf.RoundToInt(_localTaken), _localGold);
+        return (downs, level, Mathf.RoundToInt(_localTaken), _localGold, Mathf.RoundToInt(_localHealing));
     }
 
     // ------------------------------------------------------------ sync
 
-    private const int Stride = 9;
+    private const int Stride = 12;
 
     /// <summary>Host: the whole table, for <c>NetSession.ScoreSync</c>.</summary>
     public static long[] Pack()
     {
-        RefreshLocal();
+        RefreshLocal(); RefreshMeters();
         var d = new long[Lines.Count * Stride];
         int i = 0;
         foreach (ScoreLine l in Lines.Values)
         {
             d[i++] = l.Id; d[i++] = l.Kills; d[i++] = l.BossKills; d[i++] = l.Downs; d[i++] = l.Revives;
             d[i++] = l.Level; d[i++] = (long)l.DamageDealt; d[i++] = (long)l.DamageTaken; d[i++] = l.GoldEarned;
+            d[i++] = (long)l.HealingRestored; d[i++] = (long)(l.Dps * 100); d[i++] = l.Deaths;
         }
         return d;
     }
@@ -210,6 +206,7 @@ public static class RunScoreboard
             ScoreLine l = Line(d[i]);
             l.Kills = (int)d[i + 1]; l.BossKills = (int)d[i + 2]; l.Downs = (int)d[i + 3]; l.Revives = (int)d[i + 4];
             l.Level = (int)d[i + 5]; l.DamageDealt = d[i + 6]; l.DamageTaken = d[i + 7]; l.GoldEarned = (int)d[i + 8];
+            l.HealingRestored = d[i + 9]; l.Dps = d[i + 10] / 100f; l.Deaths = (int)d[i + 11];
         }
         RefreshLocal();
         Version++;
@@ -224,6 +221,7 @@ public static class RunScoreboard
             // Should not happen; keep the line with more on it.
             if (clash.Kills + clash.Level > line.Kills + line.Level) return;
         }
+        if (DamageMeters.Remove(from, out DamageWindow? meter)) DamageMeters[to] = meter;
         line.Id = to;
         if (Coop.NameOf(to) is { } name && !name.StartsWith('#')) line.Name = name;
         Lines[to] = line;
@@ -240,3 +238,4 @@ public static class RunScoreboard
         return $"{v:0}";
     }
 }
+

@@ -25,6 +25,7 @@ public sealed partial class ReefHarvest : Node3D
     public override void _PhysicsProcess(double delta)
     {
         if (Count != 0) return;
+        if (!Arena.Current.Underwater) { PopulateLand(); SetPhysicsProcess(false); return; }
         for (int i = 0; i < 28; i++)
         {
             float angle = i * 2.39996f;
@@ -62,20 +63,27 @@ public sealed partial class ReefHarvest : Node3D
         SetPhysicsProcess(false);
     }
 
-    private void Add(Vector3 at, Vector3 normal = default)
+    private void Add(Vector3 at, Vector3 normal = default, HarvestKind? kind = null)
     {
         if (normal == Vector3.Zero) normal = Vector3.Up;
         int id = _defs.Count;
-        bool crystal = id % 2 == 0;
+        HarvestKind resource = kind ?? (id % 2 == 0 ? HarvestKind.Crystal : HarvestKind.Plant);
+        bool crystal = resource == HarvestKind.Crystal;
         PickupKind reward = crystal ? (id % 4 == 0 ? PickupKind.Xp : PickupKind.Gold) : PickupKind.Health;
-        var def = new ReefHarvestDef(id, at, normal, crystal, reward, reward == PickupKind.Xp ? 6 : reward == PickupKind.Gold ? 4 : 0.05f);
+        var def = new ReefHarvestDef(id, at, normal, crystal, reward, reward == PickupKind.Xp ? 6 : reward == PickupKind.Gold ? 4 : 0.05f, resource);
         _defs.Add(def);
         var visual = new ReefHarvestVisual(def); _visuals.Add(visual); AddChild(visual);
         if (_depleted.Contains(id)) visual.Deplete(false);
     }
 
+    private float _focusIn;
+    private int _focused = -1;
     public override void _Process(double delta)
     {
+        _focusIn -= (float)delta;
+        bool interact = Input.IsActionJustPressed("interact");
+        if (_focusIn > 0 && !interact) return;
+        _focusIn = .1f;
         if (Player.Instance is not { IsAlive: true } player) return;
         int focus = -1; float best = 3.5f * 3.5f;
         for (int i = 0; i < _defs.Count; i++)
@@ -83,7 +91,9 @@ public sealed partial class ReefHarvest : Node3D
             float distance = player.CenterPosition.DistanceSquaredTo(_defs[i].Position + _defs[i].Normal);
             if (!_visuals[i].Spent && distance < best) { best = distance; focus = i; }
         }
-        for (int i = 0; i < _visuals.Count; i++) _visuals[i].Focus(i == focus);
+        if (_focused >= 0 && _focused != focus) _visuals[_focused].Focus(false);
+        if (focus >= 0) _visuals[focus].Focus(true);
+        _focused = focus;
         if (focus < 0 || Net.Coop.LocalHold || !Input.IsActionJustPressed("interact")) return;
         if (Net.Coop.InRun) Net.NetSession.Instance?.AskReefHarvest(focus);
         else TryHarvest(focus, player.CenterPosition);

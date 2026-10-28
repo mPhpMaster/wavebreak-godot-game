@@ -16,6 +16,21 @@ public sealed partial class ReefHarvestVisual : Node3D
     public override void _Ready()
     {
         _growth = new Node3D(); AddChild(_growth);
+        if (!Game.Arena.Current.Underwater)
+        {
+            PropFactory.Kind kind = _def.Kind == HarvestKind.Crystal ? PropFactory.Kind.Crystal
+                : _def.Kind == HarvestKind.Mushroom ? PropFactory.Kind.Mushroom : PropFactory.Kind.Flower;
+            PropTheme theme = PropTheme.Get(Game.Arena.Current.Theme);
+            float scale = theme.UsesKit(kind) && theme.KitScale.TryGetValue(kind, out float fit) ? fit : 1;
+            _growth.AddChild(new MeshInstance3D { Mesh = PropFactory.PropMesh(kind, theme, _def.Id % 4),
+                MaterialOverride = ToonMaterials.Prop, Scale = Vector3.One * scale });
+        }
+        else BuildReefGrowth();
+        BuildPrompt();
+    }
+
+    private void BuildReefGrowth()
+    {
         var kit = new MeshKit();
         for (int i = 0; i < 5; i++)
         {
@@ -30,6 +45,10 @@ public sealed partial class ReefHarvestVisual : Node3D
             }
         }
         _growth.AddChild(new MeshInstance3D { Mesh = kit.ToMesh(), MaterialOverride = ToonMaterials.Prop });
+    }
+
+    private void BuildPrompt()
+    {
         AddChild(new MeshInstance3D { Mesh = new TorusMesh { InnerRadius = 0.65f, OuterRadius = 0.74f, Rings = 20, RingSegments = 5 },
             Position = Vector3.Up * 0.08f, MaterialOverride = Game.Arena.Flat(new Color(0.3f, 0.95f, 0.7f), 1) });
         _label = new Label3D { Position = Basis.Inverse() * (Vector3.Up * 2), FontSize = 32, PixelSize = 0.009f,
@@ -43,7 +62,7 @@ public sealed partial class ReefHarvestVisual : Node3D
         if (!show || Spent) return;
         string reward = _def.Reward == Actors.PickupKind.Xp ? "+6 XP" : _def.Reward == Actors.PickupKind.Gold ? "+4 gold" : "+5% health";
         string key = InputMap.ActionGetEvents("interact").Count > 0 ? InputMap.ActionGetEvents("interact")[0].AsText() : "E";
-        _label.Text = Loc.F(_def.Crystal ? "{0}: harvest crystal ({1})" : "{0}: gather reef herb ({1})", key, Loc.T(reward));
+        _label.Text = Loc.F(_def.Crystal ? "{0}: harvest crystal ({1})" : Game.Arena.Current.Underwater ? "{0}: gather reef herb ({1})" : "{0}: gather plant ({1})", key, Loc.T(reward));
     }
 
     public void Deplete(bool feedback)

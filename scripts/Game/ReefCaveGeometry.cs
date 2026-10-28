@@ -37,7 +37,7 @@ public static class ReefCaveGeometry
             }
         tool.GenerateNormals();
         ArrayMesh mesh = tool.Commit();
-        var material = Game.Arena.Flat(new Color(0.18f, 0.3f, 0.34f), 0.08f);
+        var material = Game.Arena.Flat(new Color(0.25f, 0.39f, 0.42f), 0.15f);
         material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
         parent.AddChild(new MeshInstance3D { Name = "WindingCliffCave", Mesh = mesh, MaterialOverride = material });
         var body = new StaticBody3D { CollisionLayer = 1, CollisionMask = 1 };
@@ -45,12 +45,13 @@ public static class ReefCaveGeometry
         shape.BackfaceCollision = true;
         body.AddChild(new CollisionShape3D { Shape = shape });
         parent.AddChild(body);
+        ReefCaveWayfinding.Build(parent, path);
         PortalRocks(parent, path[0], rights[0], ups[0], false);
         PortalRocks(parent, path[^1], rights[^1], ups[^1], true);
         var coral = Arena.Flat(new Color(0.38f, 0.85f, 0.95f), 1.4f);
         for (int i = 4; i < path.Length - 3; i += 5)
         {
-            parent.AddChild(new MeshInstance3D { Mesh = new PrismMesh { Size = new Vector3(0.7f, 1.8f, 0.8f) },
+            parent.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(1.3f, .12f, .18f) },
                 Position = path[i] + new Vector3(i % 2 == 0 ? -3 : 3, -ReefCavePath.Width(i) + 1.3f, 0), MaterialOverride = coral });
             if (i % 2 == 0) parent.AddChild(new OmniLight3D { Position = path[i], LightColor = new Color(0.2f, 0.8f, 1),
                 OmniRange = 15, LightEnergy = 0.65f, ShadowEnabled = false });
@@ -81,3 +82,5 @@ public static class ReefCaveGeometry
         }
     }
 }
+
+

@@ -9,7 +9,9 @@
 #endif
 #define AppPublisher "mPhpMaster"
 #define AppExe "Wavebreak.exe"
-#define Source "..\build\windows"
+#ifndef Source
+  #define Source "..\build\windows"
+#endif
 
 [Setup]
 AppId={{6F1C2E7A-8B4D-4E2A-9C61-57A0B3D9E1F4}
@@ -29,7 +31,7 @@ OutputDir=..\build\installer
 OutputBaseFilename=Wavebreak-Setup-{#AppVersion}
 SetupIconFile=wavebreak.ico
 UninstallDisplayIcon={app}\wavebreak.ico
-Compression=lzma2/ultra64
+Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 ShowLanguageDialog=auto
@@ -57,3 +59,5 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+
+

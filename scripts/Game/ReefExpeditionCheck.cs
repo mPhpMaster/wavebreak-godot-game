@@ -109,8 +109,9 @@ public sealed partial class ReefExpeditionCheck : Node
         bool marine = true;
         foreach (string id in Stages.Lumenreef.EnemyIds)
             if (Catalog.EnemyById(id) is { } def) marine &= EnemyVisuals.SpecFor(def).Id.StartsWith("reef:", StringComparison.Ordinal);
-        marine &= EnemyVisuals.SpecFor(Catalog.EnemyById(Stages.Lumenreef.BossId)!).Id.StartsWith("reef:", StringComparison.Ordinal);
-        Check(marine, "all reef ordinary/elite/boss models resolve through marine-only overrides");
+        ModelSpec boss = EnemyVisuals.SpecFor(Catalog.EnemyById(Stages.Lumenreef.BossId)!);
+        marine &= boss.Id == "boss:wertt-leviathan" && boss.IsImported && boss.NativeSwimmingClip;
+        Check(marine, "reef roster uses marine overrides and the licensed animated Leviathan boss");
     }
 
     private void Harvest()
@@ -128,3 +129,4 @@ public sealed partial class ReefExpeditionCheck : Node
 
     public override void _ExitTree() => Input.ActionRelease("jump");
 }
+

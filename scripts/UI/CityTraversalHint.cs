@@ -7,6 +7,8 @@ namespace Wavebreak.UI;
 
 public sealed partial class CityTraversalHint : Control
 {
+    private readonly TraversalPractice _practice = new();
+    private readonly TraversalHelpSession _help = new();
     private float _refresh;
     private Label _text = null!;
     private Label _reticle = null!;
@@ -17,7 +19,7 @@ public sealed partial class CityTraversalHint : Control
         _text = new Label
         {
             AnchorLeft = 0.15f, AnchorRight = 0.85f, AnchorTop = 1f, AnchorBottom = 1f,
-            OffsetTop = -165f, OffsetBottom = -95f,
+            OffsetTop = -205f, OffsetBottom = -100f,
             HorizontalAlignment = HorizontalAlignment.Center, MouseFilter = MouseFilterEnum.Ignore,
         };
         _text.AddThemeFontSizeOverride("font_size", 16);
@@ -41,6 +43,9 @@ public sealed partial class CityTraversalHint : Control
         using var timing = Prof.Scope("UI.cityHint");
         Visible = Arena.IsCity && Player.Instance is { IsAlive: true };
         if (!Visible || Player.Instance is not { } player) return;
+        _help.Tick((float)delta);
+        _practice.Tick(player, true);
+        _text.Visible = _help.Visible || player.CoreStrikeFeedback.Length > 0;
         _refresh -= (float)delta;
         if (_refresh > 0f) return;
         _refresh = .1f;
@@ -48,10 +53,18 @@ public sealed partial class CityTraversalHint : Control
         string hook = Keybinds.Describe(Keybinds.Get("city_hook_left", 0));
         string jump = Keybinds.Describe(Keybinds.Get("jump", 0));
         string strike = Keybinds.Describe(Keybinds.Get("dash", 0));
-        _text.Text = Loc.F("Hold {0}: LEFT hook  |  Hold {1}: RIGHT hook", hook, right)
+        string hooks = GameplaySettings.ToggleCityHooks
+            ? Loc.T("Click to toggle grapple") + " · " + Loc.F("Left: {0}  |  Right: {1}", hook, right)
+            : Loc.F("Hold {0}: LEFT hook  |  Hold {1}: RIGHT hook", hook, right);
+        _text.Text = hooks
             + "\n" + Loc.F("{0}: attached BOOST  |  {1}: dash / airborne core strike  |  Boost ready in {2:0.0}s", jump, strike, player.HookBoostCooldown)
             + "\n" + Loc.F("Left: {0}  |  Right: {1}", Loc.T(player.LeftHookAttached ? "Attached" : "Free"), Loc.T(player.RightHookAttached ? "Attached" : "Free"));
+        _text.Text = Loc.T(_practice.Instruction) + "\n" + _text.Text;
+        _text.Text += "\n" + Loc.T("F2: skip help  |  F1: replay help");
         if (player.CoreStrikeFeedback.Length > 0) _text.Text = Loc.T(player.CoreStrikeFeedback);
         _reticle.Modulate = player.Grappling ? Colors.Gold : player.HookTargetAvailable ? Colors.Aquamarine : Colors.White;
     }
 }
+
+
+

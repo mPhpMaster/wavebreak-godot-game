@@ -1,0 +1,13 @@
+Sea Levithan, Rigged, Animated, Free by wErT (@wErTT)
+Source: https://sketchfab.com/3d-models/sea-levithan-rigged-animated-free-d8bdc555c8b2472d9a2058dd55036c3d
+Creator: https://sketchfab.com/wErTT
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+Downloaded through the official Sketchfab GLB download after user sign-in.
+
+The original leviathan.glb remains unmodified for provenance.
+Wavebreak derivative leviathan-normalized.glb preserves the source mesh topology
+and material palette, removes the incompatible nonuniform armature hierarchy,
+applies the source orientation and uniform normalization, and adds a new original
+looping swimming morph animation. Runtime material brightness/emission is raised
+for underwater readability. Reproduction: tools/normalize_leviathan.py with Blender.

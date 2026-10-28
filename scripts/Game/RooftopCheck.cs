@@ -30,7 +30,14 @@ public sealed partial class RooftopCheck : Node
             _player.Teleport(Vector3.Up * .2f);
             PlayerCamera.Instance!.FaceDirection(Vector3.Forward);
             PlayerCamera.Instance.SetPitchDegrees(-60);
-            Input.ActionPress("city_hook_left"); await Wait(.16f);
+            Input.ActionPress("city_hook_left"); await Wait(.03f);
+            Require(_player.LeftHookFiring && !_player.LeftHookAttached
+                && _player.HookTip(HookSide.Left).DistanceTo(_player.HookOrigin(HookSide.Left)) > .1f
+                && _player.HookTip(HookSide.Left).DistanceTo(_player.LeftHookAnchor) > .1f,
+                "launch tip travels visibly before the tether attaches");
+            foreach (string arg in OS.GetCmdlineUserArgs())
+                if (arg.StartsWith("--roof-shot=")) await Screenshot.Capture(GetTree(), this, arg["--roof-shot=".Length..]);
+            await Wait(.14f);
             Require(_player.LeftHookAttached && _player.LeftHookAnchor.Y >= 12.9f, "low camera aim acquires a rooftop, not a low wall");
             Vector3 left = _player.LeftHookAnchor;
             PlayerCamera.Instance.SetPitchDegrees(75);

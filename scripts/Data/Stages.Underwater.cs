@@ -17,7 +17,7 @@ public static partial class Stages
         Chests = 7, Breakables = 32, ChargeShrines = 3, ChallengeShrines = 2,
         HazardPools = 14, HazardRadius = 4.5f, HazardSlow = 0.8f, HazardDamage = 0.025f,
         HazardName = "luminous brine", HazardColor = new Color(0.35f, 0.95f, 0.64f),
-        BossId = "undertow_oracle", MusicId = "tidal",
+        BossId = "reef_leviathan", MusicId = "tidal",
         EnemyIds = new[]
         {
             "mote", "brine_leech", "bloat_polyp", "sidle_crab", "lantern_jelly",

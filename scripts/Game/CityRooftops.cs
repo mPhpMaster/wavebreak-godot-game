@@ -14,8 +14,8 @@ public static class CityRooftops
     public static int Count => Roofs.Count;
     public static void Begin(Node3D owner) { _owner = owner; Roofs.Clear(); }
     public static void End(Node3D owner) { if (_owner == owner) { Roofs.Clear(); _owner = null; } }
-    public static void Register(StaticBody3D body, Vector2 at, float width, float depth, float height)
-        => Roofs.Add(new(body, new Vector3(at.X, 0f, at.Y), new Vector2(width, depth) * .5f, height));
+    public static void Register(StaticBody3D body, Vector2 at, float width, float depth, float height, float roofRise = 0)
+        => Roofs.Add(new(body, new Vector3(at.X, 0f, at.Y), new Vector2(width, depth) * .5f, height, roofRise));
 
     public static bool Find(Node3D world, Vector3 player, Vector3 forward, HookSide side, out Vector3 anchor, Vector3? otherAnchor = null)
     {
@@ -34,6 +34,7 @@ public static class CityRooftops
             Vector3 point = center;
             point.X = Mathf.Clamp(player.X, center.X - roof.Half.X + .025f, center.X + roof.Half.X - .025f);
             point.Z = Mathf.Clamp(player.Z, center.Z - roof.Half.Y + .025f, center.Z + roof.Half.Y - .025f);
+            point.Y -= roof.RoofRise * Mathf.Abs(point.X - center.X) / roof.Half.X;
             point.Y += .12f;
             float distance = player.DistanceTo(point);
             if (distance < 3f || distance > GrapplePhysics.Range) continue;
@@ -52,3 +53,4 @@ public static class CityRooftops
         return false;
     }
 }
+

@@ -189,6 +189,7 @@ public sealed partial class Pickup : Node3D, IPooled
         Live.Clear();
         _pool?.Clear();
         _pool = null;
+        ClearSupportQuery();
     }
 
     /// <summary>
@@ -254,8 +255,8 @@ public sealed partial class Pickup : Node3D, IPooled
         // Orbs rest at a fixed height above the floor rather than at whatever
         // height the kill happened at, so a drop from an airborne enemy still
         // ends up somewhere reachable.
-        _restY = MathF.Max(RestHeight, MathF.Min(position.Y, 3f));
-        if (Game.Arena.Current.Underwater) _restY = Visuals.ReefPlacement.SupportBelow(this, position) + 0.04f;
+        _restY = FindSupport(position);
+        _supportIn = 0.15f;
 
         // De-synchronises the bob. Without it every orb on screen rises and falls
         // in lockstep, which reads as a rendering glitch rather than as motion.
@@ -296,7 +297,7 @@ public sealed partial class Pickup : Node3D, IPooled
             ? 1f
             : Mathf.Clamp(0.85f + MathF.Sqrt(_value) * 0.16f, 0.85f, 2.1f);
         _mesh.Scale = new Vector3(scale, scale, scale);
-        DressReef();
+        DressPickupVisual();
     }
 
     // ------------------------------------------------------------------- loop
@@ -385,7 +386,7 @@ public sealed partial class Pickup : Node3D, IPooled
             // stacking every orb on one pixel.
             _velocity.Y -= Gravity * dt;
             position += _velocity * dt;
-            if (_reef) _restY = Visuals.ReefPlacement.SupportBelow(this, position with { Y = Mathf.Max(position.Y, _restY + 0.1f) }) + 0.04f;
+            UpdateSupport(dt, position);
 
             if (position.Y <= _restY && _velocity.Y <= 0f)
             {
@@ -398,12 +399,11 @@ public sealed partial class Pickup : Node3D, IPooled
         }
         else
         {
-            position.Y = _restY + (_reef && _kind == PickupKind.Gold ? 0 : BobHeight * MathF.Sin(_age * BobRate + _phase));
+            position.Y = _restY + (_kind == PickupKind.Gold ? 0 : BobHeight * MathF.Sin(_age * BobRate + _phase));
             _mesh.Rotation = _tilt + new Vector3(0f, _age * SpinRate, 0f);
         }
 
         GlobalPosition = position;
-        StepReefVisual();
         return false;
     }
 

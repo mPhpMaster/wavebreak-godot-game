@@ -49,6 +49,7 @@ public static class ExpeditionModels
         lower.Tube(Vector3.Zero, (end - bend) * b.H, width * b.H, width * b.H, lowerColor);
         lower.Ellipsoid(new Transform3D(Basis.Identity, (end - bend) * b.H),
             new Vector3(fin ? 0.115f : width, 0.055f, arm ? 0.06f : 0.13f) * b.H, lowerColor);
+        if (arm) ExpeditionEquipment.Add(lower, (end - bend) * b.H, b.H, fin, side);
         b.Limb(arm, side, joint * b.H - b.HipsOffset, bend * b.H - b.HipsOffset, upper, lower);
     }
 

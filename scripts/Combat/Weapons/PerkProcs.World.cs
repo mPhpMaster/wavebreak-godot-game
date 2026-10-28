@@ -39,7 +39,7 @@ public sealed partial class PerkProcs
     {
         int lw = L(Wake);
         _wakeFor -= dt;
-        if (lw > 0 && (p.IsDashing || _wakeFor > 0f))
+        if (lw > 0 && (p.IsDashing || _wakeFor > 0f) && _main.Weapons.HasAttackTarget(Wake.V(2, lw)))
         {
             Vector3 feet = p.GlobalPosition;
             float radius = Wake.V(2, lw) * 0.5f;

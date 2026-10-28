@@ -265,6 +265,7 @@ public sealed partial class EnemyManager
     {
         if (defIndex < 0 || defIndex >= _pools.Count || Net.Coop.IsClient) return null;
         if (Visuals.CityGiantModels.IsGiant(_defs[defIndex]) && !Game.Arena.IsCity) return null;
+        if (Net.Coop.IsHost) around = SpawnAnchor(around);
 
         Pool<Enemy> pool = _pools[defIndex];
         Enemy? enemy = pool.Get();
@@ -277,6 +278,7 @@ public sealed partial class EnemyManager
             return null;
         }
 
+        if (!SpawnSpaceFree(point, _defs[defIndex].Radius)) { _pools[defIndex].Release(enemy); return null; }
         Activate(defIndex, enemy, point);
         return enemy;
     }
@@ -335,3 +337,5 @@ public sealed partial class EnemyManager
     }
 
 }
+
+

@@ -53,7 +53,7 @@ public sealed partial class Enemy
         _flashTimer = FlashDuration;
         _rig?.PlayHit();
 
-        if (info.Knockback > 0f && _act != Act.Dash) AddKnockback(info.Direction, info.Knockback);
+        if (!IsCityGiant && info.Knockback > 0f && _act != Act.Dash) AddKnockback(info.Direction, info.Knockback);
 
         if (_health <= 0f) Die();
         else CheckPhase();
@@ -118,6 +118,7 @@ public sealed partial class Enemy
 
     private void UpdateFlash(float dt)
     {
+        RefreshWounds();
         if (_flashTimer <= 0f) return;
         _flashTimer -= dt;
         ApplyFlash(_flashTimer <= 0f ? 0f : _flashTimer / FlashDuration);
@@ -429,3 +430,5 @@ public sealed partial class Enemy
         }
     }
 }
+
+

@@ -213,6 +213,7 @@ public sealed partial class PerkProcs : Node
         }
 
         TickStats(p, dt);
+        if (_main.Stages.InRestRoom) { SuspendCombatEffects(); return; }
         TickWake(p, dt);
         TickMotes(p, dt);
         TickBubbles(p, dt);
@@ -407,6 +408,7 @@ public sealed partial class PerkProcs : Node
 
     private void OnPlayerMoved(PlayerMoved e)
     {
+        if (InRest) return;
         if (e.Verb == MoveVerb.Dash && L(Wake) > 0) _wakeFor = 0.3f;
     }
 
@@ -414,6 +416,7 @@ public sealed partial class PerkProcs : Node
 
     private void OnXpGained(XpGained e)
     {
+        if (InRest) return;
         int lf = L(Flotsam);
         if (e.Amount <= 0 || lf <= 0 || _moteCd > 0f || _motes.Count >= (int)Flotsam.V(0, lf)) return;
         if (LivePlayer is not { IsAlive: true }) return;

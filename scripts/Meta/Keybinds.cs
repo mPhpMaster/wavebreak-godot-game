@@ -17,7 +17,7 @@ namespace Wavebreak.Meta;
 /// Defaults are captured from the project's InputMap before any override is
 /// applied, so "reset" always means what ships, even after the file has changed.
 /// </summary>
-public static class Keybinds
+public static partial class Keybinds
 {
     private const string FilePath = "user://keybinds.cfg";
 
@@ -114,6 +114,7 @@ public static class Keybinds
             for (int i = 0; i < Slots && i < parts.Length; i++) slots[i] = Decode(parts[i]);
             SetAll(action, slots);
         }
+        MigrateScoreboardKey(cfg);
     }
 
     public static void Save()
@@ -128,6 +129,7 @@ public static class Keybinds
             for (int i = 0; i < Slots; i++) parts[i] = Get(action, i) is { } ev ? Encode(ev) : "";
             cfg.SetValue("keys", action, string.Join(",", parts));
         }
+        cfg.SetValue("keys", "binding_schema", 2);
         cfg.Save(FilePath);
     }
 

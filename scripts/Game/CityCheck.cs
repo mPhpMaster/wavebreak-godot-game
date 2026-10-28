@@ -118,7 +118,7 @@ public sealed partial class CityCheck : Node
             var probe = new CityPathState();
             CityNavigation.Next(giant.GlobalPosition, target.Position, probe, 0.1f);
             GD.Print($"CITY path={string.Join(";", probe.Points)}");
-            for (int i = 0; i < 2400; i++)
+            for (int i = 0; i < 14400; i++)
             {
                 giant.Step(1f / 60f, target.Position, target, Vector3.Zero);
                 if (i % 600 == 599) GD.Print($"CITY navigation at={giant.GlobalPosition} vel={giant.Velocity}");
@@ -187,3 +187,5 @@ public sealed partial class CityCheck : Node
         }
     }
 }
+
+

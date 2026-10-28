@@ -34,7 +34,9 @@ public sealed partial class ReefLandmarks
             Position = origin + new Vector3(-0.7f, 9f, 3f), Rotation = new Vector3(0f, 0f, -0.28f),
             MaterialOverride = Arena.Flat(new Color(0.62f, 0.72f, 0.64f)),
         });
+        ReefWreckDetails.Build(this, origin, wood, dark);
         Label("The Sunken Skipper", origin + Vector3.Up * 15f);
         return origin;
     }
 }
+

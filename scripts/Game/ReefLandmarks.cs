@@ -54,8 +54,8 @@ public sealed partial class ReefLandmarks : Node3D
         {
             if (!_caveGuarded[i] && at.DistanceSquaredTo(_caves[i]) < 30f * 30f)
             {
-                bool first = SpawnGuard("brine_leech", ReefCavePath.Points[38]);
-                bool second = SpawnGuard("silt_eel", ReefCavePath.Points[62]);
+                bool first = SpawnGuard("reef_cave_shark", ReefCavePath.Points[38]);
+                bool second = SpawnGuard("reef_cave_shark", ReefCavePath.Points[62]);
                 _caveGuarded[i] = first || second;
             }
             if (!_caveRewarded[i] && at.DistanceSquaredTo(_caves[i] + Vector3.Up * 1.5f) < 4f * 4f)

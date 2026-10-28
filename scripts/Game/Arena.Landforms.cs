@@ -60,6 +60,7 @@ public sealed partial class Arena
     public override void _ExitTree()
     {
         if (_restoreOcclusion) GetViewport().UseOcclusionCulling = _previousOcclusion;
+        PlatformRoutes.End(this);
         MapBlockers.End(this);
         CityNavigation.End(this);
         CityRooftops.End(this);
@@ -328,3 +329,4 @@ public sealed partial class LighthouseBeam : Node3D
 
     public override void _Process(double delta) => RotateY((float)delta * 0.35f);
 }
+

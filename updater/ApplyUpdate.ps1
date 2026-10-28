@@ -42,7 +42,16 @@ function Assert-Root([string]$Root) {
     }
 }
 function Assert-Hash([string]$Path, [string]$Expected) {
-    if ($Expected -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash -ne $Expected) { throw 'Update integrity verification failed.' }
+    if ($Expected -notmatch '^[a-fA-F0-9]{64}$') { throw 'Update integrity verification failed.' }
+    $stream = [IO.File]::OpenRead($Path)
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try {
+        $actual = [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '')
+        if (-not $actual.Equals($Expected, [StringComparison]::OrdinalIgnoreCase)) { throw 'Update integrity verification failed.' }
+    } finally {
+        $algorithm.Dispose()
+        $stream.Dispose()
+    }
 }
 function Test-Cancelled { return (Test-Path -LiteralPath $cancelPath) -or ($ui -and (Test-UpdateCancelled)) }
 function Assert-NotCancelled { if (Test-Cancelled) { throw [OperationCanceledException]::new('Update cancelled.') } }
@@ -153,3 +162,4 @@ try {
     if ($rootLock) { $rootLock.Dispose() }
     if ($lock) { $lock.Dispose() }
 }
+

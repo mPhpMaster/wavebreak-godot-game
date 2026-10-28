@@ -9,7 +9,7 @@ namespace Wavebreak.Actors;
 ///
 /// Host: the director and the AI run exactly as in single-player, except that
 /// each enemy chases the nearest living player (local or remote) instead of
-/// the one local player, spawns ring around a living player in turn, and
+/// the one local player, spawns ring around the living team center, and
 /// strays are culled by distance to the nearest player.
 ///
 /// Client: no director and no AI. Bodies are puppets the host spawns, moves
@@ -20,7 +20,7 @@ namespace Wavebreak.Actors;
 public sealed partial class EnemyManager
 {
     private readonly List<(Node3D Node, IDamageable Hit)> _targets = new();
-    private int _anchorTurn;
+
 
     /// <summary>Client: put the host's enemy <paramref name="netId"/> on the field.</summary>
     internal Enemy? SpawnPuppet(int defIndex, int netId, Vector3 at, float yaw, float maxHealth, float health)
@@ -64,8 +64,10 @@ public sealed partial class EnemyManager
         float best = float.MaxValue;
         for (int i = 0; i < _targets.Count; i++)
         {
+            if (!GodotObject.IsInstanceValid(_targets[i].Node) || !_targets[i].Hit.IsAlive) continue;
             Vector3 f = _targets[i].Node.GlobalPosition;
-            float d = (f.X - p.X) * (f.X - p.X) + (f.Z - p.Z) * (f.Z - p.Z);
+            float d = Game.Arena.Current.Underwater ? f.DistanceSquaredTo(p)
+                : (f.X - p.X) * (f.X - p.X) + (f.Z - p.Z) * (f.Z - p.Z);
             if (d >= best) continue;
             best = d;
             feet = f;
@@ -74,13 +76,17 @@ public sealed partial class EnemyManager
         return hit is not null;
     }
 
-    /// <summary>Host: where this spawn burst rings — each living player in turn,
-    /// so a player who wanders off still has company.</summary>
+    /// <summary>Host: where this spawn burst rings — the mean of all living players,
+    /// with existing placement checks choosing safe ground.</summary>
     private Vector3 SpawnAnchor(Vector3 fallback)
     {
         if (_targets.Count == 0) return fallback;
-        _anchorTurn = (_anchorTurn + 1) % _targets.Count;
-        return _targets[_anchorTurn].Node.GlobalPosition;
+        Vector3 center = Vector3.Zero;
+        int count = 0;
+        foreach (var target in _targets)
+            if (GodotObject.IsInstanceValid(target.Node) && target.Hit.IsAlive)
+            { center += target.Node.GlobalPosition; count++; }
+        return count > 0 ? center / count : fallback;
     }
 
     /// <summary>Host: cull strays far from every player.</summary>
@@ -107,3 +113,4 @@ public sealed partial class EnemyManager
         }
     }
 }
+

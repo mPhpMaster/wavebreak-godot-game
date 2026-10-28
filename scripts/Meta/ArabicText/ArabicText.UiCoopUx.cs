@@ -25,10 +25,10 @@ public static partial class ArabicText
         ("Upgrade what I have", "طوّر ما أملكه"),
         ("Random", "عشوائي"),
         ("Compact level-up: small cards at the bottom of the screen and the game keeps running, so you can keep moving while you choose " +
-         "(pick with 1 / 2 / 3 or a click). Co-op always uses it. " +
+         "(pick with 1 / 2 / 3 or a click). Co-op keeps running with either card size. " +
          "Auto-pick: every level-up takes a card at once by the rule, and a note shows what it took.",
          "الارتقاء المصغّر: بطاقات صغيرة أسفل الشاشة واللعبة مستمرة، فتواصل الحركة وأنت تختار " +
-         "(اختر بـ 1 / 2 / 3 أو بالنقر). اللعب الجماعي يستخدمه دائمًا. " +
+         "(اختر بـ 1 / 2 / 3 أو بالنقر). تستمر الحركة في اللعب الجماعي مع كلا الشكلين. " +
          "الاختيار التلقائي: كل ارتقاء يأخذ بطاقة فورًا حسب القاعدة، وتظهر ملاحظة بما أخذه."),
 
         // ---- CO-OP page (UI/CoopPage.cs, UI/CoopLineup.cs)

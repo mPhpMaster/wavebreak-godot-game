@@ -11,7 +11,7 @@ public sealed partial class Arena : Node3D
     private void BuildDressing()
     {
         using var timing = Prof.Scope("Startup.dressing");
-        if (!_stage.Underwater) AddChild(PropFactory.BuildFloor(_stage.Radius + FloorSkirt, _theme));
+        if (!_stage.Underwater) AddChild(PropFactory.BuildFloor(_stage.Radius + (_stage.Id == "shallows" ? 0f : FloorSkirt), _theme));
         var world = PropFactory.MakeWorldEnvironment(_theme);
         var sun = PropFactory.MakeSun(_theme);
         if (_stage.Layout == "city") world.Environment.FogDensity = 0.0025f;
@@ -21,7 +21,7 @@ public sealed partial class Arena : Node3D
         // Seeded from the layout, not the run: the dressing is part of the place.
         var rng = new Core.Rng((ulong)_stage.LayoutSeed ^ 0xD2E55UL);
         Node3D props = PropFactory.Scatter(this, rng, _stage.InRadius - 3f, _theme, _stage.PropDensity * Meta.GraphicsSettings.PropDensityScale,
-                                           clearRadius: _stage.ClearRadius);
+                                           clearRadius: _stage.ClearRadius, collectibleResources: true);
         CullScatter(props);
         if (_stage.Underwater)
         {
@@ -143,3 +143,4 @@ public sealed partial class Arena : Node3D
         return p;
     }
 }
+

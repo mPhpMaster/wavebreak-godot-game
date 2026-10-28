@@ -60,7 +60,7 @@ public sealed partial class EnemyManager
                 if (OutsideArena(candidate)) continue;
             }
 
-            if (!SnapToGround(ref candidate)) continue;
+            if (!SnapToGround(ref candidate) || !TeamSpawnSafe(candidate)) continue;
 
             point = candidate;
             return true;
@@ -72,7 +72,7 @@ public sealed partial class EnemyManager
         inward = inward.LengthSquared() > 0.01f ? inward.Normalized() : _rng.OnUnitCircleXZ();
 
         Vector3 last = around + inward * SpawnRingMin;
-        if (SnapToGround(ref last))
+        if (SnapToGround(ref last) && TeamSpawnSafe(last))
         {
             point = last;
             return true;
@@ -80,7 +80,32 @@ public sealed partial class EnemyManager
 
         last.Y = _groundKnown ? _lastGroundY : around.Y;
         point = last;
-        return _groundKnown && !Wavebreak.Game.MapBlockers.Inside(last with { Y = -1f }, 1.5f);
+        return _groundKnown && TeamSpawnSafe(last) && !Wavebreak.Game.MapBlockers.Inside(last with { Y = -1f }, 1.5f);
+    }
+
+    private bool SpawnSpaceFree(Vector3 point, float radius)
+    {
+        foreach (Enemy other in _alive)
+        {
+            if (!other.IsAlive) continue;
+            Vector3 delta = other.GlobalPosition - point;
+            if (!Game.Arena.Current.Underwater) delta.Y = 0;
+            float gap = radius + (other.Def?.Radius ?? .5f) + .25f;
+            if (delta.LengthSquared() < gap * gap) return false;
+        }
+        return true;
+    }
+
+    private bool TeamSpawnSafe(Vector3 point)
+    {
+        foreach (var target in _targets)
+        {
+            if (!GodotObject.IsInstanceValid(target.Node) || !target.Hit.IsAlive) continue;
+            Vector3 delta = target.Node.GlobalPosition - point;
+            if (!Game.Arena.Current.Underwater) delta.Y = 0;
+            if (delta.LengthSquared() < 144) return false;
+        }
+        return true;
     }
 
     private bool OutsideArena(Vector3 p)
@@ -167,3 +192,5 @@ public sealed partial class EnemyManager
     }
 
 }
+
+

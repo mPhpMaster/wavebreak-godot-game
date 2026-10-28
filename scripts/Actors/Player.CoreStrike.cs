@@ -8,6 +8,7 @@ namespace Wavebreak.Actors;
 
 public sealed partial class Player
 {
+    private Audio.CoreImpactAudio? _coreImpact;
     private float _coreStrikeCooldown;
     public int CoreStrikes { get; private set; }
     public string CoreStrikeFeedback { get; private set; } = "";
@@ -18,6 +19,11 @@ public sealed partial class Player
         _coreStrikeCooldown = Mathf.Max(0f, _coreStrikeCooldown - dt);
         _coreFeedbackTime -= dt;
         if (_coreFeedbackTime <= 0f) CoreStrikeFeedback = "";
+    }
+
+    private Audio.CoreImpactAudio CreateCoreImpact()
+    {
+        var audio = new Audio.CoreImpactAudio(); AddChild(audio); return audio;
     }
 
     internal bool TryCoreStrike()
@@ -51,9 +57,12 @@ public sealed partial class Player
         _coreFeedbackTime = 1.5f;
         Main.Instance?.Weapons.ReportHit(chosen, hit);
         PlayerCamera.Instance?.Shake(0.08f, 0.14f);
+        _coreImpact ??= CreateCoreImpact();
+        _coreImpact.Play();
         CoreStrikes++;
         CoreStrikeFeedback = "CORE HIT!";
         FlashHit(0.3f);
         return true;
     }
 }
+

@@ -65,9 +65,9 @@ public sealed partial class CoopHud : Control
         _row = 0;
         Player? me = Player.Instance;
         if (Coop.LocalPeer is { } mine)
-            AddRow(mine.Name, mine.Slot, me?.Health?.Fraction ?? 0f, me is not null && !me.IsAlive, true);
+            AddRow(Coop.LocalId, mine.Name, mine.Slot, me?.Health?.Fraction ?? 0f, me is not null && !me.IsAlive, true);
         foreach (RemotePlayer r in s.Remotes.Values)
-            if (IsInstanceValid(r)) AddRow(r.DisplayName, r.Slot, r.Health01, r.Down, false);
+            if (IsInstanceValid(r)) AddRow(r.PeerId, r.DisplayName, r.Slot, r.Health01, r.Down, false);
         for (int i = 0; i < _team.GetChildCount(); i++) ((Label)_team.GetChild(i)).Visible = i < _row;
 
         if (!s.Started)
@@ -80,10 +80,12 @@ public sealed partial class CoopHud : Control
         _center.AddThemeColorOverride("font_color", me is not null && !me.IsAlive ? Down : Ink);
     }
 
-    private void AddRow(string name, int slot, float health, bool down, bool you)
+    private void AddRow(long peerId, string name, int slot, float health, bool down, bool you)
     {
         string text = down ? Loc.F("{0}  DOWN", name)
                     : Loc.F("{0}  {1}%", name, Mathf.RoundToInt(Mathf.Clamp(health, 0f, 1f) * 100f));
+        Game.RunScoreboard.RefreshMeters();
+        text += "  ·  " + Loc.F("DPS {0}", Game.RunScoreboard.Short(Game.RunScoreboard.Find(peerId)?.Dps ?? 0));
         if (you) text = Loc.F("{0} (you)", text);
         Label l;
         if (_row < _team.GetChildCount()) l = (Label)_team.GetChild(_row);

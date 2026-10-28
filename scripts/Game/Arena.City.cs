@@ -51,7 +51,9 @@ public sealed partial class Arena
     private void CityTower(Vector2 at, float width, float depth, float height, int palette)
     {
         CityBuildingCount++;
-        Color wall = HouseWalls[palette];
+        Color wall = new Color(.77f, .72f, .62f).Lightened(palette * .015f);
+        float roofRise = Mathf.Abs(at.X) < 24 && Mathf.Abs(at.Y) < 24 ? 0 : 3f;
+        float masonryHeight = height - roofRise;
         Blocker(at, 0f, width, depth, height, MapBlockers.Shape.Box, wall);
         var solid = new StaticBody3D
         {
@@ -61,22 +63,33 @@ public sealed partial class Arena
         };
         solid.AddChild(new CollisionShape3D
         {
-            Position = Vector3.Up * height * 0.5f,
-            Shape = new BoxShape3D { Size = new Vector3(width, height, depth) },
+            Position = Vector3.Up * masonryHeight * 0.5f,
+            Shape = new BoxShape3D { Size = new Vector3(width, masonryHeight, depth) },
         });
+        if (roofRise > 0)
+            solid.AddChild(new CollisionShape3D
+            {
+                Position = Vector3.Up * (height - roofRise * .5f),
+                Shape = new PrismMesh { Size = new Vector3(width, roofRise, depth) }.CreateConvexShape(),
+            });
         AddChild(solid);
-        CityRooftops.Register(solid, at, width, depth, height);
+        CityRooftops.Register(solid, at, width, depth, height, roofRise);
         AddChild(new OccluderInstance3D
         {
             Name = "TowerOccluder" + CityBuildingCount,
-            Position = new Vector3(at.X, height * .5f, at.Y),
-            Occluder = new BoxOccluder3D { Size = new Vector3(width - .12f, height - .12f, depth - .12f) },
+            Position = new Vector3(at.X, masonryHeight * .5f, at.Y),
+            Occluder = new BoxOccluder3D { Size = new Vector3(width - .12f, masonryHeight - .12f, depth - .12f) },
         });
-        float wallHeight = height - 0.25f;
+        float wallHeight = masonryHeight - (roofRise > 0 ? 0 : .25f);
         _bodies.Add((BoxX(at, 0f, wallHeight * 0.5f, new Vector3(width, wallHeight, depth)), wall));
         // A flush roof plate: its top and the physical roof are identical.
-        _trims.Add((BoxX(at, 0f, height - 0.125f, new Vector3(width, 0.25f, depth)), Roofs[palette % Roofs.Length]));
-        for (float y = 3f; y < height - 1f; y += 4f)
+        if (roofRise == 0)
+            _trims.Add((BoxX(at, 0f, height - .125f, new Vector3(width, .25f, depth)), Roofs[palette % Roofs.Length]));
+        else _roofs.Add((BoxX(at, 0f, height - roofRise * .5f, new Vector3(width, roofRise, depth)), new Color(.48f, .21f, .13f)));
+        foreach (float x in new[] { -width * .5f, width * .5f })
+            foreach (float z in new[] { -depth * .5f, depth * .5f })
+                _trims.Add((BoxX(at + new Vector2(x, z), 0, masonryHeight * .5f, new Vector3(.24f, masonryHeight, .24f)), DoorWood));
+        for (float y = 3f; y < masonryHeight - 1f; y += 4f)
         {
             _trims.Add((BoxX(at, 0f, y - 0.3f, new Vector3(width + 0.12f, 0.2f, depth + 0.12f)), wall.Darkened(0.22f)));
             for (int side = -1; side <= 1; side += 2)
@@ -92,3 +105,4 @@ public sealed partial class Arena
             new Vector3(2f, 2.7f, 0.08f)), DoorWood));
     }
 }
+

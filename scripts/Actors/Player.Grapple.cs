@@ -43,6 +43,7 @@ public sealed partial class Player
     {
         if (!IsAlive || !GrappleAnchors.Valid(this, CenterPosition, anchor)) return false;
         HookAttachment hook = _hooks[(int)side];
+        BindHookTarget(hook, anchor);
         hook.Anchor = anchor; hook.Length = CenterPosition.DistanceTo(anchor);
         hook.Attached = true; hook.SightIn = 0.08f;
         _sliding = _slamming = false; _dashTime = 0f;
@@ -71,13 +72,20 @@ public sealed partial class Player
         UpdateHooks(control, dt);
         StepCoreStrike(dt);
         _cityDashHandled = false;
+        bool dashBoost = false;
         if (Grappling)
         {
             _dashCooldown = Mathf.Max(0f, _dashCooldown - dt);
             if (control && ReadCityDash())
             {
                 _cityDashHandled = true;
-                TryDash(ReadMoveInput(), Stats.Get(Stat.MoveSpeed));
+                if (TryCoreStrike())
+                {
+                    _dashCooldown = Mathf.Max(.65f, Stats.Get(Stat.DashCooldown));
+                    Dashes++;
+                    Core.EventBus.Publish(new Core.PlayerMoved(Core.MoveVerb.Dash, GlobalPosition));
+                }
+                else dashBoost = true;
             }
         }
         if (!Grappling) { DrawHooks(); return false; }
@@ -86,10 +94,11 @@ public sealed partial class Player
         Vector3 wish = ReadMoveInput();
         Vector3 velocity = GrapplePhysics.StepDual(CenterPosition, Velocity, _hooks[0], _hooks[1], wish,
             _gravity, dt, HookBoosting ? GrapplePhysics.BoostSpeed : GrapplePhysics.MaxSpeed);
-        if (jump && _boostCooldown <= 0f)
+        if ((jump || dashBoost) && _boostCooldown <= 0f)
         {
             Vector3 direction = velocity.LengthSquared() > 25f ? velocity.Normalized() : (HookAnchor - CenterPosition).Normalized();
             velocity = (velocity + direction * 18f + Vector3.Up * 7f).LimitLength(GrapplePhysics.BoostSpeed);
+            if (dashBoost) Dashes++;
             _boostCooldown = 2.2f; _boostWindow = 0.45f; HookBoosts++;
             Core.EventBus.Publish(new Core.PlayerMoved(Core.MoveVerb.Dash, GlobalPosition));
             PlayerCamera.Instance?.Shake(0.035f, 0.12f);
@@ -113,19 +122,35 @@ public sealed partial class Player
         {
             _aimIn = 1f / 15f;
             Camera3D? camera = GetViewport().GetCamera3D();
+            Vector3 aimedAnchor = Vector3.Zero;
+            bool aimed = control && camera is not null && GrappleAnchors.RayTarget(this,
+                camera.GlobalPosition, -camera.GlobalBasis.Z, CenterPosition, out aimedAnchor, out CollisionObject3D? aimedBody)
+                && (aimedBody is Enemy { IsCityGiant: true, IsAlive: true } || aimedBody?.IsInGroup("CityBoundary") == true);
             for (int i = 0; i < 2; i++)
+            {
+                if (aimed) { _aimAvailable[i] = true; _aimAnchors[i] = aimedAnchor; continue; }
                 _aimAvailable[i] = control && camera is not null && CityRooftops.Find(this,
                     CenterPosition, -camera.GlobalBasis.Z, (HookSide)i, out _aimAnchors[i],
                     _hooks[1 - i].Attached ? _hooks[1 - i].Anchor : null);
+            }
             HookTargetAvailable = _aimAvailable[0] || _aimAvailable[1];
         }
         for (int i = 0; i < 2; i++)
         {
             HookAttachment hook = _hooks[i];
-            bool held = control && Input.IsActionPressed(i == 0 ? "city_hook_left" : "city_hook_right");
-            if (!held) { hook.BlockedUntilRelease = false; ReleaseHook((HookSide)i); continue; }
-            if (!hook.Attached && !hook.BlockedUntilRelease && _aimAvailable[i]) AttachHook((HookSide)i, _aimAnchors[i]);
-            if (!hook.Attached) continue;
+            string action = i == 0 ? "city_hook_left" : "city_hook_right";
+            bool held = control && Input.IsActionPressed(action);
+            if (Meta.GameplaySettings.ToggleCityHooks)
+            {
+                if (control && Input.IsActionJustPressed(action)) hook.Wanted = !hook.Wanted;
+            }
+            else hook.Wanted = held;
+            if (!control || !hook.Wanted) { hook.BlockedUntilRelease = false; ReleaseHook((HookSide)i); continue; }
+            if (!hook.Attached && !hook.Firing && !hook.BlockedUntilRelease && _aimAvailable[i]) BeginHookFlight((HookSide)i, _aimAnchors[i]);
+            if (!hook.Attached && !hook.Firing) continue;
+            if (!FollowHookTarget(hook))
+            { ReleaseHook((HookSide)i); hook.BlockedUntilRelease = true; continue; }
+            StepHookFlight(hook, dt);
             hook.SightIn -= dt;
             if (CenterPosition.DistanceSquaredTo(hook.Anchor) > (GrapplePhysics.Range + 2f) * (GrapplePhysics.Range + 2f)
                 || hook.SightIn <= 0f && !GrappleAnchors.Valid(this, CenterPosition, hook.Anchor))
@@ -144,12 +169,13 @@ public sealed partial class Player
     {
         for (int i = 0; i < 2; i++)
         {
-            if (_cables[i] is null && _hooks[i].Attached)
+            if (_cables[i] is null && (_hooks[i].Attached || _hooks[i].Firing))
             {
                 _cables[i] = new GrappleTether { Name = i == 0 ? "GrappleCable" : "RightGrappleCable" };
                 AddChild(_cables[i]!);
             }
-            _cables[i]?.Set(HookOrigin((HookSide)i), _hooks[i].Anchor, _hooks[i].Attached && IsAlive);
+            _cables[i]?.Set(HookOrigin((HookSide)i), HookTip((HookSide)i), (_hooks[i].Attached || _hooks[i].Firing) && IsAlive);
+            DrawHookTip(i);
         }
     }
 }
