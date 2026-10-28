@@ -213,6 +213,7 @@ public sealed partial class PerkProcs : Node
         }
 
         TickStats(p, dt);
+        if (_main.Stages.InRestRoom) return;
         TickWake(p, dt);
         TickMotes(p, dt);
         TickBubbles(p, dt);

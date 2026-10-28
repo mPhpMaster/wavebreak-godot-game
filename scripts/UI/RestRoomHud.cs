@@ -58,7 +58,7 @@ public sealed partial class RestRoomHud : Control
     public override void _Process(double delta)
     {
         // Out of the way of the level-up cards and the pause menu.
-        _panel.Visible = !Net.Coop.IsPaused(GetTree());
+        _panel.Visible = !Net.Coop.IsPaused(GetTree()) && !LevelUpPanel.AnyOpen;
         if (RestRoom.Inside < 0)
         {
             _team.Visible = false;

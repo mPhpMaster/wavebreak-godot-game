@@ -35,23 +35,26 @@ public sealed partial class MainMenu
     {
         var page = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
         page.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        Label title = MakeLabel("SPECIAL EXPEDITIONS", 27, Gold);
-        Place(title, 60f, 183f, 900f, 40f); page.AddChild(title);
-        _expeditionHero = MakeLabel("", 18, Ink);
-        Place(_expeditionHero, 115f, 226f, 650f, 56f); page.AddChild(_expeditionHero);
-        Button previous = _heroPrevious = MenuButton("‹", () => CycleExpeditionHero(-1));
-        previous.Name = "ExpeditionHeroPrevious";
-        Place(previous, 60f, 230f, 45f, 36f); page.AddChild(previous);
-        Button next = _heroNext = MenuButton("›", () => CycleExpeditionHero(1));
-        next.Name = "ExpeditionHeroNext";
-        Place(next, 735f, 230f, 45f, 36f); page.AddChild(next);
+        var backdrop = new ColorRect { Color = new Color(.025f, .045f, .075f, .96f), MouseFilter = Control.MouseFilterEnum.Ignore };
+        Place(backdrop, 36f, 176f, 1020f, 548f); page.AddChild(backdrop);
+        Label title = MakeLabel("SPECIAL EXPEDITIONS", 28, Ink);
+        Place(title, 60f, 192f, 650f, 40f); page.AddChild(title);
+        _expeditionHero = MakeLabel("Choose a destination, then choose your character.", 16, InkDim);
+        Place(_expeditionHero, 60f, 238f, 650f, 30f); page.AddChild(_expeditionHero);
+        _heroPrevious = MenuButton("‹", () => CycleExpeditionHero(-1));
+        _heroPrevious.Name = "ExpeditionHeroPrevious";
+        _heroNext = MenuButton("›", () => CycleExpeditionHero(1));
+        _heroNext.Name = "ExpeditionHeroNext";
+        _heroPrevious.Visible = _heroNext.Visible = false;
+        page.AddChild(_heroPrevious); page.AddChild(_heroNext);
         _expeditionDifficulty = new DifficultyPicker { Compact = true };
-        Place(_expeditionDifficulty, 795f, 226f, 220f, 55f); page.AddChild(_expeditionDifficulty);
+        Place(_expeditionDifficulty, 795f, 202f, 220f, 50f); page.AddChild(_expeditionDifficulty);
         BuildExpeditionCard(page, false, 60f);
         BuildExpeditionCard(page, true, 550f);
         Button classic = MenuButton("CLASSIC PLAY & CHARACTER DETAILS", () =>
         {
             RestoreExpeditionClassic();
+            Profile.SetMeta("route", 0);
             ShowPage("play");
         });
         Place(classic, 60f, 655f, 600f, 44f); page.AddChild(classic);
@@ -62,35 +65,41 @@ public sealed partial class MainMenu
 
     private void BuildExpeditionCard(Control page, bool city, float x)
     {
-        var panel = Panel(x, 296f, 465f, 342f);
+        var panel = Panel(x, 282f, 465f, 348f);
+        var surface = new StyleBoxFlat { BgColor = new Color(.065f, .095f, .14f), BorderColor = new Color(.16f, .24f, .31f), ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 16, ContentMarginBottom = 16 };
+        surface.SetCornerRadiusAll(12); surface.SetBorderWidthAll(1);
+        panel.AddThemeStyleboxOverride("panel", surface);
         page.AddChild(panel);
-        var rows = new VBoxContainer(); rows.AddThemeConstantOverride("separation", 5); panel.AddChild(rows);
-        rows.AddChild(new ExpeditionPreview { City = city, CustomMinimumSize = new Vector2(410f, 42f) });
+        var rows = new VBoxContainer(); rows.AddThemeConstantOverride("separation", 10); panel.AddChild(rows);
+        rows.AddChild(new ExpeditionPreview { City = city, CustomMinimumSize = new Vector2(410f, 110f), ClipContents = true, MouseFilter = Control.MouseFilterEnum.Ignore });
         string route = city ? "skyline-run" : "reef-dive";
         Button select = MenuButton(city ? "Bellspire Ward" : "Lumenreef Basin", () => SelectExpedition(route));
-        select.CustomMinimumSize = new Vector2(0f, 34f); select.AddThemeFontSizeOverride("font_size", 23);
+        select.CustomMinimumSize = new Vector2(0f, 34f); select.AddThemeFontSizeOverride("font_size", 24);
+        select.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
         _mapSelectors.Add((route, select)); rows.AddChild(select);
-        Label description = MakeLabel(city
-            ? "Swing between tall rooftops. Defeat colossal stone wardens by striking their glowing cores. Recommended: Vesper."
-            : "Explore deep reefs, currents and a hidden cave. Swim freely in three dimensions. Recommended: Nori.", 16, Ink);
+        Label description = MakeLabel(city ? "Rooftop grappling · Colossal wardens" : "Free swimming · Hidden caves", 16, InkDim);
         description.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        description.CustomMinimumSize = new Vector2(0f, 66f); rows.AddChild(description);
-        Label controls = MakeLabel(city
-            ? Loc.F("{0} / {1}: independent hooks  |  {2}: attached boost",
-                Keybinds.Describe(Keybinds.Get("city_hook_left", 0)), Keybinds.Describe(Keybinds.Get("city_hook_right", 0)), Keybinds.Describe(Keybinds.Get("jump", 0)))
-            : Loc.F("Hold {0}: rise  |  Hold {1}: dive  |  Look + forward: swim",
-                Keybinds.Describe(Keybinds.Get("jump", 0)), Keybinds.Describe(Keybinds.Get("slide", 0))), 14, Accent);
-        controls.AutowrapMode = TextServer.AutowrapMode.WordSmart; rows.AddChild(controls);
+        description.CustomMinimumSize = new Vector2(0f, 44f); rows.AddChild(description);
+        var actions = new HBoxContainer(); actions.AddThemeConstantOverride("separation", 10); rows.AddChild(actions);
         Button start = MenuButton(city ? "START CITY EXPEDITION" : "START REEF EXPEDITION", () => StartExpedition(route));
-        _expeditionStarts[route] = start;
-        rows.AddChild(start);
+        start.AddThemeFontSizeOverride("font_size", 16);
+        start.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        start.Alignment = HorizontalAlignment.Center;
+        Color accent = city ? new Color(.95f, .70f, .36f) : new Color(.36f, .85f, .80f);
+        start.AddThemeColorOverride("font_color", new Color(.025f, .06f, .09f));
+        start.AddThemeColorOverride("font_focus_color", new Color(.025f, .06f, .09f));
+        start.AddThemeStyleboxOverride("normal", ButtonBox(accent, Colors.Transparent));
+        _expeditionStarts[route] = start; actions.AddChild(start);
         if (!city) _expeditionFocus = start;
-        rows.AddChild(MenuButton("SELECT FOR CO-OP", () =>
+        Button coop = MenuButton("SELECT FOR CO-OP", () =>
         {
             SelectExpedition(route, false);
             Profile.Save();
             ShowPage("coop");
-        }));
+        });
+        coop.AddThemeFontSizeOverride("font_size", 14);
+        coop.Alignment = HorizontalAlignment.Center;
+        actions.AddChild(coop);
     }
 
     internal void OpenExpeditions(bool focus = true)
@@ -99,9 +108,7 @@ public sealed partial class MainMenu
         CharacterDef hero = Characters.ById(Profile.SelectedCharacter) ?? Characters.Default;
         bool selected = _expeditionFlow.RouteId is not null;
         _heroPrevious.Disabled = _heroNext.Disabled = !selected;
-        _expeditionHero.Text = selected ? Loc.F("Character: {0}  ·  {1}", Loc.T(hero.DisplayName), Characters.Describe(hero))
-            : Loc.T("Select a map to preview its hero; you can choose another afterward");
-        _expeditionHero.TooltipText = Loc.T(hero.PassiveText);
+        _expeditionHero.Text = Loc.T("Choose a destination, then choose your character.");
         foreach (var entry in _mapSelectors)
             entry.Button.AddThemeColorOverride("font_color", entry.Route == _expeditionFlow.RouteId ? Gold : Ink);
         _expeditionDifficulty.Refresh();
@@ -142,6 +149,6 @@ public sealed partial class MainMenu
         CharacterDef hero = Characters.ById(Profile.SelectedCharacter) ?? Characters.Default;
         // Let StartRun preserve this hero's owned skin and hat selections.
         _shownCharacter = null;
-        StartRun(hero);
+        ShowPage("play:" + hero.Id);
     }
 }

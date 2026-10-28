@@ -27,6 +27,7 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 
 $version = (Select-String -Path "$root\project.godot" -Pattern '^config/version="([^"]+)"').Matches[0].Groups[1].Value
 Write-Host "Wavebreak $version" -ForegroundColor Cyan
+& "$root\tools\verify-release-notes.ps1" -Version $version -Root $root
 
 function Step($name, [scriptblock]$body) {
     Write-Host "==> $name" -ForegroundColor Yellow

@@ -34,6 +34,21 @@ public sealed partial class ExpeditionMenuCheck : Node
         {
             await Wait(0.3f);
             Require(_menu.CurrentPage == "main", "title opens normally");
+            if (Launch.MenuExpeditionCheck!.StartsWith("classic-"))
+            {
+                string prior = Launch.MenuExpeditionCheck.Contains("city") ? "skyline-run" : "reef-dive";
+                Profile.SetMeta("route", Routes.IndexOf(Routes.ById(prior)!));
+                if (Launch.MenuExpeditionCheck.Contains("card"))
+                {
+                    Button(_menu, "SPECIAL MAPS: REEF & CITY")!.EmitSignal(Godot.Button.SignalName.Pressed);
+                    Button(_menu, "CLASSIC PLAY & CHARACTER DETAILS")!.EmitSignal(Godot.Button.SignalName.Pressed);
+                }
+                else Button(_menu, "PLAY")!.EmitSignal(Godot.Button.SignalName.Pressed);
+                Require(_menu.CurrentPage == "play" && Routes.Selected.Id == "classic", "classic play clears prior expedition route");
+                Phase = 1;
+                Button(_menu, "START RUN")!.EmitSignal(Godot.Button.SignalName.Pressed);
+                return;
+            }
             Button(_menu, "SPECIAL MAPS: REEF & CITY")!.EmitSignal(Godot.Button.SignalName.Pressed);
             Require(_menu.CurrentPage == "expeditions", "obvious main-menu entry opens both map cards");
             Require(Button(_menu, "START CITY EXPEDITION") is not null && Button(_menu, "START REEF EXPEDITION") is not null,
@@ -55,6 +70,7 @@ public sealed partial class ExpeditionMenuCheck : Node
                 Difficulty = DifficultyTiers.Selected.Id; Phase = 1;
                 Button(_menu, directCity ? "START CITY EXPEDITION" : "START REEF EXPEDITION")!
                     .EmitSignal(Godot.Button.SignalName.Pressed);
+                ConfirmCharacterThenStart();
                 return;
             }
             Button(_menu, "Bellspire Ward")!.EmitSignal(Godot.Button.SignalName.Pressed);
@@ -79,8 +95,16 @@ public sealed partial class ExpeditionMenuCheck : Node
             Phase = 1;
             Button(_menu, Launch.MenuExpeditionCheck!.StartsWith("city") ? "START CITY EXPEDITION" : "START REEF EXPEDITION")!
                 .EmitSignal(Godot.Button.SignalName.Pressed);
+            ConfirmCharacterThenStart();
         }
         catch (Exception e) { GD.Print("EXPEDITION MENU FAIL " + e); GetTree().Quit(1); }
+    }
+
+    private void ConfirmCharacterThenStart()
+    {
+        Require(_menu.CurrentPage == "play", "destination opens character selection before the run");
+        Require(Profile.SelectedCharacter == ExpectedHero, "character recommendation or manual choice survives");
+        Button(_menu, "START RUN")!.EmitSignal(Godot.Button.SignalName.Pressed);
     }
 
     private async Task Capture(string map)

@@ -52,11 +52,12 @@ public sealed partial class LevelUpPanel
     private bool _compactNow;
 
     /// <summary>True when the next hand should be the compact one.</summary>
-    public static bool WantsCompact => (Net.Coop.Active && Net.Coop.InRun) || GameplaySettings.CompactLevelUp;
+    public static bool WantsCompact => GameplaySettings.CompactLevelUp;
+    private bool _nonModalNow;
 
     /// <summary>True while this hand holds the game paused (the full panel).
     /// The compact hand never does.</summary>
-    public bool PausesGame => IsOpen && !_compactNow;
+    public bool PausesGame => IsOpen && !_nonModalNow;
 
     /// <summary>True while the compact hand is on screen.</summary>
     public bool CompactOpen => IsOpen && _compactNow;
@@ -238,7 +239,11 @@ public sealed partial class LevelUpPanel
     {
         _chrome.Visible = !_compactNow;
         _compact.Visible = _compactNow;
-        MouseFilter = _compactNow ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop;
+        MouseFilter = _nonModalNow ? MouseFilterEnum.Ignore : MouseFilterEnum.Stop;
+        _dimmer.Visible = !_nonModalNow;
+        foreach (Card card in _cards) card.Button.FocusMode = _nonModalNow ? FocusModeEnum.None : FocusModeEnum.All;
+        foreach (Button button in new[] { _rerollButton, _banishButton, _skipButton })
+            button.FocusMode = _nonModalNow ? FocusModeEnum.None : FocusModeEnum.All;
     }
 
     private void LayoutCompact()

@@ -67,13 +67,22 @@ public sealed partial class Player
         wish = intent.Direction;
         SwimmingBoostActive = intent.Reinforced;
         speed *= intent.SpeedScale;
-        if (control && Pressed("dash", _hasDash, ref _requestedDash)) TryDash(wish, speed);
+        if (control && Pressed("dash", _hasDash, ref _requestedDash))
+        {
+            int before = Dashes;
+            Vector3 launch = wish.LengthSquared() > .01f ? wish : -(GetViewport().GetCamera3D()?.GlobalBasis.Z ?? Vector3.Back);
+            TryDash(launch, speed);
+            if (Dashes > before) _dashTime = SwimmingDash.Duration;
+        }
         float y;
         if (_dashTime > 0f)
         {
+            _dashDirection = SwimmingDash.Steer(_dashDirection, wish, dt);
+            float burstSpeed = SwimmingDash.Speed(speed, _dashTime);
             _dashTime = Mathf.Max(0f, _dashTime - dt);
-            _moveVelocity = (_dashDirection with { Y = 0f }) * DashSpeed;
-            y = _dashDirection.Y * DashSpeed;
+            _moveVelocity = (_dashDirection with { Y = 0f }) * burstSpeed;
+            y = _dashDirection.Y * burstSpeed;
+            SwimmingBoostActive = true;
             SpawnAfterimage(dt);
         }
         else

@@ -64,8 +64,10 @@ public sealed partial class EnemyManager
         float best = float.MaxValue;
         for (int i = 0; i < _targets.Count; i++)
         {
+            if (!GodotObject.IsInstanceValid(_targets[i].Node) || !_targets[i].Hit.IsAlive) continue;
             Vector3 f = _targets[i].Node.GlobalPosition;
-            float d = (f.X - p.X) * (f.X - p.X) + (f.Z - p.Z) * (f.Z - p.Z);
+            float d = Game.Arena.Current.Underwater ? f.DistanceSquaredTo(p)
+                : (f.X - p.X) * (f.X - p.X) + (f.Z - p.Z) * (f.Z - p.Z);
             if (d >= best) continue;
             best = d;
             feet = f;
@@ -79,8 +81,12 @@ public sealed partial class EnemyManager
     private Vector3 SpawnAnchor(Vector3 fallback)
     {
         if (_targets.Count == 0) return fallback;
-        _anchorTurn = (_anchorTurn + 1) % _targets.Count;
-        return _targets[_anchorTurn].Node.GlobalPosition;
+        Vector3 center = Vector3.Zero;
+        int count = 0;
+        foreach (var target in _targets)
+            if (GodotObject.IsInstanceValid(target.Node) && target.Hit.IsAlive)
+            { center += target.Node.GlobalPosition; count++; }
+        return count > 0 ? center / count : fallback;
     }
 
     /// <summary>Host: cull strays far from every player.</summary>

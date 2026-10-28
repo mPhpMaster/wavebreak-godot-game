@@ -81,6 +81,8 @@ public sealed partial class MainMenu : Node3D
     {
         Launch.Parse();
         Loc.Init(this);
+        if (System.Array.Exists(OS.GetCmdlineUserArgs(), arg => arg == "--check-release-notes"))
+        { AddChild(new Game.ReleaseNotesCheck()); return; }
         if (Updates.UpdateCheck.Requested) { AddChild(new Updates.UpdateCheck()); return; }
         if (Launch.DumpStrings is { } dump)
         {
@@ -145,8 +147,9 @@ public sealed partial class MainMenu : Node3D
             Net.SteamLobby.PendingJoin = lobby;
             CoopPage.OpenOnTitle = true;
         }
-        ShowPage(DevReturnPage ?? (Launch.MenuShot is not null ? Launch.MenuPage : CoopPage.OpenOnTitle ? "coop" : "main"));
+        ShowPage(DevReturnPage ?? (CoopPage.OpenOnTitle ? "coop" : Launch.MenuPage));
         DevReturnPage = null;
+        OfferWhatsNew();
         if (Launch.MenuExpeditionCheck is not null) AddChild(new Game.ExpeditionMenuCheck(this));
         DevPanel.Install(this);
         Net.SteamLobby.JoinRequested += OnSteamJoinRequested;
@@ -240,6 +243,7 @@ public sealed partial class MainMenu : Node3D
         AddChild(_lineup = new CoopLineup(_coop));   // the lobby's players on the beach
         foreach (Control p in _pages.Values) _root.AddChild(p);
         AddCreditsButton();
+        AddWhatsNew();
     }
 
     private Control BuildMainPage()
@@ -291,6 +295,7 @@ public sealed partial class MainMenu : Node3D
         if (_page == "updates" && name != "updates" && _updates?.Busy == true) _updates.Cancel();
         if (_page == "boombox" && name != "boombox") _boombox.Closing();
         if (name == "main" && _page is "expeditions" or "coop") RestoreExpeditionClassic();
+        if (name == "play" && _page == "main") Profile.SetMeta("route", 0);
         _page = name;
         foreach (var (key, page) in _pages) page.Visible = key == name;
         if (_creditsButton is not null) _creditsButton.Visible = name == "main";
@@ -361,7 +366,7 @@ public sealed partial class MainMenu : Node3D
     /// title is up: the CO-OP page opens and joins.</summary>
     private void OnSteamJoinRequested()
     {
-        if (_root is null || DevPanel.IsOpen) return;
+        if (_root is null || DevPanel.IsOpen || _whatsNew is not null) return;
         ShowPage("coop");
     }
 
@@ -379,7 +384,7 @@ public sealed partial class MainMenu : Node3D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (_root is null || DevPanel.IsOpen) return;
+        if (_root is null || DevPanel.IsOpen || _whatsNew is not null) return;
         if (_page == "play" && (@event.IsActionPressed("ui_left") || @event.IsActionPressed("ui_right")))
         {
             CycleSkin((@event.IsActionPressed("ui_left") ? -1 : 1) * (Loc.IsRtl ? -1 : 1));

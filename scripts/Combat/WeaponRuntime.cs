@@ -113,6 +113,16 @@ public sealed class WeaponRuntime
         _interval = stats.AttackInterval(BaseCooldown);
         _cooldown -= dt;
 
+        float reach = Def.Shape == AttackShape.Aura ? Def.Radius : Def.Range * (1f + Bonus.Range);
+        if (Def.Shape is AttackShape.Melee or AttackShape.Aura) reach *= stats.Get(Stat.AreaSize) * (1f + Bonus.Area);
+        if (!system.HasAttackTarget(MathF.Max(.5f, reach)))
+        {
+            _cooldown = MathF.Max(0f, _cooldown);
+            HidePersistentVisuals();
+            return;
+        }
+        if (_auraRoot is not null && GodotObject.IsInstanceValid(_auraRoot)) _auraRoot.Visible = true;
+
         int fired = 0;
         while (_cooldown <= 0f && fired < MaxShotsPerTick)
         {
@@ -330,5 +340,10 @@ public sealed class WeaponRuntime
         _auraRoot = null;
         _auraDisc = null;
         _auraLight = null;
+    }
+
+    internal void HidePersistentVisuals()
+    {
+        if (_auraRoot is not null && GodotObject.IsInstanceValid(_auraRoot)) _auraRoot.Visible = false;
     }
 }

@@ -12,6 +12,12 @@ public sealed partial class ExpeditionMenuRunCheck : Node
     private async Task Run()
     {
         await ToSignal(GetTree().CreateTimer(0.5), SceneTreeTimer.SignalName.Timeout);
+        if (Launch.MenuExpeditionCheck!.StartsWith("classic-"))
+        {
+            bool classic = Arena.Current.Id == "thornmeadow" && Routes.Active.Id == "classic";
+            GD.Print($"CLASSIC START {(classic ? "PASS" : "FAIL")} map={Arena.Current.Id} route={Routes.Active.Id}");
+            GetTree().Quit(classic ? 0 : 1); return;
+        }
         bool city = Launch.MenuExpeditionCheck!.StartsWith("city");
         bool valid = ExpeditionMenuCheck.Phase == 1 && Arena.Current.Id == (city ? "bellspire" : "lumenreef")
             && Profile.SelectedCharacter == ExpeditionMenuCheck.ExpectedHero
