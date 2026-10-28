@@ -1,4 +1,4 @@
-using System.Text;
+using System;
 using Godot;
 using Wavebreak.Combat;
 using Wavebreak.Data;
@@ -18,6 +18,8 @@ public sealed partial class StatsPanel
     private const float TileSize = 44f;
     private VBoxContainer _build = null!;
     private ScrollContainer _buildScroll = null!;
+    private int _buildStamp;
+    private bool _buildCreated;
 
     private Control BuildBox()
     {
@@ -48,15 +50,18 @@ public sealed partial class StatsPanel
 
     private void RebuildBuild(StatSheet stats)
     {
+        int stamp = BuildInspectionStamp.Compute(_weapons, _inventory, TomeBook.Current);
+        if (_buildCreated && _buildStamp == stamp) return;
+        CloseBuildTooltips();
+        _buildCreated = true; _buildStamp = stamp;
         Clear(_build);
 
         Section(_build, Loc.F("WEAPONS  {0}/{1}", _weapons.Weapons.Count, _weapons.Slots));
         HFlowContainer weapons = Flow();
         foreach (WeaponRuntime w in _weapons.Weapons)
         {
-            float dps = w.Interval > 0f ? w.VolleyDamage(stats) / w.Interval : 0f;
-            string tip = Tip(w.Def.DisplayName, w.Def.Rarity, Loc.F("Lv {0}/{1}  ~{2:0} dps", w.Level, w.Def.MaxLevel, dps), w.Def.Description);
-            weapons.AddChild(Tile(Icons.For(w.Def), Catalog.RarityColor(w.Def.Rarity), Loc.F("Lv{0}", w.Level), tip));
+            weapons.AddChild(Tile(Icons.For(w.Def), Catalog.RarityColor(w.Def.Rarity), Loc.F("Lv{0}", w.Level),
+                () => BuildInspectionText.Weapon(w, _player.Stats)));
         }
         Empty(weapons);
 
@@ -67,8 +72,7 @@ public sealed partial class StatsPanel
             foreach (TomeDef t in book.Held)
             {
                 int level = book.LevelOf(t);
-                string tip = Tip(t.DisplayName, null, Loc.F("Lv {0}/{1}  {2}", level, t.MaxLevel, t.DescribeTotal(level)), t.Description);
-                tomes.AddChild(Tile(Icons.For(t), t.Tint, Loc.F("Lv{0}", level), tip));
+                tomes.AddChild(Tile(Icons.For(t), t.Tint, Loc.F("Lv{0}", level), () => BuildInspectionText.Tome(t, book)));
             }
         Empty(tomes);
 
@@ -76,11 +80,8 @@ public sealed partial class StatsPanel
         HFlowContainer items = Flow();
         foreach (ItemStack item in _inventory.Items)
         {
-            var effects = new StringBuilder();
-            foreach (ItemEffect e in item.Def.Effects) effects.Append('\n').Append(Loc.T(Catalog.DescribeEffect(e)));
-            string tip = Tip(item.DisplayName, item.Rarity, item.Count > 1 ? Loc.F("x{0}", item.Count) : "",
-                             item.Def.Description) + effects;
-            items.AddChild(Tile(Icons.For(item.Def), Catalog.RarityColor(item.Rarity), item.Count > 1 ? Loc.F("x{0}", item.Count) : "", tip));
+            items.AddChild(Tile(Icons.For(item.Def), Catalog.RarityColor(item.Rarity), item.Count > 1 ? Loc.F("x{0}", item.Count) : "",
+                () => BuildInspectionText.Item(item)));
         }
         Empty(items);
 
@@ -114,14 +115,13 @@ public sealed partial class StatsPanel
 
     /// <summary>One icon with a small badge (level or stack count) in its
     /// corner; the tooltip carries everything else.</summary>
-    private static Control Tile(IconSpec spec, Color ring, string badge, string tip)
+    private static Control Tile(IconSpec spec, Color ring, string badge, Func<string> describe)
     {
         // The icon is the tile: one control, so nothing inside can drift out
         // of place when the layout mirrors for Arabic.
-        IconView tile = IconView.Make(TileSize);
-        tile.Set(spec, ring);
-        tile.MouseFilter = MouseFilterEnum.Stop;
-        tile.TooltipText = tip;
+        var tile = new BuildInspectTile(describe) { CustomMinimumSize = new Vector2(TileSize, TileSize), Size = new Vector2(TileSize, TileSize) };
+        IconView icon = IconView.Make(TileSize);
+        icon.Set(spec, ring); tile.AddChild(icon);
         tile.LayoutDirection = LayoutDirectionEnum.Ltr;
         if (badge.Length > 0)
         {
@@ -145,13 +145,11 @@ public sealed partial class StatsPanel
         return tile;
     }
 
-    private static string Tip(string name, Rarity? rarity, string detail, string description)
+    private void CloseBuildTooltips()
     {
-        var sb = new StringBuilder(Loc.T(name));
-        if (rarity is { } r) sb.Append("  ·  ").Append(Loc.T(r.ToString()));
-        if (detail.Length > 0) sb.Append('\n').Append(detail);
-        string d = Loc.T(description.Trim());
-        if (d.Length > 0) sb.Append("\n\n").Append(d);
-        return sb.ToString();
+        if (_build is null) return;
+        foreach (Node flow in _build.GetChildren())
+            foreach (Node child in flow.GetChildren())
+                if (child is BuildInspectTile tile) tile.CloseTooltip();
     }
 }

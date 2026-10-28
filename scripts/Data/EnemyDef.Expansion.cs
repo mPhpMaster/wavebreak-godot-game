@@ -26,6 +26,7 @@ public enum EnemyAura
 /// </summary>
 public partial class EnemyDef
 {
+    [Export] public bool UnderwaterOnly { get; set; }
     /// <summary>
     /// Free-form tags saying where this enemy belongs: biome words ("shore",
     /// "reef", "deep", "storm", "frost", "ash", "meadow") and role words

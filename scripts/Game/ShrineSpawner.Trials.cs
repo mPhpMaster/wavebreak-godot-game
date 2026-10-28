@@ -77,7 +77,7 @@ public sealed partial class ShrineSpawner
         EnemyDef? best = null, earliest = null;
         foreach (EnemyDef def in Catalog.Enemies)
         {
-            if (def is null || !def.IsElite || def.IsBoss || Visuals.CityGiantModels.IsGiant(def) != Arena.IsCity) continue;
+            if (def is null || !def.IsElite || def.IsBoss || !EnemyMapEligibility.Allows(def, Arena.Current)) continue;
             if (earliest is null || def.UnlockAtSeconds < earliest.UnlockAtSeconds) earliest = def;
             if (def.UnlockAtSeconds <= runSeconds && (best is null || def.Cost > best.Cost)) best = def;
         }

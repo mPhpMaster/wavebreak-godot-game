@@ -1,0 +1,12 @@
+{
+  "Version": "1.4.4",
+  "Title": "Scoreboard, build inspection and enemy habitat fixes",
+  "Changes": [
+    "All player statistics now appear together in the scoreboard without a view dropdown.",
+    "Tab opens only the scoreboard. Escape takes priority when opening the pause menu.",
+    "Equipment icons stay stable while the character sheet refreshes, allowing hover descriptions to appear.",
+    "Weapon, tome and item descriptions show their current level, stacks and effects.",
+    "Cave sharks and Reef Leviathans are restricted to underwater maps, including boss, shrine and multiplayer spawn paths.",
+    "Classic Play continues to start in Thornmeadow."
+  ]
+}

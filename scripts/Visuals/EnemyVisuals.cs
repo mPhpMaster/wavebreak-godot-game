@@ -48,7 +48,7 @@ public static class EnemyVisuals
     {
         if (!ArtAssets.ModelsEnabled)
         {
-            if (current is not null && GodotObject.IsInstanceValid(current)) current.QueueFree();
+            if (current is not null && GodotObject.IsInstanceValid(current)) Retire(current);
             return null;
         }
         ModelSpec spec = SpecFor(def);
@@ -57,17 +57,23 @@ public static class EnemyVisuals
             current.ResetState();
             return current;
         }
-        if (current is not null && GodotObject.IsInstanceValid(current)) current.QueueFree();
+        if (current is not null && GodotObject.IsInstanceValid(current)) Retire(current);
         CharacterRig rig = Build(def);
         owner.AddChild(rig);
         return rig;
     }
 
+    private static void Retire(CharacterRig rig)
+    {
+        rig.GetParent()?.RemoveChild(rig);
+        rig.QueueFree();
+    }
+
     /// <summary>The spec for a definition, cached per id.</summary>
     public static ModelSpec SpecFor(EnemyDef def)
     {
-        if (def.Id == ReefLeviathanModels.Id) return ReefLeviathanModels.For(def);
-        if (def.Id == ReefGuardianModels.Id) return ReefGuardianModels.For(def);
+        if (Game.Arena.Current.Underwater && def.Id == ReefLeviathanModels.Id) return ReefLeviathanModels.For(def);
+        if (Game.Arena.Current.Underwater && def.Id == ReefGuardianModels.Id) return ReefGuardianModels.For(def);
         if (CityGiantModels.IsGiant(def)) return CityGiantModels.For(def);
         if (Game.Arena.Current.Underwater) return ReefMarineModels.For(def);
         string key = def.Id + (def.IsElite ? "+e" : "") + (def.IsBoss ? "+b" : "");

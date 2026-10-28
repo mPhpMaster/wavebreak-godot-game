@@ -167,6 +167,7 @@ public sealed partial class PauseMenu : Node
 
     public override void _Input(InputEvent @event)
     {
+        if (RunOverlayInput.OwnsScoreboardEvent(@event)) return;
         bool toggle = @event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }
                       || (InputMap.HasAction("pause") && @event.IsActionPressed("pause"));
         if (!toggle || DevPanel.IsOpen) return;
@@ -214,6 +215,7 @@ public sealed partial class PauseMenu : Node
 
     private void Open()
     {
+        ScoreboardPanel.SuspendHeld();
         _open = true;
         PlayerCamera.HoldCursor(this);
         // Co-op: the world keeps running for the others; only this player waits.

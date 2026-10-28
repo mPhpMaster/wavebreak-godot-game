@@ -174,7 +174,7 @@ public sealed partial class EnemyManager
     }
 
     private static bool CityAllowed(EnemyDef def)
-        => Visuals.CityGiantModels.IsGiant(def) == Game.Arena.IsCity;
+        => Game.EnemyMapEligibility.Allows(def, Game.Arena.Current);
 
     private bool HasSpawnable(bool elite, float runSeconds)
     {
@@ -264,7 +264,7 @@ public sealed partial class EnemyManager
     private Enemy? SpawnOne(int defIndex, Vector3 around)
     {
         if (defIndex < 0 || defIndex >= _pools.Count || Net.Coop.IsClient) return null;
-        if (Visuals.CityGiantModels.IsGiant(_defs[defIndex]) && !Game.Arena.IsCity) return null;
+        if (!Game.EnemyMapEligibility.Allows(_defs[defIndex], Game.Arena.Current)) return null;
         if (Net.Coop.IsHost) around = SpawnAnchor(around);
 
         Pool<Enemy> pool = _pools[defIndex];
@@ -293,7 +293,8 @@ public sealed partial class EnemyManager
     {
         int index = _defs.IndexOf(def);
         // Co-op client: only the host puts enemies on the field.
-        if (index < 0 || _living >= MaxAlive || Net.Coop.IsClient || Quiet) return null;
+        if (index < 0 || _living >= MaxAlive || Net.Coop.IsClient || Quiet
+            || !Game.EnemyMapEligibility.Allows(def, Game.Arena.Current)) return null;
         if (Visuals.CityGiantModels.IsGiant(def) && (!Game.Arena.IsCity || Game.MapBlockers.Inside(position, def.Radius + 0.3f))) return null;
 
         Enemy? enemy = _pools[index].Get();

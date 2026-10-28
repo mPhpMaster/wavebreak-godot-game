@@ -4,6 +4,13 @@ public static partial class ArabicText
 {
     internal static readonly (string En, string Ar)[] ReleaseNotes =
     {
+        ("Scoreboard, build inspection and enemy habitat fixes", "إصلاح الإحصاءات وتفاصيل المعدات وظهور الأعداء"),
+        ("All player statistics now appear together in the scoreboard without a view dropdown.", "تظهر جميع إحصاءات اللاعبين معاً في لوحة واحدة دون قائمة لتبديل العرض."),
+        ("Tab opens only the scoreboard. Escape takes priority when opening the pause menu.", "يفتح Tab لوحة الإحصاءات فقط، وتكون الأولوية لزر Escape عند فتح قائمة الإيقاف."),
+        ("Equipment icons stay stable while the character sheet refreshes, allowing hover descriptions to appear.", "تبقى أيقونات المعدات ثابتة أثناء تحديث لوحة الشخصية لتظهر تفاصيلها عند تمرير المؤشر."),
+        ("Weapon, tome and item descriptions show their current level, stacks and effects.", "تعرض تفاصيل الأسلحة والكتب والعناصر المستوى الحالي والعدد والتأثيرات."),
+        ("Cave sharks and Reef Leviathans are restricted to underwater maps, including boss, shrine and multiplayer spawn paths.", "تظهر قروش الكهف وليفايثان الشعاب في خرائط تحت الماء فقط، بما يشمل استدعاء الزعماء والمزارات واللعب الجماعي."),
+        ("Classic Play continues to start in Thornmeadow.", "يستمر اللعب الكلاسيكي بالبدء في ثورنميدو."),
         ("Clearer menus & classic adventures", "قوائم أوضح ومغامرات كلاسيكية"),
         ("Redesigned the expedition screen with clearer destination cards and simpler controls.", "تصميم جديد لشاشة الرحلات مع بطاقات وجهات أوضح وخيارات أبسط."),
         ("Choose your character after selecting a Reef or City expedition, before starting the run.", "اختر شخصيتك بعد تحديد رحلة الشعاب أو المدينة وقبل بدء الجولة."),

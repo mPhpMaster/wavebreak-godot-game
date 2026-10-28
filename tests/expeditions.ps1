@@ -35,6 +35,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
     }
     if (-not $CoopOnly -and -not $RenderOnly) {
+    Run-Headless 'overlay-regression-en' @('--check-overlay-regression', '--auto', '--invulnerable') 'OVERLAY REGRESSION PASS'
+    Run-Headless 'overlay-regression-ar' @('--check-overlay-regression', '--auto', '--invulnerable', '--lang=ar') 'OVERLAY REGRESSION PASS'
     Run-Headless 'scoreboard-polish' @('--check-scoreboard', '--auto', '--invulnerable') 'SCOREBOARD PASS'
     Run-Headless 'all-map-resources' @('--check-resource-polish', '--auto', '--invulnerable') 'RESOURCES PASS' 2400
     Run-Headless 'platform-pursuit' @('--check-platform-pursuit', '--auto', '--invulnerable') 'PLATFORM PURSUIT PASS'

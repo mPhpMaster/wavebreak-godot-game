@@ -84,9 +84,10 @@ public sealed partial class StatsPanel : Control
         set
         {
             _pinned = value;
+            if (!value) CloseBuildTooltips();
             if (_title is null) return;
             _title.Text = Loc.T(value ? "PAUSED" : "CHARACTER SHEET");
-            _hint.Text = Loc.T(value ? "Esc / P  resume" : "hold TAB");
+            _hint.Text = SheetHint();
             ActionRow.Visible = value;
             _refresh = 0f;
         }
@@ -187,10 +188,12 @@ public sealed partial class StatsPanel : Control
 
     public override void _Process(double delta)
     {
-        bool want = _pinned || ForceOpen || Screenshot.ShowStats || (_available && Input.IsActionPressed("stats"));
+        bool want = !ScoreboardPanel.Requested
+            && (_pinned || ForceOpen || Screenshot.ShowStats || (_available && Input.IsActionPressed("stats")));
         IsShown = want;
         if (want != Visible)
         {
+            if (!want) CloseBuildTooltips();
             Visible = want;
             if (want) _refresh = 0f;
         }
@@ -206,6 +209,7 @@ public sealed partial class StatsPanel : Control
 
     private void Rebuild()
     {
+        _hint.Text = SheetHint();
         if (!IsInstanceValid(_player)) return;
         StatSheet stats = _player.Stats;
 
@@ -252,6 +256,10 @@ public sealed partial class StatsPanel : Control
 
         CallDeferred(MethodName.FitScroll);
     }
+
+    private string SheetHint() => _pinned
+        ? Loc.T("RESUME") + " · Esc / " + Keybinds.Describe(Keybinds.Primary("pause"))
+        : Loc.F("hold {0}", Keybinds.Describe(Keybinds.Primary("stats")));
 
 
     /// <summary>One stat: name, value in its natural unit, and the change from

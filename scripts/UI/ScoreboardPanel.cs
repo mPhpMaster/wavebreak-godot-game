@@ -38,8 +38,7 @@ public sealed partial class ScoreboardPanel : Control
     private GridContainer _grid = null!;
     private Label _hint = null!;
     private bool _resultsOpen;
-    private bool _holdingMouse;
-    private ScoreMetric _sort;
+    private bool _suspendedUntilRelease;
     private readonly List<ScoreLine> _ordered = new();
     private float _refresh;
 
@@ -70,11 +69,6 @@ public sealed partial class ScoreboardPanel : Control
         _panel.AddChild(box);
         box.AddChild(MakeLabel(Loc.T("SCOREBOARD"), 26, Head, HorizontalAlignment.Center));
 
-        var sorting = new OptionButton { FocusMode = FocusModeEnum.None,
-            TooltipText = Loc.T("Sort players by damage, DPS, kills, deaths or healing restored.") };
-        foreach (string label in new[] { "Damage", "DPS (10s)", "Kills", "Deaths", "Healed" }) sorting.AddItem(Loc.T(label));
-        sorting.ItemSelected += index => { _sort = (ScoreMetric)(int)index; Rebuild(); };
-        box.AddChild(sorting);
         _grid = new GridContainer { Columns = Columns.Length, MouseFilter = MouseFilterEnum.Ignore };
         _grid.AddThemeConstantOverride("h_separation", 12);
         _grid.AddThemeConstantOverride("v_separation", 6);
@@ -88,22 +82,33 @@ public sealed partial class ScoreboardPanel : Control
     {
         if (Instance == this) Instance = null;
         ForceShow = false;
-        if (_holdingMouse) Actors.PlayerCamera.ReleaseCursor(this);
-        _holdingMouse = false;
     }
 
     /// <summary>The results screen's SCOREBOARD button.</summary>
     public void ToggleResults() => _resultsOpen = !_resultsOpen;
 
+    internal static bool Requested => ForceShow || Instance?._resultsOpen == true
+        || (Instance?._suspendedUntilRelease != true && RunOverlayInput.ScoreboardHeld);
+
+    internal static void SuspendHeld()
+    {
+        if (Instance is not { } panel) return;
+        panel._suspendedUntilRelease = RunOverlayInput.ScoreboardHeld;
+        panel._resultsOpen = false;
+    }
+
+    public override void _Input(InputEvent input)
+    {
+        if (RunOverlayInput.OwnsScoreboardEvent(input)) GetViewport().SetInputAsHandled();
+    }
+
     public override void _Process(double delta)
     {
-        bool held = !DevPanel.IsOpen && InputMap.HasAction(Action) && Input.IsActionPressed(Action);
-        bool want = ForceShow || _resultsOpen || held;
+        if (!RunOverlayInput.ScoreboardHeld) _suspendedUntilRelease = false;
+        bool want = Requested;
         if (want != Visible)
         {
             Visible = want;
-            if (want && !_holdingMouse) { Actors.PlayerCamera.HoldCursor(this); _holdingMouse = true; }
-            else if (!want && _holdingMouse) { Actors.PlayerCamera.ReleaseCursor(this); _holdingMouse = false; }
             _refresh = 0f;
         }
         if (!Visible) return;
@@ -122,7 +127,7 @@ public sealed partial class ScoreboardPanel : Control
         for (int i = 0; i < Columns.Length; i++)
             _grid.AddChild(MakeLabel(Loc.T(Columns[i]), 14, Dim, i == 0 ? HorizontalAlignment.Left : HorizontalAlignment.Right));
 
-        ScoreboardOrdering.Fill(RunScoreboard.All, _ordered, _sort);
+        ScoreboardOrdering.Fill(RunScoreboard.All, _ordered, ScoreMetric.Damage);
         foreach (ScoreLine l in _ordered)
         {
             bool you = l.Id == Coop.LocalId;

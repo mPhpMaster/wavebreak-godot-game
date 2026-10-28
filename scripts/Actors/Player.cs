@@ -320,6 +320,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         if (OS.GetCmdlineUserArgs().Contains("--check-coop-polish")) AddChild(new Game.CoopPolishCheck());
         if (OS.GetCmdlineUserArgs().Contains("--check-resource-polish")) AddChild(new Game.ResourcePolishCheck());
         if (OS.GetCmdlineUserArgs().Contains("--check-scoreboard")) AddChild(new Game.ScoreboardCheck());
+        if (OS.GetCmdlineUserArgs().Contains("--check-overlay-regression")) AddChild(new Game.OverlayRegressionCheck());
         if (OS.GetCmdlineUserArgs().Contains("--check-expedition-weapons")) AddChild(new Game.ExpeditionWeaponsCheck(this));
         if (OS.GetCmdlineUserArgs().Contains("--check-leviathan")) AddChild(new Game.GuardianCheck(this, true));
         if (OS.GetCmdlineUserArgs().Contains("--check-guardian")) AddChild(new Game.GuardianCheck(this));

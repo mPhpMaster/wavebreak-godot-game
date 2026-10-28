@@ -42,7 +42,9 @@ public static partial class ContentAudit
         if (def.SplitCount > 0)
             Check(Catalog.EnemyById(def.SplitInto) is { IsBoss: false } && def.SplitCount <= 8, $"splitter {id} child {def.SplitInto}");
 
-        if (!def.DirectorSpawns)
+        if (!def.DirectorSpawns && id == Visuals.ReefGuardianModels.Id)
+            Check(def.UnderwaterOnly && !def.IsBoss, "cave guardian is a scripted underwater encounter (verified by --check-guardian)");
+        else if (!def.DirectorSpawns)
             Check(Catalog.Enemies.Any(e => e.SplitInto == id || e.BossMoves.Any(m => m.SummonId == id)),
                   $"summon-only {id} is never summoned or split into");
 

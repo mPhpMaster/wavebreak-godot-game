@@ -25,7 +25,8 @@ public sealed partial class EnemyManager
     /// <summary>Client: put the host's enemy <paramref name="netId"/> on the field.</summary>
     internal Enemy? SpawnPuppet(int defIndex, int netId, Vector3 at, float yaw, float maxHealth, float health)
     {
-        if (defIndex < 0 || defIndex >= _pools.Count) return null;
+        if (defIndex < 0 || defIndex >= _pools.Count
+            || !Game.EnemyMapEligibility.Allows(_defs[defIndex], Game.Arena.Current)) return null;
         Enemy? enemy = _pools[defIndex].Get();
         if (enemy is null) return null;
         enemy.PoolIndex = defIndex;

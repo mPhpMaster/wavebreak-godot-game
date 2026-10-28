@@ -4,6 +4,7 @@ public static partial class ArabicText
 {
     internal static readonly (string En, string Ar)[] ExpeditionPolish =
     {
+        ("Total effects", "التأثيرات الإجمالية"),
         ("Choose a destination, then choose your character.", "اختر الوجهة، ثم اختر شخصيتك."),
         ("Rooftop grappling · Colossal wardens", "تنقّل بالخطّاف فوق الأسطح · حرّاس عمالقة"),
         ("Free swimming · Hidden caves", "سباحة حرة · كهوف مخفية"),
