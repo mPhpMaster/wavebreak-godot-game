@@ -34,6 +34,7 @@ try {
     }
     if (-not $CoopOnly -and -not $RenderOnly) {
     Run-Headless 'city' @('--route=skyline-run', '--check-city', '--auto', '--invulnerable', '--character=vesper') 'CITY PASS'
+    Run-Headless 'rooftop-acquisition' @('--route=skyline-run', '--check-rooftops', '--auto', '--invulnerable', '--character=vesper') 'ROOFTOP PASS'
     Run-Headless 'dual-hooks' @('--route=skyline-run', '--check-dual-hooks', '--auto', '--invulnerable', '--character=vesper') 'DUALHOOK PASS' 2400
     Run-Headless 'classic-after-reef' @('--menu-expedition-check=classic-reef') 'CLASSIC START PASS'
     Run-Headless 'classic-after-city-card' @('--menu-expedition-check=classic-city-card') 'CLASSIC START PASS'

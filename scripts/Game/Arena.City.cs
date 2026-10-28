@@ -18,6 +18,7 @@ public sealed partial class Arena
         _previousOcclusion = GetViewport().UseOcclusionCulling;
         _restoreOcclusion = true;
         GetViewport().UseOcclusionCulling = true;
+        CityRooftops.Begin(this);
         Reserve(Vector2.Zero, 15f);
         // Regular avenues remain wide enough for a giant's full capsule.
         for (int x = -10; x <= 10; x++)
@@ -64,6 +65,7 @@ public sealed partial class Arena
             Shape = new BoxShape3D { Size = new Vector3(width, height, depth) },
         });
         AddChild(solid);
+        CityRooftops.Register(solid, at, width, depth, height);
         AddChild(new OccluderInstance3D
         {
             Name = "TowerOccluder" + CityBuildingCount,

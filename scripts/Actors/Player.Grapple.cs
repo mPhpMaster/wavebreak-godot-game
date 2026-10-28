@@ -22,7 +22,8 @@ public sealed partial class Player
     public bool HookBoosting => _boostWindow > 0f;
     private bool _cityBallistic, _cityMode;
     private float _cityPitch, _aimIn, _boostCooldown, _boostWindow;
-    private Vector3 _aimAnchor;
+    private readonly Vector3[] _aimAnchors = new Vector3[2];
+    private readonly bool[] _aimAvailable = new bool[2];
 
     public void ReleaseHook()
     {
@@ -112,15 +113,18 @@ public sealed partial class Player
         {
             _aimIn = 1f / 15f;
             Camera3D? camera = GetViewport().GetCamera3D();
-            HookTargetAvailable = control && camera is not null && GrappleAnchors.Ray(this,
-                camera.GlobalPosition, -camera.GlobalBasis.Z, CenterPosition, out _aimAnchor);
+            for (int i = 0; i < 2; i++)
+                _aimAvailable[i] = control && camera is not null && CityRooftops.Find(this,
+                    CenterPosition, -camera.GlobalBasis.Z, (HookSide)i, out _aimAnchors[i],
+                    _hooks[1 - i].Attached ? _hooks[1 - i].Anchor : null);
+            HookTargetAvailable = _aimAvailable[0] || _aimAvailable[1];
         }
         for (int i = 0; i < 2; i++)
         {
             HookAttachment hook = _hooks[i];
             bool held = control && Input.IsActionPressed(i == 0 ? "city_hook_left" : "city_hook_right");
             if (!held) { hook.BlockedUntilRelease = false; ReleaseHook((HookSide)i); continue; }
-            if (!hook.Attached && !hook.BlockedUntilRelease && HookTargetAvailable) AttachHook((HookSide)i, _aimAnchor);
+            if (!hook.Attached && !hook.BlockedUntilRelease && _aimAvailable[i]) AttachHook((HookSide)i, _aimAnchors[i]);
             if (!hook.Attached) continue;
             hook.SightIn -= dt;
             if (CenterPosition.DistanceSquaredTo(hook.Anchor) > (GrapplePhysics.Range + 2f) * (GrapplePhysics.Range + 2f)

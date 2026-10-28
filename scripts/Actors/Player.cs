@@ -315,6 +315,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
             if (perfArg.StartsWith("--perf-tour=")) AddChild(new Game.TraversalPerfTour(this, perfArg["--perf-tour=".Length..]));
         foreach (string soakArg in OS.GetCmdlineUserArgs())
             if (soakArg.StartsWith("--perf-soak=")) AddChild(new Game.TraversalSoak(this, soakArg["--perf-soak=".Length..]));
+        if (OS.GetCmdlineUserArgs().Contains("--check-rooftops")) AddChild(new Game.RooftopCheck(this));
         if (OS.GetCmdlineUserArgs().Contains("--check-dual-hooks")) AddChild(new Game.DualHookCheck(this));
         if (Meta.Launch.MenuExpeditionCheck is not null) AddChild(new Game.ExpeditionMenuRunCheck());
         if (OS.GetCmdlineUserArgs().Contains("--check-city"))

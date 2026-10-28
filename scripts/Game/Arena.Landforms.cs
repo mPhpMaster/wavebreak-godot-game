@@ -62,6 +62,7 @@ public sealed partial class Arena
         if (_restoreOcclusion) GetViewport().UseOcclusionCulling = _previousOcclusion;
         MapBlockers.End(this);
         CityNavigation.End(this);
+        CityRooftops.End(this);
         if (_stage.Layout == "city") GrappleAnchors.End();
     }
 

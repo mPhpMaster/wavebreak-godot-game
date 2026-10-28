@@ -1,13 +1,17 @@
 # Expedition polish — authorized work
 
-Latest published baseline:1.4.0. Current branch:codex/expedition-polish. Do not claim any pending feature is implemented. No new release was requested for this polish batch yet; validate before proposing publication.
+Latest published baseline: 1.4.2. Current branch: codex/expedition-polish.
+The broader batch is not published. Draft changes from 161dae7 were archived
+before release; this branch now incorporates the shipped UI/Flick fixes.
+Only checks recorded below establish current implementation.
 
-## Implemented, awaiting targeted verification
-- Level-up layout now follows Compact Level-up preference instead of forcing compact in co-op. Both layouts are non-pausing in co-op, no dark backdrop, no keyboard focus stealing. Ordinary single-player full layout retains pause.
-- Rest stop information hides while a level-up hand is open so it cannot cover/intercept compact choices.
-- LevelUpPanel split into Build, Presentation, Types partial files; primary file below500 lines.
-- Base giant walk speed reduced from2.4/3.1 to0.5/0.65. Need cap phase multipliers and check animation/nav at very slow speeds.
-- Debug build passed after restoring dependencies. A --no-restore build immediately after ExportRelease had used runtime-only Godot references and failed editor plugin types; `dotnet build` restored correct references.
+## Verified current work
+- Rooftop acquisition is connected to both player inputs and registered city
+  buildings. Low/sky aim, side selection, taller nearby preference, obstruction,
+  range, held-anchor stability, 12-query budget and teardown passed RooftopCheck.
+- Existing DualHookCheck passed after the targeting change, including independent
+  controls, boost, bindings and death cleanup.
+- Classic Thornmeadow and map-to-character selection shipped in 1.4.2.
 
 ## Still required
 1. Honest staged initial loading and prewarming; preserve graphics/content; compare cold/steady measurements.
@@ -17,8 +21,8 @@ Latest published baseline:1.4.0. Current branch:codex/expedition-polish. Do not 
 5. Prepare new-player test route/questions/metrics. Actual participant testing remains unavailable without people; no outreach authorized.
 6. New original MAIN MENU music inspired by existing Gravemoor Lullaby and Lantern Waltz (musicbox melodies, triple-meter waltzes). User has not heard new map music: do not replace reef/city tracks yet. Those maps currently use tidal and harbour respectively.
 7. Jump AND Dash boost while tethered. Dash near an eligible core keeps core-strike priority. Existing mapping/rebindings/controllers must work.
-8. Gameplay settings, title and in-game: independently usable hold vs click-toggle hook behavior. Toggle retains attachment until second click or invalid/out-of-range target. Preserve manual aim priority.
-9. Auto-target when no valid aimed point: nearest valid right-side structure for right hook, left-side for left. Range/LOS, no through-wall snap, no continuous expensive scans.
+8. Gameplay settings, title and in-game: independently usable hold vs click-toggle hook behavior. Toggle retains attachment until second click or invalid/out-of-range target. Rooftop preference overrides low-wall manual aim, as requested.
+9. Implemented and engine-verified: automatic reachable rooftop selection for left/right, camera-forward and side preference, taller nearby roof bias, range/LOS, stable held anchors and bounded queries.
 10. Grapple moving giants as well as city boundary walls. Moving hook anchors follow body-local attachment, expire on death/despawn, replicate safely.
 11. Hook launch must visibly travel from character reel to target and attach on arrival, with an original compressed-gas/reel launch sound. No instant cable from nowhere. Independent simultaneous launches/releases.
 12. City architecture inspired by the anime's stone/plaster/timber/gabled tiled roofs; retain expanded city/navigation/quality and exact visible/collision hook geometry.
