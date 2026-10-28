@@ -11,7 +11,7 @@
 
 If 1.4.3 or 1.4.4 reports `Update error: Handoff`, download and run `Wavebreak-Setup-1.4.5.exe` manually once. Those older executables contain the old updater helper; downloading a newer release cannot replace that running helper. Future updates from 1.4.5 use the repaired path.
 
-The real installed 1.4.3 path was checked through readiness without closing the user's game or replacing its files. Installation over that live copy and human listening remain unverified.
+The real installed 1.4.3 path passed readiness validation. After user approval, the standalone installer also successfully upgraded the existing Program Files installation from 1.4.4 to 1.4.5: all 191 payload files matched, save/settings files were preserved, and the installed game reopened successfully. Human listening remains unverified.
 
 ## Downloads
 

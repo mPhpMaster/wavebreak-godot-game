@@ -25,6 +25,10 @@ Installer: 75,670,012 bytes, SHA-256 `2ed658baaf023f1b0e12e92818c15ec296890c8e77
 
 Local evidence uses `wavebreak-145-*`, `wavebreak-shotgun-*`, `wavebreak-dive-control.log`, `wavebreak-installed-preflight.log` and `wavebreak-updater-regression-next.log` in the temporary directory.
 
-## Installation boundary
+## Real installation acceptance
 
-No installer was run over the user's live installation and no user game process was stopped. Full installation over that copy and human listening are still unverified. The old helper embedded in affected 1.4.3/1.4.4 executables cannot repair itself by downloading another asset: use the standalone 1.4.5 installer once. Subsequent updates run the repaired helper.
+After explicit user approval to close the game and install, the released installer completed with exit code 0 over the existing administrative installation in `C:\Program Files\Wavebreak`. Its pre-install executable version was 1.4.4.0; the resulting version is 1.4.5.0. All 191 exported payload files matched their installed SHA-256 hashes. `profile.cfg`, `settings.cfg`, `keybinds.cfg` and `leaderboard.cfg` were backed up locally and remained byte-identical through installation.
+
+The installed game was launched normally afterward (PID 1900), with a responding `Wavebreak` window and the correct executable path. Evidence: `wavebreak-145-real-install.log`; local save backup: `build/install-verification-145-20261028-125453`.
+
+Human listening remains unverified. The old helper embedded in affected 1.4.3/1.4.4 executables cannot repair itself by downloading another asset: use the standalone 1.4.5 installer once. Subsequent updates run the repaired helper.
