@@ -157,7 +157,12 @@ public sealed partial class NetSession
             if (Coop.IsHost)
             {
                 if (!BecameHost) problems.Add("host now without having been elected");
-                if (PeakPlayers > 2 && Rejoins == 0) problems.Add("the other survivor never reconnected");
+                if (_testExpectRejoinRefused)
+                {
+                    if (RejoinsRefused == 0) problems.Add("the forged rejoin was not refused");
+                    if (Rejoins != 0) problems.Add("a forged rejoin took a slot");
+                }
+                else if (PeakPlayers > 2 && Rejoins == 0) problems.Add("the other survivor never reconnected");
             }
             else
             {
@@ -169,7 +174,7 @@ public sealed partial class NetSession
         if (MigrationFallback.Length > 0) problems.Add($"fell back: {MigrationFallback}");
         int rests = _main?.Stages.RestRoomsVisited ?? 0;
         return $"role={role} role_now={roleNow} migrated={Migrations} old_host=\"{LastOldHost}\" new_host=\"{LastNewHost}\" " +
-               $"became_host={(BecameHost ? 1 : 0)} promoted={PromotedEnemies} rejoins={Rejoins} resyncs={SnapshotsApplied} resync_s={ResyncSeconds:0.0} " +
+               $"became_host={(BecameHost ? 1 : 0)} promoted={PromotedEnemies} rejoins={Rejoins} rejoins_refused={RejoinsRefused} resyncs={SnapshotsApplied} resync_s={ResyncSeconds:0.0} " +
                $"migrated_at={MigratedAt:0.0} ran_after={after:0.0} enemy_travel={_testEnemyTravel:0} " +
                $"enemy_states_after={EnemyStatesReceived - _testEnemyStatesAtMigration} phase_at_migration={_testPhaseAtMigration} phase={phase} " +
                $"rest_rooms={rests} players_now={Coop.Roster.Count} remotes={_remotes.Count} alive={EnemyManager.Instance?.AliveCount ?? 0} " +
@@ -183,7 +188,7 @@ public sealed partial class NetSession
     private void TestMigrationFallback()
     {
         ParseMigrationTest();
-        if (!_testMode || _testDone) return;
+        if (!_testMode || _testDone || TestRefusalSeen(MigrationFallback)) return;
         _testDone = true;
         SceneTree tree = GetTree();
         string? shot = _testShot;

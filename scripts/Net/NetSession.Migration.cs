@@ -37,7 +37,9 @@ namespace Wavebreak.Net;
 ///
 /// <b>The others</b> wait a moment, then connect to the new host (ENet: its
 /// address as the old host saw it, on port + 1; Steam: its Steam id) and say
-/// "I was slot N". The new host re-keys their roster entry, avatar and
+/// "I was slot N", with proof: their Steam id on Steam, otherwise the token the
+/// old host issued them, checked against its hash on the roster
+/// (<see cref="CoopPeer.ClaimedBy"/>). The new host re-keys their roster entry, avatar and
 /// scoreboard line to the new peer id and sends them a full world snapshot
 /// (<see cref="SendWorldSnapshot"/>), against which they line their puppets
 /// up. Until then their own player keeps moving; only the puppets stand still.
@@ -95,6 +97,8 @@ public sealed partial class NetSession
     public float MigratedAt { get; private set; } = -1f;
     /// <summary>Survivors who reached the new host (counted on the new host).</summary>
     public int Rejoins { get; private set; }
+    /// <summary>Claims on a kept slot by someone who could not prove it (new host).</summary>
+    public int RejoinsRefused { get; private set; }
     /// <summary>Enemies turned from puppets into real enemies (new host).</summary>
     public int PromotedEnemies { get; private set; }
     /// <summary>Set when migration was impossible and the run was ended.</summary>
@@ -348,6 +352,12 @@ public sealed partial class NetSession
             Changed?.Invoke();
         }
     }
+
+    /// <summary>New host: is peer <paramref name="id"/> the player who held
+    /// <paramref name="slot"/>? The transport's Steam id cannot be claimed
+    /// falsely; the token can only be shown by whoever was issued it.</summary>
+    private bool RejoinClaimValid(long id, int slot, string token)
+        => Coop.Roster.Find(x => x.Slot == slot) is { } p && p.ClaimedBy(SteamIdOfPeer(id), token);
 
     /// <summary>New host: a survivor (who was slot <paramref name="slot"/>)
     /// reached us as peer <paramref name="id"/>. False when that slot was not

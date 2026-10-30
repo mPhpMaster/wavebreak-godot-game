@@ -71,6 +71,7 @@ public static partial class ArabicText
         ("The host left the game.", "غادر المضيف اللعبة."),
         ("Different game version.", "نسخة اللعبة مختلفة."),
         ("Version mismatch: host {0}, you {1}", "النسخة غير متطابقة: المضيف {0}، وأنت {1}"),
+        ("That place is kept for another player.", "هذا المكان محجوز للاعب آخر."),
         ("That game has already started.", "تلك اللعبة بدأت بالفعل."),
         ("That game is full.", "تلك اللعبة ممتلئة."),
         ("In the lobby. Press READY when you are set.", "أنت في الردهة. اضغط «جاهز!» عندما تستعد."),

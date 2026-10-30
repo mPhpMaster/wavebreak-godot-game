@@ -15,6 +15,20 @@ public sealed class CoopPeer
     public string SkinId = "";
     public string HatId = "";
     public bool Ready;
+
+    /// <summary>The Steam identity the host's transport saw; 0 on ENet.</summary>
+    public ulong SteamId;
+
+    /// <summary>Hash of the secret token the host issued this player. Everyone
+    /// holds the hash, only the player holds the token, so any survivor can
+    /// check a claim on this slot after a host migration and none can make one.</summary>
+    public string RejoinProof = "";
+
+    /// <summary>Is the peer reconnecting with <paramref name="steamId"/> (0 on
+    /// ENet) and <paramref name="token"/> this player? Steam's identity decides
+    /// when there is one.</summary>
+    public bool ClaimedBy(ulong steamId, string token)
+        => SteamId != 0 ? steamId == SteamId : RejoinProof.Length > 0 && Coop.ProofOf(token) == RejoinProof;
 }
 
 /// <summary>
@@ -33,7 +47,11 @@ public static class Coop
     /// <summary>Protocol tag; a client from another build is turned away
     /// instead of desyncing halfway into a run. It goes into the content hash
     /// that the handshake compares with the game version (<see cref="CoopBuild"/>).</summary>
-    public const string Protocol = "wavebreak-coop-13";   // 13: raw build handshake before Hello
+    public const string Protocol = "wavebreak-coop-13";   // 13: raw build handshake before Hello; rejoin identity on the roster
+
+    /// <summary>The public half of a rejoin token.</summary>
+    public static string ProofOf(string token)
+        => System.Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
 
     /// <summary>A teammate standing within this many metres of a downed
     /// player for <see cref="ReviveSeconds"/> brings them back.</summary>

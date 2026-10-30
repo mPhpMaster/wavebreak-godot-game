@@ -112,6 +112,8 @@ public sealed partial class NetSession
             else if (arg.StartsWith("--coop-quit-at=")) s._testHostQuitAt = arg["--coop-quit-at=".Length..].ToFloat();
             else if (arg == "--coop-expect-host-leave") s._testExpectHostLeave = true;
             else if (arg == "--coop-expect-refusal") s._testExpectRefusal = true;   // NetSession.Test.Refusal.cs
+            else if (arg == "--coop-expect-rejoin-refused") s._testExpectRejoinRefused = true;
+            else if (arg.StartsWith("--coop-rejoin-token=")) s._testRejoinToken = arg["--coop-rejoin-token=".Length..];
             else if (arg.StartsWith("--coop-expect-rejects=")) s._testExpectRejects = arg["--coop-expect-rejects=".Length..].ToInt();
             else if (arg.StartsWith("--coop-forge-hits-at=")) s._testForgeHitsAt = arg["--coop-forge-hits-at=".Length..].ToFloat();
             else if (arg.StartsWith("--coop-expect-phase=")) s._testExpectPhase = arg["--coop-expect-phase=".Length..].ToInt();

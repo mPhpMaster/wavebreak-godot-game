@@ -69,7 +69,7 @@ param(
     [float]$Seconds = 60,
     [int]$Port = 7777,
     [switch]$SkipBuild,
-    # Run only these scenarios (coop, coop-hostleft, coop-version, coop-content, coop-forge, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
+    # Run only these scenarios (coop, coop-hostleft, coop-version, coop-content, coop-forge, coop-hijack, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
     [string[]]$Only = @()
 )
 
@@ -280,6 +280,14 @@ Invoke-Multi 'coop-migrate' @(
     @{ Name = 'a'; Delay = 4; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA --coop-expect-migration --coop-expect-phase=2 --coop-seconds=80 --coop-down-at=999 `"--coop-toast-shot=$(Join-Path $shotDir 'coop-migrate-toast-a.png')`" $mig" },
     @{ Name = 'b'; Delay = 2; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestB --coop-expect-migration --coop-expect-phase=2 --coop-seconds=80 --coop-down-at=999 `"--coop-toast-shot=$(Join-Path $shotDir 'coop-migrate-toast-b.png')`" $mig" }
 ) 260
+
+# 3b. Rejoin hijack: guest B reconnects after the migration claiming its slot
+# with a forged token. The new host refuses it and the slot stays unclaimed.
+Invoke-Multi 'coop-hijack' @(
+    @{ Name = 'host'; Delay = 0; Shot = $false; Args = "--coop-host=$Port --coop-name=Host --coop-players=3 --coop-quit-at=16 --seed=5 --auto --invulnerable" },
+    @{ Name = 'a'; Delay = 4; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA --coop-expect-migration --coop-expect-rejoin-refused --coop-seconds=45 --coop-down-at=999 --auto --invulnerable" },
+    @{ Name = 'b'; Delay = 2; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestB --coop-rejoin-token=forged --coop-expect-refusal --coop-seconds=45 --coop-down-at=999 --auto --invulnerable" }
+) 200
 
 # 4. Late join: a third player joins about 20 s into the run, after the
 # host's team has cleared map 1 (the portal opens at 12 s), so the joiner

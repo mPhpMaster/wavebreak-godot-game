@@ -311,10 +311,10 @@ public sealed partial class NetSession : Node
     }
 
     /// <summary>The host accepted this build: introduce the player.</summary>
-    private void SendHello()
+    private void SendHello(string rejoinToken)
     {
         CoopPeer me = LocalProfile();
-        RpcId(1, MethodName.Hello, me.Name, me.CharacterId, me.SkinId, me.HatId, _helloPrevSlot);
+        RpcId(1, MethodName.Hello, me.Name, me.CharacterId, me.SkinId, me.HatId, _helloPrevSlot, rejoinToken);
     }
 
     private void OnConnectionFailed()

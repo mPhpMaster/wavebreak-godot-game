@@ -11,6 +11,10 @@ namespace Wavebreak.Net;
 ///                             the refusal reaches it and names both sides
 ///   --coop-fake-version=V     pose as another game version (<see cref="CoopBuild"/>)
 ///   --coop-fake-content=H     pose as another content hash
+///   --coop-rejoin-token=T     client: show this token when reconnecting after a
+///                             host migration, instead of the one it was issued
+///   --coop-expect-rejoin-refused  the new host: a survivor's claim must be
+///                             refused and its slot stay untaken
 ///   --coop-forge-hits-at=S    client: at S seconds send what a broken or hostile
 ///                             client would (<see cref="StepForgeHits"/>)
 ///   --coop-expect-rejects=N   host: exactly N hit records must be dropped
@@ -18,7 +22,8 @@ namespace Wavebreak.Net;
 /// </summary>
 public sealed partial class NetSession
 {
-    private bool _testExpectRefusal;
+    private bool _testExpectRefusal, _testExpectRejoinRefused;
+    private string? _testRejoinToken;
     private int _testExpectRejects;
     private float _testForgeHitsAt = -1f;
 
@@ -34,7 +39,8 @@ public sealed partial class NetSession
     private bool TestRefusalSeen(string reason)
     {
         if (!_testExpectRefusal) return false;
-        bool named = reason.Contains(CoopBuild.Version) && reason != Meta.Loc.T("Different game version.");
+        bool named = _testRejoinToken is not null ? reason == Meta.Loc.T("That place is kept for another player.")
+                     : reason.Contains(CoopBuild.Version) && reason != Meta.Loc.T("Different game version.");
         TestRefusalEnd($"COOP {(named ? "PASS" : "FAIL")} role=client refused=1 notice=\"{Coop.Notice}\"");
         return true;
     }

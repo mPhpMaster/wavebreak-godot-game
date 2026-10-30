@@ -49,15 +49,16 @@ public sealed partial class NetSession
     }
 
     /// <summary>A player introduces themselves. <paramref name="prevSlot"/> is
-    /// the slot they held before a host migration (-1 otherwise); mid-run, a
-    /// new player is a late joiner (NetSession.Snapshot.cs). The build was
-    /// checked before this (NetSession.Handshake.cs).</summary>
+    /// the slot they held before a host migration (-1 otherwise), proved by
+    /// <paramref name="rejoinToken"/>; mid-run, a new player is a late joiner
+    /// (NetSession.Snapshot.cs). The build was checked before this
+    /// (NetSession.Handshake.cs).</summary>
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void Hello(string name, string characterId, string skinId, string hatId, int prevSlot)
+    private void Hello(string name, string characterId, string skinId, string hatId, int prevSlot, string rejoinToken)
     {
         if (!Coop.IsHost) return;
         long id = Multiplayer.GetRemoteSenderId();
-        if (!_verified.Contains(id))
+        if (!_verified.TryGetValue(id, out string? proof))
         {
             RefusePeer(id, Loc.T("Different game version."));
             return;
@@ -66,6 +67,13 @@ public sealed partial class NetSession
         bool rejoin = false, lateJoin = false;
         if (p is null)
         {
+            // A kept slot goes only to its owner; refused here, it stays kept.
+            if (Coop.InRun && _awaiting.ContainsKey(prevSlot) && !RejoinClaimValid(id, prevSlot, rejoinToken))
+            {
+                RejoinsRefused++;
+                RefusePeer(id, Loc.T("That place is kept for another player."));
+                return;
+            }
             if (Coop.InRun && prevSlot >= 0 && AcceptRejoin(id, prevSlot))
             {
                 p = Coop.Peer(id);
@@ -92,6 +100,8 @@ public sealed partial class NetSession
             }
         }
         p!.Name = UniqueName(CleanName(name), id);
+        p.RejoinProof = proof;
+        p.SteamId = SteamIdOfPeer(id);
         p.CharacterId = characterId;
         p.SkinId = skinId;
         p.HatId = hatId;
@@ -134,7 +144,8 @@ public sealed partial class NetSession
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void Refused(string reason)
     {
-        Fail(reason);
+        if (_migrating) Fallback(reason);
+        else Fail(reason);
     }
 
     /// <summary>The character or skin changed on the CO-OP page: tell the lobby.</summary>
@@ -143,7 +154,7 @@ public sealed partial class NetSession
         if (Coop.InRun) return;
         CoopPeer me = LocalProfile();
         if (Coop.IsClient && Coop.LocalPeer is not null)
-            RpcId(1, MethodName.Hello, me.Name, me.CharacterId, me.SkinId, me.HatId, -1);
+            RpcId(1, MethodName.Hello, me.Name, me.CharacterId, me.SkinId, me.HatId, -1, "");
         else if (Coop.IsHost && Coop.LocalPeer is { } host)
         {
             host.CharacterId = me.CharacterId;
@@ -211,7 +222,7 @@ public sealed partial class NetSession
         foreach (CoopPeer p in Coop.Roster)
             sb.Append(p.Id).Append('|').Append(p.Slot).Append('|').Append(p.Ready ? 1 : 0).Append('|')
               .Append(p.CharacterId).Append('|').Append(p.SkinId).Append('|').Append(p.Name).Append('|')
-              .Append(p.HatId).Append('\n');
+              .Append(p.HatId).Append('|').Append(p.SteamId).Append('|').Append(p.RejoinProof).Append('\n');
         return sb.ToString();
     }
 
@@ -244,6 +255,8 @@ public sealed partial class NetSession
                 SkinId = f[4],
                 Name = f[5],
                 HatId = f.Length > 6 ? f[6] : "",
+                SteamId = f.Length > 7 && ulong.TryParse(f[7], out ulong steamId) ? steamId : 0,
+                RejoinProof = f.Length > 8 ? f[8] : "",
             });
         }
         if (Coop.LocalPeer is not null && !Coop.InRun) Status = Loc.T("In the lobby. Press READY when you are set.");

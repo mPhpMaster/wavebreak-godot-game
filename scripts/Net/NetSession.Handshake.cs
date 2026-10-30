@@ -13,22 +13,27 @@ namespace Wavebreak.Net;
 /// difference can shift.
 ///
 ///   client -> host   hello | version | content hash
-///   host -> client   ok, or refuse | version | content hash
+///   host -> client   ok | rejoin token, or refuse | version | content hash
 ///
 /// Only after "ok" does the client say Hello, and the host ignores a Hello from
 /// a peer that has not passed. A refusal carries the host's facts rather than a
 /// sentence, so the client writes it in its own language
 /// (<see cref="CoopBuild.MismatchText"/>). A host too old to answer leaves the
 /// client to its timeout.
+///
+/// The token is this session's proof of who the player is, should the host leave
+/// (<see cref="CoopPeer.ClaimedBy"/>, NetSession.Migration.cs): a survivor shows
+/// the one it held and takes a new one from the new host.
 /// </summary>
 public sealed partial class NetSession
 {
     private const double HandshakeSeconds = 15.0;
     private const string HsHello = "wb-hello", HsOk = "wb-ok", HsRefuse = "wb-refuse";
 
-    private readonly HashSet<long> _verified = new();   // host: peers past the handshake
+    private readonly Dictionary<long, string> _verified = new();   // host: peers past the handshake -> rejoin proof
     private double _handshakeDeadline = -1;             // client: waiting for the host's answer
     private int _helloPrevSlot = -1;
+    private string _rejoinToken = "";                   // client: the secret behind this player's proof
 
     private void SendRaw(long id, params string[] fields)
         => ((SceneMultiplayer)Multiplayer).SendBytes(Encoding.UTF8.GetBytes(string.Join('|', fields)), (int)id);
@@ -46,10 +51,12 @@ public sealed partial class NetSession
         string[] f = Encoding.UTF8.GetString(packet).Split('|');
         if (Coop.IsHost && f[0] == HsHello && f.Length >= 3) HostHandshake(id, f[1], f[2]);
         else if (!Coop.IsClient || id != 1 || _handshakeDeadline < 0) return;
-        else if (f[0] == HsOk)
+        else if (f[0] == HsOk && f.Length >= 2)
         {
             _handshakeDeadline = -1;
-            SendHello();
+            string held = _testRejoinToken ?? _rejoinToken;
+            _rejoinToken = f[1];
+            SendHello(held);
         }
         else if (f[0] == HsRefuse && f.Length >= 3)
         {
@@ -70,8 +77,9 @@ public sealed partial class NetSession
             TestBuildRefused();
             return;
         }
-        _verified.Add(id);
-        SendRaw(id, HsOk);
+        string token = System.Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+        _verified[id] = Coop.ProofOf(token);
+        SendRaw(id, HsOk, token);
     }
 
     /// <summary>Host: a connection that never completes the handshake (an old
@@ -80,7 +88,7 @@ public sealed partial class NetSession
     {
         GetTree().CreateTimer(HandshakeSeconds + 5.0, processAlways: true).Timeout += () =>
         {
-            if (!IsInstanceValid(this) || !IsInsideTree() || !Coop.IsHost || _verified.Contains(id)) return;
+            if (!IsInstanceValid(this) || !IsInsideTree() || !Coop.IsHost || _verified.ContainsKey(id)) return;
             if (System.Array.IndexOf(Multiplayer.GetPeers(), (int)id) < 0) return;
             GD.Print($"[coop] peer {id} never completed the handshake");
             _peer?.DisconnectPeer((int)id);

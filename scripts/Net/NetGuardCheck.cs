@@ -56,6 +56,18 @@ public static class NetGuardCheck
         Expect("past the floor and the field, damage stops", !budget.TakeDamage(1e6f, 20.0, () => Field(100f)));
         Expect("the next second is a new budget", budget.TakeDamage(1e6f, 21.1, () => Field(100f)));
 
+        // Rejoin claims.
+        const string token = "A1B2C3";
+        var enet = new CoopPeer { RejoinProof = Coop.ProofOf(token) };
+        var steam = new CoopPeer { SteamId = 7656119, RejoinProof = Coop.ProofOf(token) };
+        Expect("the proof does not show the token", !enet.RejoinProof.Contains(token));
+        Expect("ENet: the issued token claims the slot", enet.ClaimedBy(0, token));
+        Expect("ENet: any other token does not", !enet.ClaimedBy(0, "guess") && !enet.ClaimedBy(0, ""));
+        Expect("ENet: the proof itself is no token", !enet.ClaimedBy(0, enet.RejoinProof));
+        Expect("ENet: a slot with no proof can be claimed by nobody", !new CoopPeer().ClaimedBy(0, "") && !new CoopPeer().ClaimedBy(0, token));
+        Expect("Steam: the same id claims the slot", steam.ClaimedBy(7656119, ""));
+        Expect("Steam: another id does not, even with the token", !steam.ClaimedBy(1234, token) && !steam.ClaimedBy(0, token));
+
         GD.Print(failed.Count == 0 ? $"NETGUARD PASS checks={checks}" : $"NETGUARD FAIL checks={checks} failed={failed.Count}");
         return failed.Count == 0;
     }
