@@ -50,13 +50,14 @@ public sealed partial class NetSession
 
     /// <summary>A player introduces themselves. <paramref name="prevSlot"/> is
     /// the slot they held before a host migration (-1 otherwise); mid-run, a
-    /// new player is a late joiner (NetSession.Snapshot.cs).</summary>
+    /// new player is a late joiner (NetSession.Snapshot.cs). The build was
+    /// checked before this (NetSession.Handshake.cs).</summary>
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void Hello(string protocol, string name, string characterId, string skinId, string hatId, int prevSlot)
+    private void Hello(string name, string characterId, string skinId, string hatId, int prevSlot)
     {
         if (!Coop.IsHost) return;
         long id = Multiplayer.GetRemoteSenderId();
-        if (protocol != Coop.Protocol)
+        if (!_verified.Contains(id))
         {
             RefusePeer(id, Loc.T("Different game version."));
             return;
@@ -118,10 +119,15 @@ public sealed partial class NetSession
     {
         GD.Print($"[coop] refused peer {id}: {reason}");
         RpcId(id, MethodName.Refused, reason);
+        DropPeerSoon(id);
+    }
+
+    private void DropPeerSoon(long id)
+    {
         // Let the message leave before the socket does.
         GetTree().CreateTimer(0.5, processAlways: true).Timeout += () =>
         {
-            if (_peer is not null && IsInstanceValid(_peer)) _peer.DisconnectPeer((int)id);
+            if (_peer is not null && IsInstanceValid(_peer) && Array.IndexOf(Multiplayer.GetPeers(), (int)id) >= 0) _peer.DisconnectPeer((int)id);
         };
     }
 
@@ -137,7 +143,7 @@ public sealed partial class NetSession
         if (Coop.InRun) return;
         CoopPeer me = LocalProfile();
         if (Coop.IsClient && Coop.LocalPeer is not null)
-            RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId, me.HatId, -1);
+            RpcId(1, MethodName.Hello, me.Name, me.CharacterId, me.SkinId, me.HatId, -1);
         else if (Coop.IsHost && Coop.LocalPeer is { } host)
         {
             host.CharacterId = me.CharacterId;

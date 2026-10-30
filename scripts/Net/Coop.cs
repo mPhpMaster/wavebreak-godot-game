@@ -31,8 +31,9 @@ public static class Coop
     public const int MaxPlayers = 4;
 
     /// <summary>Protocol tag; a client from another build is turned away
-    /// instead of desyncing halfway into a run.</summary>
-    public const string Protocol = "wavebreak-coop-12";   // 12: huge authored Reef boss collision and body hit geometry
+    /// instead of desyncing halfway into a run. It goes into the content hash
+    /// that the handshake compares with the game version (<see cref="CoopBuild"/>).</summary>
+    public const string Protocol = "wavebreak-coop-13";   // 13: raw build handshake before Hello
 
     /// <summary>A teammate standing within this many metres of a downed
     /// player for <see cref="ReviveSeconds"/> brings them back.</summary>

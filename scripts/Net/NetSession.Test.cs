@@ -111,6 +111,7 @@ public sealed partial class NetSession
             else if (arg == "--coop-lobby-only") s._testLobbyOnly = true;   // stay in the lobby (lobby screenshots)
             else if (arg.StartsWith("--coop-quit-at=")) s._testHostQuitAt = arg["--coop-quit-at=".Length..].ToFloat();
             else if (arg == "--coop-expect-host-leave") s._testExpectHostLeave = true;
+            else if (arg == "--coop-expect-refusal") s._testExpectRefusal = true;   // NetSession.Test.Refusal.cs
             else if (arg.StartsWith("--coop-expect-phase=")) s._testExpectPhase = arg["--coop-expect-phase=".Length..].ToInt();
             else if (arg.StartsWith("--coop-down-shot=")) s._testDownShot = arg["--coop-down-shot=".Length..];
             else if (arg == "--coop-down-before-rest") s._testDownBeforeRest = s._testDownBeforeRestAsked = true;
@@ -244,6 +245,7 @@ public sealed partial class NetSession
 
     private void TestFail(string reason)
     {
+        if (_testMode && !_testDone && TestRefusalSeen(reason)) return;
         if (_testMode && !_testDone) TestResult(false, reason);
     }
 

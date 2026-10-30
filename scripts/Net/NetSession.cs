@@ -64,6 +64,7 @@ public sealed partial class NetSession : Node
         Multiplayer.ConnectedToServer += OnConnected;
         Multiplayer.ConnectionFailed += OnConnectionFailed;
         Multiplayer.ServerDisconnected += OnServerDisconnected;
+        ((SceneMultiplayer)Multiplayer).PeerPacket += OnPeerPacket;   // NetSession.Handshake.cs
         _pendingStart?.Invoke();
         _pendingStart = null;
     }
@@ -75,6 +76,7 @@ public sealed partial class NetSession : Node
         Multiplayer.ConnectedToServer -= OnConnected;
         Multiplayer.ConnectionFailed -= OnConnectionFailed;
         Multiplayer.ServerDisconnected -= OnServerDisconnected;
+        ((SceneMultiplayer)Multiplayer).PeerPacket -= OnPeerPacket;
         if (ReferenceEquals(Instance, this)) Instance = null;
     }
 
@@ -238,6 +240,8 @@ public sealed partial class NetSession : Node
         }
         if (IsInsideTree()) Multiplayer.MultiplayerPeer = new OfflineMultiplayerPeer();
         _connectStarted = -1;
+        _handshakeDeadline = -1;
+        _verified.Clear();
     }
 
     private void Fail(string message)
@@ -259,6 +263,7 @@ public sealed partial class NetSession : Node
             _connectStarted = -1;
             Fail(Loc.T("No answer from the host. Check the address, the port and the firewall."));
         }
+        StepHandshake();   // NetSession.Handshake.cs
         StepMigration();   // NetSession.Migration.cs
         ProcessRun((float)delta);
         StepTrade((float)delta);   // NetSession.Trade.cs
@@ -270,12 +275,14 @@ public sealed partial class NetSession : Node
     private void OnPeerConnected(long id)
     {
         GD.Print($"[coop] peer {id} connected");
+        if (Coop.IsHost) WatchHandshake(id);
     }
 
     private void OnPeerDisconnected(long id)
     {
         GD.Print($"[coop] peer {id} disconnected");
         if (!Coop.IsHost) return;
+        _verified.Remove(id);
         string name = Coop.NameOf(id);
         Coop.Roster.RemoveAll(p => p.Id == id);
         BroadcastRoster();
@@ -295,12 +302,18 @@ public sealed partial class NetSession : Node
             ReconnectedToNewHost();
             prevSlot = _mySlotBefore;
         }
-        CoopPeer me = LocalProfile();
         if (!Coop.InRun) Status = Loc.T("Connected. Waiting for the host...");
         GD.Print($"[coop] connected as {Coop.LocalId}");
         if (ViaSteam) SteamLobby.PublishPeerId(Coop.LocalId);
-        RpcId(1, MethodName.Hello, Coop.Protocol, me.Name, me.CharacterId, me.SkinId, me.HatId, prevSlot);
+        BeginHandshake(prevSlot);   // NetSession.Handshake.cs
         Changed?.Invoke();
+    }
+
+    /// <summary>The host accepted this build: introduce the player.</summary>
+    private void SendHello()
+    {
+        CoopPeer me = LocalProfile();
+        RpcId(1, MethodName.Hello, me.Name, me.CharacterId, me.SkinId, me.HatId, _helloPrevSlot);
     }
 
     private void OnConnectionFailed()

@@ -69,7 +69,7 @@ param(
     [float]$Seconds = 60,
     [int]$Port = 7777,
     [switch]$SkipBuild,
-    # Run only these scenarios (coop, coop-hostleft, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
+    # Run only these scenarios (coop, coop-hostleft, coop-version, coop-content, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
     [string[]]$Only = @()
 )
 
@@ -198,6 +198,12 @@ foreach ($who in @('host', 'client')) {
 # 2. The host quits mid-run: the lone guest takes over as the host and plays on.
 Invoke-Scenario 'coop-hostleft' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `
                                 "--coop-expect-migration --coop-seconds=42 --coop-down-at=999 --auto --invulnerable" 170 $false $true
+
+# 2a. A build that differs is refused in the handshake with both versions named,
+# in the guest's language (NetSession.Handshake.cs). The guest poses as another
+# version, then as the same version with other content.
+Invoke-Scenario 'coop-version' "--coop-players=2 --coop-expect-refusal" "--coop-fake-version=9.9.9 --coop-expect-refusal" 90 $false $false
+Invoke-Scenario 'coop-content' "--coop-players=2 --coop-expect-refusal" "--coop-fake-content=deadbeef --coop-expect-refusal --lang=ar" 90 $false $false
 
 # 2b. Fallback: migration off, the guest's run ends on the results screen.
 Invoke-Scenario 'coop-fallback' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `
