@@ -103,6 +103,13 @@ public sealed partial class MainMenu : Node3D
             GetTree().Quit();
             return;
         }
+        // --check-profile: saving and recovery on real files (Meta/Profile.Check.cs).
+        if (Profile.CheckRequested)
+        {
+            Profile.RunCheck();
+            GetTree().Quit();
+            return;
+        }
         // --coop-host / --coop-join: the automated co-op test. No menu; the
         // session starts the run when everyone is in (Net/NetSession.Test.cs).
         // With --menu-shot the menu is built too, to photograph the lobby.
