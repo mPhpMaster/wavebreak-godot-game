@@ -241,6 +241,7 @@ public sealed partial class EnemyManager : Node3D
     {
         using var timing = Wavebreak.Game.Prof.Scope("Startup.enemyPools");
         Instance = this;
+        Net.CoopScaling.Reset();
         _rng = rng ?? new Rng(0);
         _despawnHandler ??= OnEnemyDespawned;
 
@@ -304,6 +305,7 @@ public sealed partial class EnemyManager : Node3D
         // Co-op client: the host's director decides every spawn (EnemyManager.Coop.cs).
         if (Net.Coop.IsClient) return;
         UpdateDifficulty(runSeconds);
+        Net.CoopScaling.Report();
         RefreshNavigation(runSeconds);
 
         // Bank credits, but not without limit. An unbounded bank means a player
@@ -314,7 +316,8 @@ public sealed partial class EnemyManager : Node3D
         // The bank cap is also the opening burst: whatever it allows is spent on
         // the first tick. At 40 that was forty enemies in the first second, which
         // no amount of live-cap tuning downstream can undo.
-        float bank = (10f + minutes * 26f) * SpawnRateScale * Meta.DifficultyTiers.Active.SpawnRate * Meta.Challenges.SpawnRate;
+        float bank = (10f + minutes * 26f) * SpawnRateScale * Meta.DifficultyTiers.Active.SpawnRate * Meta.Challenges.SpawnRate
+                     * Net.CoopScaling.SpawnRate(Net.CoopScaling.Living);
         if (_credits > bank) _credits = bank;
 
         UpdateWaves(runSeconds);
