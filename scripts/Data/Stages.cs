@@ -146,10 +146,11 @@ public partial class StageDef : Resource
     /// the pressure. Not a fail state: a slow kill is punished, never blocked.</summary>
     [Export] public float BossGraceSeconds { get; set; } = 120f;
 
-    /// <summary>Optional boss id. Empty means "let the director choose", which
-    /// is the normal case: it takes the strongest boss unlocked by then that the
-    /// run has not fought yet, so bosses added to the catalog slot in without
-    /// anyone editing this table.</summary>
+    /// <summary>Optional boss id. Empty is the normal case: the run's
+    /// <see cref="Game.BossPlan"/> draws one of the right tier, so bosses added
+    /// to the catalog slot in without anyone editing this table. An id here is
+    /// the map's signature, three times as likely when the plan reaches it; a
+    /// boss that can only stand on this map always comes.</summary>
     [Export] public string BossId { get; set; } = "";
 
     /// <summary>

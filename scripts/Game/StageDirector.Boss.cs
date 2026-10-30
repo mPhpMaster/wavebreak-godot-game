@@ -66,48 +66,17 @@ public sealed partial class StageDirector
             _retryAt = _run.PhaseSeconds + 1f;
             return;
         }
-        _fought.Add(_bossDef.Id);
         Log($"phase {_index + 1} boss '{_bossDef.DisplayName}' arrives ({_boss.MaxHealth:0} hp)");
         EventBus.Publish(new PhaseBossArrived(_index + 1, _bossDef.DisplayName));
         if (Net.Coop.IsHost) Net.NetSession.Instance?.SendBoss(_boss);
     }
 
-    /// <summary>
-    /// The strongest boss available now that this run has not met yet.
-    ///
-    /// "Available" is the boss's own unlock time against the run clock, the
-    /// same rule the old timer used, so a boss tuned to appear late still
-    /// appears late. If nothing is unlocked yet (shortened test phases), the
-    /// earliest-unlocking unfought boss stands in. Repeats only when every
-    /// eligible boss has been fought.
-    /// </summary>
-    private EnemyDef? ChooseBoss()
-    {
-        if (Stage.BossId is { Length: > 0 } wanted)
-            foreach (EnemyDef def in _roster)
-                // Reef's explicit encounter must not be replaced by a generic roster unlock gate.
-                if (def.IsBoss && def.Id == wanted
-                    && (wanted == Visuals.ReefLeviathanModels.Id || def.UnlockAtSeconds <= _run.Seconds)
-                    && EnemyMapEligibility.Allows(def, Stage)) return def;
+    /// <summary>This map's boss from the run's plan (<see cref="BossPlan"/>).
+    /// Asked only by whoever runs the phase flow; clients are sent the result.</summary>
+    private EnemyDef? ChooseBoss() => PlannedBosses[Mathf.Clamp(_index, 0, _stages.Count - 1)];
 
-        EnemyDef? best = null, bestFresh = null, earliest = null, earliestFresh = null;
-        foreach (EnemyDef def in _roster)
-        {
-            if (def is null || !def.IsBoss || !EnemyMapEligibility.Allows(def, Stage)) continue;
-            bool fresh = !_fought.Contains(def.Id);
-
-            if (earliest is null || def.UnlockAtSeconds < earliest.UnlockAtSeconds) earliest = def;
-            if (fresh && (earliestFresh is null || def.UnlockAtSeconds < earliestFresh.UnlockAtSeconds)) earliestFresh = def;
-
-            if (def.UnlockAtSeconds > _run.Seconds) continue;
-            if (Stronger(def, best)) best = def;
-            if (fresh && Stronger(def, bestFresh)) bestFresh = def;
-        }
-        return bestFresh ?? earliestFresh ?? best ?? earliest;
-    }
-
-    private static bool Stronger(EnemyDef a, EnemyDef? b)
-        => b is null || a.Cost > b.Cost || (a.Cost == b.Cost && a.Health > b.Health);
+    /// <summary>The boss of each map on the route, in order.</summary>
+    public EnemyDef?[] PlannedBosses => BossPlan.For(_stages, _roster, _run.Seed);
 
     private void OnBossKilled()
     {

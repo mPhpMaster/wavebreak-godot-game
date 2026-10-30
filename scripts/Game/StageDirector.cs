@@ -17,9 +17,10 @@ namespace Wavebreak.Game;
 /// adds its own multiplier on top, so a new map is a step up rather than a
 /// reset — arriving should feel like a promotion.
 ///
-/// The boss is chosen from the catalog by data — the strongest boss that is
-/// unlocked by now and that this run has not fought yet — so a boss added to
-/// the roster slots into the phase flow without anyone editing this file.
+/// The boss is chosen from the catalog by data: <see cref="BossPlan"/> draws one
+/// per map from the run's seed, each of the tier its place in the run calls for,
+/// so a boss added to the roster slots into the phase flow without anyone
+/// editing this file.
 ///
 /// It cannot soft-lock: a boss that lives past its grace window starts raising
 /// the pressure on everything else, and a boss that vanishes without dying (a
@@ -68,7 +69,6 @@ public sealed partial class StageDirector
     private readonly PlayerCamera _camera;
     private IReadOnlyList<StageDef> _stages;
     private readonly IReadOnlyList<EnemyDef> _roster;
-    private readonly HashSet<string> _fought = new();
 
     private int _index = -1;
     private Arena? _arena;
@@ -173,6 +173,7 @@ public sealed partial class StageDirector
         bool checkBoundary = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-boundary") >= 0;
         if (checkBoundary) _stages = Data.Stages.All;
         EnterPhase(Mathf.Clamp(_startPhase - 1, 0, _stages.Count - 1));
+        GD.Print($"META bosses={string.Join(",", System.Array.ConvertAll(PlannedBosses, b => b?.Id ?? "none"))}");
 
         if (checkBoundary)
             _ = CheckBoundary();

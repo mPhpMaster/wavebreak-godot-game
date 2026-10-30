@@ -29,7 +29,6 @@ public sealed partial class StageDirector
         _bossAt = _run.PhaseSeconds;
         _boss = boss;
         _bossDef = def ?? boss?.Def;
-        if (_bossDef is not null) _fought.Add(_bossDef.Id);
         EventBus.Publish(new PhaseBossArrived(_index + 1, _bossDef?.DisplayName ?? ""));
     }
 

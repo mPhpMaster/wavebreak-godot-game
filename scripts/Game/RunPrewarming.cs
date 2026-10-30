@@ -12,7 +12,7 @@ public static class RunPrewarming
     public static async Task Prepare(Main main, RunLoadingPanel progress)
     {
         var ids = main.Stages.Route.SelectMany(stage => stage.EnemyIds ?? System.Array.Empty<string>()).ToHashSet();
-        foreach (StageDef stage in main.Stages.Route) ids.Add(stage.BossId);
+        foreach (EnemyDef? boss in main.Stages.PlannedBosses) if (boss is not null) ids.Add(boss.Id);
         var enemies = Catalog.Enemies.Where(enemy => ids.Contains(enemy.Id) || !enemy.IsBoss).ToArray();
         for (int index = 0; index < enemies.Length; index++)
         {

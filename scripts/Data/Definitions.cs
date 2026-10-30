@@ -256,9 +256,9 @@ public partial class EnemyDef : Resource
 
     /// <summary>
     /// Which stage of a run a boss is written for: 1 = first boss, 2 = middle,
-    /// 3 = final. 0 for everything that is not a boss. Nothing in the enemy
-    /// layer reads it — it is a hint for whatever schedules bosses (the timer
-    /// today, a map/phase system later) so that choice can be made from data.
+    /// 3 = final. 0 for everything that is not a boss, and for a boss that
+    /// belongs to one map. <see cref="Game.BossPlan"/> draws each run's bosses
+    /// by it, which is what keeps the ramp while the order changes run to run.
     /// </summary>
     [Export] public int BossTier { get; set; }
 

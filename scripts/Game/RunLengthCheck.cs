@@ -68,7 +68,34 @@ public static class RunLengthCheck
         Expect("Normal has 4 phases", Routes.PhasesFor(DifficultyTiers.All[0]) == 4);
         Expect("Abyss has 6 phases (every map)", Routes.PhasesFor(DifficultyTiers.ById("abyss")!) == 6);
         Expect("the long map order includes Stormwatch Harbour", System.Array.IndexOf(Stages.LongOrder, "stormwatch") >= 0);
+        CheckBossPlans(Expect);
         GD.Print(ok ? "PHASES PASS" : "PHASES FAIL");
+    }
+
+    /// <summary>Boss plans over many seeds: repeatable, varied, tiers never
+    /// falling along a route, no boss twice while its tier has another left.</summary>
+    private static void CheckBossPlans(Action<string, bool> expect)
+    {
+        const int seeds = 300;
+        foreach (DifficultyTier tier in new[] { DifficultyTiers.All[0], DifficultyTiers.ById("nightmare")!, DifficultyTiers.ById("abyss")! })
+        {
+            IReadOnlyList<StageDef> maps = Routes.Build(Routes.All[0], 7UL, Routes.PhasesFor(tier));
+            var orders = new Dictionary<string, int>();
+            bool ramp = true, once = true, repeatable = true, final3 = true;
+            for (ulong seed = 1; seed <= seeds; seed++)
+            {
+                EnemyDef?[] plan = Game.BossPlan.For(maps, Catalog.Enemies, seed);
+                string order = string.Join(",", plan.Select(b => b?.Id ?? "none"));
+                orders[order] = orders.TryGetValue(order, out int n) ? n + 1 : 1;
+                repeatable &= order == string.Join(",", Game.BossPlan.For(maps, Catalog.Enemies, seed).Select(b => b?.Id ?? "none"));
+                for (int i = 1; i < plan.Length; i++) ramp &= plan[i]!.BossTier >= plan[i - 1]!.BossTier;
+                once &= plan.Distinct().Count() == plan.Length;
+                final3 &= plan[^1]!.BossTier == 3;
+            }
+            expect($"{tier.Id} ({maps.Count} maps): {orders.Count} boss orders in {seeds} seeds; ramp={ramp} once={once} repeatable={repeatable} final tier 3={final3}",
+                   orders.Count >= (maps.Count >= 6 ? 2 : 4) && ramp && once && repeatable && final3);
+            GD.Print($"PHASES {tier.Id} commonest: {string.Join("  ", orders.OrderByDescending(p => p.Value).Take(3).Select(p => $"{p.Key} x{p.Value}"))}");
+        }
     }
 
     private static void CheckRoute(Action<string, bool> expect, string label, IReadOnlyList<StageDef> maps, bool quiet = false)
