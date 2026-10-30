@@ -17,7 +17,7 @@ internal sealed class ReefShotgun : IWeaponBehavior
         Vector3 right = heading.Cross(Vector3.Up).Normalized();
         if (right.LengthSquared() < .1f) right = Vector3.Right;
         Vector3 up = right.Cross(heading).Normalized();
-        int count = Math.Clamp(weapon.BaseProjectiles + (int)stats.Get(Stat.ProjectileCount), 1, 32);
+        int count = Math.Clamp(weapon.BaseProjectiles + weapon.BonusShots(stats), 1, 32);
         float spread = Mathf.Tan(Mathf.DegToRad(weapon.Def.SpreadDegrees / 2));
         for (int i = 0; i < count; i++)
         {
@@ -47,7 +47,7 @@ internal sealed class SkylineSwords : IWeaponBehavior
         float reach = weapon.Def.Range * (1 + weapon.Bonus.Range) * stats.Get(Stat.AreaSize) * (1 + weapon.Bonus.Area);
         Vector3 origin = system.MuzzlePosition, heading = system.AimAt(origin, reach);
         Targeting.Overlap(origin, reach, _targets);
-        int swings = Math.Clamp(weapon.BaseProjectiles + (int)stats.Get(Stat.ProjectileCount), 2, 6);
+        int swings = Math.Clamp(weapon.BaseProjectiles + weapon.BonusShots(stats), 2, 6);
         float arc = Mathf.Cos(Mathf.DegToRad(weapon.Def.SpreadDegrees / 2));
         for (int blade = 0; blade < swings; blade++)
         {

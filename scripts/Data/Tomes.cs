@@ -90,8 +90,10 @@ public static partial class Tomes
              "A metronome bound in sharkskin. Weapons recover faster.", new Color(1.00f, 0.78f, 0.35f)),
         Tome("tome_breadth", "Tome of Breadth", Rarity.Common, Stat.AreaSize, ModifierOp.Additive, 0.08f, 5, 0.8f,
              "Maps of currents that go further than they should. Bigger auras and blasts.", new Color(0.55f, 0.80f, 1.00f)),
-        Tome("tome_multitudes", "Tome of Multitudes", Rarity.Rare, Stat.ProjectileCount, ModifierOp.Flat, 1f, 3, 0.35f,
-             "Read it twice and you start seeing two of everything. So do your weapons.", new Color(0.72f, 0.55f, 1.00f)),
+        // Half a shot a level, not one: at +1 a level this doubled a single-shot
+        // weapon outright, then tripled it, against +8% from a Tome of Edges.
+        Tome("tome_multitudes", "Tome of Multitudes", Rarity.Rare, Stat.ProjectileCount, ModifierOp.Flat, 0.5f, 3, 0.35f,
+             "Read it twice and you start seeing double. Half a shot a level: a half fires on every second volley.", new Color(0.72f, 0.55f, 1.00f)),
         Tome("tome_precision", "Tome of Precision", Rarity.Uncommon, Stat.CritChance, ModifierOp.Flat, 0.03f, 5, 0.6f,
              "Anatomy of things that live under pressure. Find the soft parts.", new Color(1.00f, 0.55f, 0.75f)),
 

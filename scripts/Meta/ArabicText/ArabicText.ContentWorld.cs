@@ -71,7 +71,7 @@ public static partial class ArabicText
         ("Tome of Breadth", "كتاب الاتّساع"),
         ("Maps of currents that go further than they should. Bigger auras and blasts.", "خرائط تيّارات تمتد أبعد مما ينبغي. هالات وانفجارات أكبر."),
         ("Tome of Multitudes", "كتاب الكثرة"),
-        ("Read it twice and you start seeing two of everything. So do your weapons.", "اقرأه مرتين وسترى كل شيء مضاعفًا. وكذلك أسلحتك."),
+        ("Read it twice and you start seeing double. Half a shot a level: a half fires on every second volley.", "اقرأه مرتين وسترى كل شيء مضاعفًا. نصف طلقة لكل مستوى: يُطلَق النصف مع كل رشقة ثانية."),
         ("Tome of Precision", "كتاب الدقّة"),
         ("Anatomy of things that live under pressure. Find the soft parts.", "تشريح كائنات تعيش تحت الضغط. ابحث عن المواضع الطريّة."),
         ("Tome of Vigour", "كتاب الحيويّة"),

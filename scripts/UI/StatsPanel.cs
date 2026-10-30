@@ -305,7 +305,7 @@ public sealed partial class StatsPanel : Control
         Stat.AttackSpeed     => $"x{v:0.00}",
         Stat.CritChance      => $"{v * 100f:0.#}%",
         Stat.CritDamage      => $"+{v * 100f:0}%",
-        Stat.ProjectileCount => $"+{v:0}",
+        Stat.ProjectileCount => $"+{v:0.#}",
         Stat.MoveSpeed       => Loc.F("{0:0.0} m/s", v),
         Stat.JumpHeight      => Loc.F("{0:0.0} m", v),
         Stat.DashCooldown    => Loc.F("{0:0.00} s", v),

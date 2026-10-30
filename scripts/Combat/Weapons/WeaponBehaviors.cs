@@ -58,7 +58,7 @@ internal static class WeaponBehaviors
     private static readonly List<IDamageable> Hit = new(16);
 
     internal static int Shots(WeaponRuntime w, StatSheet s)
-        => Math.Max(1, w.Def.ProjectilesAtLevel(w.Level) + (int)s.Get(Stat.ProjectileCount));
+        => Math.Max(1, w.Def.ProjectilesAtLevel(w.Level) + w.BonusShots(s));
 
     internal static float Area(StatSheet s) => s.Get(Stat.AreaSize);
 
