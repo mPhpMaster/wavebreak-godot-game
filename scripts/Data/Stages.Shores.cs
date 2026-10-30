@@ -152,6 +152,13 @@ public static partial class Stages
             HazardPools = 12, HazardRadius = 4.2f, HazardSlow = 0.7f, HazardDamage = 0.02f,
             HazardColor = new Color(0.55f, 0.95f, 0.45f), HazardName = "sunken grave",
             BossId = "gyre_matron",
+            // What does not stay buried: burrowers, blinkers, lights in the
+            // mist, things tethered to something; the cold heralds keep watch.
+            RosterThemes = new[] { "burrower", "teleporter", "gloom", "tether", "support" },
+            RosterExtra = new[]
+            {
+                "brine_leech", "bloat_polyp", "crock_mimic", "gloomwing_ray", "gloom_lurcher", "deepcaller", "pale_sentinel", "rift_maw", "frost_herald",
+            },
         },
 
         // ---- Saltglass Shallows. A wide twelve-sided beach at low tide: long
@@ -180,6 +187,10 @@ public static partial class Stages
             HazardPools = 16, HazardRadius = 6.5f, HazardSlow = 0.6f, HazardDamage = 0f,
             HazardColor = new Color(0.25f, 0.75f, 0.85f), HazardName = "tide pool",
             BossId = "squall_tyrant",
+            // The tide line: crabs, leeches, shell-backs and spitters. Nothing
+            // from deep water, nothing with wings.
+            RosterThemes = new[] { "shore", "reef" },
+            RosterAvoid = new[] { "deep", "storm", "ash" },
         },
 
         Stormwatch(),   // Stages.Harbour.cs

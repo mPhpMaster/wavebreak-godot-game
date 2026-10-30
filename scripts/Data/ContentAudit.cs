@@ -202,6 +202,7 @@ public static partial class ContentAudit
             AuditItems();
             AuditEnemies(system);
             AuditDirector();
+            AuditRosters();         // ContentAudit.Rosters.cs
             AuditOffers(system);
             AuditTomes(system);
             AuditPerks(system);     // ContentAudit.Perks.cs
