@@ -103,6 +103,13 @@ public sealed partial class MainMenu : Node3D
             GetTree().Quit();
             return;
         }
+        // --check-netguard: the host's limits on client input (Net/NetGuardCheck.cs).
+        if (Net.NetGuardCheck.Requested)
+        {
+            Net.NetGuardCheck.Run();
+            GetTree().Quit();
+            return;
+        }
         // --check-profile: saving and recovery on real files (Meta/Profile.Check.cs).
         if (Profile.CheckRequested)
         {

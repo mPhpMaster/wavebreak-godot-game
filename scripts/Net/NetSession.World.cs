@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 using Wavebreak.Actors;
@@ -43,6 +44,7 @@ public sealed partial class NetSession
 
     private const int HitStride = 9;
 
+    private readonly Dictionary<long, HitGuard> _hitGuards = new();   // host: per sender
     private readonly List<float> _ev = new();
     private readonly List<float> _hits = new();
     private readonly List<float> _state = new();
@@ -56,6 +58,9 @@ public sealed partial class NetSession
     public int EnemiesSynced { get; private set; }
     public int HitsQueued { get; private set; }
     public int HitsApplied { get; private set; }
+    /// <summary>Host: hit records dropped as malformed or over budget. An enemy
+    /// that merely died first is not counted.</summary>
+    public int HitsRejected { get; private set; }
     public int PuppetKills { get; private set; }
     public int PickupsSynced { get; private set; }
     public int ChestsSynced { get; private set; }
@@ -74,6 +79,7 @@ public sealed partial class NetSession
         _enemies.Clear();
         _chests.Clear();
         _claimedChests.Clear();
+        _hitGuards.Clear();
     }
 
     private void FlushEvents()
@@ -182,29 +188,69 @@ public sealed partial class NetSession
     private void Hits(float[] d)
     {
         if (!Coop.IsHost) return;
+        long sender = Multiplayer.GetRemoteSenderId();
+        if (Coop.Peer(sender) is null || !HitGuard.ValidBatch(d.Length, HitStride))
+        {
+            HitsRejected += d.Length / HitStride;
+            NoteRejected(sender);
+            return;
+        }
+        if (!_hitGuards.TryGetValue(sender, out HitGuard? guard)) _hitGuards[sender] = guard = new HitGuard();
         // Every hit in this batch is the sender's: kill credit and the
         // scoreboard read it (Enemy.Awareness.cs).
-        Enemy.NetHitter = Multiplayer.GetRemoteSenderId();
-        try { ApplyHits(d); }
+        Enemy.NetHitter = sender;
+        try { ApplyHits(d, guard, sender); }
         finally { Enemy.NetHitter = 0; }
     }
 
-    private void ApplyHits(float[] d)
+    private double _rejectLoggedAt = -10;
+
+    private void NoteRejected(long sender)
+    {
+        if (Now - _rejectLoggedAt < 5.0) return;
+        _rejectLoggedAt = Now;
+        GD.Print($"[coop] dropped hits from peer {sender} ({HitsRejected} so far)");
+    }
+
+    /// <summary>Health alive on the field, for the damage budget.</summary>
+    private float FieldHealth()
+    {
+        float sum = 0f;
+        foreach (Enemy e in _enemies.Values)
+            if (IsInstanceValid(e) && e.IsAlive) sum += e.MaxHealth;
+        return sum;
+    }
+
+    private void ApplyHits(float[] d, HitGuard guard, long sender)
     {
         // Applied straight to the enemy: no EnemyDamaged is published here, so
         // the host's own lifesteal and on-hit items never fire off someone
-        // else's hit (the client already ran its own).
+        // else's hit (the client already ran its own). Nothing the client sent
+        // is taken on trust: every field goes through HitGuard first.
+        int rejected = HitsRejected;
+        double now = Now;
         for (int i = 0; i + HitStride <= d.Length; i += HitStride)
         {
+            if (!HitGuard.ValidId(d[i], _nextEnemyId) || !guard.TakeHit(now))
+            {
+                HitsRejected++;
+                continue;
+            }
             if (!_enemies.TryGetValue((int)d[i], out Enemy? e) || !IsInstanceValid(e) || !e.IsAlive) continue;
-            float amount = d[i + 1];
+            float amount = HitGuard.ClampAmount(d[i + 1], e.MaxHealth);
+            // Overkill is not damage: the budget counts what the hit can remove.
+            if (amount > 0f && !guard.TakeDamage(MathF.Min(amount, e.Health), now, FieldHealth))
+            {
+                HitsRejected++;
+                continue;
+            }
             if (amount > 0f)
             {
                 e.TakeDamage(new DamageInfo
                 {
                     Amount = amount,
-                    Knockback = d[i + 2],
-                    Direction = new Vector3(d[i + 3], 0f, d[i + 4]),
+                    Knockback = HitGuard.ClampKnockback(d[i + 2]),
+                    Direction = HitGuard.CleanDirection(d[i + 3], d[i + 4]),
                     CanCrit = false,
                     ProcCoefficient = 0f,
                     Source = "coop",
@@ -212,9 +258,11 @@ public sealed partial class NetSession
                 HitsApplied++;
             }
             if (!e.IsAlive) continue;
-            if (d[i + 5] > 0f) e.ApplyStun(d[i + 5]);
-            if (d[i + 6] > 0f) e.ApplyChill(d[i + 6], (int)d[i + 7], d[i + 8]);
+            float stun = HitGuard.ClampStatus(d[i + 5]), chill = HitGuard.ClampStatus(d[i + 6]);
+            if (stun > 0f) e.ApplyStun(stun);
+            if (chill > 0f) e.ApplyChill(chill, float.IsFinite(d[i + 7]) ? Math.Clamp((int)d[i + 7], 0, HitGuard.MaxFreezeStacks) : 0, HitGuard.ClampStatus(d[i + 8]));
         }
+        if (HitsRejected != rejected) NoteRejected(sender);
     }
 
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable, TransferChannel = 1)]

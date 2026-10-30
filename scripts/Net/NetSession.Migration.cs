@@ -285,6 +285,7 @@ public sealed partial class NetSession
         _loaded.Clear();
         _loaded.Add(1);
         _hits.Clear();
+        _hitGuards.Clear();
 
         // The world: puppets become enemies, orbs and chests come under this
         // machine's rule, the director and the phase machine carry on.

@@ -112,6 +112,8 @@ public sealed partial class NetSession
             else if (arg.StartsWith("--coop-quit-at=")) s._testHostQuitAt = arg["--coop-quit-at=".Length..].ToFloat();
             else if (arg == "--coop-expect-host-leave") s._testExpectHostLeave = true;
             else if (arg == "--coop-expect-refusal") s._testExpectRefusal = true;   // NetSession.Test.Refusal.cs
+            else if (arg.StartsWith("--coop-expect-rejects=")) s._testExpectRejects = arg["--coop-expect-rejects=".Length..].ToInt();
+            else if (arg.StartsWith("--coop-forge-hits-at=")) s._testForgeHitsAt = arg["--coop-forge-hits-at=".Length..].ToFloat();
             else if (arg.StartsWith("--coop-expect-phase=")) s._testExpectPhase = arg["--coop-expect-phase=".Length..].ToInt();
             else if (arg.StartsWith("--coop-down-shot=")) s._testDownShot = arg["--coop-down-shot=".Length..];
             else if (arg == "--coop-down-before-rest") s._testDownBeforeRest = s._testDownBeforeRestAsked = true;
@@ -156,6 +158,7 @@ public sealed partial class NetSession
         if (!_go || _main is null || !IsInstanceValid(_main)) return;
 
         float t = _main.Run.Seconds;
+        StepForgeHits(t);   // NetSession.Test.Refusal.cs
         Player? me = Player.Instance;
         TestRestRoom((float)GetProcessDeltaTime());
         StepTradeTest();       // NetSession.Test.Trade.cs
@@ -284,6 +287,7 @@ public sealed partial class NetSession
             if (PeakPlayers < _testPlayers) problems.Add($"only {PeakPlayers} players joined");
             if (EnemiesSynced == 0) problems.Add("no enemies were sent");
             if (HitsApplied == 0) problems.Add("no client hit reached the host");
+            if (HitsRejected != _testExpectRejects) problems.Add($"{HitsRejected} hits rejected, wanted {_testExpectRejects}");
             if (StatesReceived < 100) problems.Add($"only {StatesReceived} player states received");
             if (reachedEnd && !_testClientLeft) problems.Add("the client's departure was not seen");
             if (AttacksMirrored == 0) problems.Add("no enemy attack was mirrored");
@@ -297,7 +301,7 @@ public sealed partial class NetSession
             ParseMigrationTest();
             if (_testExpectLateJoin && LateJoins == 0) problems.Add("nobody joined the run in progress");
             line = $"late_joins={LateJoins} difficulty={Meta.DifficultyTiers.Active.Id} role=host rest_rooms={rests} rest_exit={(restExit.Length > 0 ? restExit : "-")} players={PeakPlayers} enemies_synced={EnemiesSynced} hits={HitsApplied} kills={kills} phase={phase} " +
-                   $"pickups={PickupsSynced} remote_collects={RemoteCollects} chests={ChestsSynced} attacks={AttacksMirrored} " +
+                   $"pickups={PickupsSynced} remote_collects={RemoteCollects} chests={ChestsSynced} attacks={AttacksMirrored} hits_rejected={HitsRejected} " +
                    $"states_rx={StatesReceived} hurts_sent={HurtsSent} client_left={(_testClientLeft ? 1 : 0)} " +
                    $"remotes_now={_remotes.Count} level={level} t={_main?.Run.Clock ?? "-"}";
         }

@@ -69,7 +69,7 @@ param(
     [float]$Seconds = 60,
     [int]$Port = 7777,
     [switch]$SkipBuild,
-    # Run only these scenarios (coop, coop-hostleft, coop-version, coop-content, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
+    # Run only these scenarios (coop, coop-hostleft, coop-version, coop-content, coop-forge, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
     [string[]]$Only = @()
 )
 
@@ -204,6 +204,12 @@ Invoke-Scenario 'coop-hostleft' "--coop-players=2 --coop-quit-at=15 --auto --inv
 # version, then as the same version with other content.
 Invoke-Scenario 'coop-version' "--coop-players=2 --coop-expect-refusal" "--coop-fake-version=9.9.9 --coop-expect-refusal" 90 $false $false
 Invoke-Scenario 'coop-content' "--coop-players=2 --coop-expect-refusal" "--coop-fake-content=deadbeef --coop-expect-refusal --lang=ar" 90 $false $false
+
+# 2aa. Forged hits (NetSession.Test.Refusal.cs): the guest sends bad ids, NaN and
+# absurd numbers, a cut batch and an oversized one over the real RPC. The host
+# drops exactly those records and plays on; every other scenario must drop none.
+Invoke-Scenario 'coop-forge' "--coop-players=2 --coop-seconds=35 --auto --invulnerable --seed=23 --coop-expect-rejects=20006" `
+                             "--coop-seconds=35 --coop-down-at=999 --auto --invulnerable --coop-forge-hits-at=8" 170 $false $false
 
 # 2b. Fallback: migration off, the guest's run ends on the results screen.
 Invoke-Scenario 'coop-fallback' "--coop-players=2 --coop-quit-at=15 --auto --invulnerable --seed=11" `

@@ -283,6 +283,7 @@ public sealed partial class NetSession : Node
         GD.Print($"[coop] peer {id} disconnected");
         if (!Coop.IsHost) return;
         _verified.Remove(id);
+        _hitGuards.Remove(id);
         string name = Coop.NameOf(id);
         Coop.Roster.RemoveAll(p => p.Id == id);
         BroadcastRoster();
