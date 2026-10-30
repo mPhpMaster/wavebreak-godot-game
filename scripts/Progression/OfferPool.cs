@@ -253,7 +253,9 @@ public sealed class OfferPool
 
     /// <summary>
     /// How much one point of luck bends the rarity curve. See
-    /// <see cref="LuckShift"/> for the shape.
+    /// <see cref="LuckShift"/> for the shape. The steepness is why permanent luck
+    /// is sold thin: a full Lucky Shell (+1.25) makes a legendary about 6x likelier
+    /// against a common, where +1 a level made it 111x at +5 before any item.
     /// </summary>
     public const float LuckPerTier = 0.45f;
 
