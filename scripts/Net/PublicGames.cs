@@ -10,9 +10,9 @@ namespace Wavebreak.Net;
 /// the host's Public / Invite only choice.
 ///
 /// A public host's Steam lobby is <c>k_ELobbyTypePublic</c> and carries, as
-/// lobby data: game=wavebreak, protocol, vis=public, host (name), diff (tier
+/// lobby data: game=wavebreak, the build tag (<see cref="SteamLobby.BuildKey"/>), vis=public, host (name), diff (tier
 /// id) and state ("lobby", "map:2/3" or "rest:2/3", kept current once a
-/// second during the run). The page asks Steam for lobbies with game, protocol
+/// second during the run). The page asks Steam for lobbies with game, build
 /// and vis matching (<see cref="SteamLobby.RequestPublicList"/>), and this
 /// class does the rest without Steam, so it can be tested: drop anything that
 /// is not ours, full, empty or our own lobby (<see cref="Filter"/>), order
@@ -22,7 +22,7 @@ public static class PublicGames
 {
     public const string VisibilityKey = "vis", PublicValue = "public", InviteValue = "invite";
 
-    public readonly record struct Entry(ulong Lobby, string Game, string Protocol, string Visibility,
+    public readonly record struct Entry(ulong Lobby, string Game, string Build, string Visibility,
                                         string Host, int Players, int MaxPlayers, string Difficulty, string State);
 
     /// <summary>One row of the list, already translated.</summary>
@@ -37,7 +37,7 @@ public static class PublicGames
         foreach (Entry e in all)
         {
             if (e.Lobby == 0 || e.Lobby == ownLobby || !seen.Add(e.Lobby)) continue;
-            if (e.Game != SteamLobby.GameTag || e.Protocol != Coop.Protocol) continue;
+            if (e.Game != SteamLobby.GameTag || e.Build != CoopBuild.Tag) continue;
             if (e.Visibility != PublicValue) continue;
             int max = e.MaxPlayers > 0 ? Math.Min(e.MaxPlayers, Coop.MaxPlayers) : Coop.MaxPlayers;
             if (e.Players <= 0 || e.Players >= max) continue;
@@ -98,12 +98,12 @@ public static class PublicGames
 
     public static List<Entry> FakeEntries() => new()
     {
-        new(1001, SteamLobby.GameTag, Coop.Protocol, PublicValue, "Nadia", 1, 4, "normal", "lobby"),
-        new(1002, SteamLobby.GameTag, Coop.Protocol, PublicValue, "Kenji", 3, 4, "hard", "map:2/3"),
-        new(1003, SteamLobby.GameTag, Coop.Protocol, PublicValue, "Omar", 2, 4, "nightmare", "rest:1/4"),
-        new(1004, SteamLobby.GameTag, Coop.Protocol, PublicValue, "Full House", 4, 4, "normal", "lobby"),
+        new(1001, SteamLobby.GameTag, CoopBuild.Tag, PublicValue, "Nadia", 1, 4, "normal", "lobby"),
+        new(1002, SteamLobby.GameTag, CoopBuild.Tag, PublicValue, "Kenji", 3, 4, "hard", "map:2/3"),
+        new(1003, SteamLobby.GameTag, CoopBuild.Tag, PublicValue, "Omar", 2, 4, "nightmare", "rest:1/4"),
+        new(1004, SteamLobby.GameTag, CoopBuild.Tag, PublicValue, "Full House", 4, 4, "normal", "lobby"),
         new(1005, "spacewar", "", "", "Not Ours", 1, 4, "", ""),
-        new(1006, SteamLobby.GameTag, Coop.Protocol, PublicValue, "Lena", 2, 4, "tempest", "map:4/4"),
+        new(1006, SteamLobby.GameTag, CoopBuild.Tag, PublicValue, "Lena", 2, 4, "tempest", "map:4/4"),
     };
 
     // ------------------------------------------------------------ self-check
@@ -122,7 +122,7 @@ public static class PublicGames
             GD.Print($"BROWSE {(ok ? "ok  " : "FAIL")} {what}");
             if (!ok) failed.Add(what);
         }
-        string tag = SteamLobby.GameTag, proto = Coop.Protocol;
+        string tag = SteamLobby.GameTag, proto = CoopBuild.Tag;
         var all = new List<Entry>
         {
             new(10, tag, proto, PublicValue, "InRun", 2, 4, "hard", "map:2/3"),
@@ -131,7 +131,11 @@ public static class PublicGames
             new(13, tag, proto, PublicValue, "Full", 4, 4, "normal", "lobby"),
             new(14, tag, proto, InviteValue, "Private", 1, 4, "normal", "lobby"),
             new(15, "spacewar", proto, PublicValue, "OtherGame", 1, 4, "", ""),
-            new(16, tag, "wavebreak-coop-1", PublicValue, "OldBuild", 1, 4, "", "lobby"),
+            new(16, tag, "1.0.0#00000000", PublicValue, "OldBuild", 1, 4, "", "lobby"),
+            new(20, tag, CoopBuild.Version + "#00000000", PublicValue, "OtherContent", 1, 4, "", "lobby"),
+            new(21, tag, "", PublicValue, "NoBuildData", 1, 4, "", "lobby"),
+            new(22, "", "", "", "SomeSpacewarLobby", 1, 4, "", ""),
+            new(23, "", proto, PublicValue, "NoGameTag", 1, 4, "", "lobby"),
             new(17, tag, proto, PublicValue, "Mine", 1, 4, "", "lobby"),
             new(18, tag, proto, PublicValue, "Empty", 0, 4, "", "lobby"),
             new(11, tag, proto, PublicValue, "Fresh again", 1, 4, "normal", "lobby"),

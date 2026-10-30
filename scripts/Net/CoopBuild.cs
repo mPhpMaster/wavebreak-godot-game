@@ -27,6 +27,9 @@ public static class CoopBuild
     /// <summary>Eight hex digits over the protocol tag and every catalog's ids.</summary>
     public static string Content => _content ??= TestOverride("--coop-fake-content=") ?? HashContent();
 
+    /// <summary>Both facts as one value, for the Steam lobby search.</summary>
+    public static string Tag => $"{Version}#{Content}";
+
     public static bool Matches(string version, string content) => version == Version && content == Content;
 
     /// <summary>Written on this machine, so it reads in this player's language,

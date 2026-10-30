@@ -16,13 +16,19 @@ namespace Wavebreak.Net;
 /// owner, and from there NetSession runs exactly as it does over ENet.
 ///
 /// The lobby only finds people and says who is in; game traffic never goes
-/// through it. Lobby data: game=wavebreak, protocol=<see cref="Coop.Protocol"/>.
+/// through it. Lobby data: game=wavebreak and the keys below. App ID 480 is
+/// shared with every Spacewar test project, so a lobby counts as ours only by
+/// <see cref="BuildKey"/>, a key no other project sets, which also carries the
+/// build: a search never returns another game's lobby or another version's.
 /// Member data: peer=&lt;Godot peer id&gt;, so every player can put a Steam
 /// avatar on every roster row.
 /// </summary>
 public static partial class SteamLobby
 {
     public const string GameTag = "wavebreak";
+
+    // Lobby data keys: this build's tag, and its parts for a readable refusal.
+    public const string BuildKey = "wavebreak_build", VersionKey = "wavebreak_version", ContentKey = "wavebreak_content";
 
     /// <summary>Lobby or Steam state changed (lobby joined, avatar loaded...).</summary>
     public static event Action? Changed;
@@ -114,7 +120,9 @@ public static partial class SteamLobby
         IsOwner = true;
         var lobby = new CSteamID(LobbyId);
         SteamMatchmaking.SetLobbyData(lobby, "game", GameTag);
-        SteamMatchmaking.SetLobbyData(lobby, "protocol", Coop.Protocol);
+        SteamMatchmaking.SetLobbyData(lobby, BuildKey, CoopBuild.Tag);
+        SteamMatchmaking.SetLobbyData(lobby, VersionKey, CoopBuild.Version);
+        SteamMatchmaking.SetLobbyData(lobby, ContentKey, CoopBuild.Content);
         SteamMatchmaking.SetLobbyData(lobby, "host", SteamApp.PersonaName);
         // Browse data (SteamLobby.Browse.cs, PublicGames).
         SteamMatchmaking.SetLobbyData(lobby, PublicGames.VisibilityKey, LobbyVisibility.Public ? PublicGames.PublicValue : PublicGames.InviteValue);
@@ -216,9 +224,12 @@ public static partial class SteamLobby
             Fail(Loc.T("That lobby is not a Wavebreak game."));
             return;
         }
-        if (SteamMatchmaking.GetLobbyData(lobby, "protocol") != Coop.Protocol)
+        string build = SteamMatchmaking.GetLobbyData(lobby, BuildKey);
+        if (build != CoopBuild.Tag)
         {
-            Fail(Loc.T("Different game version."));
+            // An invite can come from any version; older ones publish no build.
+            Fail(build.Length == 0 ? Loc.T("Different game version.")
+                 : CoopBuild.MismatchText(SteamMatchmaking.GetLobbyData(lobby, VersionKey), SteamMatchmaking.GetLobbyData(lobby, ContentKey)));
             return;
         }
         if (owner.m_SteamID == SteamApp.LocalSteamId || owner.m_SteamID == 0)
@@ -317,8 +328,9 @@ public static partial class SteamLobby
     public readonly record struct FriendGame(ulong SteamId, string Name, ulong Lobby);
 
     /// <summary>Friends sitting in a Wavebreak lobby right now (not ours).
-    /// A friend's lobby shows once its data says it is Wavebreak: under the
-    /// test App ID people may be in real Spacewar lobbies too.</summary>
+    /// A friend's lobby shows once its data carries our <see cref="BuildKey"/>:
+    /// under the test App ID people may be in real Spacewar lobbies too. Any
+    /// version shows; joining another one says which versions differ.</summary>
     public static List<FriendGame> FriendsInGames()
     {
         var list = new List<FriendGame>();
@@ -332,7 +344,7 @@ public static partial class SteamLobby
             if (info.m_gameID.AppID().m_AppId != SteamApp.AppId) continue;
             ulong lobby = info.m_steamIDLobby.m_SteamID;
             if (lobby == 0 || lobby == LobbyId) continue;
-            string game = SteamMatchmaking.GetLobbyData(info.m_steamIDLobby, "game");
+            string game = SteamMatchmaking.GetLobbyData(info.m_steamIDLobby, BuildKey);
             if (string.IsNullOrEmpty(game))
             {
                 if (!_dataAsked.TryGetValue(lobby, out double at) || now - at > 10.0)
@@ -342,7 +354,6 @@ public static partial class SteamLobby
                 }
                 continue;
             }
-            if (game != GameTag) continue;
             list.Add(new FriendGame(friend.m_SteamID, SteamFriends.GetFriendPersonaName(friend) ?? "", lobby));
         }
         return list;

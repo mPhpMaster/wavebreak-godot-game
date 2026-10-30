@@ -8,7 +8,7 @@ namespace Wavebreak.Net;
 /// Public lobbies and host migration on Steam.
 ///
 /// <b>Browse.</b> <see cref="RequestPublicList"/> asks Steam for lobbies of
-/// this App ID whose data says game=wavebreak, our protocol and vis=public,
+/// this App ID whose data says game=wavebreak, our exact build and vis=public,
 /// worldwide; the answer is read into <see cref="PublicGames.Entry"/> records
 /// and filtered and formatted by <see cref="PublicGames"/>.
 ///
@@ -37,7 +37,7 @@ public static partial class SteamLobby
         if (!SteamApp.Ready || Searching) return;
         _listed ??= CallResult<LobbyMatchList_t>.Create(OnListed);
         SteamMatchmaking.AddRequestLobbyListStringFilter("game", GameTag, ELobbyComparison.k_ELobbyComparisonEqual);
-        SteamMatchmaking.AddRequestLobbyListStringFilter("protocol", Coop.Protocol, ELobbyComparison.k_ELobbyComparisonEqual);
+        SteamMatchmaking.AddRequestLobbyListStringFilter(BuildKey, CoopBuild.Tag, ELobbyComparison.k_ELobbyComparisonEqual);
         SteamMatchmaking.AddRequestLobbyListStringFilter(PublicGames.VisibilityKey, PublicGames.PublicValue, ELobbyComparison.k_ELobbyComparisonEqual);
         SteamMatchmaking.AddRequestLobbyListDistanceFilter(ELobbyDistanceFilter.k_ELobbyDistanceFilterWorldwide);
         SteamMatchmaking.AddRequestLobbyListResultCountFilter(50);
@@ -56,7 +56,7 @@ public static partial class SteamLobby
                 _public.Add(new PublicGames.Entry(
                     lobby.m_SteamID,
                     SteamMatchmaking.GetLobbyData(lobby, "game"),
-                    SteamMatchmaking.GetLobbyData(lobby, "protocol"),
+                    SteamMatchmaking.GetLobbyData(lobby, BuildKey),
                     SteamMatchmaking.GetLobbyData(lobby, PublicGames.VisibilityKey),
                     SteamMatchmaking.GetLobbyData(lobby, "host"),
                     SteamMatchmaking.GetNumLobbyMembers(lobby),
