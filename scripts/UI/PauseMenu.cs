@@ -42,6 +42,8 @@ public sealed partial class PauseMenu : Node
 
     public bool IsOpen => _open;
 
+    internal bool SettingsShown => _settings.Visible;
+
     public override void _Ready()
     {
         Name = "PauseMenu";
@@ -68,6 +70,10 @@ public sealed partial class PauseMenu : Node
         _graphics = Framed(_graphicsPanel);
         _sheet.AddChild(_graphics);
         _graphics.Visible = false;
+        PadInput.AddScope(_sheet.ActionRow);
+        PadInput.AddScope(_settings);
+        PadInput.AddScope(_keys);
+        PadInput.AddScope(_graphics);
 
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--check-pause="))
@@ -169,7 +175,8 @@ public sealed partial class PauseMenu : Node
     {
         if (RunOverlayInput.OwnsScoreboardEvent(@event)) return;
         bool toggle = @event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }
-                      || (InputMap.HasAction("pause") && @event.IsActionPressed("pause"));
+                      || PadInput.Pressed(@event, "pause")
+                      || (_open && PadInput.IsBack(@event));
         if (!toggle || DevPanel.IsOpen) return;
         // That Esc belongs to the key-binding row waiting for a key.
         if (KeybindPanel.AnyListening || GraphicsPanel.Blocking) return;
@@ -272,6 +279,8 @@ public sealed partial class PauseMenu : Node
         if (show) _keys.Visible = false;
         if (show || !_open) _graphics.Visible = false;
         _sheet.ActionRow.Visible = _open && !show && !_keys.Visible;
+        if (show) PadInput.FocusFirstIn(_settings);
+        else if (_open) _resume.GrabFocus();
     }
 
     private void ShowKeys(bool show)
@@ -279,6 +288,7 @@ public sealed partial class PauseMenu : Node
         _keys.Visible = show;
         _settings.Visible = !show && _open;
         _sheet.ActionRow.Visible = false;
+        PadInput.FocusFirstIn(show ? _keys : _settings);
     }
 
     private void ShowGraphics(bool show)
@@ -292,6 +302,7 @@ public sealed partial class PauseMenu : Node
             _graphicsPanel.Refresh();
             _graphicsPanel.FocusFirst();
         }
+        else if (_open) PadInput.FocusFirstIn(_settings);
     }
 
     private static Control Framed(Control content)

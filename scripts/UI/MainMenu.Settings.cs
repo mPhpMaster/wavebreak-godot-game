@@ -140,6 +140,8 @@ public sealed partial class MainMenu : Node3D
         return ob;
     }
 
+    private KeybindPanel _keys = null!;
+
     private Control BuildKeysPage()
     {
         // Wider than the left vignette, so it carries its own backing.
@@ -148,7 +150,7 @@ public sealed partial class MainMenu : Node3D
         style.SetCornerRadiusAll(6);
         frame.AddThemeStyleboxOverride("panel", style);
         Place(frame, 44f, 180f, 640f, 530f);
-        frame.AddChild(new KeybindPanel(() => ShowPage("settings")));
+        frame.AddChild(_keys = new KeybindPanel(() => ShowPage("settings")));
         return frame;
     }
 

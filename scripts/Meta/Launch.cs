@@ -44,6 +44,9 @@ public static class Launch
     /// (with --menu-shot); "unlock" also presses Unlock everything.</summary>
     public static string? DevPanelMenu { get; private set; }
 
+    /// <summary>--check-pad-menu: walk the title's pages with an injected pad.</summary>
+    public static bool PadMenuCheck { get; private set; }
+
     /// <summary>True when any game argument other than the menu's own was given.</summary>
     public static bool SkipsMenu { get; private set; }
 
@@ -51,7 +54,7 @@ public static class Launch
     /// player's real profile unless a path was given explicitly — a smoke test
     /// that quietly hands out unlocks on the developer's machine would make the
     /// menu lie about what the player has earned.</summary>
-    public static bool Automated => SkipsMenu || MenuShot is not null || MenuExpeditionCheck is not null;
+    public static bool Automated => SkipsMenu || MenuShot is not null || MenuExpeditionCheck is not null || PadMenuCheck;
 
     public static void Parse()
     {
@@ -84,6 +87,7 @@ public static class Launch
             }
             else if (arg.StartsWith("--menu-review=")) { } // Menu test captures do not skip the title.
             else if (arg.StartsWith("--update-fixture=")) { }
+            else if (arg == "--check-pad-menu") PadMenuCheck = true;
             else if (arg == "--latin-report") { }   // Game/Screenshot: a capture diagnostic, menu or run
             // Net/Steam: allow Steam in an automated run; join a lobby at start (menu flags).
             else if (arg == "--steam-test" || arg.StartsWith("--steam-test=") || arg.StartsWith("--connect-lobby")) { }

@@ -242,12 +242,13 @@ public sealed partial class ShrinePanel : Control
     public override void _Input(InputEvent @event)
     {
         if (!IsOpen || DevPanel.IsOpen) return;
-        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
+        if (!PadInput.IsPress(@event)) return;
         if (!Armed)
         {
-            if (key.Keycode != Key.Escape) GetViewport().SetInputAsHandled();
+            if (@event is not InputEventKey { Keycode: Key.Escape }) GetViewport().SetInputAsHandled();
             return;
         }
+        if (@event is not InputEventKey key) return;
         int index = key.Keycode switch
         {
             Key.Key1 or Key.Kp1 => 0,

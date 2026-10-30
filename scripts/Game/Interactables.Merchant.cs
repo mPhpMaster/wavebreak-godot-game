@@ -177,7 +177,7 @@ public sealed partial class Interactables
     public override void _UnhandledInput(InputEvent e)
     {
         if (!_hasAction || e is InputEventKey { Echo: true } || Net.Coop.LocalHold) return;
-        if (!e.IsActionPressed(InteractAction)) return;
+        if (!UI.PadInput.Pressed(e, InteractAction)) return;
         if (_focus is null) return;
         _interactRequested = true;
         GetViewport().SetInputAsHandled();

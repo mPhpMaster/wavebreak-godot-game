@@ -17,6 +17,7 @@ namespace Wavebreak.UI;
 /// (<see cref="IconView"/>, rarity ring, count badge, hover tooltip), made
 /// clickable.
 ///
+/// Pad: A on a tile is a click, X the right-click.
 /// Mouse: click a bag tile to offer one copy (Shift-click or right-click: the
 /// whole stack), click an offered tile to take one back (right-click: all of
 /// it); the gold buttons step by 1 / 10 / 100. Keyboard: Tab and the arrows
@@ -539,7 +540,7 @@ public sealed partial class TradePanel : ModalPanel
             b.Pressed += () => { if (Armed) click(); };
             b.GuiInput += e =>
             {
-                if (alt is not null && e is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true } && Armed && enabled)
+                if (alt is not null && e is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true } or InputEventJoypadButton { ButtonIndex: JoyButton.X, Pressed: true } && Armed && enabled)
                 {
                     alt();
                     b.AcceptEvent();

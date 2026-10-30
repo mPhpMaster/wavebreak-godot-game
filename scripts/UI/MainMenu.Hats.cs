@@ -69,13 +69,35 @@ public sealed partial class MainMenu
     {
         var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(44f, 36f) };
         b.AddThemeFontSizeOverride("font_size", 20);
-        b.Pressed += () =>
-        {
-            int n = Hats.All.Count;
-            _hatIndex = ((_hatIndex + step) % n + n) % n;
-            ShowHat();
-        };
+        b.Pressed += () => CycleHat(step);
         return b;
+    }
+
+    private void CycleHat(int step)
+    {
+        int n = Hats.All.Count;
+        _hatIndex = ((_hatIndex + step) % n + n) % n;
+        ShowHat();
+    }
+
+    /// <summary>The arrows take no focus so the character list keeps it; a pad
+    /// reaches them from the shoulders: skin on the bumpers, hat on the triggers,
+    /// Y to buy the hat shown.</summary>
+    private bool PadPlayPage(InputEvent e)
+    {
+        switch (e)
+        {
+            case InputEventJoypadButton { Pressed: true, ButtonIndex: JoyButton.LeftShoulder or JoyButton.RightShoulder } b:
+                CycleSkin(b.ButtonIndex == JoyButton.LeftShoulder ? -1 : 1);
+                return true;
+            case InputEventJoypadButton { Pressed: true, ButtonIndex: JoyButton.Y }:
+                if (_hatBuy.Visible && !_hatBuy.Disabled) BuyHat();
+                return true;
+            case InputEventJoypadMotion { Axis: JoyAxis.TriggerLeft or JoyAxis.TriggerRight } t when PadInput.NewAxisPress(t):
+                CycleHat(t.Axis == JoyAxis.TriggerLeft ? -1 : 1);
+                return true;
+        }
+        return false;
     }
 
     private HatDef CurrentHat => Hats.All[Mathf.Clamp(_hatIndex, 0, Hats.All.Count - 1)];

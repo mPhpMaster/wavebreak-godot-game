@@ -44,7 +44,7 @@ public sealed partial class MainMenu
         box.AddChild(new Control { CustomMinimumSize = new Vector2(0f, 10f) });
         box.AddChild(MakeLabel("Thank you for playing.", 17, InkDim));
 
-        Button back = MenuButton("BACK", () => ShowPage("main"));
+        Button back = _creditsBack = MenuButton("BACK", () => ShowPage("main"));
         Place(back, 60f, 654f, 240f, 44f);
         page.AddChild(back);
         return page;
@@ -53,7 +53,7 @@ public sealed partial class MainMenu
     /// <summary>Small CREDITS button, bottom right above the version.</summary>
     private void AddCreditsButton()
     {
-        var b = new Button { Text = Loc.T("CREDITS"), Flat = true, FocusMode = Control.FocusModeEnum.None };
+        var b = new Button { Text = Loc.T("CREDITS"), Flat = true, FocusMode = Control.FocusModeEnum.All };
         b.AddThemeFontSizeOverride("font_size", 16);
         b.AddThemeColorOverride("font_color", new Color(1f, 1f, 1f, 0.75f));
         b.AddThemeColorOverride("font_hover_color", Gold);
@@ -66,4 +66,5 @@ public sealed partial class MainMenu
     }
 
     private Button? _creditsButton;
+    private Button _creditsBack = null!;
 }

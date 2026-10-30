@@ -23,6 +23,7 @@ public sealed partial class KeybindPanel : VBoxContainer
     private readonly List<(string Action, Button[] Keys)> _rows = new();
     private (string Action, int Slot)? _listening;
     private Label _status = null!;
+    private Control? _first;
 
     /// <summary>True while any panel waits for a key, so Esc handlers elsewhere
     /// (pause menu, title back-navigation) leave that Esc to cancel the bind.</summary>
@@ -66,6 +67,7 @@ public sealed partial class KeybindPanel : VBoxContainer
         var list = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         list.AddThemeConstantOverride("separation", 4);
         scroll.AddChild(list);
+        BuildPadRows(list);
 
         foreach (var (action, label) in Keybinds.Actions)
         {
@@ -98,6 +100,52 @@ public sealed partial class KeybindPanel : VBoxContainer
         AddChild(buttons);
 
         Refresh(null);
+    }
+
+    /// <summary>Land on the first row, for the keyboard and the pad.</summary>
+    public void FocusFirst() => _first?.GrabFocus();
+
+    /// <summary>The right stick's feel, above the bindings it goes with.</summary>
+    private void BuildPadRows(VBoxContainer list)
+    {
+        PadSettings.Load();
+        HSlider look = PadSlider(list, "Stick look speed", PadSettings.MinSensitivity, PadSettings.MaxSensitivity, PadSettings.SensitivityStep,
+                                 PadSettings.LookSensitivity, "{0:0.00}x", PadSettings.SetLookSensitivity);
+        PadSlider(list, "Look dead zone", PadSettings.MinDeadzone, PadSettings.MaxDeadzone, PadSettings.DeadzoneStep,
+                  PadSettings.LookDeadzone, "{0:0.00}", PadSettings.SetLookDeadzone);
+        PadSlider(list, "Move dead zone", PadSettings.MinDeadzone, PadSettings.MaxDeadzone, PadSettings.DeadzoneStep,
+                  PadSettings.MoveDeadzone, "{0:0.00}", PadSettings.SetMoveDeadzone);
+
+        var invert = new CheckButton { ButtonPressed = PadSettings.InvertLook, FocusMode = FocusModeEnum.All };
+        invert.Toggled += PadSettings.SetInvertLook;
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 12);
+        Label name = MainMenu.MakeLabel("Invert stick look", 16, Ink);
+        name.CustomMinimumSize = new Vector2(220f, 0f);
+        row.AddChild(name);
+        row.AddChild(invert);
+        list.AddChild(row);
+        _first = look;
+    }
+
+    private static HSlider PadSlider(VBoxContainer list, string label, float min, float max, float step, float value, string format, Action<float> set)
+    {
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 12);
+        Label name = MainMenu.MakeLabel(label, 16, Ink);
+        name.CustomMinimumSize = new Vector2(220f, 0f);
+        row.AddChild(name);
+        var slider = new HSlider
+        {
+            MinValue = min, MaxValue = max, Step = step, Value = value, FocusMode = FocusModeEnum.All,
+            CustomMinimumSize = new Vector2(220f, 28f), SizeFlagsVertical = SizeFlags.ShrinkCenter,
+        };
+        Label shown = MainMenu.MakeLabel(string.Format(format, value), 16, Ink);
+        slider.ValueChanged += v => { set((float)v); shown.Text = string.Format(format, v); };
+        row.AddChild(slider);
+        row.AddChild(shown);
+        list.AddChild(row);
+        return slider;
     }
 
     private void Listen(string action, int slot)

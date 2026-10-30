@@ -28,6 +28,10 @@ public static partial class Keybinds
         ("move_back", "Move back"),
         ("move_left", "Move left"),
         ("move_right", "Move right"),
+        ("look_left", "Look left"),
+        ("look_right", "Look right"),
+        ("look_up", "Look up"),
+        ("look_down", "Look down"),
         ("jump", "Jump"),
         ("dash", "Dash / core strike (city)"),
         ("slide", "Slide / slam"),
@@ -37,6 +41,9 @@ public static partial class Keybinds
         ("stats", "Character sheet (hold)"),
         ("scoreboard", "Scoreboard (hold)"),
         ("ping", "Ping (mark a spot)"),
+        ("camera_zoom_in", "Zoom in"),
+        ("camera_zoom_out", "Zoom out"),
+        ("help_toggle", "Hide or replay help"),
         ("pause", "Pause"),
         ("levelup_reroll", "Level-up: reroll"),
         ("levelup_banish", "Level-up: banish"),
@@ -82,15 +89,7 @@ public static partial class Keybinds
         AddHookAction("city_hook_left", MouseButton.Left, Key.Q, JoyButton.LeftShoulder);
         AddHookAction("city_hook_right", MouseButton.Right, Key.V, JoyButton.RightShoulder);
         AddCityAction("dash", Key.Shift, JoyButton.X);
-        bool dashPad = false;
-        foreach (InputEvent entry in InputMap.ActionGetEvents("dash")) dashPad |= entry is InputEventJoypadButton;
-        if (!dashPad) InputMap.ActionAddEvent("dash", new InputEventJoypadButton { ButtonIndex = JoyButton.X });
-        if (InputMap.HasAction("jump"))
-        {
-            bool hasPad = false;
-            foreach (InputEvent entry in InputMap.ActionGetEvents("jump")) hasPad |= entry is InputEventJoypadButton;
-            if (!hasPad) InputMap.ActionAddEvent("jump", new InputEventJoypadButton { ButtonIndex = JoyButton.A });
-        }
+        AddPadDefaults();   // Keybinds.Pad.cs: project.godot ships keys only
 
         foreach (var (action, _) in Actions)
         {
@@ -99,6 +98,7 @@ public static partial class Keybinds
             for (int i = 0; i < Slots; i++) slots[i] = Get(action, i)?.Duplicate() as InputEvent;
             Defaults[action] = slots;
         }
+        UI.PadInput.Install();
 
         // Automated runs (tests, captures) must behave the same on every machine.
         if (Launch.Automated) return;

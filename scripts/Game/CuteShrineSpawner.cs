@@ -177,7 +177,7 @@ public sealed partial class CuteShrineSpawner : Node
     public override void _UnhandledInput(InputEvent e)
     {
         if (!_hasAction || e is InputEventKey { Echo: true } || Net.Coop.LocalHold) return;
-        if (!e.IsActionPressed(InteractAction) || _focus is null || _panel.IsOpen) return;
+        if (!UI.PadInput.Pressed(e, InteractAction) || _focus is null || _panel.IsOpen) return;
         _interactRequested = true;
         GetViewport().SetInputAsHandled();
     }

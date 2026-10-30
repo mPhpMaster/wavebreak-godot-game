@@ -146,11 +146,14 @@ public sealed partial class LevelUpPanel
     /// <summary>Route a reroll/banish/skip key. True when it was one of them.</summary>
     private bool HandleControlKey(InputEvent @event)
     {
-        if (@event.IsActionPressed(RerollAction)) { DoReroll(); return true; }
-        if (@event.IsActionPressed(BanishAction)) { ToggleBanish(); return true; }
-        if (@event.IsActionPressed(SkipAction)) { DoSkip(); return true; }
+        if (PadInput.Pressed(@event, RerollAction)) { DoReroll(); return true; }
+        if (PadInput.Pressed(@event, BanishAction)) { ToggleBanish(); return true; }
+        if (PadInput.Pressed(@event, SkipAction)) { DoSkip(); return true; }
         return false;
     }
+
+    private static bool IsControlPress(InputEvent @event)
+        => PadInput.Pressed(@event, RerollAction) || PadInput.Pressed(@event, BanishAction) || PadInput.Pressed(@event, SkipAction);
 
     private void ReArm()
     {

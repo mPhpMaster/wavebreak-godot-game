@@ -46,7 +46,7 @@ public sealed partial class ChestSpawner
     public override void _UnhandledInput(InputEvent e)
     {
         if (!_hasAction || e is InputEventKey { Echo: true }) return;
-        if (!e.IsActionPressed(InteractAction)) return;
+        if (!UI.PadInput.Pressed(e, InteractAction)) return;
         _interactRequested = true;
         if (_focus is not null) GetViewport().SetInputAsHandled();
     }

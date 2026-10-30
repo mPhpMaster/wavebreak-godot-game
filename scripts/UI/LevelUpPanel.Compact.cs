@@ -323,7 +323,18 @@ public sealed partial class LevelUpPanel
 
     // ---------------------------------------------------------------- input
 
-    private void CompactInput(InputEvent @event, InputEventKey key)
+    /// <summary>The pad's D-pad takes the cards here: left, up, right, down in
+    /// the order the row reads, so right-to-left starts on the right.</summary>
+    private static int DpadCard(InputEvent @event) => @event switch
+    {
+        InputEventJoypadButton { ButtonIndex: JoyButton.DpadLeft } => Loc.IsRtl ? 2 : 0,
+        InputEventJoypadButton { ButtonIndex: JoyButton.DpadUp } => 1,
+        InputEventJoypadButton { ButtonIndex: JoyButton.DpadRight } => Loc.IsRtl ? 0 : 2,
+        InputEventJoypadButton { ButtonIndex: JoyButton.DpadDown } => 3,
+        _ => -1,
+    };
+
+    private void CompactInput(InputEvent @event, bool control)
     {
         // Another menu has the game (pause menu, shrine, merchant): wait.
         if (Net.Coop.IsPaused(GetTree())) return;
@@ -331,15 +342,7 @@ public sealed partial class LevelUpPanel
         foreach (string action in MoveActions)
             if (InputMap.HasAction(action) && @event.IsAction(action)) return;
 
-        int index = key.Keycode switch
-        {
-            Key.Key1 or Key.Kp1 => 0,
-            Key.Key2 or Key.Kp2 => 1,
-            Key.Key3 or Key.Kp3 => 2,
-            Key.Key4 or Key.Kp4 => 3,
-            _ => -1,
-        };
-        bool control = @event.IsActionPressed(RerollAction) || @event.IsActionPressed(BanishAction) || @event.IsActionPressed(SkipAction);
+        int index = @event is InputEventKey key ? NumberOf(key) : DpadCard(@event);
         if (index < 0 && !control) return;   // not ours: leave it to the game
 
         GetViewport().SetInputAsHandled();

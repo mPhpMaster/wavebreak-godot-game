@@ -119,6 +119,8 @@ public sealed partial class Main : Node3D
             _ = GraphicsCheck.Run(this);
         else if (!_guardsChecked && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-input-guards") >= 0)
             _ = CheckInputGuards();
+        else if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-pad") >= 0)
+            _ = PadCheck();                          // Main.PadCheck.cs
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--levelup-shot=")) is { } shotArg)
             _ = LevelUpShot(shotArg["--levelup-shot=".Length..]);
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--panel-shot=")) is { } panelArg)

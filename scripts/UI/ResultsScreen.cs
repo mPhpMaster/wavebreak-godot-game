@@ -96,6 +96,9 @@ public sealed partial class ResultsScreen : Control
         EventBus.Subscribe<WeaponAcquired>(OnWeaponAcquired);
         EventBus.Subscribe<LeaderboardPlaced>(OnLeaderboard);
         _subscribed = true;
+        PadInput.DeviceChanged += SyncPadFocus;
+        VisibilityChanged += SyncPadFocus;
+        PadInput.AddScope(this);
     }
 
     public override void _ExitTree()
@@ -105,6 +108,7 @@ public sealed partial class ResultsScreen : Control
         EventBus.Unsubscribe<ItemAcquired>(OnItemAcquired);
         EventBus.Unsubscribe<WeaponAcquired>(OnWeaponAcquired);
         EventBus.Unsubscribe<LeaderboardPlaced>(OnLeaderboard);
+        PadInput.DeviceChanged -= SyncPadFocus;
     }
 
     private void OnItemAcquired(ItemAcquired e)
@@ -244,11 +248,23 @@ public sealed partial class ResultsScreen : Control
         return box;
     }
 
+    private readonly System.Collections.Generic.List<Button> _bigButtons = new();
+
+    /// <summary>The comment on the button row holds for a keyboard; a pad has
+    /// no Enter or Esc to reach for, so with a pad the buttons take focus, behind
+    /// the same arm delay as everything here.</summary>
+    private void SyncPadFocus()
+    {
+        foreach (Button b in _bigButtons) b.FocusMode = PadInput.UsingPad ? FocusModeEnum.All : FocusModeEnum.None;
+        if (Visible && PadInput.UsingPad && _bigButtons.Count > 0) _bigButtons[0].GrabFocus();
+    }
+
     private Control BigButton(string text, string hint, Color accent, System.Action pressed, float width)
     {
         var box = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         box.AddThemeConstantOverride("separation", 2);
         var b = new Button { Text = text, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(width, 52f) };
+        _bigButtons.Add(b);
         b.AddThemeFontSizeOverride("font_size", 24);
         b.AddThemeColorOverride("font_color", Ink);
         b.AddThemeColorOverride("font_hover_color", accent);
@@ -461,14 +477,13 @@ public sealed partial class ResultsScreen : Control
     public override void _Input(InputEvent @event)
     {
         if (!Visible || DevPanel.IsOpen) return;
-        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
-
-        if (key.Keycode == Key.Escape)
+        if (PadInput.IsBack(@event))
         {
             GetViewport().SetInputAsHandled();
             ToMainMenu();
             return;
         }
+        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
 
         // Not Space: it is the jump key, and a death usually lands mid-jump.
         if (key.Keycode is not (Key.Enter or Key.KpEnter or Key.R)) return;
