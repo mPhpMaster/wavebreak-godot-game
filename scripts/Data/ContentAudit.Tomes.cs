@@ -189,6 +189,15 @@ public static partial class ContentAudit
 
         sheet.Add(Stat.Rerolls, ModifierOp.Flat, 1f, TomeBaseline);
         Check(choices.RerollsLeft == 1, "a +1 Rerolls modifier did not add a charge");
+
+        // Map refills: reroll every map, banish and skip alternating; a late
+        // count of three grants the three at once, and never twice.
+        var refilled = new LevelUpChoices(pool, system, null, new StatSheet(), book, publish: false);
+        var refill = refilled.GrantMapRefills(3);
+        var again = refilled.GrantMapRefills(3);
+        Check(refill == (3, 1, 2) && again == (0, 0, 0) && refilled.RerollsLeft == rerolls + 3
+              && refilled.BanishesLeft == banishes + 1 && refilled.SkipsLeft == skips + 2,
+              $"map refills after 3 maps: {refill}, repeat {again}, left {refilled.Describe()}");
         sheet.RemoveAllFrom(TomeBaseline);
 
         Offer? target = hand.FirstOrDefault(LevelUpChoices.CanBanish);

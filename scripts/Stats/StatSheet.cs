@@ -69,7 +69,7 @@ public sealed class StatSheet
         Stat.GoldGain        => 0f,
         Stat.Luck            => 0f,
 
-        Stat.Rerolls         => 2f,     // charges per run, see LevelUpChoices
+        Stat.Rerolls         => 2f,     // starting charges; each map refills some, see LevelUpChoices
         Stat.Banishes        => 1f,
         Stat.Skips           => 3f,
 

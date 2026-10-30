@@ -33,6 +33,12 @@ public readonly struct LevelUpControlUsed
 /// spent, so an item, character passive or unlock that adds a Flat +1 works
 /// immediately and without any code here.
 ///
+/// <b>Refills.</b> The base 2/1/3 last a whole run of 20 minutes and more, so
+/// each new map adds to the totals (<see cref="GrantMapRefills"/>): a reroll
+/// every map, a banish on every second, a skip on the others. The count comes
+/// from how many maps the run has cleared, so a player who joins on map 3 holds
+/// what the team holds, and each machine counts its own player's charges.
+///
 /// The panel and the autopilot both go through this, so a human and a bot
 /// spend the same charges under the same rules.
 /// </summary>
@@ -53,6 +59,7 @@ public sealed class LevelUpChoices
     private int _rerollsUsed;
     private int _banishesUsed;
     private int _skipsUsed;
+    private int _mapsCleared;
 
     /// <param name="publish">False for a scratch controller (the content audit):
     /// it neither replaces <see cref="Current"/> nor publishes events.</param>
@@ -72,9 +79,28 @@ public sealed class LevelUpChoices
 
     // ------------------------------------------------------------- charges
 
-    public int RerollsTotal => Charges(Stat.Rerolls);
-    public int BanishesTotal => Charges(Stat.Banishes);
-    public int SkipsTotal => Charges(Stat.Skips);
+    public int RerollsTotal => Charges(Stat.Rerolls) + RerollsAfter(_mapsCleared);
+    public int BanishesTotal => Charges(Stat.Banishes) + BanishesAfter(_mapsCleared);
+    public int SkipsTotal => Charges(Stat.Skips) + SkipsAfter(_mapsCleared);
+
+    /// <summary>Charges refilled once <paramref name="mapsCleared"/> maps are
+    /// behind the player.</summary>
+    public static int RerollsAfter(int mapsCleared) => mapsCleared;
+    public static int BanishesAfter(int mapsCleared) => mapsCleared / 2;
+    public static int SkipsAfter(int mapsCleared) => (mapsCleared + 1) / 2;
+
+    /// <summary>A new map: bring the refills up to <paramref name="mapsCleared"/>.
+    /// Never lowers them (a developer jump back keeps what was given). Returns
+    /// what was added, for the arrival popup.</summary>
+    public (int Rerolls, int Banishes, int Skips) GrantMapRefills(int mapsCleared)
+    {
+        int before = _mapsCleared;
+        if (mapsCleared <= before) return (0, 0, 0);
+        _mapsCleared = mapsCleared;
+        return (RerollsAfter(mapsCleared) - RerollsAfter(before),
+                BanishesAfter(mapsCleared) - BanishesAfter(before),
+                SkipsAfter(mapsCleared) - SkipsAfter(before));
+    }
 
     public int RerollsLeft => Math.Max(0, RerollsTotal - _rerollsUsed);
     public int BanishesLeft => Math.Max(0, BanishesTotal - _banishesUsed);
