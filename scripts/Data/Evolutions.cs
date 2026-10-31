@@ -244,7 +244,7 @@ public static class Evolutions
         {
             Id = "evo_frozen_gyre", WeaponId = "hailstone_cluster", CatalystId = "tome_tides",
             Name = "Frozen Gyre", Description = "The hail stops falling and starts circling, dragging the pack into one point before it all lets go.",
-            Delivery = EvolutionDelivery.Vortex, DamageScale = 0.5f, ExtraProjectiles = -2, Radius = 2.8f, Speed = 16f,
+            Delivery = EvolutionDelivery.Vortex, DamageScale = 0.62f, ExtraProjectiles = -2, Radius = 2.8f, Speed = 16f,
             Tint = new Color(0.78f, 0.93f, 1f),
         },
         new()
@@ -265,7 +265,7 @@ public static class Evolutions
         {
             Id = "evo_cyclone_eye", WeaponId = "tempest_spindle", CatalystId = "tome_fortune",
             Name = "Eye of the Cyclone", Description = "The spindles stop leaving. They wheel around you at speed, and everything that comes close is cut to ribbons.",
-            Delivery = EvolutionDelivery.Orbit, DamageScale = 0.37f, Range = 2.4f, Radius = 0.8f, Speed = 15f,
+            Delivery = EvolutionDelivery.Orbit, DamageScale = 0.46f, Range = 2.4f, Radius = 0.8f, Speed = 15f,
             Tint = new Color(0.72f, 0.9f, 1f),
         },
 

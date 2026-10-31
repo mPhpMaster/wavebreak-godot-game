@@ -92,7 +92,11 @@ public static partial class ContentAudit
             if (Visuals.CityGiantModels.IsGiant(def)) continue;
             if (def.IsBoss)
             {
-                for (int i = 0; i < def.BossMoves.Count; i++) ProbeMove(system, def, i, feet);
+                // An underwater boss aims in 3D only inside its own arena; on this
+                // dry probe its shots leave from body height and pass over the
+                // dummy by chance. Its moves are checked by the expedition checks.
+                if (!def.UnderwaterOnly)
+                    for (int i = 0; i < def.BossMoves.Count; i++) ProbeMove(system, def, i, feet);
                 ProbePhase(system, def, feet);
             }
             // Healers never attack; burrowers and blinkers hit by contact, which
