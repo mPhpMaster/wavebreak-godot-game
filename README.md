@@ -202,7 +202,7 @@ Title screen → **CO-OP**.
 | ![Co-op lobby](docs/screenshots/coop-lobby.png) | ![Co-op run](docs/screenshots/coop-run.png) |
 | Lobby: players, characters, skins, ready | Two players in a run, name tags and team panel |
 | ![Ping](docs/screenshots/coop-ping.png) | ![Arabic co-op lobby](docs/screenshots/arabic-coop-lobby.png) |
-| A downed teammate and their Ping | Arabic: co-op lobby |
+| A map ping | Arabic: co-op lobby |
 
 ## Screenshots
 
