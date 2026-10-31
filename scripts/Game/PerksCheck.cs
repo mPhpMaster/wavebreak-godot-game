@@ -155,15 +155,21 @@ public static class PerksCheck
         // 5. Crab Stomp: drop onto an enemy.
         {
             PerkDef d = D(Perks.CrabStomp);
-            Enemy? e = Spawn(grunt, Ahead(3f));
-            await Wait(tree, 0.3);
-            for (int tries = 0; tries < 3 && e is not null && procs.FiredCount(d.Id) == 0; tries++)
+            // Dropped straight up from where the player stands: a teleport to an
+            // enemy can be pushed back inside the map's edge and land metres off.
+            // The target is held still and cannot die mid-drop, since the stomp
+            // only cares what is under the feet.
+            for (int tries = 0; tries < 3 && procs.FiredCount(d.Id) == 0; tries++)
             {
-                if (!e.IsAlive) e = Spawn(grunt, Ahead(3f));
-                await Wait(tree, 0.1);
+                Vector3 ground = p.GlobalPosition;
+                Enemy? e = Spawn(elite, ground);
                 if (e is null) break;
-                p.Teleport(e.GlobalPosition + Vector3.Up * 3.2f);
+                EnemyManager.DevFrozen = true;
+                e.SetHealthForCheck(1000000f);
+                p.Teleport(ground + Vector3.Up * 3.2f);
                 await Wait(tree, 1.0);
+                EnemyManager.DevFrozen = false;
+                if (e.IsAlive) e.Despawn();
             }
             Report(d, procs.FiredCount(d.Id) > 0, "");
         }
@@ -276,9 +282,9 @@ public static class PerksCheck
             PerkDef d = D(Perks.TidalPulse);
             int before = procs.FiredCount(d.Id);
             for (int i = 0; i < 3; i++)
-                Spawn(grunt, p.GlobalPosition + new Vector3(Mathf.Cos(i * 2.1f), 0f, Mathf.Sin(i * 2.1f)) * 2.5f);
-            // Fire now: with every perk at max, the rest of the build kills the
-            // grunts long before a 5 s pulse would come round on its own.
+                Spawn(elite, p.GlobalPosition + new Vector3(Mathf.Cos(i * 2.1f), 0f, Mathf.Sin(i * 2.1f)) * 2.5f);
+            // Fire now: with every perk at max, the rest of the build kills
+            // anything weak long before a 5 s pulse would come round on its own.
             procs.PrimePulseForCheck();
             for (int i = 0; i < 80 && procs.FiredCount(d.Id) == before; i++) await Wait(tree, 0.1);
             Report(d, procs.FiredCount(d.Id) > before, "");

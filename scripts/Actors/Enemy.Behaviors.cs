@@ -104,6 +104,9 @@ public sealed partial class Enemy
 
     /// <summary>Make the next boss move this index into its moveset, bypassing
     /// weights, range and cooldown. For the audit and the showcase.</summary>
+    /// <summary>Checks: a target that outlives a maxed build for as long as it takes.</summary>
+    internal void SetHealthForCheck(float health) { _maxHealth = health; _health = health; }
+
     internal void ForceMove(int index, float delay = 0f)
     {
         _forcedMove = index;
