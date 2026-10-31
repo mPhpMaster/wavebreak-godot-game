@@ -136,6 +136,8 @@ public sealed partial class Main : Node3D
             _ = TotemCheck.Run(this);                // --check-totem / --totem-shot= (Tide Totems)
         else if (Trade.TradeCheck.Requested())
             _ = Trade.TradeCheck.Run(this);          // --check-trade (swap meet rules and escrow)
+        else if (EvolutionCheck.Requested)
+            _ = EvolutionCheck.Run(this);            // --check-evolutions
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--map-tour=")) is { } tourArg)
             _ = MapTour(tourArg["--map-tour=".Length..]);   // Main.MapTour.cs
     }

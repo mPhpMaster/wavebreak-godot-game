@@ -76,6 +76,8 @@ public static partial class ContentAudit
 
     /// <summary>Four seconds of one weapon against a line of indestructible
     /// dummies, through the real runtime, projectile pool and targeting.</summary>
+    private static EvolutionDef? _fireEvolution;
+
     private static (int hits, float damage) FireTest(WeaponSystem system, WeaponDef def, int level)
     {
         Vector3 m = system.MuzzlePosition;
@@ -90,6 +92,7 @@ public static partial class ContentAudit
 
         var runtime = new WeaponRuntime(def);
         while (runtime.Level < level && runtime.LevelUp()) { }
+        if (_fireEvolution is not null) runtime.Evolve(_fireEvolution);   // ContentAudit.Evolutions.cs
 
         const float dt = 1f / 60f;
         for (int frame = 0; frame < 240; frame++)
