@@ -30,6 +30,8 @@ public sealed partial class PauseMenu : Node
     private Control _keys = null!;
     private Control _graphics = null!;
     private GraphicsPanel _graphicsPanel = null!;
+    private Control _access = null!;
+    private AccessibilityPanel _accessPanel = null!;
     private Button _resume = null!;
     private bool _open;
 
@@ -41,6 +43,17 @@ public sealed partial class PauseMenu : Node
     }
 
     public bool IsOpen => _open;
+
+    internal bool SettingsShown => _settings.Visible;
+
+    /// <summary>--check-pad: the key-binding page, as its button opens it.</summary>
+    internal Control OpenKeysForCheck()
+    {
+        ShowKeys(true);
+        return _keys;
+    }
+
+    internal void CloseKeysForCheck() => ShowKeys(false);
 
     public override void _Ready()
     {
@@ -68,6 +81,15 @@ public sealed partial class PauseMenu : Node
         _graphics = Framed(_graphicsPanel);
         _sheet.AddChild(_graphics);
         _graphics.Visible = false;
+        _accessPanel = new AccessibilityPanel(() => ShowAccess(false));
+        _access = Framed(_accessPanel);
+        _sheet.AddChild(_access);
+        _access.Visible = false;
+        PadInput.AddScope(_sheet.ActionRow);
+        PadInput.AddScope(_settings);
+        PadInput.AddScope(_keys);
+        PadInput.AddScope(_graphics);
+        PadInput.AddScope(_access);
 
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--check-pause="))
@@ -112,7 +134,7 @@ public sealed partial class PauseMenu : Node
         }
         var rowKeys = new List<Button>();
         foreach (Node n in Walk(_keys))
-            if (n is Button b && b.GetParent() is HBoxContainer row && row.GetChildCount() == 3) rowKeys.Add(b);
+            if (n is Button b && b.GetParent() is HBoxContainer row && row.GetChildCount() == 4) rowKeys.Add(b);
         Expect("key-binding page has two keys per action", rowKeys.Count >= 4);
         string first = Keybinds.Actions[0].Action;
         void Press(Key k)
@@ -169,7 +191,8 @@ public sealed partial class PauseMenu : Node
     {
         if (RunOverlayInput.OwnsScoreboardEvent(@event)) return;
         bool toggle = @event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }
-                      || (InputMap.HasAction("pause") && @event.IsActionPressed("pause"));
+                      || PadInput.Pressed(@event, "pause")
+                      || (_open && PadInput.IsBack(@event));
         if (!toggle || DevPanel.IsOpen) return;
         // That Esc belongs to the key-binding row waiting for a key.
         if (KeybindPanel.AnyListening || GraphicsPanel.Blocking) return;
@@ -178,6 +201,7 @@ public sealed partial class PauseMenu : Node
         {
             // Esc backs out of settings first, then out of the pause menu.
             if (_graphics.Visible) ShowGraphics(false);
+            else if (_access.Visible) ShowAccess(false);
             else if (_keys.Visible) ShowKeys(false);
             else if (_settings.Visible) ShowSettings(false);
             else Close();
@@ -270,8 +294,10 @@ public sealed partial class PauseMenu : Node
     {
         _settings.Visible = show;
         if (show) _keys.Visible = false;
-        if (show || !_open) _graphics.Visible = false;
+        if (show || !_open) _graphics.Visible = _access.Visible = false;
         _sheet.ActionRow.Visible = _open && !show && !_keys.Visible;
+        if (show) PadInput.FocusFirstIn(_settings);
+        else if (_open) _resume.GrabFocus();
     }
 
     private void ShowKeys(bool show)
@@ -279,6 +305,21 @@ public sealed partial class PauseMenu : Node
         _keys.Visible = show;
         _settings.Visible = !show && _open;
         _sheet.ActionRow.Visible = false;
+        PadInput.FocusFirstIn(show ? _keys : _settings);
+    }
+
+    private void ShowAccess(bool show)
+    {
+        _access.Visible = show;
+        _keys.Visible = false;
+        _settings.Visible = !show && _open;
+        _sheet.ActionRow.Visible = false;
+        if (show)
+        {
+            _accessPanel.Refresh();
+            _accessPanel.FocusFirst();
+        }
+        else if (_open) PadInput.FocusFirstIn(_settings);
     }
 
     private void ShowGraphics(bool show)
@@ -292,6 +333,7 @@ public sealed partial class PauseMenu : Node
             _graphicsPanel.Refresh();
             _graphicsPanel.FocusFirst();
         }
+        else if (_open) PadInput.FocusFirstIn(_settings);
     }
 
     private static Control Framed(Control content)
@@ -420,8 +462,21 @@ public sealed partial class PauseMenu : Node
         page.AddChild(Row(Loc.T("Mouse"), sens, sensValue));
 
         page.AddChild(new GameplayPanel(null, 200f, withTitle: false));   // compact level-up, auto-pick
-        page.AddChild(MainMenu.MenuButton(Loc.T("GRAPHICS"), () => ShowGraphics(true)));
-        page.AddChild(MainMenu.MenuButton(Loc.T("KEY BINDINGS"), () => ShowKeys(true)));
+        // Side by side: the page already reaches the window's edges.
+        var pages = new HBoxContainer();
+        pages.AddThemeConstantOverride("separation", 6);
+        foreach (Button b in new[] { MainMenu.MenuButton(Loc.T("GRAPHICS"), () => ShowGraphics(true)),
+                                     MainMenu.MenuButton(Loc.T("KEY BINDINGS"), () => ShowKeys(true)),
+                                     MainMenu.MenuButton(Loc.T("ACCESSIBILITY"), () => ShowAccess(true)) })
+        {
+            b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            b.Alignment = HorizontalAlignment.Center;
+            b.AddThemeFontSizeOverride("font_size", 15);
+            foreach (string state in new[] { "normal", "hover", "pressed", "focus" })
+                if (b.GetThemeStylebox(state) is StyleBoxFlat flat) { flat.ContentMarginLeft = 6; flat.ContentMarginRight = 4; }
+            pages.AddChild(b);
+        }
+        page.AddChild(pages);
         page.AddChild(MainMenu.MenuButton(Loc.T("BACK"), () => ShowSettings(false)));
         return centre;
     }

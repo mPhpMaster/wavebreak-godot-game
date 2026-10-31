@@ -81,7 +81,7 @@ public sealed partial class Interactables : Node
     private StationPrompt _prompt = null!;
     private MerchantPanel _merchantPanel = null!;
     private MicrowavePanel _microwavePanel = null!;
-    private string _keyName = "E";
+    private static string _keyName => Meta.Keybinds.Hint(InteractAction);
     private bool _hasAction;
     private bool _interactRequested;
     private Station? _focus;
@@ -133,7 +133,6 @@ public sealed partial class Interactables : Node
         layer.AddChild(_microwavePanel);
 
         _hasAction = InputMap.HasAction(InteractAction);
-        _keyName = KeyName();
     }
 
     public override void _ExitTree()

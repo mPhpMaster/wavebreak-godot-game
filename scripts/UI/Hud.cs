@@ -129,6 +129,7 @@ public sealed partial class Hud : Control
     /// <summary>1 the frame the dash comes back, decaying to 0. Drives the halo
     /// and the white flash on the meter.</summary>
     private float _dashFlash;
+    private int _dashHints;
     private bool _dashWasReady = true;
 
     /// <summary>Last countdown shown, in tenths of a second, so the label is only
@@ -327,7 +328,7 @@ public sealed partial class Hud : Control
         // The key is named on the meter itself. Dash is the verb new players
         // forget they have, and a meter that does not say which key it belongs
         // to teaches nothing.
-        _dashLabel = Text(Loc.T("DASH  [SHIFT]  READY"), 15, DashReady, HorizontalAlignment.Center);
+        _dashLabel = Text(Loc.F("DASH  [{0}]  READY", Keybinds.Hint("dash")), 15, DashReady, HorizontalAlignment.Center);
         PlaceBottomCentre(_dashLabel, top - 24f, DashBarWidth + 120f, 22f);
         AddChild(_dashLabel);
     }
@@ -634,7 +635,7 @@ public sealed partial class Hud : Control
             colour = colour.Lerp(Colors.White, pulse * 0.35f);
         }
 
-        _healthFill.Color = colour.Lerp(Colors.White, _hurtFlash * 0.6f);
+        _healthFill.Color = colour.Lerp(Colors.White, Accessibility.Flash(_hurtFlash) * 0.6f);
 
         float shieldMax = _health.ShieldMax;
         bool hasShield = shieldMax > 0.01f;
@@ -671,16 +672,18 @@ public sealed partial class Hud : Control
 
         Color colour = ready ? DashReady : DashCharging;
         if (player.IsDashing) colour = DashReady.Lerp(Colors.White, 0.5f);
-        _dashFill.Color = colour.Lerp(Colors.White, _dashFlash * 0.7f);
-        _dashHalo.Color = DashReady with { A = _dashFlash * 0.55f };
+        _dashFill.Color = colour.Lerp(Colors.White, Accessibility.Flash(_dashFlash) * 0.7f);
+        _dashHalo.Color = DashReady with { A = Accessibility.Flash(_dashFlash) * 0.55f };
 
         // Countdown in tenths: whole seconds are too coarse for a cooldown that
         // is itself only a few seconds long, and hundredths are noise.
         int tenths = ready ? 0 : Mathf.CeilToInt(remaining * 10f);
-        if (tenths == _lastDashTenths) return;
+        if (tenths == _lastDashTenths && Hints.Stamp == _dashHints) return;
 
         _lastDashTenths = tenths;
-        _dashLabel.Text = ready ? Loc.T("DASH  [SHIFT]  READY") : Loc.F("DASH  [SHIFT]  {0:0.0}s", tenths / 10f);
+        _dashHints = Hints.Stamp;
+        string key = Keybinds.Hint("dash");
+        _dashLabel.Text = ready ? Loc.F("DASH  [{0}]  READY", key) : Loc.F("DASH  [{0}]  {1:0.0}s", key, tenths / 10f);
         _dashLabel.AddThemeColorOverride("font_color", ready ? DashReady : DashCharging.Lerp(Ink, 0.4f));
     }
 

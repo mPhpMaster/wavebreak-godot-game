@@ -142,15 +142,20 @@ public sealed partial class DevPanel : CanvasLayer
            && (k.Keycode == Key.D || k.PhysicalKeycode == Key.D)
            && k.CtrlPressed && k.ShiftPressed && !k.AltPressed;
 
+    /// <summary>View and Menu together: the chord for a pad in hand.</summary>
+    private static bool IsPadChord(InputEvent e)
+        => e is InputEventJoypadButton { Pressed: true, ButtonIndex: JoyButton.Back or JoyButton.Start } b
+           && Input.IsJoyButtonPressed(b.Device, JoyButton.Back) && Input.IsJoyButtonPressed(b.Device, JoyButton.Start);
+
     public override void _Input(InputEvent @event)
     {
-        if (IsChord(@event))
+        if (IsChord(@event) || IsPadChord(@event))
         {
             GetViewport().SetInputAsHandled();
             Toggle();
             return;
         }
-        if (_open && @event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
+        if (_open && PadInput.IsBack(@event))
         {
             GetViewport().SetInputAsHandled();
             Close();
@@ -161,7 +166,7 @@ public sealed partial class DevPanel : CanvasLayer
     /// open (interact, jump, zoom), whether or not the run is paused.</summary>
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (_open && @event is InputEventKey or InputEventMouseButton) GetViewport().SetInputAsHandled();
+        if (_open && @event is InputEventKey or InputEventMouseButton or InputEventJoypadButton or InputEventJoypadMotion) GetViewport().SetInputAsHandled();
     }
 
     public void Toggle()

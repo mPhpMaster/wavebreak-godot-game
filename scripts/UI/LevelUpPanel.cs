@@ -353,10 +353,11 @@ public sealed partial class LevelUpPanel : Control
     public override void _Input(InputEvent @event)
     {
         if (!IsOpen || DevPanel.IsOpen) return;
-        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
+        bool control = IsControlPress(@event);   // a trigger press is motion, not a button
+        if (!control && !PadInput.IsPress(@event)) return;
         if (_nonModalNow)
         {
-            CompactInput(@event, key);   // LevelUpPanel.Compact.cs
+            CompactInput(@event, control);   // LevelUpPanel.Compact.cs
             return;
         }
 
@@ -364,7 +365,7 @@ public sealed partial class LevelUpPanel : Control
         {
             // Swallow it, so it cannot reach the focused card as an activation
             // either. Escape is left alone: it frees the mouse.
-            if (key.Keycode != Key.Escape) GetViewport().SetInputAsHandled();
+            if (@event is not InputEventKey { Keycode: Key.Escape }) GetViewport().SetInputAsHandled();
             return;
         }
 
@@ -376,14 +377,16 @@ public sealed partial class LevelUpPanel : Control
             return;
         }
 
-        int index = key.Keycode switch
+        // B backs out of a banish the way pressing Banish again does.
+        if (_banishMode && @event is InputEventJoypadButton && PadInput.IsBack(@event))
         {
-            Key.Key1 or Key.Kp1 => 0,
-            Key.Key2 or Key.Kp2 => 1,
-            Key.Key3 or Key.Kp3 => 2,
-            Key.Key4 or Key.Kp4 => 3,
-            _ => -1,
-        };
+            GetViewport().SetInputAsHandled();
+            ToggleBanish();
+            return;
+        }
+
+        if (@event is not InputEventKey key) return;
+        int index = NumberOf(key);
 
         if (index < 0 || index >= _current.Count) return;
 
@@ -392,6 +395,15 @@ public sealed partial class LevelUpPanel : Control
         GetViewport().SetInputAsHandled();
         Pick(index);
     }
+
+    private static int NumberOf(InputEventKey key) => key.Keycode switch
+    {
+        Key.Key1 or Key.Kp1 => 0,
+        Key.Key2 or Key.Kp2 => 1,
+        Key.Key3 or Key.Kp3 => 2,
+        Key.Key4 or Key.Kp4 => 3,
+        _ => -1,
+    };
 
     private void Pick(int index)
     {

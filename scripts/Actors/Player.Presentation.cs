@@ -109,7 +109,7 @@ public sealed partial class Player
         }
         else
         {
-            _lamp.LightEnergy = 1.5f + _flash * 2.5f;
+            _lamp.LightEnergy = 1.5f + Meta.Accessibility.Flash(_flash) * 2.5f;
             // Only a co-op revive ever brings a fallen player back up; in
             // single-player this is already 0 and stays 0.
             _deathTilt = Mathf.MoveToward(_deathTilt, 0f, dt * 3f);

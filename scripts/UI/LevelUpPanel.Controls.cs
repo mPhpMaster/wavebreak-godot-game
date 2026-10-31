@@ -55,6 +55,7 @@ public sealed partial class LevelUpPanel
         _rerollButton.Pressed += () => { if (Armed) DoReroll(); };
         _banishButton.Pressed += () => { if (Armed) ToggleBanish(); };
         _skipButton.Pressed += () => { if (Armed) DoSkip(); };
+        Hints.Watch(this, () => { if (IsOpen) RefreshControls(); });
     }
 
     private static Button ControlButton(HBoxContainer row)
@@ -94,8 +95,12 @@ public sealed partial class LevelUpPanel
         InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = key });
     }
 
-    private static string KeyName(string action)
-        => InputMap.HasAction(action) ? Keybinds.Describe(Keybinds.Get(action, 0)) : "?";
+    private static string KeyName(string action) => InputMap.HasAction(action) ? Keybinds.Hint(action) : "?";
+
+    /// <summary>Under the cards, and on the shrine's: 1 2 3, or A on the focus.</summary>
+    internal static string CardHint() => PadInput.UsingPad
+        ? Loc.F("{0}: take the highlighted card", Keybinds.PadLabel(JoyButton.A))
+        : Loc.T("press  1  ·  2  ·  3");
 
     /// <summary>Redraw the three buttons from the live charges.</summary>
     private void RefreshControls()
@@ -146,11 +151,14 @@ public sealed partial class LevelUpPanel
     /// <summary>Route a reroll/banish/skip key. True when it was one of them.</summary>
     private bool HandleControlKey(InputEvent @event)
     {
-        if (@event.IsActionPressed(RerollAction)) { DoReroll(); return true; }
-        if (@event.IsActionPressed(BanishAction)) { ToggleBanish(); return true; }
-        if (@event.IsActionPressed(SkipAction)) { DoSkip(); return true; }
+        if (PadInput.Pressed(@event, RerollAction)) { DoReroll(); return true; }
+        if (PadInput.Pressed(@event, BanishAction)) { ToggleBanish(); return true; }
+        if (PadInput.Pressed(@event, SkipAction)) { DoSkip(); return true; }
         return false;
     }
+
+    private static bool IsControlPress(InputEvent @event)
+        => PadInput.Pressed(@event, RerollAction) || PadInput.Pressed(@event, BanishAction) || PadInput.Pressed(@event, SkipAction);
 
     private void ReArm()
     {

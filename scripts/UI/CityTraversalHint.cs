@@ -49,10 +49,10 @@ public sealed partial class CityTraversalHint : Control
         _refresh -= (float)delta;
         if (_refresh > 0f) return;
         _refresh = .1f;
-        string right = Keybinds.Describe(Keybinds.Get("city_hook_right", 0));
-        string hook = Keybinds.Describe(Keybinds.Get("city_hook_left", 0));
-        string jump = Keybinds.Describe(Keybinds.Get("jump", 0));
-        string strike = Keybinds.Describe(Keybinds.Get("dash", 0));
+        string right = Keybinds.Hint("city_hook_right");
+        string hook = Keybinds.Hint("city_hook_left");
+        string jump = Keybinds.Hint("jump");
+        string strike = Keybinds.Hint("dash");
         string hooks = GameplaySettings.ToggleCityHooks
             ? Loc.T("Click to toggle grapple") + " · " + Loc.F("Left: {0}  |  Right: {1}", hook, right)
             : Loc.F("Hold {0}: LEFT hook  |  Hold {1}: RIGHT hook", hook, right);
@@ -60,7 +60,7 @@ public sealed partial class CityTraversalHint : Control
             + "\n" + Loc.F("{0}: attached BOOST  |  {1}: dash / airborne core strike  |  Boost ready in {2:0.0}s", jump, strike, player.HookBoostCooldown)
             + "\n" + Loc.F("Left: {0}  |  Right: {1}", Loc.T(player.LeftHookAttached ? "Attached" : "Free"), Loc.T(player.RightHookAttached ? "Attached" : "Free"));
         _text.Text = Loc.T(_practice.Instruction) + "\n" + _text.Text;
-        _text.Text += "\n" + Loc.T("F2: skip help  |  F1: replay help");
+        _text.Text += "\n" + TraversalHelpSession.Line();
         if (player.CoreStrikeFeedback.Length > 0) _text.Text = Loc.T(player.CoreStrikeFeedback);
         _reticle.Modulate = player.Grappling ? Colors.Gold : player.HookTargetAvailable ? Colors.Aquamarine : Colors.White;
     }

@@ -75,7 +75,8 @@ public sealed partial class ShrinePanel : Control
         Label sub = MakeLabel(Loc.T("Choose a blessing for this run"), 17, InkDim);
         Band(sub, 720f, -136f, 26f);
         AddChild(sub);
-        Label hint = MakeLabel(Loc.T("press  1  ·  2  ·  3"), 15, new Color(0.50f, 0.55f, 0.64f));
+        Label hint = MakeLabel("", 15, new Color(0.50f, 0.55f, 0.64f));
+        Hints.Follow(hint, LevelUpPanel.CardHint);
         Band(hint, 720f, 130f, 24f);
         AddChild(hint);
 
@@ -242,12 +243,13 @@ public sealed partial class ShrinePanel : Control
     public override void _Input(InputEvent @event)
     {
         if (!IsOpen || DevPanel.IsOpen) return;
-        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
+        if (!PadInput.IsPress(@event)) return;
         if (!Armed)
         {
-            if (key.Keycode != Key.Escape) GetViewport().SetInputAsHandled();
+            if (@event is not InputEventKey { Keycode: Key.Escape }) GetViewport().SetInputAsHandled();
             return;
         }
+        if (@event is not InputEventKey key) return;
         int index = key.Keycode switch
         {
             Key.Key1 or Key.Kp1 => 0,

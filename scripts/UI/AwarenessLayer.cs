@@ -35,6 +35,7 @@ public static class AwarenessLayer
         overlay.AddChild(new CityTraversalHint());
         overlay.AddChild(new ExpeditionObjectivesHud());
         overlay.AddChild(new AwarenessAlerts());
+        if (ClassicTutorial.ShouldShow()) overlay.AddChild(new ClassicTutorial());
 
         var top = new CanvasLayer { Name = "ScoreboardUI", Layer = 30 };
         main.AddChild(top);

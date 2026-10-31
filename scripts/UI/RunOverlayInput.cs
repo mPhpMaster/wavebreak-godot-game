@@ -7,12 +7,13 @@ internal static class RunOverlayInput
 {
     internal static bool ScoreboardHeld => !DevPanel.IsOpen && !KeybindPanel.AnyListening
         && !GraphicsPanel.Blocking && InputMap.HasAction(ScoreboardPanel.Action)
-        && Input.IsActionPressed(ScoreboardPanel.Action);
+        && Input.IsActionPressed(ScoreboardPanel.Action) && (!PadInput.UsingPad || PadInput.PlayHasPad);
 
     internal static bool IsEscape(InputEvent input) => input is InputEventKey
         { Pressed: true, Echo: false, Keycode: Key.Escape };
 
     internal static bool OwnsScoreboardEvent(InputEvent input) => !DevPanel.IsOpen
         && !KeybindPanel.AnyListening && !GraphicsPanel.Blocking && !IsEscape(input)
-        && InputMap.HasAction(ScoreboardPanel.Action) && input.IsAction(ScoreboardPanel.Action);
+        && InputMap.HasAction(ScoreboardPanel.Action) && input.IsAction(ScoreboardPanel.Action)
+        && (input is not (InputEventJoypadButton or InputEventJoypadMotion) || PadInput.PlayHasPad);
 }

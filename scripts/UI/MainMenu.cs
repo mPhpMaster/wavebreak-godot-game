@@ -165,6 +165,7 @@ public sealed partial class MainMenu : Node3D
         DevReturnPage = null;
         OfferWhatsNew();
         if (Launch.MenuExpeditionCheck is not null) AddChild(new Game.ExpeditionMenuCheck(this));
+        if (Launch.PadMenuCheck) _ = Game.PadMenuCheck.Run(this);
         DevPanel.Install(this);
         Net.SteamLobby.JoinRequested += OnSteamJoinRequested;
 
@@ -173,6 +174,13 @@ public sealed partial class MainMenu : Node3D
         // Lobby captures: the host waits for the guest (who starts a moment later) to photograph first.
         if (Launch.MenuShot is not null) _ = CaptureAndQuit(coopAuto ? 4.0 : 2.5);
     }
+
+    /// <summary>--check-pad-menu: every page, by name.</summary>
+    internal IEnumerable<string> PageNames => _pages.Keys;
+
+    internal void OpenPageForCheck(string name) => ShowPage(name);
+
+    internal Control PageForCheck(string name) => _pages[name];
 
     private void TintHero(CharacterDef def) => ShowHeroSkin(def.SelectedSkin);
 
@@ -245,6 +253,7 @@ public sealed partial class MainMenu : Node3D
         _pages["keys"] = BuildKeysPage();
         _pages["graphics"] = BuildGraphicsPage();
         _pages["gameplay"] = BuildGameplayPage();   // UI/GameplayPanel
+        _pages["access"] = BuildAccessPage();       // UI/AccessibilityPanel
         _pages["shop"] = _shop = new MetaShopPage(() => ShowPage("main"));
         _pages["records"] = BuildLeaderboardPage();
         _pages["run"] = _runPicker = new ChallengePicker(() => ShowPage("play"));
@@ -356,6 +365,10 @@ public sealed partial class MainMenu : Node3D
                 _gameplay.Refresh();
                 _gameplay.FocusFirst();
                 break;
+            case "access":
+                _access.Refresh();
+                _access.FocusFirst();
+                break;
             case "graphics":
                 _graphics.Refresh();
                 if (arg == "bottom") _graphics.FocusLast();
@@ -368,6 +381,12 @@ public sealed partial class MainMenu : Node3D
             case "records":
                 _leaderboard.Refresh();
                 _leaderboardBack.GrabFocus();
+                break;
+            case "keys":
+                _keys.FocusFirst();
+                break;
+            case "credits":
+                _creditsBack.GrabFocus();
                 break;
             default:
                 _pearls.Text = Loc.F("{0} {1}   ·   difficulty {2}", Pearls.Name, Pearls.Balance, DifficultyTiers.Selected.Name);
@@ -399,6 +418,11 @@ public sealed partial class MainMenu : Node3D
     public override void _UnhandledInput(InputEvent @event)
     {
         if (_root is null || DevPanel.IsOpen || _whatsNew is not null) return;
+        if (_page == "play" && PadPlayPage(@event))   // MainMenu.Hats.cs
+        {
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (_page == "play" && (@event.IsActionPressed("ui_left") || @event.IsActionPressed("ui_right")))
         {
             CycleSkin((@event.IsActionPressed("ui_left") ? -1 : 1) * (Loc.IsRtl ? -1 : 1));
@@ -411,7 +435,7 @@ public sealed partial class MainMenu : Node3D
             GetViewport().SetInputAsHandled();
             if (_page == "updates" && _updatePanel?.CancelBusy() == true) return;
             if (_page == "coop") CoopPage.LeaveSession();   // same as BACK
-            ShowPage(_page switch { "run" => "play", "toggler" => "shop", "keys" or "graphics" or "gameplay" => "settings", _ => "main" });
+            ShowPage(_page switch { "run" => "play", "toggler" => "shop", "keys" or "graphics" or "gameplay" or "access" => "settings", _ => "main" });
         }
     }
 

@@ -33,11 +33,14 @@ public sealed partial class GroundDecal : MeshInstance3D, IPooled
     private static readonly StringName FillParam = "fill";
     private static readonly StringName InnerParam = "inner";
     private static readonly StringName ShapeParam = "shape";
+    private static readonly StringName StripesParam = "stripes";
 
     private static PlaneMesh? _mesh;
     private static ShaderMaterial? _material;
 
     public bool IsPooled { get; set; } = true;
+
+    private bool _stripes;
 
     public GroundDecal()
     {
@@ -85,6 +88,15 @@ public sealed partial class GroundDecal : MeshInstance3D, IPooled
 
     private void SetParams(Shape shape, float fill, float inner, Color tint)
     {
+        // Every enemy's own tint folds into one colour per answer here, so no
+        // hostile marking can slip through on a hue the player cannot read.
+        tint = shape == Shape.Band ? Meta.Accessibility.Wave(tint) : Meta.Accessibility.Danger(tint);
+        bool stripes = Meta.Accessibility.Patterned;
+        if (stripes != _stripes)
+        {
+            _stripes = stripes;
+            SetInstanceShaderParameter(StripesParam, stripes ? 1f : 0f);
+        }
         SetInstanceShaderParameter(TintParam, tint);
         SetInstanceShaderParameter(FillParam, Mathf.Clamp(fill, 0f, 1f));
         SetInstanceShaderParameter(InnerParam, inner);
@@ -99,6 +111,7 @@ instance uniform vec4 tint : source_color = vec4(1.0, 0.3, 0.2, 1.0);
 instance uniform float fill = 0.0;
 instance uniform float inner = 0.0;
 instance uniform float shape = 0.0;
+instance uniform float stripes = 0.0;
 
 void fragment() {
     vec2 p = UV * 2.0 - 1.0;
@@ -121,6 +134,12 @@ void fragment() {
         float rim = max(smoothstep(0.80, 0.94, q.x), smoothstep(0.95, 0.99, q.y));
         float core = step(UV.y, fill);
         a = max(rim * 0.95, 0.12 + core * 0.40);
+    }
+    // Colour-blind modes: a telegraph reads by pattern too. Discs and lanes
+    // stripe one way, bands the other, in the decal's own space.
+    if (stripes > 0.5) {
+        float along = shape > 0.5 && shape < 1.5 ? UV.x - UV.y : UV.x + UV.y;
+        a = max(a, step(0.5, fract(along * 7.0)) * 0.42);
     }
     ALBEDO = tint.rgb;
     ALPHA = clamp(a, 0.0, 1.0) * tint.a;
@@ -154,11 +173,8 @@ public sealed partial class EnemyShot : Node3D, IPooled
         Visible = false;
 
         _mesh ??= new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 12, Rings = 6 };
-        _material ??= new StandardMaterial3D
-        {
-            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            AlbedoColor = EnemyAttacks.ShotColor,
-        };
+        _material ??= new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded };
+        _material.AlbedoColor = EnemyAttacks.ShotColor;   // shared, and the palette can change between runs
         AddChild(new MeshInstance3D
         {
             Name = "Visual",
@@ -190,14 +206,14 @@ public sealed partial class EnemyShot : Node3D, IPooled
 public static class EnemyAttacks
 {
     /// <summary>Hostile shot colour. Hot pink: nothing the player owns uses it.</summary>
-    public static readonly Color ShotColor = new(1.00f, 0.22f, 0.55f);
+    public static Color ShotColor => Meta.Accessibility.Shot(new Color(1.00f, 0.22f, 0.55f));
 
     /// <summary>Default telegraph colour for blasts.</summary>
-    public static readonly Color DangerColor = new(1.00f, 0.32f, 0.18f, 0.85f);
+    public static Color DangerColor => Meta.Accessibility.Danger(new Color(1.00f, 0.32f, 0.18f, 0.85f));
 
     /// <summary>Shockwave colour — a different hue from blasts on purpose,
     /// because the answer is different: you jump a wave, you leave a disc.</summary>
-    public static readonly Color WaveColor = new(1.00f, 0.80f, 0.25f, 0.9f);
+    public static Color WaveColor => Meta.Accessibility.Wave(new Color(1.00f, 0.80f, 0.25f, 0.9f));
 
     /// <summary>Player body as the attacks see it: a vertical segment with a
     /// radius. Matches Player.BodyRadius/BodyHeight without compiling against it.</summary>
@@ -319,7 +335,7 @@ public static class EnemyAttacks
     /// show the area that was live.</summary>
     public static void Flash(Vector3 centre, float radius, Color tint)
     {
-        Hazard h = NewHazard(Kind.Flash, centre, "", tint);
+        Hazard h = NewHazard(Kind.Flash, centre, "", tint with { A = Meta.Accessibility.Flash(tint.A) });
         h.Radius = radius;
         LiveHazards.Add(h);
         if (Net.Coop.IsHost) Net.NetSession.Instance?.MirrorAttack(3, centre, Vector3.Zero, radius, 0f, 0f, 0f, 0f, tint);

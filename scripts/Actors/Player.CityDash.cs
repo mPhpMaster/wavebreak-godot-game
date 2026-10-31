@@ -22,8 +22,8 @@ public sealed partial class Player
                 InputEventKey key when key.PhysicalKeycode != Key.None => Input.IsPhysicalKeyPressed(key.PhysicalKeycode),
                 InputEventKey key => Input.IsKeyPressed(key.Keycode),
                 InputEventMouseButton mouse => Input.IsMouseButtonPressed(mouse.ButtonIndex),
-                InputEventJoypadButton pad => Input.IsJoyButtonPressed(pad.Device < 0 ? 0 : pad.Device, pad.ButtonIndex),
-                InputEventJoypadMotion axis => Input.GetJoyAxis(axis.Device < 0 ? 0 : axis.Device, axis.Axis) * Mathf.Sign(axis.AxisValue) > .5f,
+                InputEventJoypadButton pad => UI.PadInput.ButtonHeld(pad),
+                InputEventJoypadMotion axis => UI.PadInput.AxisHeld(axis),
                 _ => false,
             };
             if (held) return true;

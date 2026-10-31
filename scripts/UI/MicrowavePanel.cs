@@ -43,7 +43,8 @@ public sealed partial class MicrowavePanel : ModalPanel
         _empty = MakeLabel(Loc.T("You have nothing to put in it."), 16, InkDim);
         Body.AddChild(_empty);
 
-        Body.AddChild(MakeLabel(Loc.T("click an item or press 1-9      Esc / E to leave"), 14, InkDim));
+        Body.AddChild(Follow(MakeLabel("", 14, InkDim), () => Loc.F("click an item or press 1-9      Esc / {0} to leave", Keybinds.Hint("interact")),
+                             "{0}: cook      {1}: leave"));
     }
 
     public void Open(Microwave microwave)

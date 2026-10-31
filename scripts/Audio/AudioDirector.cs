@@ -308,7 +308,7 @@ public sealed partial class AudioDirector : Node
         if (e is InputEventKey { Echo: true }) return;
         foreach (var (action, channel, steps) in Controls)
         {
-            if (!InputMap.HasAction(action) || !e.IsActionPressed(action)) continue;
+            if (!UI.PadInput.Pressed(e, action)) continue;
 
             if (steps == 0) AudioSettings.ToggleMute();
             else AudioSettings.Nudge(channel, steps);

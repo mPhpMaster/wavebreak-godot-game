@@ -61,6 +61,16 @@ public partial class PlayerCamera : Node3D
     /// <summary>Metres of zoom per wheel notch.</summary>
     [Export] public float ZoomStep { get; set; } = 1.0f;
 
+    /// <summary>Right stick at the rim, radians per second at 1.0x.</summary>
+    private const float StickLookSpeed = 2.6f;
+
+    /// <summary>Vertical look runs slower than horizontal: pitch has far less
+    /// range to cross, and full speed overshoots it.</summary>
+    private const float StickPitchShare = 0.6f;
+
+    /// <summary>Wheel notches per second while a zoom action is held.</summary>
+    private const float StickZoomRate = 6f;
+
     [Export(PropertyHint.Range, "40,110,1")] public float FieldOfView { get; set; } = 70.0f;
 
     /// <summary>Physics layers the arm collides with. Layer 1 by default, which is
@@ -380,6 +390,38 @@ public partial class PlayerCamera : Node3D
         }
     }
 
+    /// <summary>The one way the view turns: right and down are positive here,
+    /// for the mouse and the right stick alike.</summary>
+    private void Turn(float right, float down)
+    {
+        _yaw = Mathf.Wrap(_yaw - right, -Mathf.Pi, Mathf.Pi);
+        _pitch = Mathf.Clamp(_pitch - down, Mathf.DegToRad(MinPitchDegrees), Mathf.DegToRad(MaxPitchDegrees));
+    }
+
+    /// <summary>The look actions (right stick by default), and the held zoom
+    /// the wheel has no pad equivalent for. Mouse-look stops when a panel frees
+    /// the cursor; the stick stops at the same moments, except that the compact
+    /// hand keeps the game running and takes the D-pad, not the stick.</summary>
+    private void PadLook(float dt)
+    {
+        if (Net.Coop.IsPaused(GetTree()) || UI.DevPanel.IsOpen) return;
+        if (CursorHeld && !UI.LevelUpPanel.AnyCompactOpen) return;
+        if (!ForceCaptureForTest && !DisplayServer.WindowIsFocused()) return;
+
+        Vector2 stick = Input.GetVector("look_left", "look_right", "look_up", "look_down", Meta.PadSettings.LookDeadzone);
+        if (stick != Vector2.Zero)
+        {
+            // Squared: small pushes aim finely, the rim still turns at full speed.
+            stick *= stick.Length();
+            float speed = StickLookSpeed * Meta.PadSettings.LookSensitivity * dt;
+            Turn(stick.X * speed, stick.Y * speed * StickPitchShare * (Meta.PadSettings.InvertLook ? -1f : 1f));
+        }
+
+        if (!UI.PadInput.PlayHasPad) return;
+        float zoom = Input.GetActionStrength("camera_zoom_out") - Input.GetActionStrength("camera_zoom_in");
+        if (zoom != 0f) Distance = Mathf.Clamp(Distance + zoom * ZoomStep * StickZoomRate * dt, MinDistance, MaxDistance);
+    }
+
     public override void _UnhandledInput(InputEvent @event)
     {
         bool captured = Input.MouseMode == Input.MouseModeEnum.Captured;
@@ -395,11 +437,7 @@ public partial class PlayerCamera : Node3D
             // The user's setting scales the camera's own default, read every
             // event so a change in the pause menu takes effect at once.
             float sensitivity = MouseSensitivity * Meta.GameSettings.Sensitivity;
-            _yaw = Mathf.Wrap(_yaw - motion.Relative.X * sensitivity, -Mathf.Pi, Mathf.Pi);
-            _pitch = Mathf.Clamp(
-                _pitch - motion.Relative.Y * sensitivity,
-                Mathf.DegToRad(MinPitchDegrees),
-                Mathf.DegToRad(MaxPitchDegrees));
+            Turn(motion.Relative.X * sensitivity, motion.Relative.Y * sensitivity);
             return;
         }
 
@@ -445,6 +483,7 @@ public partial class PlayerCamera : Node3D
     {
         float dt = (float)delta;
 
+        PadLook(dt);
         ResolveTarget(dt);
 
         if (_target is not null)

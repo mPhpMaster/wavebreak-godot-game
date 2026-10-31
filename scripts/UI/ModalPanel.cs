@@ -1,13 +1,14 @@
 using System;
 using Godot;
 using Wavebreak.Core;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
 /// <summary>
 /// Shared shell for the station panels (merchant, microwave): pauses the tree,
 /// frees the mouse and hands it back, ignores keys for a moment after opening,
-/// and closes on Escape or the interact key.
+/// and closes on Escape, the pad's B or the interact key.
 ///
 /// The arm delay is the same guard <see cref="LevelUpPanel"/> and
 /// <see cref="ChestPrompt"/> rely on: the panel opens from a key press in the
@@ -28,8 +29,25 @@ public partial class ModalPanel : Control
 
     private ulong _shownAtMsec;
     private bool _subscribed;
+    private readonly System.Collections.Generic.List<Button> _padButtons = new();
 
     protected bool Armed => Time.GetTicksMsec() - _shownAtMsec >= ArmDelayMsec;
+
+    /// <summary>A hint line that reads one way for a pad, another for keys.</summary>
+    protected static Label Follow(Label label, Func<string> keyboard, string pad)
+    {
+        Hints.Follow(label, () => PadInput.UsingPad
+            ? Loc.F(pad, Keybinds.PadLabel(JoyButton.A), Keybinds.PadLabel(JoyButton.B))
+            : keyboard());
+        return label;
+    }
+
+    /// <summary>A button that stays out of keyboard focus, as <see cref="MakeButton"/>'s do.</summary>
+    protected void PadFocusOnly(Button b)
+    {
+        b.FocusMode = PadInput.UsingPad ? FocusModeEnum.All : FocusModeEnum.None;
+        _padButtons.Add(b);
+    }
 
     /// <summary>The root everything visible hangs from; subclasses fill it.</summary>
     protected VBoxContainer Body { get; private set; } = null!;
@@ -58,11 +76,16 @@ public partial class ModalPanel : Control
 
         EventBus.Subscribe<RunEnded>(OnRunEnded);
         _subscribed = true;
+        PadInput.DeviceChanged += SyncPadFocus;
     }
 
     public override void _ExitTree()
     {
-        if (_subscribed) EventBus.Unsubscribe<RunEnded>(OnRunEnded);
+        if (_subscribed)
+        {
+            EventBus.Unsubscribe<RunEnded>(OnRunEnded);
+            PadInput.DeviceChanged -= SyncPadFocus;
+        }
         _subscribed = false;
         if (IsOpen) Close();
     }
@@ -76,6 +99,18 @@ public partial class ModalPanel : Control
         IsOpen = true;
         Visible = true;
         if (IsInsideTree()) Net.Coop.SetPaused(GetTree(), true);
+        PadInput.AddScope(Body);
+        SyncPadFocus();
+    }
+
+    /// <summary>The stations' buttons take no focus from a keyboard (Space must
+    /// not buy anything), but a pad has nothing else to press them with.</summary>
+    private void SyncPadFocus()
+    {
+        _padButtons.RemoveAll(b => !IsInstanceValid(b));
+        foreach (Button b in _padButtons) b.FocusMode = PadInput.UsingPad ? FocusModeEnum.All : FocusModeEnum.None;
+        if (!IsOpen || !PadInput.UsingPad) return;
+        if (GetViewport().GuiGetFocusOwner() is not { } owner || !IsAncestorOf(owner)) PadInput.FocusFirstIn(Body);
     }
 
     public void Close()
@@ -96,9 +131,9 @@ public partial class ModalPanel : Control
     public override void _Input(InputEvent @event)
     {
         if (!IsOpen || DevPanel.IsOpen) return;
-        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
+        bool interact = PadInput.Pressed(@event, "interact");
+        if (!interact && !PadInput.IsPress(@event)) return;
 
-        bool escape = key.Keycode == Key.Escape;
         if (!Armed)
         {
             // Swallowed, so it cannot reach a button as an activation either.
@@ -106,12 +141,14 @@ public partial class ModalPanel : Control
             return;
         }
 
-        if (escape || (InputMap.HasAction("interact") && key.IsActionPressed("interact")))
+        if (interact || PadInput.IsBack(@event))
         {
             GetViewport().SetInputAsHandled();
             Close();
             return;
         }
+
+        if (@event is not InputEventKey key) return;
 
         int index = key.Keycode switch
         {
@@ -146,9 +183,10 @@ public partial class ModalPanel : Control
 
     protected Button MakeButton(string text, Action onPress)
     {
-        var b = new Button { Text = text, FocusMode = FocusModeEnum.None };
+        var b = new Button { Text = text, FocusMode = PadInput.UsingPad ? FocusModeEnum.All : FocusModeEnum.None };
         b.AddThemeFontSizeOverride("font_size", 16);
         b.Pressed += () => { if (Armed) onPress(); };
+        _padButtons.Add(b);
         return b;
     }
 }

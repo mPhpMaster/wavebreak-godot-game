@@ -61,7 +61,7 @@ public sealed partial class ReefHarvestVisual : Node3D
         _label.Visible = show && !Spent;
         if (!show || Spent) return;
         string reward = _def.Reward == Actors.PickupKind.Xp ? "+6 XP" : _def.Reward == Actors.PickupKind.Gold ? "+4 gold" : "+5% health";
-        string key = InputMap.ActionGetEvents("interact").Count > 0 ? InputMap.ActionGetEvents("interact")[0].AsText() : "E";
+        string key = Meta.Keybinds.Hint("interact");
         _label.Text = Loc.F(_def.Crystal ? "{0}: harvest crystal ({1})" : Game.Arena.Current.Underwater ? "{0}: gather reef herb ({1})" : "{0}: gather plant ({1})", key, Loc.T(reward));
     }
 

@@ -96,6 +96,9 @@ public sealed partial class ResultsScreen : Control
         EventBus.Subscribe<WeaponAcquired>(OnWeaponAcquired);
         EventBus.Subscribe<LeaderboardPlaced>(OnLeaderboard);
         _subscribed = true;
+        PadInput.DeviceChanged += SyncPadFocus;
+        VisibilityChanged += SyncPadFocus;
+        PadInput.AddScope(this);
     }
 
     public override void _ExitTree()
@@ -105,6 +108,7 @@ public sealed partial class ResultsScreen : Control
         EventBus.Unsubscribe<ItemAcquired>(OnItemAcquired);
         EventBus.Unsubscribe<WeaponAcquired>(OnWeaponAcquired);
         EventBus.Unsubscribe<LeaderboardPlaced>(OnLeaderboard);
+        PadInput.DeviceChanged -= SyncPadFocus;
     }
 
     private void OnItemAcquired(ItemAcquired e)
@@ -199,7 +203,7 @@ public sealed partial class ResultsScreen : Control
         _buildEmpty.Visible = false;
         build.AddChild(_buildEmpty);
 
-        VBoxContainer board = Card(cards, Loc.F("SCOREBOARD  [{0}]", Keybinds.Describe(Keybinds.Primary(ScoreboardPanel.Action))), new Color(0.62f, 0.98f, 1f), 0.33f);
+        VBoxContainer board = Card(cards, Loc.F("SCOREBOARD  [{0}]", Keybinds.Hint(ScoreboardPanel.Action)), new Color(0.62f, 0.98f, 1f), 0.33f);
         board.AddChild(new ScoreboardRows());
 
         // ---- buttons. No keyboard focus: Space is ui_accept, so a focused
@@ -208,8 +212,8 @@ public sealed partial class ResultsScreen : Control
         var buttons = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
         buttons.AddThemeConstantOverride("separation", 24);
         col.AddChild(buttons);
-        buttons.AddChild(BigButton(Loc.T("RESTART"), Loc.T("Enter  /  R"), Victory, Restart, 300f));
-        buttons.AddChild(BigButton(Loc.T("MAIN MENU"), Loc.Ltr("Esc"), InkDim, ToMainMenu, 240f));
+        buttons.AddChild(BigButton(Loc.T("RESTART"), () => PadInput.UsingPad ? Keybinds.PadLabel(JoyButton.A) : Loc.T("Enter  /  R"), Victory, Restart, 300f));
+        buttons.AddChild(BigButton(Loc.T("MAIN MENU"), () => PadInput.UsingPad ? Keybinds.PadLabel(JoyButton.B) : Loc.Ltr("Esc"), InkDim, ToMainMenu, 240f));
 
         _seed = MakeLabel("", 12, new Color(0.52f, 0.57f, 0.66f), HorizontalAlignment.Center);
         col.AddChild(_seed);
@@ -244,11 +248,23 @@ public sealed partial class ResultsScreen : Control
         return box;
     }
 
-    private Control BigButton(string text, string hint, Color accent, System.Action pressed, float width)
+    private readonly System.Collections.Generic.List<Button> _bigButtons = new();
+
+    /// <summary>The comment on the button row holds for a keyboard; a pad has
+    /// no Enter or Esc to reach for, so with a pad the buttons take focus, behind
+    /// the same arm delay as everything here.</summary>
+    private void SyncPadFocus()
+    {
+        foreach (Button b in _bigButtons) b.FocusMode = PadInput.UsingPad ? FocusModeEnum.All : FocusModeEnum.None;
+        if (Visible && PadInput.UsingPad && _bigButtons.Count > 0) _bigButtons[0].GrabFocus();
+    }
+
+    private Control BigButton(string text, System.Func<string> hint, Color accent, System.Action pressed, float width)
     {
         var box = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         box.AddThemeConstantOverride("separation", 2);
         var b = new Button { Text = text, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(width, 52f) };
+        _bigButtons.Add(b);
         b.AddThemeFontSizeOverride("font_size", 24);
         b.AddThemeColorOverride("font_color", Ink);
         b.AddThemeColorOverride("font_hover_color", accent);
@@ -257,7 +273,9 @@ public sealed partial class ResultsScreen : Control
         b.AddThemeStyleboxOverride("pressed", Box(new Color(0.24f, 0.29f, 0.42f), accent, 14, 3));
         b.Pressed += pressed;
         box.AddChild(b);
-        box.AddChild(MakeLabel(hint, 15, InkDim, HorizontalAlignment.Center));
+        Label caption = MakeLabel("", 15, InkDim, HorizontalAlignment.Center);
+        Hints.Follow(caption, hint);
+        box.AddChild(caption);
         return box;
     }
 
@@ -461,14 +479,13 @@ public sealed partial class ResultsScreen : Control
     public override void _Input(InputEvent @event)
     {
         if (!Visible || DevPanel.IsOpen) return;
-        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
-
-        if (key.Keycode == Key.Escape)
+        if (PadInput.IsBack(@event))
         {
             GetViewport().SetInputAsHandled();
             ToMainMenu();
             return;
         }
+        if (@event is not InputEventKey { Pressed: true, Echo: false } key) return;
 
         // Not Space: it is the jump key, and a death usually lands mid-jump.
         if (key.Keycode is not (Key.Enter or Key.KpEnter or Key.R)) return;

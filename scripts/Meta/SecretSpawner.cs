@@ -274,12 +274,13 @@ public sealed partial class Shrine : Node3D
 
         _inRange = !Spent && dist <= InteractRange;
         _prompt.Visible = _inRange;
+        if (_inRange) _prompt.Text = $"[{Keybinds.Hint("interact")}]  {Kind.DisplayName}";
     }
 
     public override void _UnhandledInput(InputEvent @event)
     {
         if (!_inRange || Spent || Net.Coop.LocalHold) return;
-        bool pressed = (InputMap.HasAction("interact") && @event.IsActionPressed("interact"))
+        bool pressed = UI.PadInput.Pressed(@event, "interact")
                        || @event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.E }
                        || @event is InputEventJoypadButton { Pressed: true, ButtonIndex: JoyButton.X };
         if (!pressed) return;

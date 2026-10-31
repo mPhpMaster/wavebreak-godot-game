@@ -133,7 +133,7 @@ public sealed partial class Enemy
     {
         if (_bodyMaterial is null) return;
 
-        float t = Mathf.Clamp(amount, 0f, 1f);
+        float t = Meta.Accessibility.Flash(Mathf.Clamp(amount, 0f, 1f));
         float g = Mathf.Clamp(_glow, 0f, 1f);
         float baseEnergy = EmissionFor(_builtSilhouette) + (_phase >= 2 ? 0.7f : 0f);
 

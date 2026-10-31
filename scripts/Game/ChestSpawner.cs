@@ -122,7 +122,7 @@ public sealed partial class ChestSpawner : Node
     private float _radius;
 
     private ChestPrompt _prompt = null!;
-    private string _keyName = "E";
+    private static string _keyName => Meta.Keybinds.Hint(InteractAction);
     private bool _hasAction;
     private bool _interactRequested;
     private Chest? _focus;
@@ -195,7 +195,6 @@ public sealed partial class ChestSpawner : Node
         AddChild(_prompt);
 
         _hasAction = InputMap.HasAction(InteractAction);
-        _keyName = KeyName();
 
         EventBus.Subscribe<EnemyKilled>(OnEnemyKilled);
 

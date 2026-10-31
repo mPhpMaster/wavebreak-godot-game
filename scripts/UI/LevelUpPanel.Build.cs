@@ -31,7 +31,8 @@ public sealed partial class LevelUpPanel
         Band(_subheading, 720f, -208f, 28f);
         AddChild(_subheading);
 
-        Label hint = MakeLabel(Loc.T("press  1  ·  2  ·  3"), 15, new Color(0.50f, 0.55f, 0.64f), HorizontalAlignment.Center);
+        Label hint = MakeLabel("", 15, new Color(0.50f, 0.55f, 0.64f), HorizontalAlignment.Center);
+        Hints.Follow(hint, CardHint);
         Band(hint, 720f, 204f, 22f);
         AddChild(hint);
     }

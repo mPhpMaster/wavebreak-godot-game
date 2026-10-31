@@ -47,7 +47,6 @@ public static partial class ArabicText
         // ---- merchant
         ("SHADY MERCHANT", "التاجر المريب"),
         ("\"Everything must go. Mostly to you.\"", "«كل شيء للبيع… ومعظمه لك.»"),
-        ("press  1 · 2 · 3  to buy      Esc / E to leave", "اضغط  1 · 2 · 3  للشراء      Esc / E للمغادرة"),
         ("Your gold: {0}", "ذهبك: {0}"),
         ("SOLD", "بِيع!"),
         ("   · held x{0}", "   · لديك ×{0}"),
@@ -61,7 +60,6 @@ public static partial class ArabicText
         ("MICROWAVE", "الميكروويف"),
         ("Put one item in, get one more stack out. Works once.", "ضع غرضًا، واحصل على نسخة إضافية منه. يعمل مرة واحدة."),
         ("You have nothing to put in it.", "ليس لديك ما تضعه فيه."),
-        ("click an item or press 1-9      Esc / E to leave", "انقر غرضًا أو اضغط 1-9      Esc / E للمغادرة"),
 
         // ---- prompts over chests, stations and shrines
         ("{0} — open free chest", "{0} — افتح الصندوق المجاني"),

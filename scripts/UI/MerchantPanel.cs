@@ -63,7 +63,8 @@ public sealed partial class MerchantPanel : ModalPanel
             _cards.Add((rarity, title, effect, buy, card, icon));
         }
 
-        Body.AddChild(MakeLabel(Loc.T("press  1 · 2 · 3  to buy      Esc / E to leave"), 14, InkDim));
+        Body.AddChild(Follow(MakeLabel("", 14, InkDim), () => Loc.F("press  1 · 2 · 3  to buy      Esc / {0} to leave", Keybinds.Hint("interact")),
+                             "{0}: buy      {1}: leave"));
     }
 
     public void Open(Merchant merchant)
