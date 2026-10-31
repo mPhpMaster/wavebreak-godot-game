@@ -47,10 +47,10 @@ public static partial class Challenges
         new("speed",     "Ebb Clock",      "Waves 25% shorter, and every phase boss must fall within 75 seconds or the tide takes you.", 0.35f),
         new("chonk",     "Leviathans",     "Enemies are huge: x2.2 health, x1.3 damage, 25% slower, 40% fewer of them.", 0.25f),
         new("noitems",   "Castaway",       "No items: level-ups offer weapons and tomes only, chests pay supplies, merchants are empty.", 0.40f),
-        new("pacifist",  "Becalmed",       "Your weapons hold fire for the first 45 seconds on every map. You move 15% faster while they do.", 0.20f),
+        new("pacifist",  "Becalmed",       "Your weapons hold fire for the first 45 seconds on every map. You move 15% faster while they do.", 0.10f),
         new("elites",    "Wardens",        "Elite waves every 20 seconds instead of 55, and they last longer.", 0.35f),
-        new("fog",       "Sea Fret",       "A thick fog rolls in on every map. You will hear them first.", 0.15f),
-        new("lowgrav",   "Buoyant",        "Half gravity, +50% jump height. Floaty, and so is everything you were dodging.", 0.10f),
+        new("fog",       "Sea Fret",       "A thick fog rolls in on every map. You will hear them first.", 0.05f),
+        new("lowgrav",   "Buoyant",        "Half gravity, +50% jump height. Floaty, and so is everything you were dodging.", 0.05f),
         new("surge",     "Spring Tide",    "Every 45 seconds the tide surges: for 8 seconds spawns triple and enemies move 25% faster.", 0.30f),
     };
 

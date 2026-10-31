@@ -10,7 +10,7 @@ namespace Wavebreak.Progression;
 /// <see cref="Catalog.XpForLevel"/>, with the rest of the balance table:
 ///
 /// <code>
-///     cost(n) = 5 + 5(n-1) + (n-1)²
+///     cost(n) = 5 + 4(n-1) + 0.6(n-1)²
 /// </code>
 ///
 /// Linear plus quadratic, not exponential — an exponential curve forces a choice
@@ -32,7 +32,7 @@ public static class XpCurve
 {
     /// <summary>
     /// Ceiling on the precomputed tables. Far past anything a run reaches — the
-    /// cumulative cost of level 500 is over forty million — but a hard bound means
+    /// cumulative cost of level 500 is about twenty-five million — but a hard bound means
     /// no read can walk off the end of the array, whatever the curve does.
     /// </summary>
     public const int MaxLevel = 500;

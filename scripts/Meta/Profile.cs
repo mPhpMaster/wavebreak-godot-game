@@ -88,6 +88,7 @@ public static partial class Profile
         if (!FileAccess.FileExists(Path))
         {
             GD.Print($"[profile] new profile at {Path}");
+            MetaValues[AugurKeptKey] = 1;   // starts behind the Gilded Augur's quest
             return;
         }
 
@@ -125,8 +126,15 @@ public static partial class Profile
         Variant sel = cfg.GetValue("profile", "character", Characters.DefaultId);
         if (sel.VariantType == Variant.Type.String) SelectedCharacter = sel.AsString();
 
+        // The Gilded Augur was free until she got a quest: a save older than the
+        // quest keeps her. Once only, so a later save has to find her like anyone.
+        if (MetaValues.TryAdd(AugurKeptKey, 1) && UnlockSet.Add(Quests.AugurQuest))
+            GD.Print("[profile] this save predates the Gilded Augur's quest: she stays unlocked");
+
         GD.Print($"[profile] loaded {Path}: {UnlockSet.Count} unlocks, {SecretSet.Count} secrets, {Get(Runs)} runs");
     }
+
+    private const string AugurKeptKey = "augur_kept";
 
     private static IEnumerable<string> SafeKeys(ConfigFile cfg, string section)
         => cfg.HasSection(section) ? cfg.GetSectionKeys(section) : Array.Empty<string>();

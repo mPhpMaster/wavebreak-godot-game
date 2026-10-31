@@ -18,19 +18,20 @@ public sealed record RouteDef(string Id, string Name, string Blurb, string[] Map
 /// <summary>
 /// Which maps a run visits, picked on the play page.
 ///
-/// Classic (index 0) is <see cref="Stages.Run"/> itself and the default; any
+/// Classic (index 0) is the default, built on <see cref="Stages.Run"/>; any
 /// automated run uses it unless <c>--route=&lt;id&gt;</c> or
 /// <c>--route=mapA,mapB,mapC</c> is given, so <c>--auto</c> and the smoke test
 /// never depend on what was last picked in the menu. Other routes copy each
 /// map with the classic numbers for its phase (<see cref="Stages.ForPhase"/>),
 /// so a route changes where you fight, not how hard each phase is.
 ///
-/// Drawn routes pick 3 of the 6 maps from the run seed: a seeded run replays
-/// the same draw.
+/// Drawn routes pick their maps from the run seed: a seeded run replays the
+/// same draw.
 ///
-/// Harder tiers are longer (<see cref="DifficultyTier.Phases"/>: 4 on
-/// Nightmare and Tempest, 5 from Abyss up). A longer run uses more maps,
-/// never one twice: Classic becomes the maps in rising order
+/// How many maps depends on the tier (<see cref="DifficultyTier.Phases"/>: 4 on
+/// Normal and Hard, 5 on Nightmare and Tempest, 6 from Abyss up). A run longer
+/// than a route's three uses more maps, never one twice: Classic becomes the
+/// maps in rising order
 /// (<see cref="Stages.LongOrder"/>), a fixed route gets the unused maps slotted
 /// in before its last one, and a draw draws more. Each map is scaled for its
 /// position (<see cref="Stages.ForPhase(StageDef, int, int)"/>), so phases 4
@@ -38,7 +39,8 @@ public sealed record RouteDef(string Id, string Name, string Blurb, string[] Map
 /// </summary>
 public static class Routes
 {
-    /// <summary>Maps in a Normal run (and on any tier without its own count).</summary>
+    /// <summary>Maps in a route as written, and in a tier that asks for no more
+    /// (every tier today asks for at least four: <see cref="PhasesFor"/>).</summary>
     public const int Length = 3;
 
     /// <summary>Maps in a run on <paramref name="tier"/>: its phase count, no
@@ -57,13 +59,13 @@ public static class Routes
                 new[] { "shallows", "rimeglass", "gravemoor" }),
             new("lantern", "Lantern Road", "Gravemoor, Thornmeadow, Cinder Reach. Start in the dark.",
                 new[] { "gravemoor", "thornmeadow", "cinder" }),
-            new("draw", "Tide Draw", "Three of the six maps, in a random order, drawn from the run's seed.",
+            new("draw", "Tide Draw", "Maps drawn from the run's seed, in a random order.",
                 Array.Empty<string>()),
         };
-        // "Start on X": X first, then two of the other four drawn per run.
+        // "Start on X": X first, then the rest drawn per run.
         foreach (string id in new[] { "thornmeadow", "shallows", "rimeglass", "gravemoor", "cinder", "stormwatch" })
             list.Add(new RouteDef("start:" + id, "Start: " + (Stages.ById(id)?.DisplayName ?? id),
-                                  "This map first; the next two are drawn from the rest each run.",
+                                  "This map first; the rest are drawn each run.",
                                   Array.Empty<string>(), id));
         // Appended after the start routes: the saved choice is an index.
         // --route=beacon forces Stormwatch Harbour first (tests, captures).
@@ -112,7 +114,7 @@ public static class Routes
     public static RouteDef Active { get; private set; } = null!;
 
     /// <summary>
-    /// The maps for a new run, in phase order. Classic returns
+    /// The maps for a new run, in phase order. A three-map Classic returns
     /// <see cref="Stages.Run"/> unchanged.
     /// </summary>
     public static IReadOnlyList<StageDef> ForRun(ulong seed)

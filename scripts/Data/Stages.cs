@@ -225,10 +225,11 @@ public partial class StageDef : Resource
 /// <summary>
 /// The run's sequence of stages. Order is phase order.
 ///
-/// Timing: three phases of 3:30 of waves plus a boss fight of roughly two
-/// minutes each lands a won run near the 15 minutes the rest of the game was
-/// paced for (<see cref="Game.RunState.TargetSeconds"/>). The first verification
-/// run used 4:30 phases and finished its third boss after 21 minutes.
+/// These three are the classic numbers; a run is as long as its tier asks
+/// (<see cref="Meta.Routes.PhasesFor"/>: four maps on Normal), and each phase is
+/// 3:30 of waves plus a boss fight of roughly two minutes. So a Normal run is
+/// past 20 minutes, not the 15 the three-map run was first paced for
+/// (<see cref="Game.RunState.TargetSeconds"/>).
 /// </summary>
 public static partial class Stages
 {
