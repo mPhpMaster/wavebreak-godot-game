@@ -18,19 +18,20 @@ public sealed record RouteDef(string Id, string Name, string Blurb, string[] Map
 /// <summary>
 /// Which maps a run visits, picked on the play page.
 ///
-/// Classic (index 0) is <see cref="Stages.Run"/> itself and the default; any
+/// Classic (index 0) is the default, built on <see cref="Stages.Run"/>; any
 /// automated run uses it unless <c>--route=&lt;id&gt;</c> or
 /// <c>--route=mapA,mapB,mapC</c> is given, so <c>--auto</c> and the smoke test
 /// never depend on what was last picked in the menu. Other routes copy each
 /// map with the classic numbers for its phase (<see cref="Stages.ForPhase"/>),
 /// so a route changes where you fight, not how hard each phase is.
 ///
-/// Drawn routes pick 3 of the 6 maps from the run seed: a seeded run replays
-/// the same draw.
+/// Drawn routes pick their maps from the run seed: a seeded run replays the
+/// same draw.
 ///
-/// Harder tiers are longer (<see cref="DifficultyTier.Phases"/>: 4 on
-/// Nightmare and Tempest, 5 from Abyss up). A longer run uses more maps,
-/// never one twice: Classic becomes the maps in rising order
+/// How many maps depends on the tier (<see cref="DifficultyTier.Phases"/>: 4 on
+/// Normal and Hard, 5 on Nightmare and Tempest, 6 from Abyss up). A run longer
+/// than a route's three uses more maps, never one twice: Classic becomes the
+/// maps in rising order
 /// (<see cref="Stages.LongOrder"/>), a fixed route gets the unused maps slotted
 /// in before its last one, and a draw draws more. Each map is scaled for its
 /// position (<see cref="Stages.ForPhase(StageDef, int, int)"/>), so phases 4
@@ -38,7 +39,8 @@ public sealed record RouteDef(string Id, string Name, string Blurb, string[] Map
 /// </summary>
 public static class Routes
 {
-    /// <summary>Maps in a Normal run (and on any tier without its own count).</summary>
+    /// <summary>Maps in a route as written, and in a tier that asks for no more
+    /// (every tier today asks for at least four: <see cref="PhasesFor"/>).</summary>
     public const int Length = 3;
 
     /// <summary>Maps in a run on <paramref name="tier"/>: its phase count, no
@@ -57,13 +59,13 @@ public static class Routes
                 new[] { "shallows", "rimeglass", "gravemoor" }),
             new("lantern", "Lantern Road", "Gravemoor, Thornmeadow, Cinder Reach. Start in the dark.",
                 new[] { "gravemoor", "thornmeadow", "cinder" }),
-            new("draw", "Tide Draw", "Three of the six maps, in a random order, drawn from the run's seed.",
+            new("draw", "Tide Draw", "Maps drawn from the run's seed, in a random order.",
                 Array.Empty<string>()),
         };
-        // "Start on X": X first, then two of the other four drawn per run.
+        // "Start on X": X first, then the rest drawn per run.
         foreach (string id in new[] { "thornmeadow", "shallows", "rimeglass", "gravemoor", "cinder", "stormwatch" })
             list.Add(new RouteDef("start:" + id, "Start: " + (Stages.ById(id)?.DisplayName ?? id),
-                                  "This map first; the next two are drawn from the rest each run.",
+                                  "This map first; the rest are drawn each run.",
                                   Array.Empty<string>(), id));
         // Appended after the start routes: the saved choice is an index.
         // --route=beacon forces Stormwatch Harbour first (tests, captures).
@@ -112,7 +114,7 @@ public static class Routes
     public static RouteDef Active { get; private set; } = null!;
 
     /// <summary>
-    /// The maps for a new run, in phase order. Classic returns
+    /// The maps for a new run, in phase order. A three-map Classic returns
     /// <see cref="Stages.Run"/> unchanged.
     /// </summary>
     public static IReadOnlyList<StageDef> ForRun(ulong seed)
@@ -143,6 +145,7 @@ public static class Routes
         else stages = route.Id == "classic" && phases == Length ? Stages.Run : Build(route, seed, phases);
 
         stages = MapChallenges.Twist(stages);   // map challenge twist, on a copy of its map
+        EndlessMode.BindSeed(seed);
         Active = route;
         GD.Print($"META route={route.Id} maps={string.Join(",", stages.Select(s => s.Id))}");
         return stages;
@@ -216,6 +219,41 @@ public static class Routes
         var scaled = new List<StageDef>(maps.Count);
         for (int i = 0; i < maps.Count; i++) scaled.Add(Stages.ForPhase(maps[i], i, maps.Count));
         return scaled;
+    }
+
+    /// <summary>
+    /// The maps of Endless loop <paramref name="loop"/>: a pure function of the
+    /// first loop and the seed, so every machine holds the same list and a late
+    /// joiner can rebuild it from the count alone. Each loop takes the maps the
+    /// last one left out before any it played, in a fresh order that does not
+    /// reopen on the map it just closed on. Side maps stay on their own routes.
+    /// </summary>
+    public static IReadOnlyList<StageDef> ForLoop(IReadOnlyList<StageDef> firstLoop, ulong seed, int loop)
+    {
+        List<string> played = firstLoop.Select(s => s.Id).ToList();
+        for (int l = 1; l <= loop; l++)
+        {
+            var rng = new Rng(seed ^ 0xE1D1_E55UL ^ ((ulong)l * 0x9E3779B97F4A7C15UL));
+            List<string> fresh = Shuffled(Stages.All.Select(s => s.Id).Where(id => !played.Contains(id)).ToList(), rng);
+            List<string> again = Shuffled(Stages.All.Select(s => s.Id).Where(played.Contains).ToList(), rng);
+            List<string> next = Shuffled(fresh.Concat(again).Take(firstLoop.Count).ToList(), rng);
+            if (next.Count > 1 && next[0] == played[^1]) (next[0], next[^1]) = (next[^1], next[0]);
+            played = next;
+        }
+        var maps = new List<StageDef>(played.Count);
+        foreach (string id in played)
+            if (Stages.ById(id) is { } map) maps.Add(Stages.ForPhase(map, maps.Count, played.Count));
+        return maps;
+    }
+
+    private static List<string> Shuffled(List<string> ids, Rng rng)
+    {
+        for (int i = ids.Count - 1; i > 0; i--)
+        {
+            int j = rng.RangeInt(0, i + 1);
+            (ids[i], ids[j]) = (ids[j], ids[i]);
+        }
+        return ids;
     }
 
     /// <summary>"Thornmeadow → Rimeglass Plateau → Cinder Reach", or the draw rule.</summary>

@@ -55,7 +55,7 @@ public static partial class Catalog
     /// <summary>
     /// Experience needed to go from <paramref name="level"/> to the next one.
     ///
-    ///     cost(n) = 5 + 5(n-1) + (n-1)²
+    ///     cost(n) = 5 + 4(n-1) + 0.6(n-1)²
     ///
     /// Linear plus quadratic rather than exponential. Exponential curves force a
     /// choice between "levels stop arriving" and "xp values must inflate to

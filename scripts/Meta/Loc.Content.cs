@@ -49,6 +49,7 @@ public static partial class LocContent
         foreach (ChallengeDef c in Challenges.All) { yield return ($"challenge {c.Id}", c.Name); yield return ($"challenge {c.Id} blurb", c.Blurb); }
         foreach (MapChallengeDef c in MapChallenges.All) { yield return ($"map challenge {c.Id}", c.Name); yield return ($"map challenge {c.Id} blurb", c.Blurb); }
         foreach (RouteDef r in Routes.All) { yield return ($"route {r.Id}", r.Name); yield return ($"route {r.Id} blurb", r.Blurb); }
+        foreach (LoopMutation m in EndlessMode.Mutations) { yield return ($"loop mutation {m.Id}", m.Name); yield return ($"loop mutation {m.Id} blurb", m.Blurb); }
         foreach (StageDef s in Stages.All)
         {
             yield return ($"map {s.Id}", s.DisplayName);

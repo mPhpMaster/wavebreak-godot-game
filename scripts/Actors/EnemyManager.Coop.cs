@@ -55,6 +55,7 @@ public sealed partial class EnemyManager
     {
         _targets.Clear();
         Net.NetSession.Instance?.FillTargets(_targets);
+        Net.CoopScaling.Living = System.Math.Max(1, _targets.Count);
     }
 
     /// <summary>Host: nearest living player to <paramref name="p"/>.</summary>

@@ -272,7 +272,7 @@ public sealed partial class NetSession
         // The tier picked in the lobby (Coop.DifficultyId); the host's own
         // selection if the lobby never set one.
         string difficulty = DifficultyTiers.ById(Coop.DifficultyId) is { } lobbyTier ? lobbyTier.Id : DifficultyTiers.Selected.Id;
-        if (EndlessMode.Selected) difficulty = "endless:" + difficulty;
+        if (EndlessMode.Requested) difficulty = "endless:" + difficulty;
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--seed=")) seed = (ulong)arg["--seed=".Length..].ToInt();
         GD.Print($"[coop] starting run seed={seed} players={Coop.Roster.Count}");

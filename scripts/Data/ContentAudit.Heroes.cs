@@ -29,6 +29,9 @@ public static partial class ContentAudit
     private static void AuditHeroes(WeaponSystem system)
     {
         AuditStormBlades(system);
+        Check(Characters.ById("gilded_augur")?.UnlockedBy == Quests.AugurQuest
+              && Unlocks.ById(Quests.AugurQuest) is { Secret: true, Threshold: > 1f, Threshold: <= 3f },
+              "the Gilded Augur is not behind her secret quest");
         Line($"heroes ids={string.Join(",", Characters.HeroIds)} signatures={string.Join(",", Catalog.SignatureIds)}");
         Check(Catalog.SignatureIds.Count == 3 && Characters.HeroIds.Length == 3, "heroes: want 3 heroes and 3 signatures");
 

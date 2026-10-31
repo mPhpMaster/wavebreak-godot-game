@@ -99,7 +99,7 @@ public static partial class Signatures
     private static readonly Core.Rng FxRng = new(0x51C7_A7E5UL);
 
     private static int Shots(WeaponRuntime w, StatSheet s)
-        => Math.Max(1, w.Def.Projectiles + w.Bonus.Projectiles + (int)s.Get(Stat.ProjectileCount));
+        => Math.Max(1, w.Def.Projectiles + w.Bonus.Projectiles + w.BonusShots(s));
 
     private static float Area(WeaponRuntime w, StatSheet s) => s.Get(Stat.AreaSize) * (1f + w.Bonus.Area);
     private static float Reach(WeaponRuntime w) => w.Def.Range * (1f + w.Bonus.Range);

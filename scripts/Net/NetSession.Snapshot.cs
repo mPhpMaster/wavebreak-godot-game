@@ -25,7 +25,7 @@ namespace Wavebreak.Net;
 ///
 /// <b>The world snapshot</b> (host to one peer, reliable, one message): the
 /// phase index and state, the run clock, the boss's id, the portal and swarm
-/// timers, the endless loop, every enemy (id, def, transform, health), every
+/// timers, the endless loop and the loop whose maps are in use, every enemy (id, def, transform, health), every
 /// orb and every chest of the map (and whether it is open), plus the run
 /// snapshot (NetSession.Migration.cs). A late joiner builds its world from it;
 /// a survivor reconnecting after a host migration lines up the puppets it
@@ -35,8 +35,8 @@ public sealed partial class NetSession
 {
     // World snapshot header layout.
     private const int WsKind = 0, WsPhase = 1, WsState = 2, WsSeconds = 3, WsPhaseSeconds = 4, WsBoss = 5,
-                      WsPortal = 6, WsSwarm = 7, WsLoop = 8, WsLevel = 9, WsHostX = 10, WsHostY = 11, WsHostZ = 12,
-                      WsEnemies = 13, WsPickups = 14, WsChests = 15, WsRunSnap = 16;
+                      WsPortal = 6, WsSwarm = 7, WsLoop = 8, WsRouteLoop = 9, WsLevel = 10, WsHostX = 11, WsHostY = 12, WsHostZ = 13,
+                      WsEnemies = 14, WsPickups = 15, WsChests = 16, WsRunSnap = 17;
     private const int WsHeader = WsRunSnap + SnapLength;
     private const int WsEnemyStride = 8, WsPickupStride = 6, WsChestStride = 8;
 
@@ -110,6 +110,7 @@ public sealed partial class NetSession
         d[WsPortal] = Mathf.Max(0f, st.PortalSecondsLeft);
         d[WsSwarm] = st.Swarm?.Seconds ?? 0f;
         d[WsLoop] = EndlessMode.Loop;
+        d[WsRouteLoop] = st.RouteLoop;
         d[WsLevel] = TeamLevel(peer);
         Vector3 at = Player.Instance is { } me && IsInstanceValid(me) ? me.GlobalPosition : Arena.Centre;
         d[WsHostX] = at.X; d[WsHostY] = at.Y; d[WsHostZ] = at.Z;
@@ -187,8 +188,9 @@ public sealed partial class NetSession
         StageDirector st = _main.Stages;
         var state = (StageDirector.PhaseState)(int)d[WsState];
 
-        // 1. The map (a change clears the field, so first).
-        st.CatchUpMap((int)d[WsPhase], state);
+        // 1. The endless loop, then the map (a change clears the field, so first).
+        EndlessMode.NetSetLoop((int)d[WsLoop]);
+        st.CatchUpMap((int)d[WsPhase], state, (int)d[WsRouteLoop]);
         _main.Run.SyncClock(d[WsSeconds], d[WsPhaseSeconds]);
 
         // 2. Enemies: keep matching puppets, drop the rest, add the missing.
@@ -248,11 +250,10 @@ public sealed partial class NetSession
                 if (d[o + 7] > 0.5f && !c.IsOpen) spawner.NetTakenBy(c, "", new Color(0.7f, 0.7f, 0.75f));
             }
 
-        // 5. The boss, the open portal, the swarm; the endless loop; the director.
+        // 5. The boss, the open portal, the swarm; the director.
         int bossId = (int)d[WsBoss];
         Enemy? bossPuppet = bossId > 0 && _enemies.TryGetValue(bossId, out Enemy? b) ? b : null;
         st.CatchUpState(state, bossPuppet, d[WsPortal], d[WsSwarm]);
-        EndlessMode.NetSetLoop((int)d[WsLoop]);
         var snap = new float[SnapLength];
         Array.Copy(d, WsRunSnap, snap, 0, SnapLength);
         _hostSnap = snap;

@@ -159,7 +159,7 @@ public static partial class ArabicText
         ("+{0:0.#} health per minute", "+{0:0.#} صحة كل دقيقة"),
         ("{0} experience", "{0} خبرة"),
         ("{0} gold", "{0} ذهب"),
-        ("+{0:0} luck", "+{0:0} حظ"),
+        ("+{0:0.##} luck", "+{0:0.##} حظ"),
         ("{0} pickup range", "{0} مدى الالتقاط"),
         ("+{0:0} reroll per run", "+{0:0} إعادة سحب لكل جولة"),
         ("+{0:0} rerolls per run", "+{0:0} إعادات سحب لكل جولة"),

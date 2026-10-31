@@ -68,7 +68,69 @@ public static class RunLengthCheck
         Expect("Normal has 4 phases", Routes.PhasesFor(DifficultyTiers.All[0]) == 4);
         Expect("Abyss has 6 phases (every map)", Routes.PhasesFor(DifficultyTiers.ById("abyss")!) == 6);
         Expect("the long map order includes Stormwatch Harbour", System.Array.IndexOf(Stages.LongOrder, "stormwatch") >= 0);
+        CheckBossPlans(Expect);
+        CheckEndlessLoops(Expect);
         GD.Print(ok ? "PHASES PASS" : "PHASES FAIL");
+    }
+
+    /// <summary>Endless loops over many seeds: every loop has the run's length,
+    /// no map twice, changes the set and the opening map, and rolls a twist that
+    /// is not the one before it; the same seed gives the same loops.</summary>
+    private static void CheckEndlessLoops(Action<string, bool> expect)
+    {
+        IReadOnlyList<StageDef> first = Routes.Build(Routes.All[0], 7UL, Routes.PhasesFor(DifficultyTiers.All[0]));
+        bool lengths = true, distinct = true, moved = true, reopens = false, twists = true, repeatable = true;
+        var seen = new HashSet<string>();
+        for (ulong seed = 1; seed <= 40; seed++)
+        {
+            IReadOnlyList<StageDef> last = first;
+            LoopMutation? twist = null;
+            for (int loop = 1; loop <= 12; loop++)
+            {
+                IReadOnlyList<StageDef> maps = Routes.ForLoop(first, seed, loop);
+                lengths &= maps.Count == first.Count;
+                distinct &= maps.Select(m => m.Id).Distinct().Count() == maps.Count;
+                moved &= !maps.Select(m => m.Id).ToHashSet().SetEquals(last.Select(m => m.Id));
+                reopens |= maps[0].Id == last[^1].Id;
+                repeatable &= maps.Select(m => m.Id).SequenceEqual(Routes.ForLoop(first, seed, loop).Select(m => m.Id));
+                LoopMutation? now = EndlessMode.MutationFor(seed, loop);
+                twists &= now is not null && now != twist;
+                if (now is not null) seen.Add(now.Id);
+                twist = now;
+                last = maps;
+            }
+        }
+        expect($"endless: 40 seeds x 12 loops: length={lengths} distinct={distinct} set changes={moved} reopens on the last map={reopens} " +
+               $"twist each loop={twists} repeatable={repeatable}; {seen.Count}/{EndlessMode.Mutations.Count} twists seen",
+               lengths && distinct && moved && !reopens && twists && repeatable && seen.Count == EndlessMode.Mutations.Count);
+        expect("endless: the first pass has no twist", EndlessMode.MutationFor(7UL, 0) is null);
+        GD.Print($"PHASES endless seed 7 loop 1: {string.Join(",", Routes.ForLoop(first, 7UL, 1).Select(m => m.Id))}  loop 2: {string.Join(",", Routes.ForLoop(first, 7UL, 2).Select(m => m.Id))}");
+    }
+
+    /// <summary>Boss plans over many seeds: repeatable, varied, tiers never
+    /// falling along a route, no boss twice while its tier has another left.</summary>
+    private static void CheckBossPlans(Action<string, bool> expect)
+    {
+        const int seeds = 300;
+        foreach (DifficultyTier tier in new[] { DifficultyTiers.All[0], DifficultyTiers.ById("nightmare")!, DifficultyTiers.ById("abyss")! })
+        {
+            IReadOnlyList<StageDef> maps = Routes.Build(Routes.All[0], 7UL, Routes.PhasesFor(tier));
+            var orders = new Dictionary<string, int>();
+            bool ramp = true, once = true, repeatable = true, final3 = true;
+            for (ulong seed = 1; seed <= seeds; seed++)
+            {
+                EnemyDef?[] plan = Game.BossPlan.For(maps, Catalog.Enemies, seed);
+                string order = string.Join(",", plan.Select(b => b?.Id ?? "none"));
+                orders[order] = orders.TryGetValue(order, out int n) ? n + 1 : 1;
+                repeatable &= order == string.Join(",", Game.BossPlan.For(maps, Catalog.Enemies, seed).Select(b => b?.Id ?? "none"));
+                for (int i = 1; i < plan.Length; i++) ramp &= plan[i]!.BossTier >= plan[i - 1]!.BossTier;
+                once &= plan.Distinct().Count() == plan.Length;
+                final3 &= plan[^1]!.BossTier == 3;
+            }
+            expect($"{tier.Id} ({maps.Count} maps): {orders.Count} boss orders in {seeds} seeds; ramp={ramp} once={once} repeatable={repeatable} final tier 3={final3}",
+                   orders.Count >= (maps.Count >= 6 ? 2 : 4) && ramp && once && repeatable && final3);
+            GD.Print($"PHASES {tier.Id} commonest: {string.Join("  ", orders.OrderByDescending(p => p.Value).Take(3).Select(p => $"{p.Key} x{p.Value}"))}");
+        }
     }
 
     private static void CheckRoute(Action<string, bool> expect, string label, IReadOnlyList<StageDef> maps, bool quiet = false)

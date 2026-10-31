@@ -9,8 +9,8 @@ namespace Wavebreak.Meta;
 /// <see cref="Unlocks"/>. Same <see cref="UnlockDef"/> rows, same tracker, same
 /// codex — <see cref="Unlocks.All"/> is the two lists joined.
 ///
-/// Rewards are the three gated characters and their skins, plus skins for the
-/// free four. Every reward id is granted by exactly one quest
+/// Rewards are the four gated characters and their skins, plus skins for the
+/// free three. Every reward id is granted by exactly one quest
 /// (<see cref="Unlocks.SourceOf"/> takes the first match), so a new quest needs
 /// a new skin, never a shared one.
 ///
@@ -21,6 +21,10 @@ namespace Wavebreak.Meta;
 public static partial class Quests
 {
     public const int PhaseCount = 3;
+
+    /// <summary>The Gilded Augur's quest. <see cref="Profile"/> grants it to a
+    /// save from before it existed, when she was free.</summary>
+    public const string AugurQuest = "q_augur";
 
     private static string W(string weaponId) => Catalog.WeaponById(weaponId)?.DisplayName ?? weaponId;
 
@@ -120,6 +124,10 @@ public static partial class Quests
         new() { Id = "q_pilgrim", Name = "Pilgrim", Description = "Activate 3 hidden shrines in a single run.",
                 Metric = Metric.RunShrines, Threshold = 3, Reward = RewardKind.Skin, RewardId = "gilded_augur.prophet",
                 Secret = true, Hint = "One light on every shore, in one long walk." },
+        // She "reads the shrines nobody else can find", so she is found the same way.
+        new() { Id = AugurQuest, Name = "The Seer's Door", Description = "Find 2 kinds of hidden shrine.",
+                Metric = Metric.SecretsAny, Threshold = 2, Reward = RewardKind.Character, RewardId = "gilded_augur",
+                Secret = true, Hint = "She only opens to those who have knocked at more than one light." },
     };
 
     // ------------------------------------------------------------ profile keys

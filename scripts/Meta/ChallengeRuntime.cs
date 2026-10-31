@@ -83,7 +83,7 @@ public sealed partial class ChallengeRuntime : Node
     {
         _phaseStartedAt = Now;
         _bossDeadline = -1f;
-        if (Challenges.IsActive("fog")) Fog();
+        if (Challenges.IsActive("fog") || EndlessMode.Fog) Fog();
     }
 
     private void OnBossArrived(PhaseBossArrived e)

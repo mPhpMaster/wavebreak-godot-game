@@ -50,8 +50,10 @@ public sealed partial class EnemyManager
         if (index < 0 || !PlayerRef.TryGet(out Node3D player, out _)) return null;
         UpdateDifficulty(_runSeconds);
         // Scaled for this one spawn only; the next Tick recomputes it anyway.
+        // A boss takes its own co-op row in place of the crowd's.
         float hp = DifficultyHp;
-        DifficultyHp = hp * MathF.Max(0.01f, healthScale);
+        int team = Net.CoopScaling.Connected;
+        DifficultyHp = hp * MathF.Max(0.01f, healthScale) * Net.CoopScaling.BossHealth(team) / Net.CoopScaling.Health(team);
         RefreshTargets();
         Enemy? boss = SpawnOne(index, Net.Coop.Active ? SpawnAnchor(player.GlobalPosition) : player.GlobalPosition);
         DifficultyHp = hp;

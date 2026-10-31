@@ -376,11 +376,9 @@ public static partial class Catalog
 
         // ============================================================ bosses
         //
-        // Neither is the default pick of the stage director (it takes the
-        // highest-cost fresh boss): cost 39 sits under the Breaker Matriarch's
-        // 40, and 54 under the Knell Leviathan's 55, so the tuned campaign keeps
-        // its bosses. A map that wants these names them in StageDef.BossId; the
-        // timed-boss fallback and repeat fights draw them by weight.
+        // The run's boss plan (Game/BossPlan) draws these with the other bosses
+        // of their tier. Costs sit just under the Breaker Matriarch's 40 and the
+        // Knell Leviathan's 55, for the timed-boss fallback's weighting.
 
         // ---- Boss, tier 2. Rolls riptides down painted lanes, rings the player
         // with whirlpool blasts, and calls gulls. Phase two adds a ring burst.

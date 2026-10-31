@@ -37,6 +37,8 @@
 #   coop-flick     the host plays Flick in his own body; the guest (Sunny)
 #                  sees that body on the host's remote player
 # Late join (NetSession.Snapshot.cs):
+#   coop-endless   an Endless run goes round its maps; every machine, including
+#                  a player who joins during loop 2, holds the same maps and twist.
 #   coop-latejoin  host + guest start; a third player joins about 20 s into the
 #                  run, gets the world snapshot, the team's level, and plays.
 # Swap meet (NetSession.Trade.cs, NetSession.Test.Trade.cs):
@@ -69,7 +71,7 @@ param(
     [float]$Seconds = 60,
     [int]$Port = 7777,
     [switch]$SkipBuild,
-    # Run only these scenarios (coop, coop-hostleft, coop-version, coop-content, coop-forge, coop-hijack, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
+    # Run only these scenarios (coop, coop-hostleft, coop-version, coop-content, coop-forge, coop-hijack, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-endless, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
     [string[]]$Only = @()
 )
 
@@ -300,6 +302,33 @@ Invoke-Multi 'coop-latejoin' @(
     @{ Name = 'a'; Delay = 4; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA $lj" },
     @{ Name = 'late'; Delay = 0; WaitFile = $mark; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=Late --coop-late-join $lj" }
 ) 240
+
+# 4b. Endless (Meta/EndlessMode.cs): a portal opens 5 s into every map, so the
+# team goes round the loop fast; a third player joins during loop 2. Each loop
+# must hold the same maps and twist on every machine, the joiner included.
+$mark = Join-Path $shotDir 'coop-endless.mark'
+Remove-Item $mark -ErrorAction SilentlyContinue
+$en = "--auto --invulnerable --endless --open-portal-every=5 --portal-seconds=2 --rest-exit-seconds=4 --coop-seconds=90 --coop-down-at=999 --coop-expect-loop=1"
+Invoke-Multi 'coop-endless' @(
+    @{ Name = 'host'; Delay = 0; Shot = $false; Args = "--coop-host=$Port --coop-name=Host --coop-players=2 --coop-expect-late-join --seed=17 `"--coop-mark-file=$mark`" --coop-mark-at=26 $en" },
+    @{ Name = 'a'; Delay = 4; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA $en" },
+    @{ Name = 'late'; Delay = 0; WaitFile = $mark; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=Late --coop-late-join $en" }
+) 300
+if (-not $Only.Count -or $Only -contains 'coop-endless') {
+    $loops = @{}
+    foreach ($s in 'host', 'a', 'late') {
+        $loops[$s] = @(Get-Content (Join-Path $shotDir "coop-endless-$s.log") -ErrorAction SilentlyContinue |
+            ForEach-Object { if ($_ -match 'endless maps for loop (\d+): (\S+)') { "maps $($Matches[1]) $($Matches[2])" } elseif ($_ -match '^\[endless\] loop (\d+) tier \S+ mutation (\S+)') { "twist $($Matches[1]) $($Matches[2])" } })
+    }
+    Write-Host "[coop-endless] host: $($loops.host -join '; ')"
+    Write-Host "[coop-endless] late: $($loops.late -join '; ')"
+    foreach ($s in 'a', 'late') {
+        foreach ($entry in $loops[$s]) {
+            if ($loops.host -notcontains $entry) { $failures += "[coop-endless] $s has '$entry', the host does not" }
+        }
+    }
+    if (-not ($loops.late | Where-Object { $_ -like 'maps *' })) { $failures += '[coop-endless] the late joiner never took the loop maps' }
+}
 
 # 5. Swap meet: a trade between the two players in the rest room.
 # Gold is conserved across both machines: what one side lost the other got.

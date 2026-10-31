@@ -227,8 +227,10 @@ public static partial class Characters
                 new CharacterStat(Stat.MaxHealth, ModifierOp.Flat, -20f),
             },
         },
-        // The secret one. Luck and learning at the cost of a little bite,
-        // with the homing weapon that does not need a steady hand.
+        // The secret one: finding two kinds of hidden shrine opens her (Quests,
+        // q_augur; saves from before that quest keep her, see Profile). Luck and
+        // learning at the cost of a little bite, with the homing weapon that does
+        // not need a steady hand.
         new()
         {
             Id = "gilded_augur",

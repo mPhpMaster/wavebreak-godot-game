@@ -20,6 +20,7 @@ public static partial class Profile
         SecretSet.Clear();
         SkinChoice.Clear();
         MetaValues.Clear();
+        MetaValues[AugurKeptKey] = 1;   // as a new profile: she is behind her quest
         SelectedCharacter = Characters.DefaultId;
     }
 }

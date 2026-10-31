@@ -65,19 +65,23 @@ public sealed partial class StageDirector
     }
 
     /// <summary>Late join / reconnect, first half: be on the host's map (or
-    /// in its rest room). Run before the snapshot's enemies are placed, since
-    /// a map change clears the field.</summary>
-    public void CatchUpMap(int index, PhaseState state)
+    /// in its rest room), on the map list of the host's Endless loop. Run before
+    /// the snapshot's enemies are placed, since a map change clears the field.</summary>
+    public void CatchUpMap(int index, PhaseState state, int routeLoop)
     {
+        bool newList = routeLoop != RouteLoop;
+        UseRouteOfLoop(routeLoop);
         if (state == PhaseState.RestRoom)
         {
+            // After a loop's last boss the room leads to the next loop's first map.
+            if (Meta.EndlessMode.Active && index >= _stages.Count - 1) _loopRestart = true;
             if (State != PhaseState.RestRoom) NetRestRoom(index);
             return;
         }
-        if ((index != _index || State == PhaseState.RestRoom) && index >= 0 && index < _stages.Count)
+        if ((index != _index || State == PhaseState.RestRoom || newList) && index >= 0 && index < _stages.Count)
         {
             Log($"catching up with the host: phase {index + 1}");
-            if (index == _index) _index = -2;   // force the rebuild out of the room
+            if (index == _index) _index = -2;   // force the rebuild out of the room, or onto the new list
             EnterPhase(index);
         }
     }
@@ -87,6 +91,7 @@ public sealed partial class StageDirector
     /// boss's puppet, already placed from the snapshot.</summary>
     public void CatchUpState(PhaseState state, Enemy? boss, float portalLeft, float swarmSeconds)
     {
+        _catchingUp = true;
         switch (state)
         {
             case PhaseState.Boss:
@@ -103,7 +108,10 @@ public sealed partial class StageDirector
                 if (Swarm is not null) Swarm.NetSetSeconds(swarmSeconds);
                 break;
         }
+        _catchingUp = false;
     }
+
+    private bool _catchingUp;
 
     /// <summary>The team's current anchor for a late joiner: the host's spot is
     /// sent, this keeps it on the floor of the current map or room.</summary>

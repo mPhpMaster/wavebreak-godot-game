@@ -43,6 +43,7 @@ public sealed class WeaponRuntime
     private float _cooldown;
     private float _interval = 1f;
     private float _pulse;
+    private float _shotCarry;
 
     private Node3D? _auraRoot;
     private MeshInstance3D? _auraDisc;
@@ -163,7 +164,27 @@ public sealed class WeaponRuntime
     /// <summary>Shots per volley: the weapon's own count plus the player's bonus,
     /// never below one.</summary>
     private int ShotCount(StatSheet stats)
-        => Math.Max(1, BaseProjectiles + (int)stats.Get(Stat.ProjectileCount));
+        => Math.Max(1, BaseProjectiles + BonusShots(stats));
+
+    /// <summary>
+    /// The player's bonus projectiles for one volley. Call once per volley.
+    ///
+    /// Whole points always fire. A fraction (Tome of Multitudes adds halves)
+    /// builds up per weapon and pays out as one extra shot when it reaches a
+    /// whole, so +0.5 is an extra shot on every second volley: steady, and with
+    /// no random roll for two machines to disagree about.
+    /// </summary>
+    internal int BonusShots(StatSheet stats)
+    {
+        float bonus = stats.Get(Stat.ProjectileCount);
+        int whole = (int)bonus;
+        float part = bonus - whole;
+        if (part <= 0.001f) return whole;
+        _shotCarry += part;
+        if (_shotCarry < 1f) return whole;
+        _shotCarry -= 1f;
+        return whole + 1;
+    }
 
     // ----------------------------------------------------------- projectiles
 

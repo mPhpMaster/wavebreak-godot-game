@@ -47,7 +47,7 @@ public static class Coop
     /// <summary>Protocol tag; a client from another build is turned away
     /// instead of desyncing halfway into a run. It goes into the content hash
     /// that the handshake compares with the game version (<see cref="CoopBuild"/>).</summary>
-    public const string Protocol = "wavebreak-coop-13";   // 13: raw build handshake before Hello; rejoin identity on the roster
+    public const string Protocol = "wavebreak-coop-14";   // 14: raw build handshake, rejoin identity, map rosters, boss plan, player scaling, evolutions
 
     /// <summary>The public half of a rejoin token.</summary>
     public static string ProofOf(string token)

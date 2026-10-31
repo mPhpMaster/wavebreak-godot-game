@@ -44,6 +44,7 @@ public static partial class ContentAudit
         }
 
         AuditTomeSlots();
+        AuditFractionalShots();
 
         // The scratch pools below publish themselves as OfferPool.Current; give
         // the run's pool back afterwards so chests keep drawing from it.
@@ -96,6 +97,23 @@ public static partial class ContentAudit
             Check(MathF.Abs(sheet.Get(s) - before[s]) < 1e-4f, $"tome {t.Id} leaves residue on {s}");
 
         Line($"tome {t.Id,-18} {t.Rarity,-9} max={t.MaxLevel} step={t.DescribeStep()} total={t.DescribeTotal(t.MaxLevel)}");
+    }
+
+    /// <summary>Tome of Multitudes at each level: over 60 volleys the bonus
+    /// shots average its half-a-shot a level, whole points firing every time.</summary>
+    private static void AuditFractionalShots()
+    {
+        TomeDef t = Tomes.ById("tome_multitudes")!;
+        for (int level = 1; level <= t.MaxLevel; level++)
+        {
+            var sheet = new StatSheet();
+            sheet.Add(t.Stat, t.Op, t.ValueAtLevel(level), t);
+            var weapon = new WeaponRuntime(Catalog.Weapons[0]);
+            int bonus = 0;
+            for (int volley = 0; volley < 60; volley++) bonus += weapon.BonusShots(sheet);
+            Check(bonus == (int)(60f * t.ValueAtLevel(level)), $"tome_multitudes level {level}: {bonus} bonus shots in 60 volleys");
+            Line($"multitudes level {level}: +{t.ValueAtLevel(level):0.#} = {bonus} bonus shots in 60 volleys");
+        }
     }
 
     /// <summary>Four slots: a fifth new tome is refused, an owned one still levels.</summary>
@@ -171,6 +189,15 @@ public static partial class ContentAudit
 
         sheet.Add(Stat.Rerolls, ModifierOp.Flat, 1f, TomeBaseline);
         Check(choices.RerollsLeft == 1, "a +1 Rerolls modifier did not add a charge");
+
+        // Map refills: reroll every map, banish and skip alternating; a late
+        // count of three grants the three at once, and never twice.
+        var refilled = new LevelUpChoices(pool, system, null, new StatSheet(), book, publish: false);
+        var refill = refilled.GrantMapRefills(3);
+        var again = refilled.GrantMapRefills(3);
+        Check(refill == (3, 1, 2) && again == (0, 0, 0) && refilled.RerollsLeft == rerolls + 3
+              && refilled.BanishesLeft == banishes + 1 && refilled.SkipsLeft == skips + 2,
+              $"map refills after 3 maps: {refill}, repeat {again}, left {refilled.Describe()}");
         sheet.RemoveAllFrom(TomeBaseline);
 
         Offer? target = hand.FirstOrDefault(LevelUpChoices.CanBanish);

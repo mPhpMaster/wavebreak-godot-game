@@ -146,10 +146,11 @@ public partial class StageDef : Resource
     /// the pressure. Not a fail state: a slow kill is punished, never blocked.</summary>
     [Export] public float BossGraceSeconds { get; set; } = 120f;
 
-    /// <summary>Optional boss id. Empty means "let the director choose", which
-    /// is the normal case: it takes the strongest boss unlocked by then that the
-    /// run has not fought yet, so bosses added to the catalog slot in without
-    /// anyone editing this table.</summary>
+    /// <summary>Optional boss id. Empty is the normal case: the run's
+    /// <see cref="Game.BossPlan"/> draws one of the right tier, so bosses added
+    /// to the catalog slot in without anyone editing this table. An id here is
+    /// the map's signature, three times as likely when the plan reaches it; a
+    /// boss that can only stand on this map always comes.</summary>
     [Export] public string BossId { get; set; } = "";
 
     /// <summary>
@@ -180,10 +181,25 @@ public partial class StageDef : Resource
     [Export] public string MusicId { get; set; } = "";
     public string MusicKey => MusicId.Length > 0 ? MusicId : Id;
 
-    /// <summary>Enemy ids the director may spawn as ordinary waves on this map.
-    /// Empty (the default) means the whole roster; bosses are never filtered.
-    /// For theme enemies: list the map's crowd here, including the theme ones.</summary>
-    [Export] public string[] EnemyIds { get; set; } = System.Array.Empty<string>();
+    /// <summary>Enemy ids the director may spawn as ordinary waves on this map:
+    /// the list set here, or, without one, what <see cref="RosterThemes"/> select
+    /// (<see cref="Stages.RosterFromThemes"/>). Empty means the whole roster;
+    /// bosses, splits and summons are never filtered.</summary>
+    [Export] public string[] EnemyIds
+    {
+        get => _enemyIds.Length > 0 ? _enemyIds : Stages.RosterFromThemes(this);
+        set => _enemyIds = value;
+    }
+    private string[] _enemyIds = System.Array.Empty<string>();
+
+    /// <summary><see cref="EnemyDef.Themes"/> tags that build this map's crowd:
+    /// an enemy with any of them comes, unless it carries a
+    /// <see cref="RosterAvoid"/> tag. <see cref="RosterExtra"/> adds ids by hand,
+    /// and every map gets <see cref="Stages.RosterCore"/>. Left empty on a map
+    /// with its own <see cref="EnemyIds"/> list.</summary>
+    [Export] public string[] RosterThemes { get; set; } = System.Array.Empty<string>();
+    [Export] public string[] RosterAvoid { get; set; } = System.Array.Empty<string>();
+    [Export] public string[] RosterExtra { get; set; } = System.Array.Empty<string>();
 
     /// <summary>Hand-built landforms for this map (Game/Arena.Landforms.cs):
     /// "" for none (every classic map), "harbour" for Stormwatch's old town,
@@ -209,10 +225,11 @@ public partial class StageDef : Resource
 /// <summary>
 /// The run's sequence of stages. Order is phase order.
 ///
-/// Timing: three phases of 3:30 of waves plus a boss fight of roughly two
-/// minutes each lands a won run near the 15 minutes the rest of the game was
-/// paced for (<see cref="Game.RunState.TargetSeconds"/>). The first verification
-/// run used 4:30 phases and finished its third boss after 21 minutes.
+/// These three are the classic numbers; a run is as long as its tier asks
+/// (<see cref="Meta.Routes.PhasesFor"/>: four maps on Normal), and each phase is
+/// 3:30 of waves plus a boss fight of roughly two minutes. So a Normal run is
+/// past 20 minutes, not the 15 the three-map run was first paced for
+/// (<see cref="Game.RunState.TargetSeconds"/>).
 /// </summary>
 public static partial class Stages
 {
@@ -239,6 +256,10 @@ public static partial class Stages
             Merchants = 0, Microwaves = 1, Breakables = 28,
             ChargeShrines = 3, ChallengeShrines = 1, StatueShrines = 1, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
+            // Things that walk on grass: grunts, chargers and heavy shells.
+            RosterThemes = new[] { "meadow", "grunt", "charger", "tank" },
+            RosterAvoid = new[] { "deep", "storm", "frost" },
+            RosterExtra = new[] { "silt_eel", "tidewall_colossus", "coral_warlord" },
         },
 
         // ---- Phase 2. Frozen hexagonal plateau under a pale haze: corners to
@@ -263,6 +284,10 @@ public static partial class Stages
             ChargeShrines = 4, ChallengeShrines = 2, StatueShrines = 1, GreedShrines = 1,
             PhaseSeconds = 210f, BossGraceSeconds = 120f,
             EnemyHealthScale = 1.25f, EnemyDamageScale = 1.12f, EnemySpeedScale = 1.04f,
+            // Frost kin under a sky of gulls, squalls and fliers.
+            RosterThemes = new[] { "frost", "storm" },
+            RosterAvoid = new[] { "ash", "reef" },
+            RosterExtra = new[] { "spume_mite", "reefhorn" },
         },
 
         // ---- Phase 3. Ember-cracked basalt, octagonal, crowded with ridges:
@@ -291,6 +316,10 @@ public static partial class Stages
             // the first full run's final boss had 82,000 hp.
             BossHealthScale = 0.45f,
             EnemyHealthScale = 1.55f, EnemyDamageScale = 1.25f, EnemySpeedScale = 1.08f,
+            // Ash runners, and what crawls up out of the vents.
+            RosterThemes = new[] { "ash", "deep" },
+            RosterAvoid = new[] { "storm", "frost" },
+            RosterExtra = new[] { "brine_mortar", "fogbound_stalker", "maelstrom_eye" },
         },
     };
 }

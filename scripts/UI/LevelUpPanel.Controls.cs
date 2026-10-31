@@ -115,9 +115,9 @@ public sealed partial class LevelUpPanel
         _banishButton.Disabled = !_banishMode && choices.BanishesLeft <= 0;
         _skipButton.Disabled = choices.SkipsLeft <= 0;
 
-        _rerollButton.TooltipText = Loc.T("Draw three new cards.");
-        _banishButton.TooltipText = Loc.T("Remove one card from the pool for the rest of the run, and draw a replacement.");
-        _skipButton.TooltipText = Loc.F("Skip this level for {0} gold.", LevelUpChoices.SkipGold(Progression.Inventory.Current?.Level ?? 1));
+        _rerollButton.TooltipText = Loc.T("Draw three new cards. +1 on every new map.");
+        _banishButton.TooltipText = Loc.T("Remove one card from the pool for the rest of the run, and draw a replacement. +1 every second map.");
+        _skipButton.TooltipText = Loc.F("Skip this level for {0} gold. +1 every second map.", LevelUpChoices.SkipGold(Progression.Inventory.Current?.Level ?? 1));
 
         _banishButton.AddThemeColorOverride("font_color", _banishMode ? BanishInk : ControlInk);
         SyncCompactControls();
