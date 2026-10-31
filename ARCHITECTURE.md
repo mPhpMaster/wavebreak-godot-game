@@ -1415,7 +1415,8 @@ photographs it.
 ## Developer panel
 
 `UI/DevPanel*.cs` (widgets in `UI/DevUi.cs`). Ctrl+Shift+D toggles it
-on the title and in a run; nothing else opens it and no normal UI mentions
+on the title and in a run, in the editor and debug builds or in a release
+launched with `--dev` (`Launch.DevAllowed`); nothing else opens it and no normal UI mentions
 it. It is a CanvasLayer under the tree root, installed by `MainMenu._Ready`
 and `Main._Ready`, so it survives scene changes; it keeps itself the root's
 last child so its `_Input` sees the chord first. While open, the other
@@ -1542,3 +1543,33 @@ copy, share and modify for non-commercial use with credit and a link to the
 repository; no selling. Third-party files keep their own licences (Kenney and
 Quaternius CC0, Noto Sans Arabic UI OFL, Valve's `steam_api64.dll` under the
 Steamworks terms); `assets/CREDITS.md` lists them.
+
+## 1.5.0 audit fixes
+
+**Profile saves.** `Profile.Save` keeps the last good file as `.bak` and replaces
+atomically, because deleting first left a window with no profile at all. Load
+recovers from `.bak` or a complete `.tmp`, and `[profile] version` now drives
+`Migrate`. `--check-profile` covers this.
+
+**Co-op handshake.** Before Hello, peers exchange the game version and a content
+hash (`CoopBuild`) as raw packets, because RPC ids shift between builds. A hand
+bumped tag alone let different builds meet and desync. Rejoin is bound to the
+Steam ID, or a host-issued token on ENet, and `HitGuard` bounds client hits. The
+guard stops garbage and floods, not a client faking plausible damage.
+
+**Run variety.** `BossPlan` is a seeded per-run boss order that uses `BossTier`.
+The five land maps have `EnemyIds` rosters built from theme tags. `CoopScaling`
+holds every player-count multiplier in one place. Endless redraws its map list
+each loop, stops the exponential clock term at minute 20, and rolls one twist
+from loop 2.
+
+**Evolutions.** `Data/Evolutions.cs` is the table. An evolved weapon keeps its id,
+level and rolled upgrades, so quests and scores need no second row. Riders live in
+`Combat/Weapons/EvolutionRiders.cs`. Weapons were never replicated, so co-op sends
+evolved lists and rider flashes (`NetSession.Evolutions.cs`). `--check-evolutions`
+proves the path end to end and reports damage ratios.
+
+**Input.** Every action has a pad default in `Keybinds`, `UI/PadInput` keeps menu
+focus alive, and `Keybinds.Hint` with `UI/Hints` replaces fixed key names.
+`--check-pad`, `--check-pad-menu`, `--check-access` and `--check-tutorial` use
+injected events, so real controllers are still unverified.

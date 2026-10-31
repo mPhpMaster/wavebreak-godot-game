@@ -28,7 +28,8 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | | |
 |---|---|
 | Maps | 6: Thornmeadow, Rimeglass Plateau, Cinder Reach, Gravemoor, Saltglass Shallows and Stormwatch Harbour (the biggest: an old town, cliffs, a lighthouse, docks and a coral canyon you cannot see across). Each has its own enemies, hazards, boss and music; a run is 4 maps on Normal and Hard, 5 on Nightmare and Tempest, all 6 from Abyss up |
-| Weapons / items / tomes | 33 / 98 / 26, with elements, status effects, megacrits and upgrade rarities. Three are signature weapons that only their hero can hold |
+| Weapons / items / tomes | 35 / 98 / 26, with elements, status effects, megacrits and upgrade rarities. Three are signature weapons that only their hero can hold |
+| Evolutions | 24: a max-level weapon plus its catalyst (a tome or an item) offers a gold EVOLUTION card with a new delivery or effect, not only bigger numbers. Level-up cards and the Codex show the pairs |
 | Perks | 15 levelled rules picked like tomes (and sometimes found in chests): chain lightning every Nth hit, shield bubbles from elites, a chilling dash wake, stomps, crits that heal, orbiting XP motes, gold-fuelled damage, a refused lethal blow, a chest-finding beacon, a knock-back pulse, armour for standing still, speed-fuelled attack speed, a cornered damage boost, and two team perks (Crew Beacon buffs nearby allies; Lifeline speeds up the revives you give). Perks share the tome slots |
 | Enemies | 53, including phase bosses with move sets |
 | Characters | 24 with passives, 151 skins, 22 hats. The heroes trio have their own original models (a macaw lookout, a sailor sea-dog and a chibi aviator fox) and each bring a signature weapon that also levels up from chests and the merchant: Sunny the Lookout (Spyglass Glint, a precise beam at whatever you look at), Biscuit the Sea Dog (Mooring Anchor, a ring that holds a crowd until it is hauled in) and Flick the Kite Fox (Skimmer Kite, a kite you steer by running) |
@@ -36,12 +37,14 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 66 map challenges, the Toggler, leaderboard |
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests; Tide Totems (1-3 per map: press E once and every XP orb and coin on the map flies to you) |
 | Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full, a microwave and (in co-op) the Swap Meet, where two players trade gold, items and tomes. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |
-| Level-up | Three cards with icons (a perk card shows what the level adds and the total); reroll (R), banish (B) and skip (X); optional compact hand that keeps the game running, and auto-pick by a rule (Settings > Gameplay) |
+| Level-up | Three cards with icons (a perk card shows what the level adds and the total); reroll (R), banish (B) and skip (X), which refill a little on each new map; optional compact hand that keeps the game running, and auto-pick by a rule (Settings > Gameplay) |
 | Music | 21 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
 | Co-op | Online, 2-4 players with Steam friends: public or invite-only lobbies, joining mid-run, host migration, the host picks the difficulty and the route (see [Co-op](#co-op-2-4-players)) |
-| Modes | Seven difficulty tiers (Normal to Endless Tide) and Endless mode (unlocked after the last tier: loops the maps forever, one tier harder each loop) |
+| Modes | Seven difficulty tiers (Normal to Endless Tide) and Endless mode (unlocked after the last tier: a fresh map list every loop, one tier harder each loop, and from loop 2 a random twist) |
 | Languages | English and Arabic (full right-to-left layout) |
-| Settings | Full graphics page (presets, display, scaling/FSR, AA, shadows, effects, FOV, shake, UI scale, weapon-effect opacity, FPS counter), audio, key bindings |
+| Settings | Full graphics page (presets, display, scaling/FSR, AA, shadows, effects, FOV, shake, UI scale, weapon-effect opacity, FPS counter), audio, key and controller bindings, accessibility (colour-blind palettes with striped telegraphs, reduced flashes) |
+| Controller | Full gamepad play and menus, stick look with its own sensitivity and dead zones, rebinding, and on-screen hints that follow your bindings and device. Tested with injected input, not yet on real hardware |
+| First run | A short, skippable Classic tutorial, replayable from Settings > Accessibility |
 
 ## Optional underwater expedition
 
@@ -82,7 +85,7 @@ screen clutter hide them. Bosses retain their existing dedicated bar.
 For co-op, the host selects Reef Dive before opening CO-OP and starting the
 lobby. The host's route is sent to all peers, including late joiners; swimming
 pose and full vertical velocity ride on player state. All peers need this build
-(protocol 6). Harvest depletion, cave claims and discovered cave portals are host-owned and included in
+(the game refuses a different version or content hash when you join). Harvest depletion, cave claims and discovered cave portals are host-owned and included in
 late-join state. Other co-op runs retain Classic; standard random draws keep their
 original map pool. For development use `--route=reef-dive`, or `--route=lumenreef`
 for only the basin. `--check-swim --route=reef-dive --invulnerable --seed=42`
@@ -161,7 +164,6 @@ Title screen → **CO-OP**.
   free tome slot) are greyed out with the reason. Weapons are not traded.
   Leaving the room (or its 30 s countdown running out) cancels an open trade
   and nothing changes hands.
-- A level-up or the pause menu does not stop the game for the others. Your
 - A level-up does not stop anyone, you included: a compact hand docks at the
   bottom of the screen and you keep walking, jumping and dashing while you
   pick with 1 / 2 / 3 or a click. The pause menu does not stop the game for
@@ -192,7 +194,7 @@ Title screen → **CO-OP**.
 - You can join a run in progress, up to 4 players: anyone in a public game,
   invited friends in an invite-only one. You arrive next to the host at the
   team's average level, with your cards picked by your auto-pick rule
-  (Settings > Gameplay). Co-op always uses the Classic route, with no
+  (Settings > Gameplay). The host picks the route, and co-op runs have no
   challenges. The host's difficulty applies to everyone.
 
 | | |
@@ -316,5 +318,6 @@ Wavebreak is © 2026 Mohammad Al-Safadi (sensei / hlaCk) and licensed under
   gain.
 
 Third-party assets keep their own licences (Kenney and Quaternius: CC0;
-Noto Sans Arabic UI: OFL; Steam's `steam_api64.dll`: Valve's Steamworks
-terms). See [assets/CREDITS.md](assets/CREDITS.md).
+the Reef Leviathan by wErT: CC BY 4.0; Noto Sans Arabic UI: OFL). Steam's
+`steam_api64.dll` is not in this repository: `build.ps1` fetches it from the
+Steamworks.NET release and checks its hash. See [assets/CREDITS.md](assets/CREDITS.md).

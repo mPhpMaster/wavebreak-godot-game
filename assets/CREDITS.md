@@ -56,6 +56,8 @@ numpy/scipy synthesis and ffmpeg/libvorbis. It is © 2026 Mohammad Al-Safadi
 | `ashlands_forge.ogg` | Cinder Reach remix (loop) | D dorian, 108 bpm | 53 s |
 | `graveyard_waltz.ogg` | Gravemoor remix (loop) | G harmonic minor, 3/4, 138 bpm | 42 s |
 | `tidal_lagoon.ogg` | Saltglass Shallows remix (loop) | Bb major, 100 bpm | 38 s |
+| `harbour.ogg` | Stormwatch Harbour (loop) | see `tools/compose_music.py` | |
+| `harbour_shanty.ogg` | Stormwatch Harbour remix (loop) | see `tools/compose_music.py` | |
 | `boss_final.ogg` | final boss (loop) | E harmonic minor, 132 bpm | 44 s |
 | `shop.ogg` | merchant jingle | G major | 5.6 s |
 | `fanfare.ogg` | run won sting | F major | 10 s |

@@ -1,0 +1,14 @@
+{
+  "Version": "1.5.0",
+  "Title": "Weapon evolutions, full controller support and fresher runs",
+  "Changes": [
+    "Weapon evolutions: a max-level weapon plus its catalyst offers a gold EVOLUTION card. There are 24, and the Codex records the ones you find.",
+    "Full controller support: stick look, menus, rebinding, and hints that follow your bindings and device.",
+    "Land maps now have their own enemies, and the boss order changes from run to run.",
+    "Reroll, banish and skip refill as you reach new maps. Lucky Shell, Tome of Multitudes and easy Pearl modifiers were rebalanced.",
+    "Co-op difficulty now scales with the number of players.",
+    "Endless draws new maps every loop and adds a random twist from loop 2.",
+    "New accessibility options: colour-blind palettes and reduced flashes. Classic has a short first-run tutorial.",
+    "Safer saves, and co-op now refuses players on a different version with a clear message. All players must update together."
+  ]
+}
