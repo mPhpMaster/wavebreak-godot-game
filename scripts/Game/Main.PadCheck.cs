@@ -29,6 +29,98 @@ public sealed partial class Main
         }
     }
 
+    /// <summary>The binding page's third column, driven the way a player does:
+    /// A on the cell, then the new input. Everything is reset afterwards.</summary>
+    private static async Task PadRebinding(PauseMenu pause, System.Action<string, bool> expect, System.Func<double, Task> wait,
+                                           System.Action<JoyButton, bool> btn, System.Action<JoyAxis, float> axis,
+                                           System.Func<JoyButton, double, Task> tap)
+    {
+        Control page = pause.OpenKeysForCheck();
+        await wait(0.2);
+        expect("the key-binding page takes focus", page.GetViewport().GuiGetFocusOwner() is not null);
+        var rows = new System.Collections.Generic.Dictionary<string, Button[]>();
+        KeybindPanel panel = Walk(page).OfType<KeybindPanel>().First();
+        foreach (var (action, label) in Keybinds.Actions)
+            foreach (Node n in Walk(panel))
+                if (n is HBoxContainer { } row && row.GetChildCount() == 4 && row.GetChild(0) is Label name && name.Text == Loc.T(label))
+                    rows[action] = row.GetChildren().OfType<Button>().ToArray();
+        expect($"every action has a row with a pad cell ({rows.Count})", rows.Count == Keybinds.Actions.Count && rows.Values.All(r => r.Length == 3));
+
+        rows["jump"][2].EmitSignal(BaseButton.SignalName.Pressed);
+        await wait(0.1);
+        expect("listening shows it on the cell", rows["jump"][2].Text == Loc.T("press a button…"));
+        btn(JoyButton.Y, true);
+        await wait(0.05);
+        btn(JoyButton.Y, false);
+        await wait(0.1);
+        expect("a pad button binds", Keybinds.PadEvent("jump") is InputEventJoypadButton { ButtonIndex: JoyButton.Y });
+        expect("the button it took swaps", Keybinds.PadEvent("interact") is InputEventJoypadButton { ButtonIndex: JoyButton.A });
+        expect($"the row names it ({rows["jump"][2].Text} / {rows["interact"][2].Text})", rows["jump"][2].Text == "Y" && rows["interact"][2].Text == "A");
+
+        rows["dash"][2].EmitSignal(BaseButton.SignalName.Pressed);
+        await wait(0.1);
+        for (float v = 0.2f; v <= 1f; v += 0.2f) { axis(JoyAxis.TriggerRight, v); await wait(0.02); }
+        axis(JoyAxis.TriggerRight, 0f);
+        await wait(0.1);
+        expect("a trigger binds, once", Keybinds.PadEvent("dash") is InputEventJoypadMotion { Axis: JoyAxis.TriggerRight } && !KeybindPanel.AnyListening);
+        expect("the trigger's old action gets the button", Keybinds.PadEvent("levelup_banish") is InputEventJoypadButton { ButtonIndex: JoyButton.X });
+
+        rows["ping"][2].EmitSignal(BaseButton.SignalName.Pressed);
+        await wait(0.1);
+        axis(JoyAxis.RightX, -1f);
+        await wait(0.05);
+        axis(JoyAxis.RightX, 0f);
+        await wait(0.1);
+        expect("a stick direction binds", Keybinds.PadEvent("ping") is InputEventJoypadMotion { Axis: JoyAxis.RightX, AxisValue: < 0f });
+
+        rows["slide"][2].EmitSignal(BaseButton.SignalName.Pressed);
+        await wait(0.1);
+        Input.ParseInputEvent(new InputEventKey { Keycode = Key.Escape, PhysicalKeycode = Key.Escape, Pressed = true });
+        Input.ParseInputEvent(new InputEventKey { Keycode = Key.Escape, PhysicalKeycode = Key.Escape, Pressed = false });
+        await wait(0.1);
+        expect("Esc cancels a pad cell, the page stays", !KeybindPanel.AnyListening && page.Visible
+               && Keybinds.PadEvent("slide") is InputEventJoypadButton { ButtonIndex: JoyButton.B });
+
+        rows["slide"][0].EmitSignal(BaseButton.SignalName.Pressed);
+        await wait(0.1);
+        await tap(JoyButton.B, 0.05);
+        expect("B cancels a key cell, the page stays", !KeybindPanel.AnyListening && page.Visible);
+
+        rows["slide"][2].GrabFocus();
+        await wait(0.05);
+        await tap(JoyButton.X, 0.05);
+        expect("X clears the focused binding", Keybinds.PadEvent("slide") is null && rows["slide"][2].Text == "—");
+
+        string file = OS.GetUserDataDir() + "/pad-check-keybinds.cfg";
+        Keybinds.SaveForCheck(file);
+        Keybinds.ResetAll();
+        expect("reset restores the shipped pad", Keybinds.PadEvent("jump") is InputEventJoypadButton { ButtonIndex: JoyButton.A }
+               && Keybinds.PadEvent("slide") is InputEventJoypadButton { ButtonIndex: JoyButton.B });
+        Keybinds.LoadPadForCheck(file);
+        expect("bindings survive the file", Keybinds.PadEvent("jump") is InputEventJoypadButton { ButtonIndex: JoyButton.Y }
+               && Keybinds.PadEvent("dash") is InputEventJoypadMotion { Axis: JoyAxis.TriggerRight, AxisValue: > 0f }
+               && Keybinds.PadEvent("ping") is InputEventJoypadMotion { Axis: JoyAxis.RightX, AxisValue: < 0f }
+               && Keybinds.PadEvent("slide") is null);
+        DirAccess.RemoveAbsolute(file);
+        Keybinds.ResetAll();
+
+        PadInput.ForceStyleForTest(PadStyle.PlayStation);
+        expect("PlayStation names", Keybinds.Describe(Keybinds.PadEvent("jump")) == "Cross" && Keybinds.Describe(Keybinds.PadEvent("levelup_reroll")) == "L2");
+        PadInput.ForceStyleForTest(PadStyle.Xbox);
+        expect("Xbox names", Keybinds.Describe(Keybinds.PadEvent("jump")) == "A" && Keybinds.Describe(Keybinds.PadEvent("levelup_reroll")) == "LT");
+        pause.CloseKeysForCheck();
+        await wait(0.1);
+    }
+
+    private static System.Collections.Generic.IEnumerable<Node> Walk(Node n)
+    {
+        foreach (Node c in n.GetChildren())
+        {
+            yield return c;
+            foreach (Node d in Walk(c)) yield return d;
+        }
+    }
+
     private async Task PadCheckSteps()
     {
         SceneTree tree = GetTree();
@@ -225,6 +317,7 @@ public sealed partial class Main
             steps++;
         }
         Expect($"walking settings never drops focus ({seen.Count} controls)", steps > 0 && seen.Count >= 8);
+        await PadRebinding(pause, Expect, Wait, Btn, Axis, (b, s) => Tap(b, s));
         await Tap(JoyButton.B);
         await Wait(0.15);
         Expect("B leaves settings, the menu stays", pause.IsOpen && !pause.SettingsShown && Focus() is Button);
@@ -236,7 +329,7 @@ public sealed partial class Main
         _inventory.DevSetGold(2000);
         foreach (ItemDef item in Catalog.Items.Take(6)) _inventory.Add(item);
         Vector3 Ahead() => _player.GlobalPosition + cam.FlatForward * 2f;
-        Control Buy(Station s) => FindChildren("*", "", true, false).OfType<ModalPanel>().First(m => m.IsOpen);
+        ModalPanel Buy(Station s) => FindChildren("*", "", true, false).OfType<ModalPanel>().First(m => m.IsOpen);
         foreach (Station station in new Station[] { new Merchant(), new Microwave() })
         {
             string name = station.GetType().Name;
@@ -246,11 +339,11 @@ public sealed partial class Main
             await Wait(0.1);
             await Tap(JoyButton.Y);
             await Wait(0.5);
-            Control panel = Buy(station);
+            ModalPanel panel = Buy(station);
             Expect($"Y opens the {name} with a button focused", Inside(panel) && Focus() is Button);
             await Tap(JoyButton.B);
             await Wait(0.2);
-            Expect($"B leaves the {name}", !tree.Paused);
+            Expect($"B leaves the {name}", !panel.IsOpen);
             placed.QueueFree();
             await Wait(0.3);
         }

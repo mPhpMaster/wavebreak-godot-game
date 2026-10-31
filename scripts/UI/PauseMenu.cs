@@ -44,6 +44,15 @@ public sealed partial class PauseMenu : Node
 
     internal bool SettingsShown => _settings.Visible;
 
+    /// <summary>--check-pad: the key-binding page, as its button opens it.</summary>
+    internal Control OpenKeysForCheck()
+    {
+        ShowKeys(true);
+        return _keys;
+    }
+
+    internal void CloseKeysForCheck() => ShowKeys(false);
+
     public override void _Ready()
     {
         Name = "PauseMenu";
@@ -118,7 +127,7 @@ public sealed partial class PauseMenu : Node
         }
         var rowKeys = new List<Button>();
         foreach (Node n in Walk(_keys))
-            if (n is Button b && b.GetParent() is HBoxContainer row && row.GetChildCount() == 3) rowKeys.Add(b);
+            if (n is Button b && b.GetParent() is HBoxContainer row && row.GetChildCount() == 4) rowKeys.Add(b);
         Expect("key-binding page has two keys per action", rowKeys.Count >= 4);
         string first = Keybinds.Actions[0].Action;
         void Press(Key k)

@@ -7,8 +7,8 @@ namespace Wavebreak.Meta;
 /// Player key rebinding, persisted in <c>user://keybinds.cfg</c>.
 ///
 /// Each action has two editable bindings, a primary and a secondary (WASD and
-/// the arrow keys, Ctrl and C, Shift and right mouse), as in the shipped map.
-/// Either can be rebound or cleared; gamepad events on the action are kept.
+/// the arrow keys, Ctrl and C, Shift and right mouse), as in the shipped map,
+/// and one gamepad binding (Keybinds.Pad.cs). Each can be rebound or cleared.
 ///
 /// Rebinding to a key another action already uses SWAPS the two, rather than
 /// leaving two actions on one key (where one silently stops working) or refusing
@@ -98,6 +98,7 @@ public static partial class Keybinds
             for (int i = 0; i < Slots; i++) slots[i] = Get(action, i)?.Duplicate() as InputEvent;
             Defaults[action] = slots;
         }
+        CapturePadDefaults();
         UI.PadInput.Install();
 
         // Automated runs (tests, captures) must behave the same on every machine.
@@ -114,6 +115,7 @@ public static partial class Keybinds
             for (int i = 0; i < Slots && i < parts.Length; i++) slots[i] = Decode(parts[i]);
             SetAll(action, slots);
         }
+        ReadPad(cfg);
         MigrateScoreboardKey(cfg);
     }
 
@@ -121,6 +123,11 @@ public static partial class Keybinds
     {
         // A test pressing keys must never rewrite the player's real bindings.
         if (Launch.Automated) return;
+        WriteTo(FilePath);
+    }
+
+    private static void WriteTo(string path)
+    {
         var cfg = new ConfigFile();
         foreach (var (action, _) in Actions)
         {
@@ -130,7 +137,8 @@ public static partial class Keybinds
             cfg.SetValue("keys", action, string.Join(",", parts));
         }
         cfg.SetValue("keys", "binding_schema", 2);
-        cfg.Save(FilePath);
+        WritePad(cfg);
+        cfg.Save(path);
     }
 
     /// <summary>The key or mouse button in <paramref name="slot"/> (0 = primary,
@@ -196,6 +204,7 @@ public static partial class Keybinds
             for (int i = 0; i < Slots; i++) copy[i] = slots[i]?.Duplicate() as InputEvent;
             SetAll(action, copy);
         }
+        ResetPad();
         Save();
     }
 
@@ -215,6 +224,8 @@ public static partial class Keybinds
             MouseButton.Xbutton2 => "Mouse 5",
             _ => $"Mouse {(int)m.ButtonIndex}",
         },
+        InputEventJoypadButton b => PadName(b.ButtonIndex),
+        InputEventJoypadMotion a => PadName(a.Axis, a.AxisValue),
         _ => "—",
     };
 

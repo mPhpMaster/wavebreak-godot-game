@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Wavebreak.Meta;
 
@@ -45,6 +46,23 @@ public sealed partial class PadInput : Node
     /// <summary>Raised when the last-used device changes between pad and
     /// keyboard or mouse.</summary>
     public static event Action? DeviceChanged;
+
+    /// <summary>The maker of the pad last used, from the name it reports, for
+    /// button names. Godot's indices follow the Xbox layout on all of them.</summary>
+    public static PadStyle Style { get; private set; }
+
+    /// <summary>--check-pad: name a pad without having one.</summary>
+    internal static void ForceStyleForTest(PadStyle style) => Style = style;
+
+    private static PadStyle StyleOf(string name)
+    {
+        string n = name.ToLowerInvariant();
+        if (n.Contains("playstation") || n.Contains("dualsense") || n.Contains("dualshock") || n.Contains("ps4") || n.Contains("ps5") || n.Contains("sony"))
+            return PadStyle.PlayStation;
+        if (n.Contains("nintendo") || n.Contains("switch") || n.Contains("joy-con") || n.Contains("pro controller"))
+            return PadStyle.Nintendo;
+        return PadStyle.Xbox;
+    }
 
     /// <summary>--check-pad: count injected events the way a real pad counts.</summary>
     internal static bool ForceFocusForTest { get; set; }
@@ -115,7 +133,13 @@ public sealed partial class PadInput : Node
             || e is InputEventJoypadMotion motion && Mathf.Abs(motion.AxisValue) >= StickOff;
         bool other = e is InputEventKey { Pressed: true } or InputEventMouseButton { Pressed: true }
             || e is InputEventMouseMotion m && m.Relative.LengthSquared() > 4f;
-        if (pad == other || pad == UsingPad) return;
+        if (pad == other) return;
+        if (pad && e.Device >= 0 && Input.GetConnectedJoypads().Contains(e.Device))
+        {
+            PadStyle style = StyleOf(Input.GetJoyName(e.Device));
+            if (style != Style) { Style = style; DeviceChanged?.Invoke(); }
+        }
+        if (pad == UsingPad) return;
         UsingPad = pad;
         DeviceChanged?.Invoke();
     }
@@ -233,6 +257,12 @@ public sealed partial class PadInput : Node
         bool nav = e is InputEventJoypadMotion { Axis: JoyAxis.LeftX or JoyAxis.LeftY }
             or InputEventJoypadButton { ButtonIndex: JoyButton.DpadLeft or JoyButton.DpadRight or JoyButton.DpadUp or JoyButton.DpadDown };
         if (nav && NavigationWanted()) GetViewport().SetInputAsHandled();
+    }
+
+    /// <summary>A direction just bound to an action is not also a step.</summary>
+    public static void IgnoreHeldDirection()
+    {
+        if (Instance is { } pad) pad._navDir = pad._dpad != Vector2I.Zero ? pad._dpad : pad.StickDirection();
     }
 
     private bool NavigationWanted()
