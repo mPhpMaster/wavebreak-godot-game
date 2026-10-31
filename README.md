@@ -32,8 +32,8 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Evolutions | 24: a max-level weapon plus its catalyst (a tome or an item) offers a gold EVOLUTION card with a new delivery or effect, not only bigger numbers. Level-up cards and the Codex show the pairs |
 | Perks | 15 levelled rules picked like tomes (and sometimes found in chests): chain lightning every Nth hit, shield bubbles from elites, a chilling dash wake, stomps, crits that heal, orbiting XP motes, gold-fuelled damage, a refused lethal blow, a chest-finding beacon, a knock-back pulse, armour for standing still, speed-fuelled attack speed, a cornered damage boost, and two team perks (Crew Beacon buffs nearby allies; Lifeline speeds up the revives you give). Perks share the tome slots |
 | Enemies | 53, including phase bosses with move sets |
-| Characters | 24 with passives, 151 skins, 22 hats. The heroes trio have their own original models (a macaw lookout, a sailor sea-dog and a chibi aviator fox) and each bring a signature weapon that also levels up from chests and the merchant: Sunny the Lookout (Spyglass Glint, a precise beam at whatever you look at), Biscuit the Sea Dog (Mooring Anchor, a ring that holds a crowd until it is hauled in) and Flick the Kite Fox (Skimmer Kite, a kite you steer by running) |
-| Quests | 327 (18 secret), which unlock characters, weapons, items, skins and Pearls |
+| Characters | 24 with passives, 153 skins, 22 hats. The heroes trio have their own original models (a macaw lookout, a sailor sea-dog and a chibi aviator fox) and each bring a signature weapon that also levels up from chests and the merchant: Sunny the Lookout (Spyglass Glint, a precise beam at whatever you look at), Biscuit the Sea Dog (Mooring Anchor, a ring that holds a crowd until it is hauled in) and Flick the Kite Fox (Skimmer Kite, a kite you steer by running) |
+| Quests | 353 (19 secret), which unlock characters, weapons, items, skins and Pearls |
 | Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 66 map challenges, the Toggler, leaderboard |
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests; Tide Totems (1-3 per map: press E once and every XP orb and coin on the map flies to you) |
 | Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full, a microwave and (in co-op) the Swap Meet, where two players trade gold, items and tomes. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |
@@ -201,8 +201,8 @@ Title screen → **CO-OP**.
 |---|---|
 | ![Co-op lobby](docs/screenshots/coop-lobby.png) | ![Co-op run](docs/screenshots/coop-run.png) |
 | Lobby: players, characters, skins, ready | Two players in a run, name tags and team panel |
-| ![Revive](docs/screenshots/coop-revive.png) | ![Arabic co-op lobby](docs/screenshots/arabic-coop-lobby.png) |
-| A downed teammate and their revive ring | Arabic: co-op lobby |
+| ![Ping](docs/screenshots/coop-ping.png) | ![Arabic co-op lobby](docs/screenshots/arabic-coop-lobby.png) |
+| A downed teammate and their Ping | Arabic: co-op lobby |
 
 ## Screenshots
 
@@ -220,7 +220,14 @@ Title screen → **CO-OP**.
 | Boombox | Graphics settings |
 | ![Arabic title](docs/screenshots/arabic-menu.png) | ![Arabic character select](docs/screenshots/arabic-character-select.png) |
 | Arabic: title | Arabic: character select |
-| ![Arabic pause](docs/screenshots/arabic-pause-sheet.png) | |
+| ![Arabic pause](docs/screenshots/arabic-pause-sheet.png) | ![Credits](docs/screenshots/credits.png) |
+| Arabic pause sheet | Credits |
+| ![Lumenreef Basin](docs/screenshots/reef.png) | ![Bellspire Ward](docs/screenshots/city.png) |
+| Lumenreef Basin | Bellspire Ward |
+| ![Evolution card](docs/screenshots/evolution.png) | ![Special expeditions](docs/screenshots/expeditions.png) |
+| An EVOLUTION card | Special expeditions |
+| ![Accessibility](docs/screenshots/accessibility.png) | ![Controller bindings](docs/screenshots/controller-bindings.png) |
+| Accessibility | Key and controller bindings |
 | Arabic: pause sheet | |
 
 ## Settings > Gameplay
