@@ -162,8 +162,10 @@ function Hud([string]$side) {
 # the other's levels, the client must stand in the host's beacon (the host,
 # with the only beacon, must never get one from the client), and the client's
 # revive must be sped up by the host's Lifeline.
-$hostPerks = "--give=perk_crew_beacon,perk_lifeline --coop-check-perks"
-$clientPerks = "--give=perk_lifeline --coop-check-perks"
+# Evolutions (NetSession.Evolutions.cs): each side also starts with an evolved
+# weapon, keeps it, and must receive the other's list.
+$hostPerks = "--give=perk_crew_beacon,perk_lifeline,evo_stormcage --coop-check-perks --coop-check-evolve"
+$clientPerks = "--give=perk_lifeline,evo_sunken_sun --coop-check-perks --coop-check-evolve"
 # Shared fog of war (NetSession.Test.Fog.cs): each side reveals a far probe
 # nobody stands in; the other must see it through the FogBits mask. Prints
 # COOPFOG PASS|FAIL; the Tab big map is photographed with both probes.
@@ -265,8 +267,8 @@ Invoke-Scenario 'coop-flick' "--coop-players=2 --coop-seconds=35 --auto --invuln
 $mig = "--auto --invulnerable --phase-seconds=22 --open-portal-at=34"
 Invoke-Multi 'coop-migrate' @(
     @{ Name = 'host'; Delay = 0; Shot = $false; Args = "--coop-host=$Port --coop-name=Host --coop-players=3 --coop-quit-at=20 --seed=5 $mig" },
-    @{ Name = 'a'; Delay = 4; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA --coop-expect-migration --coop-expect-phase=2 --coop-seconds=80 --coop-down-at=999 `"--coop-toast-shot=$(Join-Path $shotDir 'coop-migrate-toast-a.png')`" $mig" },
-    @{ Name = 'b'; Delay = 2; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestB --coop-expect-migration --coop-expect-phase=2 --coop-seconds=80 --coop-down-at=999 `"--coop-toast-shot=$(Join-Path $shotDir 'coop-migrate-toast-b.png')`" $mig" }
+    @{ Name = 'a'; Delay = 4; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA --coop-expect-migration --coop-expect-phase=2 --coop-seconds=80 --coop-down-at=999 `"--coop-toast-shot=$(Join-Path $shotDir 'coop-migrate-toast-a.png')`" --give=evo_stormcage --coop-check-evolve $mig" },
+    @{ Name = 'b'; Delay = 2; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestB --coop-expect-migration --coop-expect-phase=2 --coop-seconds=80 --coop-down-at=999 `"--coop-toast-shot=$(Join-Path $shotDir 'coop-migrate-toast-b.png')`" --give=evo_sunken_sun --coop-check-evolve $mig" }
 ) 260
 
 # 4. Late join: a third player joins about 20 s into the run, after the
@@ -276,9 +278,9 @@ $mark = Join-Path $shotDir 'coop-latejoin.mark'
 Remove-Item $mark -ErrorAction SilentlyContinue
 $lj = "--auto --invulnerable --phase-seconds=10 --open-portal-at=12 --coop-seconds=66 --coop-down-at=999"
 Invoke-Multi 'coop-latejoin' @(
-    @{ Name = 'host'; Delay = 0; Shot = $true; Args = "--coop-host=$Port --coop-name=Host --coop-players=2 --coop-expect-late-join --seed=9 `"--coop-mark-file=$mark`" --coop-mark-at=18 $lj" },
+    @{ Name = 'host'; Delay = 0; Shot = $true; Args = "--coop-host=$Port --coop-name=Host --coop-players=2 --coop-expect-late-join --seed=9 `"--coop-mark-file=$mark`" --coop-mark-at=18 --give=evo_stormcage --coop-check-evolve $lj" },
     @{ Name = 'a'; Delay = 4; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA $lj" },
-    @{ Name = 'late'; Delay = 0; WaitFile = $mark; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=Late --coop-late-join $lj" }
+    @{ Name = 'late'; Delay = 0; WaitFile = $mark; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=Late --coop-late-join --give=evo_sunken_sun --coop-check-evolve $lj" }
 ) 240
 
 # 5. Swap meet: a trade between the two players in the rest room.

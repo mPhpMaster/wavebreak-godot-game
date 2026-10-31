@@ -50,6 +50,7 @@ internal static class EvolutionRiders
     private static void Mirror(Vector3 at, float radius, Color tint)
     {
         Fired++;
+        if (Net.Coop.InRun) Net.NetSession.Instance?.SendEvolutionFx(at, radius, tint);
     }
 
     // -------------------------------------------------------------- volleys

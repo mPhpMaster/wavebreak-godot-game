@@ -260,6 +260,7 @@ public sealed partial class NetSession : Node
             Fail(Loc.T("No answer from the host. Check the address, the port and the firewall."));
         }
         StepMigration();   // NetSession.Migration.cs
+        StepEvolutions((float)delta);   // NetSession.Evolutions.cs
         ProcessRun((float)delta);
         StepTrade((float)delta);   // NetSession.Trade.cs
         ProcessTest((float)delta);
