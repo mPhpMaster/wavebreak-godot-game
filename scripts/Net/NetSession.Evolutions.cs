@@ -31,6 +31,11 @@ public static class EvolutionNet
         Received = FxReceived = MaxSeen = 0;
     }
 
+    /// <summary>A host migration renumbers everyone, and id 1 goes to a player who
+    /// was somebody else a moment ago: start the lists over, so nobody's first
+    /// list under a new id reads as news.</summary>
+    internal static void ForgetPeers() => Evolved.Clear();
+
     public static int CountOf(long peer) => Evolved.TryGetValue(peer, out HashSet<string>? s) ? s.Count : 0;
 
     /// <summary>Store a peer's list. Returns what is new since its last list; a
