@@ -41,6 +41,7 @@ public static partial class Profile
 
     public static void SelectSkin(string characterId, string skinId) => SkinChoice[characterId] = skinId;
     private static readonly HashSet<string> SecretSet = new();
+    private static readonly HashSet<string> EvolutionSet = new();
 
     // Spendable and settable meta values (currency, shop levels, difficulty).
     // Kept apart from Stats, which only ever grow; these can go down.
@@ -115,6 +116,7 @@ public static partial class Profile
 
         ReadSet(cfg, "unlocks", UnlockSet);
         ReadSet(cfg, "secrets", SecretSet);
+        ReadSet(cfg, "evolutions", EvolutionSet);
 
         foreach (string key in SafeKeys(cfg, "skins"))
         {
@@ -160,6 +162,7 @@ public static partial class Profile
         foreach (var (key, value) in Stats) cfg.SetValue("stats", key, value);
         foreach (string id in UnlockSet) cfg.SetValue("unlocks", id, true);
         foreach (string id in SecretSet) cfg.SetValue("secrets", id, true);
+        foreach (string id in EvolutionSet) cfg.SetValue("evolutions", id, true);
         foreach (var (character, skin) in SkinChoice) cfg.SetValue("skins", character, skin);
         foreach (var (key, value) in MetaValues) cfg.SetValue("meta", key, value);
 
@@ -216,4 +219,8 @@ public static partial class Profile
     public static bool HasFoundSecret(string kind) => SecretSet.Contains(kind);
     public static IReadOnlyCollection<string> FoundSecrets => SecretSet;
     public static bool FindSecret(string kind) => SecretSet.Add(kind);
+
+    public static bool HasEvolved(string id) => EvolutionSet.Contains(id);
+    public static IReadOnlyCollection<string> FoundEvolutions => EvolutionSet;
+    public static bool DiscoverEvolution(string id) => EvolutionSet.Add(id);
 }

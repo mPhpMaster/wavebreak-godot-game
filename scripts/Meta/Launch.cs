@@ -15,7 +15,7 @@ namespace Wavebreak.Meta;
 ///     --profile=&lt;path&gt;      read/write this profile instead of user://profile.cfg
 ///     --character=&lt;id&gt;      start the run as this character (if unlocked)
 ///     --menu-shot=&lt;png&gt;     boot the title, capture, quit
-///     --menu-page=&lt;page&gt;    main | play | codex | codex:secrets | settings | keys | graphics | boombox  (with --menu-shot)
+///     --menu-page=&lt;page&gt;    main | play | codex | codex:secrets | codex:evolutions | settings | keys | graphics | boombox  (with --menu-shot)
 ///     --lang=en|ar          play in this language (menu flag; automated runs default to English)
 ///     --latin-report        with --lang=ar: list visible text still holding Latin words at each capture
 ///     --dump-strings=&lt;txt&gt; write every content string with no Arabic translation, then quit

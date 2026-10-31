@@ -93,6 +93,8 @@ public enum Metric
     TotalElites,
     TotalGoldEarned,
     RunTomesMaxed,
+    EvolutionsFound,    // different evolutions ever made (Profile.FoundEvolutions)
+    RunEvolutions,      // weapons evolved this run
     Feat,               // 1 once the one-off feat in Key has happened (see Quests.Feat*)
 }
 

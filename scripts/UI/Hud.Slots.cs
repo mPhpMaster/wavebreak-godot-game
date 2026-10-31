@@ -31,6 +31,14 @@ public sealed partial class Hud
         CallDeferred(MethodName.RefreshWeaponSlots);
     }
 
+    /// <summary>The weapon's row takes the evolved name, in its gold.</summary>
+    private void OnWeaponEvolved(Core.WeaponEvolved e)
+    {
+        if (!_weaponRows.TryGetValue(e.WeaponId, out Label? row) || Data.Evolutions.ById(e.EvolutionId) is not { } d) return;
+        row.Text = Loc.F("{0}   EVOLVED", Loc.T(d.Name));
+        row.AddThemeColorOverride("font_color", d.Tint);
+    }
+
     private void RefreshWeaponSlots()
     {
         if (_weaponHeader is null || !IsInstanceValid(_weaponHeader)) return;

@@ -18,6 +18,7 @@ public static partial class Profile
         Stats.Clear();
         UnlockSet.Clear();
         SecretSet.Clear();
+        EvolutionSet.Clear();
         SkinChoice.Clear();
         MetaValues.Clear();
         SelectedCharacter = Characters.DefaultId;

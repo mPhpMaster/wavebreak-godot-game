@@ -332,7 +332,8 @@ public sealed partial class MainMenu : Node3D
                 break;
             case "codex":
                 _codex.Refresh();
-                if (secrets) _codex.FocusFirstSecret();
+                if (arg == "evolutions") _codex.OpenEvolutions();
+                else if (secrets) _codex.FocusFirstSecret();
                 else _codex.FocusFirst();
                 break;
             case "settings":

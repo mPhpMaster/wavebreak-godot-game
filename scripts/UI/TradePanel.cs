@@ -558,7 +558,7 @@ public sealed partial class TradePanel : ModalPanel
         string d = Loc.T(def.Description.Trim());
         if (d.Length > 0) sb.Append("\n\n").Append(d);
         foreach (ItemEffect e in def.Effects) if (e is not null) sb.Append('\n').Append(Loc.T(Catalog.DescribeEffect(e)));
-        return sb.ToString();
+        return sb.Append(CatalystWarning(def.Id)).ToString();
     }
 
     private static string TomeTip(TomeDef t, int level)
@@ -567,6 +567,14 @@ public sealed partial class TradePanel : ModalPanel
         sb.Append('\n').Append(Loc.F("Lv {0}/{1}  {2}", level, t.MaxLevel, t.DescribeTotal(level)));
         string d = Loc.T(t.Description.Trim());
         if (d.Length > 0) sb.Append("\n\n").Append(d);
-        return sb.ToString();
+        return sb.Append(CatalystWarning(t.Id)).ToString();
+    }
+
+    /// <summary>A weapon that has evolved stays evolved, so only a catalyst still
+    /// waiting for its weapon is worth a warning before it changes hands.</summary>
+    private static string CatalystWarning(string id)
+    {
+        string line = BuildInspectionText.CatalystLine(id, "Catalyst for {0}: give it away and that weapon cannot evolve.");
+        return line.Length > 0 ? "\n\n" + line : "";
     }
 }

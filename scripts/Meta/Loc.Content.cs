@@ -25,6 +25,7 @@ public static partial class LocContent
         foreach (ItemDef i in MetaContent.Items) { yield return ($"item {i.Id}", i.DisplayName); yield return ($"item {i.Id} desc", i.Description); }
         foreach (EnemyDef e in Catalog.Enemies) yield return ($"enemy {e.Id}", e.DisplayName);
         foreach (TomeDef t in Tomes.All) { yield return ($"tome {t.Id}", t.DisplayName); yield return ($"tome {t.Id} desc", t.Description); }
+        foreach (EvolutionDef e in Evolutions.All) { yield return ($"evolution {e.Id}", e.Name); yield return ($"evolution {e.Id} desc", e.Description); }
 
         foreach (CharacterDef c in Characters.All)
         {

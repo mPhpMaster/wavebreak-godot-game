@@ -60,7 +60,7 @@ public sealed partial class StatsPanel
         HFlowContainer weapons = Flow();
         foreach (WeaponRuntime w in _weapons.Weapons)
         {
-            weapons.AddChild(Tile(Icons.For(w.Def), Catalog.RarityColor(w.Def.Rarity), Loc.F("Lv{0}", w.Level),
+            weapons.AddChild(Tile(Icons.For(w.Def), w.Evolution?.Tint ?? Catalog.RarityColor(w.Def.Rarity), Loc.F("Lv{0}", w.Level),
                 () => BuildInspectionText.Weapon(w, _player.Stats)));
         }
         Empty(weapons);
