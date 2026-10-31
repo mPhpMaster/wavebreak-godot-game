@@ -158,7 +158,8 @@ public sealed partial class TradePickPanel : ModalPanel
         _list = new VBoxContainer();
         _list.AddThemeConstantOverride("separation", 8);
         Body.AddChild(_list);
-        Body.AddChild(CuteStyle.Text(Loc.T("press  1 · 2 · 3  to pick      Esc to leave"), 13, CuteStyle.InkSoft, HorizontalAlignment.Center));
+        Body.AddChild(Follow(CuteStyle.Text("", 13, CuteStyle.InkSoft, HorizontalAlignment.Center),
+                             () => Loc.T("press  1 · 2 · 3  to pick      Esc to leave"), "{0}: pick      {1}: leave"));
     }
 
     public void Open()
@@ -215,8 +216,10 @@ public sealed partial class TradeInvitePanel : ModalPanel
         var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         row.AddThemeConstantOverride("separation", 14);
         Body.AddChild(row);
-        Button yes = CuteStyle.Pill(Loc.T("1  ACCEPT"), CuteStyle.Mint, () => Answer(true), 19);
-        Button no = CuteStyle.Pill(Loc.T("2  DECLINE"), CuteStyle.Coral, () => Answer(false), 19);
+        Button yes = CuteStyle.Pill("", CuteStyle.Mint, () => Answer(true), 19);
+        Button no = CuteStyle.Pill("", CuteStyle.Coral, () => Answer(false), 19);
+        Hints.Follow(yes, () => Loc.T(PadInput.UsingPad ? "ACCEPT" : "1  ACCEPT"));
+        Hints.Follow(no, () => Loc.T(PadInput.UsingPad ? "DECLINE" : "2  DECLINE"));
         yes.CustomMinimumSize = no.CustomMinimumSize = new Vector2(170f, 46f);
         row.AddChild(yes);
         row.AddChild(no);

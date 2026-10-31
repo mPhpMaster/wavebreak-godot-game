@@ -182,7 +182,7 @@ public sealed partial class StatsPanel : Control
         ActionRow.AddThemeConstantOverride("separation", 14);
         outer.AddChild(ActionRow);
 
-        _hint = Text(Loc.T("hold TAB"), 13, Dim, HorizontalAlignment.Center);
+        _hint = Text("", 13, Dim, HorizontalAlignment.Center);
         outer.AddChild(_hint);
     }
 
@@ -258,8 +258,8 @@ public sealed partial class StatsPanel : Control
     }
 
     private string SheetHint() => _pinned
-        ? Loc.T("RESUME") + " · Esc / " + Keybinds.Describe(Keybinds.Primary("pause"))
-        : Loc.F("hold {0}", Keybinds.Describe(Keybinds.Primary("stats")));
+        ? Loc.T("RESUME") + (PadInput.UsingPad ? " · " : " · Esc / ") + Keybinds.Hint("pause")
+        : Loc.F("hold {0}", Keybinds.Hint("stats"));
 
 
     /// <summary>One stat: name, value in its natural unit, and the change from

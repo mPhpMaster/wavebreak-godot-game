@@ -274,6 +274,7 @@ public sealed partial class Shrine : Node3D
 
         _inRange = !Spent && dist <= InteractRange;
         _prompt.Visible = _inRange;
+        if (_inRange) _prompt.Text = $"[{Keybinds.Hint("interact")}]  {Kind.DisplayName}";
     }
 
     public override void _UnhandledInput(InputEvent @event)

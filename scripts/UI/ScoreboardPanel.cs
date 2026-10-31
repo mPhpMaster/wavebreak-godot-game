@@ -148,7 +148,7 @@ public sealed partial class ScoreboardPanel : Control
             Cell($"{l.Level}");
             Cell($"{l.GoldEarned}");
         }
-        string key = Keybinds.Describe(Keybinds.Primary(Action));
+        string key = Keybinds.Hint(Action);
         _hint.Text = Coop.Active ? Loc.F("hold {0}  ·  the host keeps the score", key) : Loc.F("hold {0}", key);
     }
 

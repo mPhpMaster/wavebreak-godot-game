@@ -203,7 +203,7 @@ public sealed partial class ResultsScreen : Control
         _buildEmpty.Visible = false;
         build.AddChild(_buildEmpty);
 
-        VBoxContainer board = Card(cards, Loc.F("SCOREBOARD  [{0}]", Keybinds.Describe(Keybinds.Primary(ScoreboardPanel.Action))), new Color(0.62f, 0.98f, 1f), 0.33f);
+        VBoxContainer board = Card(cards, Loc.F("SCOREBOARD  [{0}]", Keybinds.Hint(ScoreboardPanel.Action)), new Color(0.62f, 0.98f, 1f), 0.33f);
         board.AddChild(new ScoreboardRows());
 
         // ---- buttons. No keyboard focus: Space is ui_accept, so a focused
@@ -212,8 +212,8 @@ public sealed partial class ResultsScreen : Control
         var buttons = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
         buttons.AddThemeConstantOverride("separation", 24);
         col.AddChild(buttons);
-        buttons.AddChild(BigButton(Loc.T("RESTART"), Loc.T("Enter  /  R"), Victory, Restart, 300f));
-        buttons.AddChild(BigButton(Loc.T("MAIN MENU"), Loc.Ltr("Esc"), InkDim, ToMainMenu, 240f));
+        buttons.AddChild(BigButton(Loc.T("RESTART"), () => PadInput.UsingPad ? Keybinds.PadLabel(JoyButton.A) : Loc.T("Enter  /  R"), Victory, Restart, 300f));
+        buttons.AddChild(BigButton(Loc.T("MAIN MENU"), () => PadInput.UsingPad ? Keybinds.PadLabel(JoyButton.B) : Loc.Ltr("Esc"), InkDim, ToMainMenu, 240f));
 
         _seed = MakeLabel("", 12, new Color(0.52f, 0.57f, 0.66f), HorizontalAlignment.Center);
         col.AddChild(_seed);
@@ -259,7 +259,7 @@ public sealed partial class ResultsScreen : Control
         if (Visible && PadInput.UsingPad && _bigButtons.Count > 0) _bigButtons[0].GrabFocus();
     }
 
-    private Control BigButton(string text, string hint, Color accent, System.Action pressed, float width)
+    private Control BigButton(string text, System.Func<string> hint, Color accent, System.Action pressed, float width)
     {
         var box = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         box.AddThemeConstantOverride("separation", 2);
@@ -273,7 +273,9 @@ public sealed partial class ResultsScreen : Control
         b.AddThemeStyleboxOverride("pressed", Box(new Color(0.24f, 0.29f, 0.42f), accent, 14, 3));
         b.Pressed += pressed;
         box.AddChild(b);
-        box.AddChild(MakeLabel(hint, 15, InkDim, HorizontalAlignment.Center));
+        Label caption = MakeLabel("", 15, InkDim, HorizontalAlignment.Center);
+        Hints.Follow(caption, hint);
+        box.AddChild(caption);
         return box;
     }
 

@@ -75,7 +75,8 @@ public sealed partial class ShrinePanel : Control
         Label sub = MakeLabel(Loc.T("Choose a blessing for this run"), 17, InkDim);
         Band(sub, 720f, -136f, 26f);
         AddChild(sub);
-        Label hint = MakeLabel(Loc.T("press  1  ·  2  ·  3"), 15, new Color(0.50f, 0.55f, 0.64f));
+        Label hint = MakeLabel("", 15, new Color(0.50f, 0.55f, 0.64f));
+        Hints.Follow(hint, LevelUpPanel.CardHint);
         Band(hint, 720f, 130f, 24f);
         AddChild(hint);
 

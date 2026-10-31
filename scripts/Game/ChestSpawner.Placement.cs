@@ -237,17 +237,4 @@ public sealed partial class ChestSpawner
         return best;
     }
 
-    /// <summary>The bound key's name, so the prompt follows a rebind.</summary>
-    private static string KeyName()
-    {
-        if (!InputMap.HasAction(InteractAction)) return "E";
-        foreach (InputEvent ev in InputMap.ActionGetEvents(InteractAction))
-        {
-            if (ev is not InputEventKey k) continue;
-            Key code = k.PhysicalKeycode != Key.None ? k.PhysicalKeycode : k.Keycode;
-            if (code != Key.None) return OS.GetKeycodeString(code);
-        }
-        return "E";
-    }
-
 }

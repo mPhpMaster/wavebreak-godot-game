@@ -137,10 +137,11 @@ public sealed partial class PadInput : Node
         if (pad && e.Device >= 0 && Input.GetConnectedJoypads().Contains(e.Device))
         {
             PadStyle style = StyleOf(Input.GetJoyName(e.Device));
-            if (style != Style) { Style = style; DeviceChanged?.Invoke(); }
+            if (style != Style) { Style = style; Hints.Refresh(); }
         }
         if (pad == UsingPad) return;
         UsingPad = pad;
+        Hints.Refresh();
         DeviceChanged?.Invoke();
     }
 

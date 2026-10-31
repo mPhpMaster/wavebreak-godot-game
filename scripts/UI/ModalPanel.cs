@@ -1,6 +1,7 @@
 using System;
 using Godot;
 using Wavebreak.Core;
+using Wavebreak.Meta;
 
 namespace Wavebreak.UI;
 
@@ -31,6 +32,22 @@ public partial class ModalPanel : Control
     private readonly System.Collections.Generic.List<Button> _padButtons = new();
 
     protected bool Armed => Time.GetTicksMsec() - _shownAtMsec >= ArmDelayMsec;
+
+    /// <summary>A hint line that reads one way for a pad, another for keys.</summary>
+    protected static Label Follow(Label label, Func<string> keyboard, string pad)
+    {
+        Hints.Follow(label, () => PadInput.UsingPad
+            ? Loc.F(pad, Keybinds.PadLabel(JoyButton.A), Keybinds.PadLabel(JoyButton.B))
+            : keyboard());
+        return label;
+    }
+
+    /// <summary>A button that stays out of keyboard focus, as <see cref="MakeButton"/>'s do.</summary>
+    protected void PadFocusOnly(Button b)
+    {
+        b.FocusMode = PadInput.UsingPad ? FocusModeEnum.All : FocusModeEnum.None;
+        _padButtons.Add(b);
+    }
 
     /// <summary>The root everything visible hangs from; subclasses fill it.</summary>
     protected VBoxContainer Body { get; private set; } = null!;

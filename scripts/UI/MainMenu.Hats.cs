@@ -63,6 +63,20 @@ public sealed partial class MainMenu
         row.AddChild(next);
         row.AddChild(_hatBuy);
         box.AddChild(row);
+
+        // The arrows take no focus, so a pad needs telling where they went.
+        Label pad = MakeLabel("", 14, InkDim);
+        pad.HorizontalAlignment = HorizontalAlignment.Center;
+        void ShowPad()
+        {
+            pad.Visible = PadInput.UsingPad;
+            pad.Text = Loc.F("{0} / {1}: skin   ·   {2} / {3}: hat   ·   {4}: buy hat",
+                Keybinds.PadLabel(JoyButton.LeftShoulder), Keybinds.PadLabel(JoyButton.RightShoulder),
+                Keybinds.PadLabel(JoyAxis.TriggerLeft), Keybinds.PadLabel(JoyAxis.TriggerRight), Keybinds.PadLabel(JoyButton.Y));
+        }
+        ShowPad();
+        Hints.Watch(pad, ShowPad);
+        box.AddChild(pad);
     }
 
     private Button HatArrow(string text, int step)

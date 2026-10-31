@@ -52,7 +52,7 @@ public sealed partial class ShrineSpawner : Node
     private readonly List<MapShrine> _shrines = new();
     private ShrinePrompt _prompt = null!;
     private ShrinePanel _panel = null!;
-    private string _keyName = "E";
+    private static string _keyName => Meta.Keybinds.Hint(InteractAction);
     private bool _hasAction;
     private bool _interactRequested;
     private MapShrine? _focus;
@@ -131,7 +131,6 @@ public sealed partial class ShrineSpawner : Node
         layer.AddChild(_panel);
 
         _hasAction = InputMap.HasAction(InteractAction);
-        _keyName = KeyName();
 
         EventBus.Subscribe<RunEnded>(OnRunEnded);
     }
@@ -415,15 +414,4 @@ public sealed partial class ShrineSpawner : Node
     private static void Publish(MapShrineKind kind, ShrineOutcome outcome, Vector3 at, string detail)
         => EventBus.Publish(new MapShrineUsed(kind, outcome, at, detail));
 
-    private static string KeyName()
-    {
-        if (!InputMap.HasAction(InteractAction)) return "E";
-        foreach (InputEvent ev in InputMap.ActionGetEvents(InteractAction))
-        {
-            if (ev is not InputEventKey k) continue;
-            Key code = k.PhysicalKeycode != Key.None ? k.PhysicalKeycode : k.Keycode;
-            if (code != Key.None) return OS.GetKeycodeString(code);
-        }
-        return "E";
-    }
 }

@@ -193,6 +193,7 @@ public static partial class Keybinds
         mine[slot] = ev;
         SetAll(action, mine);
         Save();
+        UI.Hints.Refresh();
         return swapped;
     }
 
@@ -206,6 +207,7 @@ public static partial class Keybinds
         }
         ResetPad();
         Save();
+        UI.Hints.Refresh();
     }
 
     /// <summary>"Space", "Shift", "Mouse Right" — what a row shows.</summary>

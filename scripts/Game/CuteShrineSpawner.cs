@@ -38,7 +38,7 @@ public sealed partial class CuteShrineSpawner : Node
     private readonly List<CuteShrine> _shrines = new();
     private ShrinePrompt _prompt = null!;
     private BalancePanel _panel = null!;
-    private string _keyName = "E";
+    private static string _keyName => Meta.Keybinds.Hint(InteractAction);
     private bool _hasAction;
     private bool _interactRequested;
     private CuteShrine? _focus;
@@ -75,7 +75,6 @@ public sealed partial class CuteShrineSpawner : Node
         _panel = new BalancePanel();
         layer.AddChild(_panel);
         _hasAction = InputMap.HasAction(InteractAction);
-        _keyName = KeyName();
 
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--cute-shrine-shot=")) _ = Capture(arg["--cute-shrine-shot=".Length..]);
@@ -350,15 +349,4 @@ public sealed partial class CuteShrineSpawner : Node
         tree.Quit();
     }
 
-    private static string KeyName()
-    {
-        if (!InputMap.HasAction(InteractAction)) return "E";
-        foreach (InputEvent ev in InputMap.ActionGetEvents(InteractAction))
-        {
-            if (ev is not InputEventKey k) continue;
-            Key code = k.PhysicalKeycode != Key.None ? k.PhysicalKeycode : k.Keycode;
-            if (code != Key.None) return OS.GetKeycodeString(code);
-        }
-        return "E";
-    }
 }

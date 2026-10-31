@@ -58,7 +58,14 @@ public sealed partial class KeybindPanel : VBoxContainer
         AddThemeConstantOverride("separation", 8);
 
         AddChild(MainMenu.MakeLabel("KEY BINDINGS", 22, new Color(0.62f, 0.98f, 1.00f)));
-        _status = MainMenu.MakeLabel("Click a key, then press the new one.  Backspace clears it, Esc cancels.", 14, Dim);
+        _status = MainMenu.MakeLabel("", 14, Dim);
+        Hints.Follow(_status, () =>
+        {
+            if (Listening is not null) return _status.Text;
+            return PadInput.UsingPad
+                ? Loc.F("{0}: rebind   ·   {1}: clear   ·   {2}: back", Keybinds.PadLabel(JoyButton.A), Keybinds.PadLabel(JoyButton.X), Keybinds.PadLabel(JoyButton.B))
+                : Loc.T("Click a key, then press the new one.  Backspace clears it, Esc cancels.");
+        });
         AddChild(_status);
 
         var header = new HBoxContainer();

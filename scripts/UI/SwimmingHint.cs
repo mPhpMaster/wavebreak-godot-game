@@ -41,21 +41,21 @@ public sealed partial class SwimmingHint : CanvasLayer
         _refresh -= (float)delta;
         if (!Game.PerformanceScenario.Reference && _refresh > 0) return;
         _refresh = .1f;
-        string up = Keybinds.Describe(Keybinds.Get("jump", 0));
-        string down = Keybinds.Describe(Keybinds.Get("slide", 0));
+        string up = Keybinds.Hint("jump");
+        string down = Keybinds.Hint("slide");
         _label.Text = Loc.F("SWIM  |  Hold {0}: rise  |  Hold {1}: dive", up, down);
         if (Player.Instance is not { } player) return;
         _label.Text += "\n" + Loc.F("Look + forward: swim in 3D  |  Depth: {0:0} m",
             Mathf.Max(0f, Game.WaterSurfaceHeight.At(player.GlobalPosition) - player.CenterPosition.Y));
         if (player.IsBreaching) _label.Text = Loc.T("BREACHING: steer and fall back into the water");
         else if (Game.WaterSurfaceHeight.At(player.GlobalPosition) - player.CenterPosition.Y < 7f)
-            _label.Text = Loc.F("Hold {0} + {1} near the surface to breach", up, Keybinds.Describe(Keybinds.Get("dash", 0)));
+            _label.Text = Loc.F("Hold {0} + {1} near the surface to breach", up, Keybinds.Hint("dash"));
         else if (Game.ReefCurrents.VelocityAt(player.GlobalPosition).Length() > 0.5f)
             _label.Text = Loc.T("CURRENT: steer sideways to leave the flow") + "\n"
                 + Loc.F("SWIM  |  Hold {0}: rise  |  Hold {1}: dive", up, down);
         _practice.Tick(player, false);
         _label.Text = Loc.T(_practice.Instruction) + "\n" + _label.Text;
-        _label.Text += "\n" + Loc.T("F2: skip help  |  F1: replay help");
+        _label.Text += "\n" + Game.TraversalHelpSession.Line();
     }
 }
 

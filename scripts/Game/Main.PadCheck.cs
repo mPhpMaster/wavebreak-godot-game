@@ -156,6 +156,27 @@ public sealed partial class Main
         Expect("a key hands it back", !PadInput.UsingPad);
         await Tap(JoyButton.DpadUp);
 
+        // --------------------------------------------------------------- hints
+        Label? dash = Walk(this).OfType<Label>().FirstOrDefault(l => l.Text.StartsWith("DASH"));
+        Expect("the HUD has a dash line", dash is not null);
+        async Task<string> DashText() { await Wait(0.15); return dash?.Text ?? ""; }
+        void KeyEv(Key k, bool down) => Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = down });
+        Expect($"pad in hand: {await DashText()}", (await DashText()).Contains("[X]"));
+        KeyEv(Godot.Key.F12, true); KeyEv(Godot.Key.F12, false);
+        Expect($"keyboard in hand: {await DashText()}", (await DashText()).Contains("[Shift]"));
+        Keybinds.Rebind("dash", 0, new InputEventKey { PhysicalKeycode = Godot.Key.F9 });
+        Expect($"a rebound key shows: {await DashText()}", (await DashText()).Contains("[F9]"));
+        Keybinds.RebindPad("dash", new InputEventJoypadButton { ButtonIndex = JoyButton.LeftStick });
+        await Tap(JoyButton.DpadUp);
+        Expect($"a rebound button shows: {await DashText()}", (await DashText()).Contains("[L3]"));
+        Keybinds.ResetAll();
+        PadInput.ForceStyleForTest(PadStyle.PlayStation);
+        Hints.Refresh();
+        Expect($"the pad's own names: {await DashText()}", (await DashText()).Contains("[Square]"));
+        PadInput.ForceStyleForTest(PadStyle.Xbox);
+        Hints.Refresh();
+        await Tap(JoyButton.DpadUp);   // help_toggle: back to how it was
+
         // ---------------------------------------------------------- left stick
         Vector3 from = _player.GlobalPosition;
         Axis(JoyAxis.LeftY, -1f);

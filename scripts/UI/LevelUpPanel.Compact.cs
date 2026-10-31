@@ -109,7 +109,8 @@ public sealed partial class LevelUpPanel
         _compactSub.ClipText = true;
         head.AddChild(_compactHeader);
         head.AddChild(_compactSub);
-        Label keys = MakeLabel(Loc.T("1 · 2 · 3 or click"), 13, new Color(0.62f, 0.68f, 0.78f));
+        Label keys = MakeLabel("", 13, new Color(0.62f, 0.68f, 0.78f));
+        Hints.Follow(keys, () => PadInput.UsingPad ? Loc.T("D-pad: pick a card") : Loc.T("1 · 2 · 3 or click"));
         head.AddChild(keys);
         column.AddChild(head);
 

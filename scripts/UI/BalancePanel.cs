@@ -55,12 +55,14 @@ public sealed partial class BalancePanel : ModalPanel
 
         var buttons = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         buttons.AddThemeConstantOverride("separation", 16);
-        Button yes = CuteStyle.Pill(Loc.T("1  Balance me!"), CuteStyle.Mint, () => { if (Armed) Confirm(); }, 18, on: true);
-        Button no = CuteStyle.Pill(Loc.T("2  Not now"), CuteStyle.Peach, () => { if (Armed) Close(); }, 18);
+        Button yes = CuteStyle.Pill("", CuteStyle.Mint, () => { if (Armed) Confirm(); }, 18, on: true);
+        Button no = CuteStyle.Pill("", CuteStyle.Peach, () => { if (Armed) Close(); }, 18);
+        Hints.Follow(yes, () => Loc.T(PadInput.UsingPad ? "Balance me!" : "1  Balance me!"));
+        Hints.Follow(no, () => Loc.T(PadInput.UsingPad ? "Not now" : "2  Not now"));
         foreach (Button b in new[] { yes, no })
         {
             b.CustomMinimumSize = new Vector2(200f, 46f);
-            b.FocusMode = FocusModeEnum.None;
+            PadFocusOnly(b);
             buttons.AddChild(b);
         }
         Body.AddChild(buttons);

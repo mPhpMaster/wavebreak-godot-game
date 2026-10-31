@@ -93,6 +93,7 @@ public static partial class Keybinds
                 }
         SetPad(action, ev);
         Save();
+        UI.Hints.Refresh();
         return swapped;
     }
 
@@ -200,6 +201,23 @@ public static partial class Keybinds
             _ => $"Axis {(int)axis}",
         };
     }
+
+    /// <summary>
+    /// What to press for an action, as a hint shows it: the pad's binding while a
+    /// pad is in use, else the primary key, else whichever exists. Translated.
+    /// </summary>
+    public static string Hint(string action)
+    {
+        InputEvent? pad = PadEvent(action);
+        InputEvent? key = InputMap.HasAction(action) ? Primary(action) : null;
+        return Loc.T(Describe(UI.PadInput.UsingPad ? pad ?? key : key ?? pad));
+    }
+
+    /// <summary>The name of a pad button that is not on an action.</summary>
+    public static string PadLabel(JoyButton button) => Loc.T(PadName(button));
+
+    /// <summary>The name of a trigger or stick that is not on an action.</summary>
+    public static string PadLabel(JoyAxis axis) => Loc.T(PadName(axis, 1f));
 
     /// <summary>The pad button or stick direction on an action, or null.</summary>
     public static InputEvent? PadEvent(string action)

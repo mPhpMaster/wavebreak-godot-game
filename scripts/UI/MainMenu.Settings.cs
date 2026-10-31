@@ -94,7 +94,11 @@ public sealed partial class MainMenu : Node3D
         page.AddChild(Row("Mouse sensitivity", sens, sensValue));
         page.AddChild(Row("Language", LanguagePicker(), MakeLabel("", 16, Ink)));
 
-        Label keys = MakeLabel("In a run:  - / =  volume   ·   9 / 0  effects   ·   [ / ]  music   ·   M  mute", 15, InkDim);
+        Label keys = MakeLabel("", 15, InkDim);
+        static string Key(string action) => Loc.Ltr(Keybinds.Describe(Keybinds.Primary(action)));
+        Hints.Follow(keys, () => Loc.F("In a run:  {0} / {1}  volume   ·   {2} / {3}  effects   ·   {4} / {5}  music   ·   {6}  mute",
+            Key("volume_down"), Key("volume_up"), Key("sfx_volume_down"), Key("sfx_volume_up"),
+            Key("music_volume_down"), Key("music_volume_up"), Key("mute")));
         keys.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         page.AddChild(keys);
         // Side by side: with the language row added, three stacked buttons no

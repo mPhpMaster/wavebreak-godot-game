@@ -70,7 +70,11 @@ public sealed partial class TradePanel : ModalPanel
         VBoxContainer mine = Column(cols, CuteStyle.Mint, out _myHead, out _myBadge);
         _myOffer = OfferArea(mine);
         mine.AddChild(GoldRow(out _myGold, true));
-        mine.AddChild(CuteStyle.Text(Loc.T("YOUR BAG  ·  click to offer, right-click for the whole stack"), 13, Soft));
+        Label bagHint = CuteStyle.Text("", 13, Soft);
+        Hints.Follow(bagHint, () => PadInput.UsingPad
+            ? Loc.F("YOUR BAG  ·  {0} to offer, {1} for the whole stack", Keybinds.PadLabel(JoyButton.A), Keybinds.PadLabel(JoyButton.X))
+            : Loc.T("YOUR BAG  ·  click to offer, right-click for the whole stack"));
+        mine.AddChild(bagHint);
         var scroll = new ScrollContainer
         {
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
@@ -99,9 +103,12 @@ public sealed partial class TradePanel : ModalPanel
         var bottom = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         bottom.AddThemeConstantOverride("separation", 12);
         Body.AddChild(bottom);
-        _ready = CuteStyle.Pill(Loc.T("1  READY"), CuteStyle.Mint, ToggleReady, 18);
-        _confirm = CuteStyle.Pill(Loc.T("2  CONFIRM"), CuteStyle.Butter, Confirm, 18);
-        _cancel = CuteStyle.Pill(Loc.T("Esc  CANCEL"), CuteStyle.Coral, Cancel, 18);
+        _ready = CuteStyle.Pill("", CuteStyle.Mint, ToggleReady, 18);
+        _confirm = CuteStyle.Pill("", CuteStyle.Butter, Confirm, 18);
+        _cancel = CuteStyle.Pill("", CuteStyle.Coral, Cancel, 18);
+        Hints.Watch(this, () => { if (IsOpen) Refresh(); });
+        Hints.Follow(_confirm, () => Loc.T(PadInput.UsingPad ? "CONFIRM" : "2  CONFIRM"));
+        Hints.Follow(_cancel, () => PadInput.UsingPad ? Loc.F("{0}  CANCEL", Keybinds.PadLabel(JoyButton.B)) : Loc.T("Esc  CANCEL"));
         foreach (Button b in new[] { _ready, _confirm, _cancel }) { b.CustomMinimumSize = new Vector2(170f, 44f); bottom.AddChild(b); }
         _status = CuteStyle.Text("", 15, InkC, HorizontalAlignment.Center);
         Body.AddChild(_status);
@@ -359,7 +366,8 @@ public sealed partial class TradePanel : ModalPanel
         bool pending = Net?.TradeDraftPending == true;
         bool iReady = TradeView.Ready[me], theyReady = TradeView.Ready[other];
         bool bothReady = iReady && theyReady;
-        _ready.Text = iReady ? Loc.T("1  NOT READY") : Loc.T("1  READY");
+        bool pad = PadInput.UsingPad;
+        _ready.Text = Loc.T(iReady ? (pad ? "NOT READY" : "1  NOT READY") : pad ? "READY" : "1  READY");
         CuteStyle.StylePill(_ready, CuteStyle.Mint, iReady);
         _ready.Disabled = Locked || pending || (!iReady && problems.Count > 0);
         _confirm.Disabled = Locked || pending || !bothReady || TradeView.Confirm[me];
