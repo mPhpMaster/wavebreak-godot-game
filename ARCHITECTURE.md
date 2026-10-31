@@ -516,6 +516,11 @@ comes back. The catalyst is not consumed. `EvolutionOffers.NextReady` is the onl
 place that decides, so the panel, the chest, auto-pick, the autopilot and the
 check cannot disagree.
 
+**Pairs pull.** One card in a pool of about a hundred turns up every few dozen
+hands, so seven upgrades on one weapon almost never happened. A held weapon
+draws its catalyst (x6) and a held catalyst draws its weapon's cards (x10), both
+in `EvolutionOffers.Pull`; a build with neither half rolls what it rolled before.
+
 **The card is not a weapon offer.** `Offer.Weapon` stays null and it has no
 `Source`, so it cannot level anything and cannot be banished; a reroll keeps it
 (`LevelUpChoices.Hand` re-adds it). The chest hand switches reroll, banish and
