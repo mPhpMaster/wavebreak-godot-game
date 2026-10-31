@@ -143,6 +143,7 @@ public static class Routes
         else stages = route.Id == "classic" && phases == Length ? Stages.Run : Build(route, seed, phases);
 
         stages = MapChallenges.Twist(stages);   // map challenge twist, on a copy of its map
+        EndlessMode.BindSeed(seed);
         Active = route;
         GD.Print($"META route={route.Id} maps={string.Join(",", stages.Select(s => s.Id))}");
         return stages;
@@ -216,6 +217,41 @@ public static class Routes
         var scaled = new List<StageDef>(maps.Count);
         for (int i = 0; i < maps.Count; i++) scaled.Add(Stages.ForPhase(maps[i], i, maps.Count));
         return scaled;
+    }
+
+    /// <summary>
+    /// The maps of Endless loop <paramref name="loop"/>: a pure function of the
+    /// first loop and the seed, so every machine holds the same list and a late
+    /// joiner can rebuild it from the count alone. Each loop takes the maps the
+    /// last one left out before any it played, in a fresh order that does not
+    /// reopen on the map it just closed on. Side maps stay on their own routes.
+    /// </summary>
+    public static IReadOnlyList<StageDef> ForLoop(IReadOnlyList<StageDef> firstLoop, ulong seed, int loop)
+    {
+        List<string> played = firstLoop.Select(s => s.Id).ToList();
+        for (int l = 1; l <= loop; l++)
+        {
+            var rng = new Rng(seed ^ 0xE1D1_E55UL ^ ((ulong)l * 0x9E3779B97F4A7C15UL));
+            List<string> fresh = Shuffled(Stages.All.Select(s => s.Id).Where(id => !played.Contains(id)).ToList(), rng);
+            List<string> again = Shuffled(Stages.All.Select(s => s.Id).Where(played.Contains).ToList(), rng);
+            List<string> next = Shuffled(fresh.Concat(again).Take(firstLoop.Count).ToList(), rng);
+            if (next.Count > 1 && next[0] == played[^1]) (next[0], next[^1]) = (next[^1], next[0]);
+            played = next;
+        }
+        var maps = new List<StageDef>(played.Count);
+        foreach (string id in played)
+            if (Stages.ById(id) is { } map) maps.Add(Stages.ForPhase(map, maps.Count, played.Count));
+        return maps;
+    }
+
+    private static List<string> Shuffled(List<string> ids, Rng rng)
+    {
+        for (int i = ids.Count - 1; i > 0; i--)
+        {
+            int j = rng.RangeInt(0, i + 1);
+            (ids[i], ids[j]) = (ids[j], ids[i]);
+        }
+        return ids;
     }
 
     /// <summary>"Thornmeadow → Rimeglass Plateau → Cinder Reach", or the draw rule.</summary>

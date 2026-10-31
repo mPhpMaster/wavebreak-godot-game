@@ -76,7 +76,7 @@ public sealed partial class StageDirector
     private EnemyDef? ChooseBoss() => PlannedBosses[Mathf.Clamp(_index, 0, _stages.Count - 1)];
 
     /// <summary>The boss of each map on the route, in order.</summary>
-    public EnemyDef?[] PlannedBosses => BossPlan.For(_stages, _roster, _run.Seed);
+    public EnemyDef?[] PlannedBosses => BossPlan.For(_stages, _roster, _run.Seed ^ ((ulong)RouteLoop * 0x9E3779B97F4A7C15UL));
 
     private void OnBossKilled()
     {
@@ -91,13 +91,17 @@ public sealed partial class StageDirector
 
         if (_index >= _stages.Count - 1 && Meta.EndlessMode.Active)
         {
-            // Endless: no win, no swarm. Raise the tier and go round again from
-            // map one, through a portal and rest room like any other map.
-            Meta.DifficultyTier next = Meta.EndlessMode.NextLoop();
-            Log($"endless loop {Meta.EndlessMode.Loop} cleared; next tier {next.Id}");
-            EventBus.Publish(new PopupRequested(_player.GlobalPosition + new Vector3(0f, 3.2f, 0f),
-                Meta.Loc.F("LOOP {0} CLEARED  ·  {1}", Meta.EndlessMode.Loop, Meta.Loc.T(next.Name)), new Color(1f, 0.55f, 0.3f), 1.6f));
-            _loopRestart = true;   // the portal and rest room lead back to map one
+            // Endless: no win, no swarm. Raise the tier and go round again on a
+            // new set of maps, through a portal and rest room like any other map.
+            // A late joiner replaying this already holds the host's count.
+            if (!_catchingUp)
+            {
+                Meta.DifficultyTier next = Meta.EndlessMode.NextLoop();
+                Log($"endless loop {Meta.EndlessMode.Loop} cleared; next tier {next.Id}");
+                EventBus.Publish(new PopupRequested(_player.GlobalPosition + new Vector3(0f, 3.2f, 0f),
+                    Meta.Loc.F("LOOP {0} CLEARED  ·  {1}", Meta.EndlessMode.Loop, Meta.Loc.T(next.Name)), new Color(1f, 0.55f, 0.3f), 1.6f));
+            }
+            _loopRestart = true;   // the portal and rest room lead to the next loop's first map
         }
         else if (_index >= _stages.Count - 1)
         {

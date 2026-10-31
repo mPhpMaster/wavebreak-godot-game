@@ -317,7 +317,7 @@ public sealed partial class EnemyManager : Node3D
         // the first tick. At 40 that was forty enemies in the first second, which
         // no amount of live-cap tuning downstream can undo.
         float bank = (10f + minutes * 26f) * SpawnRateScale * Meta.DifficultyTiers.Active.SpawnRate * Meta.Challenges.SpawnRate
-                     * Net.CoopScaling.SpawnRate(Net.CoopScaling.Living);
+                     * Net.CoopScaling.SpawnRate(Net.CoopScaling.Living) * Meta.EndlessMode.SpawnRate;
         if (_credits > bank) _credits = bank;
 
         UpdateWaves(runSeconds);

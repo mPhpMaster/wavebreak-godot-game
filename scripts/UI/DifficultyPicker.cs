@@ -78,7 +78,7 @@ public sealed partial class DifficultyPicker : VBoxContainer
             : Loc.T("ENDLESS  ·  OFF");
         _endless.AddThemeColorOverride("font_color", EndlessMode.Selected ? Nightmare : InkDim);
         if (EndlessMode.Selected)
-            note = Loc.T("Endless: starts on Normal, loops the maps forever, one tier harder every loop.");
+            note = Loc.T("Endless: starts on Normal. Every loop brings new maps, one tier harder and one random twist.");
         _note.Text = note;
     }
 }

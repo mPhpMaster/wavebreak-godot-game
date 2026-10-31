@@ -69,7 +69,42 @@ public static class RunLengthCheck
         Expect("Abyss has 6 phases (every map)", Routes.PhasesFor(DifficultyTiers.ById("abyss")!) == 6);
         Expect("the long map order includes Stormwatch Harbour", System.Array.IndexOf(Stages.LongOrder, "stormwatch") >= 0);
         CheckBossPlans(Expect);
+        CheckEndlessLoops(Expect);
         GD.Print(ok ? "PHASES PASS" : "PHASES FAIL");
+    }
+
+    /// <summary>Endless loops over many seeds: every loop has the run's length,
+    /// no map twice, changes the set and the opening map, and rolls a twist that
+    /// is not the one before it; the same seed gives the same loops.</summary>
+    private static void CheckEndlessLoops(Action<string, bool> expect)
+    {
+        IReadOnlyList<StageDef> first = Routes.Build(Routes.All[0], 7UL, Routes.PhasesFor(DifficultyTiers.All[0]));
+        bool lengths = true, distinct = true, moved = true, reopens = false, twists = true, repeatable = true;
+        var seen = new HashSet<string>();
+        for (ulong seed = 1; seed <= 40; seed++)
+        {
+            IReadOnlyList<StageDef> last = first;
+            LoopMutation? twist = null;
+            for (int loop = 1; loop <= 12; loop++)
+            {
+                IReadOnlyList<StageDef> maps = Routes.ForLoop(first, seed, loop);
+                lengths &= maps.Count == first.Count;
+                distinct &= maps.Select(m => m.Id).Distinct().Count() == maps.Count;
+                moved &= !maps.Select(m => m.Id).ToHashSet().SetEquals(last.Select(m => m.Id));
+                reopens |= maps[0].Id == last[^1].Id;
+                repeatable &= maps.Select(m => m.Id).SequenceEqual(Routes.ForLoop(first, seed, loop).Select(m => m.Id));
+                LoopMutation? now = EndlessMode.MutationFor(seed, loop);
+                twists &= now is not null && now != twist;
+                if (now is not null) seen.Add(now.Id);
+                twist = now;
+                last = maps;
+            }
+        }
+        expect($"endless: 40 seeds x 12 loops: length={lengths} distinct={distinct} set changes={moved} reopens on the last map={reopens} " +
+               $"twist each loop={twists} repeatable={repeatable}; {seen.Count}/{EndlessMode.Mutations.Count} twists seen",
+               lengths && distinct && moved && !reopens && twists && repeatable && seen.Count == EndlessMode.Mutations.Count);
+        expect("endless: the first pass has no twist", EndlessMode.MutationFor(7UL, 0) is null);
+        GD.Print($"PHASES endless seed 7 loop 1: {string.Join(",", Routes.ForLoop(first, 7UL, 1).Select(m => m.Id))}  loop 2: {string.Join(",", Routes.ForLoop(first, 7UL, 2).Select(m => m.Id))}");
     }
 
     /// <summary>Boss plans over many seeds: repeatable, varied, tiers never

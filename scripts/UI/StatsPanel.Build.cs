@@ -91,6 +91,12 @@ public sealed partial class StatsPanel
             _build.AddChild(Text($"{c.RerollsLeft} · {c.BanishesLeft} · {c.SkipsLeft}", 14, Dim));
         }
 
+        if (EndlessMode.MutationBanner is { Length: > 0 } loop)
+        {
+            Section(_build, "This loop");
+            _build.AddChild(Text(loop, 14, Dim));
+        }
+
         if (Loc.IsRtl)
             foreach (Node n in _build.GetChildren())
                 if (n is Label l) l.HorizontalAlignment = HorizontalAlignment.Right;

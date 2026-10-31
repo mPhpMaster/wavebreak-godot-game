@@ -53,14 +53,15 @@ public sealed partial class StageDirector
         State = PhaseState.Waves;
         Log($"phase {index + 1}/{_stages.Count} '{stage.DisplayName}' begins (boss in {PhaseLength:0}s, " +
             $"hp x{stage.EnemyHealthScale:0.00} dmg x{stage.EnemyDamageScale:0.00} spd x{stage.EnemySpeedScale:0.00})");
-        EventBus.Publish(new PhaseStarted(index + 1, _stages.Count, stage.Id, stage.DisplayName, stage.Tagline));
+        string banner = Meta.EndlessMode.MutationBanner;   // an Endless loop says what it changed
+        EventBus.Publish(new PhaseStarted(index + 1, _stages.Count, stage.Id, stage.DisplayName, banner.Length > 0 ? banner : stage.Tagline));
         if (Net.Coop.IsHost) Net.NetSession.Instance?.SendPhase(index);
         if (Net.Coop.InRun) Net.NetSession.Instance?.PlaceRemotes(first);
         GrantMapRefills();
     }
 
     /// <summary>Maps behind the player: what the level-up refills count.</summary>
-    public int MapsCleared => Mathf.Max(0, _index);
+    public int MapsCleared => RouteLoop * _stages.Count + Mathf.Max(0, _index);
 
     /// <summary>A new map tops up the level-up controls, on every machine for
     /// its own player; the amount is shown over the player on arrival.</summary>

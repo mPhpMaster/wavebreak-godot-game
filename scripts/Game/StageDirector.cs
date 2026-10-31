@@ -68,6 +68,7 @@ public sealed partial class StageDirector
     private readonly Player _player;
     private readonly PlayerCamera _camera;
     private IReadOnlyList<StageDef> _stages;
+    private readonly IReadOnlyList<StageDef> _firstLoop;
     private readonly IReadOnlyList<EnemyDef> _roster;
 
     private int _index = -1;
@@ -85,6 +86,7 @@ public sealed partial class StageDirector
     private readonly float _phaseSecondsOverride;
     private readonly int _startPhase;
     private float _openPortalAt;
+    private readonly float _openPortalEvery;   // N s into every map, for loop tests
 
     public PhaseState State { get; private set; } = PhaseState.Waves;
 
@@ -147,7 +149,7 @@ public sealed partial class StageDirector
         _enemies = enemies;
         _player = player;
         _camera = camera;
-        _stages = stages;
+        _stages = _firstLoop = stages;
         _roster = roster;
 
         foreach (string arg in OS.GetCmdlineUserArgs())
@@ -158,6 +160,8 @@ public sealed partial class StageDirector
                 _startPhase = arg["--start-phase=".Length..].ToInt();
             else if (arg.StartsWith("--open-portal-at="))
                 _openPortalAt = arg["--open-portal-at=".Length..].ToFloat();
+            else if (arg.StartsWith("--open-portal-every="))
+                _openPortalEvery = arg["--open-portal-every=".Length..].ToFloat();
             else if (arg.StartsWith("--portal-seconds="))
                 _portalSecondsOverride = arg["--portal-seconds=".Length..].ToFloat();
         }
@@ -249,6 +253,13 @@ public sealed partial class StageDirector
         if (_openPortalAt > 0f && _run.Seconds >= _openPortalAt && State is PhaseState.Waves or PhaseState.Boss)
         {
             _openPortalAt = 0f;
+            _boss?.Despawn();
+            OnBossKilled();
+            return;
+        }
+
+        if (_openPortalEvery > 0f && _run.PhaseSeconds >= _openPortalEvery && State is PhaseState.Waves or PhaseState.Boss)
+        {
             _boss?.Despawn();
             OnBossKilled();
             return;

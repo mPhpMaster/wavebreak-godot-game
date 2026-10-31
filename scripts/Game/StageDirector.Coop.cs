@@ -18,6 +18,7 @@ public sealed partial class StageDirector
     {
         if (index == _index || index < 0 || index >= _stages.Count) return;
         Log($"host moved to phase {index + 1}");
+        if (_loopRestart && index == 0) NextIndex();   // no rest room (--no-rest-room): a new loop's list
         EnterPhase(index);
     }
 

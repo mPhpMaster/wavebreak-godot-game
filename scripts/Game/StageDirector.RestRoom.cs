@@ -164,16 +164,31 @@ public sealed partial class StageDirector
         }
     }
 
-    /// <summary>The map after this one; back to the first after an endless
-    /// loop's last boss (which also clears the flag).</summary>
+    /// <summary>The map after this one; after an endless loop's last boss, the
+    /// first map of the next loop's list (which also clears the flag). The list
+    /// changes here, not at the kill: the map just cleared stays
+    /// <see cref="Stage"/> for as long as its portal is open.</summary>
     private int NextIndex()
     {
         if (!_loopRestart) return _index + 1;
         _loopRestart = false;
+        UseRouteOfLoop(Mathf.Max(RouteLoop, Meta.EndlessMode.Loop));
         return 0;
     }
 
     private bool _loopRestart;
+
+    /// <summary>The Endless loop whose map list is in use: one behind
+    /// <see cref="Meta.EndlessMode.Loop"/> while the last boss's portal is open.</summary>
+    public int RouteLoop { get; private set; }
+
+    private void UseRouteOfLoop(int loop)
+    {
+        if (loop == RouteLoop) return;
+        RouteLoop = loop;
+        _stages = Meta.Routes.ForLoop(_firstLoop, _run.Seed, loop);
+        Log($"endless maps for loop {loop}: {string.Join(",", System.Linq.Enumerable.Select(_stages, s => s.Id))}");
+    }
 
     private void LeaveRestRoom(string why)
     {
@@ -205,7 +220,7 @@ public sealed partial class StageDirector
     /// clearing phase <paramref name="clearedIndex"/> + 1.</summary>
     public void NetRestRoom(int clearedIndex)
     {
-        if (State == PhaseState.RestRoom || clearedIndex < 0 || clearedIndex >= _stages.Count - 1) return;
+        if (State == PhaseState.RestRoom || clearedIndex < 0 || (clearedIndex >= _stages.Count - 1 && !_loopRestart)) return;
         if (clearedIndex != _index)
         {
             // A missed Phase message: line the index up before entering.

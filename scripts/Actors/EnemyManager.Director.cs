@@ -81,7 +81,7 @@ public sealed partial class EnemyManager
     private float CreditRate(float minutes)
         => MathF.Max(0.1f, (BaseCreditRate + minutes * CreditRateGrowth) * PlayerRef.EnemyScaling
                            * SpawnRateScale * Meta.DifficultyTiers.Active.SpawnRate * Meta.Challenges.SpawnRate
-                           * Net.CoopScaling.SpawnRate(Net.CoopScaling.Living));
+                           * Net.CoopScaling.SpawnRate(Net.CoopScaling.Living) * Meta.EndlessMode.SpawnRate);
 
     /// <summary>
     /// Concurrent enemies allowed at a given point in the run.
@@ -99,7 +99,7 @@ public sealed partial class EnemyManager
     /// </summary>
     private int LiveCap(float minutes)
         => Game.Arena.IsCity ? 4 : Math.Max(6, (int)(Math.Min(MaxAlive, (int)((10 + (int)(minutes * 13f * Meta.DifficultyTiers.Active.Crowd)) * Meta.Challenges.Crowd
-                                                                     * Net.CoopScaling.Crowd(Net.CoopScaling.Living))) * LiveCapScale));
+                                                                     * Net.CoopScaling.Crowd(Net.CoopScaling.Living) * Meta.EndlessMode.Crowd)) * LiveCapScale));
 
     /// <summary>
     /// Difficulty over time.
@@ -118,19 +118,19 @@ public sealed partial class EnemyManager
 
         // The run's difficulty tier (Meta.DifficultyTiers) rides on top; Normal is 1.
         Meta.DifficultyTier tier = Meta.DifficultyTiers.Active;
-        DifficultyHp = (1f + minutes * 0.34f) * MathF.Pow(1.075f, minutes) * scaling * PhaseHealthScale * tier.Health * Meta.Challenges.EnemyHealth
-                       * Net.CoopScaling.Health(Net.CoopScaling.Connected);
-        DifficultyDamage = (1f + minutes * 0.16f) * scaling * PhaseDamageScale * tier.Damage * Meta.Challenges.EnemyDamage;
+        DifficultyHp = (1f + minutes * 0.34f) * MathF.Pow(1.075f, Meta.EndlessMode.ClockMinutes(minutes)) * scaling * PhaseHealthScale * tier.Health
+                       * Meta.Challenges.EnemyHealth * Net.CoopScaling.Health(Net.CoopScaling.Connected) * Meta.EndlessMode.Health;
+        DifficultyDamage = (1f + minutes * 0.16f) * scaling * PhaseDamageScale * tier.Damage * Meta.Challenges.EnemyDamage * Meta.EndlessMode.Damage;
         // The phase factor goes on after the cap: the cap is about the clock
         // never outpacing kiting, and a later map is allowed to be a step faster.
-        DifficultySpeed = MathF.Min(1f + minutes * 0.022f, 1.45f) * PhaseSpeedScale * Meta.Challenges.EnemySpeed;
+        DifficultySpeed = MathF.Min(1f + minutes * 0.022f, 1.45f) * PhaseSpeedScale * Meta.Challenges.EnemySpeed * Meta.EndlessMode.Speed;
     }
 
     private void UpdateWaves(float runSeconds)
     {
         if (runSeconds >= _nextEliteAt)
         {
-            _nextEliteAt = runSeconds + EliteWaveInterval;
+            _nextEliteAt = runSeconds + EliteWaveInterval * Meta.EndlessMode.EliteInterval;
             if (HasSpawnable(elite: true, runSeconds))
             {
                 _eliteWaveUntil = runSeconds + EliteWaveDuration;

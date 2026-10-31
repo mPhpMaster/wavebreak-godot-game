@@ -57,6 +57,8 @@ public sealed partial class NetSession
     private static bool _awaitTitle;
     private static string? _titleShot;
 
+    private int _testExpectLoop;   // --coop-expect-loop=N: an Endless run reached loop N
+
     /// <summary>True when the command line asks for an automated co-op session.</summary>
     public static bool AutoRequested()
     {
@@ -121,6 +123,7 @@ public sealed partial class NetSession
             else if (arg.StartsWith("--coop-hat=")) TestHat = arg["--coop-hat=".Length..];
             else if (arg.StartsWith("--coop-levelup-at=")) s._testLevelUpAt = arg["--coop-levelup-at=".Length..].ToFloat();
             else if (arg == "--coop-check-perks") s._testCheckPerks = true;   // NetSession.Perks.cs
+            else if (arg.StartsWith("--coop-expect-loop=")) s._testExpectLoop = arg["--coop-expect-loop=".Length..].ToInt();
         }
         if (PlayerName == DefaultName()) PlayerName = s._testRole == "host" ? "Host" : "Guest";
         GD.Print($"[coop-test] role={s._testRole} players={s._testPlayers} seconds={s._testSeconds}");
@@ -332,6 +335,11 @@ public sealed partial class NetSession
         line += " " + AwarenessTestCheck(role, problems);   // NetSession.Awareness.cs
         line += " " + PerkTestCheck(role, problems);        // NetSession.Perks.cs
         line += HeroTestCheck(problems);                     // NetSession.Test.Heroes.cs
+        if (_testExpectLoop > 0)
+        {
+            if (!Meta.EndlessMode.Active || Meta.EndlessMode.Loop < _testExpectLoop) problems.Add($"endless loop {Meta.EndlessMode.Loop}, wanted {_testExpectLoop}");
+            line += $" endless_loop={Meta.EndlessMode.Loop} route_loop={_main?.Stages.RouteLoop} mutation={Meta.EndlessMode.Mutation?.Id ?? "none"} tier={Meta.DifficultyTiers.Active.Id}";
+        }
         GD.Print(problems.Count == 0 ? $"COOP PASS {line}" : $"COOP FAIL {line} reason=\"{string.Join("; ", problems)}\"");
         if (_main is not null && IsInstanceValid(_main)) GD.Print(_main.Summary());
 
