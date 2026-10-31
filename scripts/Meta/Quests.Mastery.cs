@@ -74,7 +74,7 @@ public static partial class Quests
 
     public static bool IsMasteryRunMetric(Metric m) => m is Metric.RunFreezes or Metric.RunMegacrits
         or Metric.RunMerchantBuys or Metric.RunPots or Metric.RunGreed or Metric.RunDashes
-        or Metric.SwarmSeconds or Metric.RunTomesMaxed;
+        or Metric.SwarmSeconds or Metric.RunTomesMaxed or Metric.RunEvolutions;
 
     private static string[]? _mapKeys, _challengeKeys;
 
@@ -115,6 +115,7 @@ public static partial class Quests
         Metric.WeaponMaxed or Metric.TomeMaxed or Metric.Feat => -1,
         Metric.MapsCleared => DistinctPositive(MapKeys),
         Metric.ChallengesWon => DistinctPositive(ChallengeKeys),
+        Metric.EvolutionsFound => Profile.FoundEvolutions.Count,
         _ when u.StatKey.Length > 0 => Profile.Get(u.StatKey),
         _ => -1,
     };
@@ -341,6 +342,12 @@ public static class MasteryQuests
         list.Add(P("qm_level_40", "Brimming", "Reach level 40 in a single run.", Metric.RunLevel, 40, 100));
         list.Add(P("qm_stacks_25", "Overloaded", "Hold 25 items at once.", Metric.RunItemStacks, 25, 80));
         list.Add(P("qm_tomes_3", "Library at Sea", "Have 3 tomes at max level in a single run.", Metric.RunTomesMaxed, 3, 80));
+
+        // ---- evolutions (Data/Evolutions.cs)
+        list.Add(P("qm_evo_1", "High Water Mark", "Evolve a weapon.", Metric.EvolutionsFound, 1, 60));
+        list.Add(P("qm_evo_8", "Changing Tide", "Discover 8 evolutions.", Metric.EvolutionsFound, 8, 150));
+        list.Add(P("qm_evo_all", "Every Shape of Water", "Discover every evolution.", Metric.EvolutionsFound, Evolutions.All.Count, 400));
+        list.Add(P("qm_evo_run3", "Arsenal of the Deep", "Hold 3 evolved weapons in a single run.", Metric.RunEvolutions, 3, 120));
 
         // ---- secrets
         list.Add(P("qm_feat_nochest", "Empty Hold", "Win a run without opening a chest.", Metric.Feat, 1, 150, Quests.FeatNoChestWin,

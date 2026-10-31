@@ -36,6 +36,9 @@ public sealed class WeaponRuntime
     /// and a wider swing is the honest translation.</summary>
     private const float MeleeArcPerExtraShot = 14f;
 
+    /// <summary>Seconds between a volley and its Echo rider's second go.</summary>
+    private const float EchoDelay = 0.22f;
+
     // Shared across weapons: only one weapon resolves targets at a time, and the
     // list is fully consumed before the next call.
     private static readonly List<IDamageable> Targets = new(64);
@@ -59,7 +62,15 @@ public sealed class WeaponRuntime
     }
 
     /// <summary>What this weapon is.</summary>
-    public WeaponDef Def { get; }
+    public WeaponDef Def { get; private set; }
+
+    /// <summary>The evolution this weapon took, or null (Data/Evolutions.cs).</summary>
+    public EvolutionDef? Evolution { get; private set; }
+
+    /// <summary>True while an Echo rider's second volley resolves.</summary>
+    internal bool Echoing { get; private set; }
+
+    private float _echoLeft;
 
     /// <summary>1-based, capped at <see cref="WeaponDef.MaxLevel"/>.</summary>
     public int Level { get; private set; } = 1;
@@ -106,6 +117,17 @@ public sealed class WeaponRuntime
         return true;
     }
 
+    /// <summary>Become the evolved form: the same id, level and rolled upgrades
+    /// with the evolved numbers. A persistent aura is rebuilt in the new colour.</summary>
+    internal void Evolve(EvolutionDef evolution)
+    {
+        if (Evolution is not null) return;
+        Dispose();
+        Evolution = evolution;
+        Def = evolution.Evolve(Def);
+        _cooldown = 0f;
+    }
+
     // ------------------------------------------------------------------ tick
 
     internal void Tick(float dt, WeaponSystem system)
@@ -124,6 +146,13 @@ public sealed class WeaponRuntime
             return;
         }
         if (_auraRoot is not null && GodotObject.IsInstanceValid(_auraRoot)) _auraRoot.Visible = true;
+
+        if (_echoLeft > 0f && (_echoLeft -= dt) <= 0f)
+        {
+            Echoing = true;
+            Fire(system, stats);
+            Echoing = false;
+        }
 
         int fired = 0;
         while (_cooldown <= 0f && fired < MaxShotsPerTick)
@@ -154,6 +183,13 @@ public sealed class WeaponRuntime
             default:
                 FireProjectiles(system, stats);
                 break;
+        }
+
+        // Evolved weapons: the rider's volley half, and an Echo's second go.
+        if (Evolution is { } evolution)
+        {
+            Weapons.EvolutionRiders.OnVolley(this, system, stats);
+            if (evolution.Rider == EvolutionRider.Echo && !Echoing) _echoLeft = EchoDelay;
         }
 
         // Announced after the shot resolves, so a listener sees the same muzzle

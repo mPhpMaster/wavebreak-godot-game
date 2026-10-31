@@ -41,6 +41,7 @@ public sealed partial class Main : Node3D
     public StageDirector Stages => _stages;
     public UI.LevelUpPanel LevelUp => _levelUp;
     public UI.Hud Hud => _hud;
+    internal global::Wavebreak.Audio.AudioDirector AudioForTest => _audio;
     public UI.ResultsScreen Results => _results;
 
     private bool _loading;
@@ -141,6 +142,8 @@ public sealed partial class Main : Node3D
             _ = TotemCheck.Run(this);                // --check-totem / --totem-shot= (Tide Totems)
         else if (Trade.TradeCheck.Requested())
             _ = Trade.TradeCheck.Run(this);          // --check-trade (swap meet rules and escrow)
+        else if (EvolutionCheck.Requested)
+            _ = EvolutionCheck.Run(this);            // --check-evolutions
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--map-tour=")) is { } tourArg)
             _ = MapTour(tourArg["--map-tour=".Length..]);   // Main.MapTour.cs
     }
@@ -339,6 +342,7 @@ public sealed partial class Main : Node3D
             if (arg.StartsWith("--give=") && Meta.Launch.DevAllowed)
                 foreach (string id in arg["--give=".Length..].Split(','))
                     if (id == "all_items") foreach (ItemDef item in Catalog.Items) _inventory.Add(item);
+                    else if (Evolutions.ById(id) is { } evolution) GiveEvolved(evolution);
                     else if (Catalog.WeaponById(id) is { } def) _weapons.DevMax(def);
                     else if (Tomes.ById(id) is { } tome && Progression.TomeBook.Current is { } book) while (book.Add(tome)) { }
         // Map shrines (charge, challenge, statue, greed); same lifetime as chests.
@@ -349,6 +353,16 @@ public sealed partial class Main : Node3D
             var bot = new Autopilot(_player);
             _player.MoveOverride = bot.Think;
         }
+    }
+
+    /// <summary>--give=&lt;evolution id&gt;: its weapon at max, its catalyst, and the
+    /// evolution taken.</summary>
+    private void GiveEvolved(EvolutionDef evolution)
+    {
+        if (Catalog.WeaponById(evolution.WeaponId) is { } weapon) _weapons.DevMax(weapon);
+        if (Tomes.ById(evolution.CatalystId) is { } tome) Progression.TomeBook.Current?.Add(tome);
+        else _inventory.Add(Catalog.ItemById(evolution.CatalystId));
+        _weapons.Evolve(evolution);
     }
 
     public override void _Process(double delta)
@@ -375,7 +389,7 @@ public sealed partial class Main : Node3D
 
     private void OnLevelGained(LevelGained e)
     {
-        var choices = _offers.Roll(3, _weapons, _inventory, _player.Stats);
+        var choices = Progression.LevelUpChoices.Current!.Hand();
         if (choices.Count == 0) return;
 
         if (CatchUpPicks > 0)
@@ -398,10 +412,21 @@ public sealed partial class Main : Node3D
 
     private void Choose(Progression.Offer offer)
     {
-        if (offer.Weapon is not null) _weapons.Add(offer.Weapon, offer.Upgrade);
+        if (offer.Evolution is not null) _weapons.Evolve(offer.Evolution);
+        else if (offer.Weapon is not null) _weapons.Add(offer.Weapon, offer.Upgrade);
         else if (offer.Item is not null) _inventory.Add(offer.Item);
         else if (offer.Tome is not null) Progression.TomeBook.Current?.Add(offer.Tome);
         else offer.Apply(_player, _inventory);
+    }
+
+    /// <summary>A chest has paid out: if a weapon is ready, offer its evolution
+    /// now, with a way to say no. The chest's own reward is already in hand, so
+    /// this hand has no reroll, banish or skip.</summary>
+    public void OfferEvolutionAtChest()
+    {
+        if (Progression.EvolutionOffers.ChestHand(_weapons, _inventory, Progression.TomeBook.Current) is not { } hand) return;
+        if (Screenshot.Auto) Choose(hand[0]);
+        else _levelUp.ShowChestEvolution(hand, Choose);
     }
 
     private void OnRunEnded(RunEnded e)
@@ -427,7 +452,7 @@ public sealed partial class Main : Node3D
         $"phase={Run.Phase} phases={Run.PhaseCount} stage={Run.StageId} phasestate={_stages.State} " +
         $"{Meta.RunRewards.SummaryFields} " +
         $"{Interactables.Instance?.SummaryFields} " +
-        $"{ShrineSpawner.Instance?.SummaryFields}";
+        $"{ShrineSpawner.Instance?.SummaryFields} evolved={_weapons.EvolvedCount}";
 
     private async System.Threading.Tasks.Task RunScreenshot()
     {

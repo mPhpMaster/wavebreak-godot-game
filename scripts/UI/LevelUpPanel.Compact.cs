@@ -275,12 +275,12 @@ public sealed partial class LevelUpPanel
 
     private void FillCompact(Card card, Offer offer, int index)
     {
-        Color colour = Catalog.RarityColor(offer.Rarity);
+        Color colour = offer.IsEvolution ? EvolutionGold : Catalog.RarityColor(offer.Rarity);
         card.Stripe.Color = colour;
         card.Icon.Set(Icons.For(offer), colour);
         card.Title.Text = Loc.T(offer.Title);
         card.Title.AddThemeColorOverride("font_color", offer.Tint.Lerp(Ink, 0.35f));
-        card.Rarity.Text = $"{Loc.T(Catalog.RarityName(offer.Rarity))}  {Loc.T(KindOf(offer))}";
+        card.Rarity.Text = RarityLine(offer);
         card.Rarity.AddThemeColorOverride("font_color", colour);
         card.Stats.Text = EffectText(offer);
         card.Base = offer.Rarity switch
@@ -289,6 +289,7 @@ public sealed partial class LevelUpPanel
             Rarity.Epic => new Color(0.13f, 0.09f, 0.18f, 0.90f),
             _ => CardBack with { A = 0.86f },
         };
+        if (offer.IsEvolution) card.Base = EvolutionBack with { A = 0.92f };
         Paint(card, false);
         card.Button.TooltipText = $"{index + 1}. {Loc.T(offer.Title)} — {offer.Effect}\n{Loc.T(offer.Description)}";
     }

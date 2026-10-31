@@ -25,6 +25,8 @@ public sealed partial class UnlockTracker
     private float _swarmFrom = -1f;
     private bool _victory;
     private bool _quietChecked;
+    private int _runEvolutions;
+    private readonly HashSet<string> _readyAnnounced = new();
     private readonly HashSet<string> _maxedWeapons = new();
     private readonly HashSet<string> _maxedTomes = new();
     private readonly HashSet<string> _feats = new();
@@ -38,6 +40,8 @@ public sealed partial class UnlockTracker
         EventBus.Subscribe<PlayerMoved>(OnMasteryMoved);
         EventBus.Subscribe<WeaponAcquired>(OnMasteryWeapon);
         EventBus.Subscribe<TomeAcquired>(OnMasteryTome);
+        EventBus.Subscribe<ItemAcquired>(OnMasteryItem);
+        EventBus.Subscribe<WeaponEvolved>(OnMasteryEvolved);
         EventBus.Subscribe<PortalOpened>(OnMasteryPortal);
         EventBus.Subscribe<FinalBossDefeated>(OnMasteryFinalBoss);
     }
@@ -48,6 +52,8 @@ public sealed partial class UnlockTracker
         EventBus.Unsubscribe<PlayerMoved>(OnMasteryMoved);
         EventBus.Unsubscribe<WeaponAcquired>(OnMasteryWeapon);
         EventBus.Unsubscribe<TomeAcquired>(OnMasteryTome);
+        EventBus.Unsubscribe<ItemAcquired>(OnMasteryItem);
+        EventBus.Unsubscribe<WeaponEvolved>(OnMasteryEvolved);
         EventBus.Unsubscribe<PortalOpened>(OnMasteryPortal);
         EventBus.Unsubscribe<FinalBossDefeated>(OnMasteryFinalBoss);
     }
@@ -79,12 +85,32 @@ public sealed partial class UnlockTracker
     {
         WeaponDef? def = Catalog.WeaponById(e.Id) ?? MetaContent.WeaponById(e.Id);
         if (def is not null && e.NewLevel >= def.MaxLevel) _maxedWeapons.Add(e.Id);
+        NoteEvolutionReady();
     }
 
     private void OnMasteryTome(TomeAcquired e)
     {
         TomeDef? def = Tomes.ById(e.Id);
         if (def is not null && e.NewLevel >= def.MaxLevel) _maxedTomes.Add(e.Id);
+        NoteEvolutionReady();
+    }
+
+    private void OnMasteryItem(ItemAcquired e) => NoteEvolutionReady();
+
+    /// <summary>The discovery is the profile's on the spot, not at run end: a
+    /// player who quits the run has still seen it.</summary>
+    private void OnMasteryEvolved(WeaponEvolved e)
+    {
+        _runEvolutions++;
+        if (Profile.DiscoverEvolution(e.EvolutionId)) Profile.Save();
+    }
+
+    /// <summary>Say once per weapon that its pair has come together.</summary>
+    private void NoteEvolutionReady()
+    {
+        if (_main is null || !IsInstanceValid(_main) || _main.Weapons is null) return;
+        if (EvolutionOffers.NextReady(_main.Weapons, _main.Inventory, TomeBook.Current) is { } e && _readyAnnounced.Add(e.Id))
+            EventBus.Publish(new EvolutionReady(e.Id));
     }
 
     private void OnMasteryPortal(PortalOpened e) => NoteMapClear();
@@ -191,6 +217,8 @@ public sealed partial class UnlockTracker
             Metric.TotalElites => stored + (live ? run.Elites : 0),
             Metric.TotalGoldEarned => stored + (live ? _goldEarned : 0),
             Metric.RunTomesMaxed => _maxedTomes.Count,
+            Metric.EvolutionsFound => Profile.FoundEvolutions.Count,
+            Metric.RunEvolutions => _runEvolutions,
             _ => float.NaN,
         };
         return !float.IsNaN(value);

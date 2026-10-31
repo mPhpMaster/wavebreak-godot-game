@@ -68,6 +68,8 @@ public sealed partial class PerkProcs : Node
         node._rng = new Rng(main.Run.Seed ^ 0x9E2C_51A7UL);
         Instance = node;
         Net.PerkNet.Reset();
+        Net.EvolutionNet.Reset();
+        EvolutionRiders.Reset();
         TeamBeaconSeconds = 0f;
         main.AddChild(node);
         PerksCheck.MaybeStart(main, node);   // --check-perks, --perk-levelup-shot=

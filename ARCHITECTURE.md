@@ -135,7 +135,7 @@ Useful test flags (all after `--`):
 |---|---|
 | `--auto --invulnerable --seed=N` | autopilot run that cannot die |
 | `--phase-seconds=N` / `--start-phase=N` | shorter phases / start on a later map |
-| `--give=id,id` | start holding these weapons and tomes at max; `all_items` adds one of every item |
+| `--give=id,id` | start holding these weapons and tomes at max; `all_items` adds one of every item; an evolution id gives its weapon, its catalyst and the evolution |
 | `--check-perks [--check-perks-shot=x.png]`, `--perk-levelup-shot=x.png` | perks: every perk at max, each trigger made to happen, `PERKS PASS/FAIL`; a hand of perk cards (see "Perks") |
 | `--perf` | every 5 s: FPS, CPU/GPU render ms, draw calls, nodes, live enemies, per-system ms (`Game/Prof`), and a node census every 30 s |
 | `--levelup-shot=x.png`, `--menu-shot=x.png --menu-page=<page>`, `--panel-shot=<prefix>` | capture screens |
@@ -143,6 +143,7 @@ Useful test flags (all after `--`):
 | `--map-tour=<prefix>` | photograph the current map: the start facing N/E/S/W, each zone, the Tab big map, the minimap, an overhead view; use with `--route=beacon` (Stormwatch Harbour first) |
 | `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
 | `--check-totem`, `--totem-shot=<prefix>` | Tide Totem self-check (`TOTEM PASS`; no `--auto`, add `--invulnerable`) and its captures (see "Tide Totems") |
+| `--check-evolutions [--check-evolutions-shot=x.png]` | weapon evolutions: one end to end through the real panel and a real chest, then every row measured against its max-level weapon, `EVOLVE PASS/FAIL` (see "Weapon evolutions") |
 | `--check-trade`, `--swap-meet`, `--rest-exit-seconds=N` | swap meet: rules and escrow self-check (`TRADE PASS`), build the stall in single-player (captures), shorten the co-op rest room's countdown (see "Swap meet") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
 | `--coop-expect-migration`, `--coop-no-migrate`, `--coop-late-join`, `--coop-expect-late-join`, `--coop-toast-shot=x.png`, `--coop-mark-file=P --coop-mark-at=S` | host migration and late-join checks (see "Host migration and late join") |
@@ -373,7 +374,9 @@ boss, a forfeit before it.
   weapon ledger only ever goes up (it never forgets a weapon), and a player
   could trade away their only weapon. Moving the rolled upgrades faithfully
   would need a weapon serialisation format for this one feature; the window
-  says "Weapons are not traded."
+  says "Weapons are not traded." That covers evolved weapons too. A catalyst
+  trades like any item or tome: an evolved weapon stays evolved without it,
+  and one still waiting loses its offer, which the tile's tooltip warns about.
 - **Executing without duplication.** Each machine owns its own inventory
   (see "Who owns what"), so the host cannot rewrite both. It runs an escrow:
   `TradeEscrow` asks each side to re-check against its live inventory, remove
@@ -496,6 +499,68 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   Secrets / Characters / Challenges / Shrines & Tomes) by toggling visibility;
   Q/E, Page Up/Down or the shoulder buttons switch tabs. `ContentAudit.Quests`
   checks ids, rewards, keys and the six-skins-per-character floor.
+
+## Weapon evolutions
+
+`Data/Evolutions.cs` (the table), `Combat/Weapons/EvolutionRiders.cs`,
+`Progression/Offer.Evolution.cs`, `Net/NetSession.Evolutions.cs`,
+`Net/RemotePlayer.Evolution.cs`, `UI/Codex.Evolutions.cs`,
+`Audio/AudioDirector.Evolution.cs`, `Game/EvolutionCheck.cs`,
+`Data/ContentAudit.Evolutions.cs`.
+
+**The one rule.** A weapon at max level plus its catalyst (a tome or an item,
+any level, held at that moment) is ready. The next level-up hand gains a fourth,
+gold EVOLUTION card, and the next chest pays its reward and then offers the same
+card beside "Not now". It is never forced: turning it down costs nothing and it
+comes back. The catalyst is not consumed. `EvolutionOffers.NextReady` is the only
+place that decides, so the panel, the chest, auto-pick, the autopilot and the
+check cannot disagree.
+
+**Pairs pull.** One card in a pool of about a hundred turns up every few dozen
+hands, so seven upgrades on one weapon almost never happened. A held weapon
+draws its catalyst (x6) and a held catalyst draws its weapon's cards (x10), both
+in `EvolutionOffers.Pull`; a build with neither half rolls what it rolled before.
+
+**The card is not a weapon offer.** `Offer.Weapon` stays null and it has no
+`Source`, so it cannot level anything and cannot be banished; a reroll keeps it
+(`LevelUpChoices.Hand` re-adds it). The chest hand switches reroll, banish and
+skip off, because the chest has already paid and this is not a level.
+
+**The weapon keeps its id.** `WeaponRuntime.Evolve` swaps `Def` for a duplicate
+with the row's numbers (`EvolutionDef.Evolve`), and keeps the level, the rolled
+upgrades and the `WeaponBonus`. Kill quests, the scoreboard, recoil, the offer
+pool's cap check and the inventory ledger all key on the id, so none of them
+needed a second row. The catalogue's def is never edited.
+
+**A real behaviour change on every row.** A row picks a `Delivery` (one of the
+expansion's strategies, reading the evolved def's numbers) or a `Rider`. Riders
+run from `WeaponRuntime.Fire` (volley riders) and `WeaponSystem.ReportHit` (hit
+riders). A rider's own hits carry no `DamageInfo.Evolution`, so a rider cannot
+trigger itself. Evolved shots get their trail from the same field, in
+`Projectile.Launch`, without touching any delivery.
+
+**Balance.** `DamageScale` is tuned against `--check-evolutions`, which fires both
+forms at the same pack of eight bodies for 30 s with the same crit rolls. The pack
+must land at 1.6 to 2.2 times the max-level weapon. The lone-target figure is
+printed too: a rider has nobody to reach there, so it runs lower on the rider rows
+and higher on the slow-hitting auras, and `--damage-log` cannot help because it
+logs hits on the player. Several `DamageScale` values are below 1 on purpose: a
+delivery that hits everything twice has to hit softer per body.
+
+**Co-op.** Weapons are their owner's (see "Who owns what"), so evolved hits reach
+the host through the ordinary hit batch, and neither a late joiner nor a host
+migration can lose one: the state never left the owner's machine. Each player
+sends its evolved list to everyone at once on a change and every 3 s, the same
+shape as the perk levels. That is what marks a teammate's puppet with a gold ring
+and raises the toast; a peer's first list is not toasted, so a late joiner or a
+migrated session does not replay old news. Riders send a rate-limited unreliable
+flash where they land. `Coop.Protocol` moved to 13 for the two RPCs.
+
+**Discoverability.** Weapon cards name their catalyst, catalyst cards name a held
+weapon, the Tab sheet's tooltips do both, and an "EVOLUTION READY" toast fires once
+per weapon. The codex has an Evolutions tab: the recipe always shows, the evolved
+name and text only once made (profile section `[evolutions]`, saved on the spot).
+Quests: `qm_evo_*`.
 
 ## Heroes trio and signature weapons
 
@@ -895,7 +960,7 @@ responsive and cannot desync where it matters:
 
 | Thing | Owner | Others see |
 |---|---|---|
-| A player's body, movement, health, weapons, level-ups, inventory, tomes and perks (teammates' Crew Beacon / Lifeline levels are synced, see "Perks") | that player's machine | `RemotePlayer` puppets from 20 Hz unreliable state: position, facing, velocity, pose, health, down flag, pickup range |
+| A player's body, movement, health, weapons, evolutions, level-ups, inventory, tomes and perks (teammates' Crew Beacon / Lifeline levels and evolved lists are synced, see "Perks" and "Weapon evolutions") | that player's machine | `RemotePlayer` puppets from 20 Hz unreliable state: position, facing, velocity, pose, health, down flag, pickup range |
 | Enemies (director, spawns, AI, health, death) | host | `Enemy` puppets: spawn and death are reliable events; position, facing and health come in 15 Hz unreliable snapshots, with smoothing and a short look-ahead |
 | Damage *to* enemies | host applies it | Clients' weapons fire locally at puppets. A hit is predicted (number, flash, health bar), batched and sent to the host, which applies it to the real enemy. Crowd control (stun, chill/freeze) is forwarded the same way. Burn and poison tick on the client's puppet and forward each tick |
 | Damage *to* players | the victim | The host's contact swings at a remote player become a `Hurt` RPC. The owner applies it through their own i-frames, dodge, armour and shield. Enemy shots, blasts, shockwaves and flashes are mirrored, and each machine tests them against its own player |

@@ -151,6 +151,21 @@ public sealed partial class LevelUpPanel : Control
         if (!IsOpen && !_resolving) Present();
     }
 
+    /// <summary>A chest's evolution hand: the gold card and a way to say no.
+    /// Reroll, banish and skip stay off, because this hand is not a level.</summary>
+    public void ShowChestEvolution(IEnumerable<Offer> offers, Action<Offer> onPick)
+    {
+        var list = new List<Offer>(offers);
+        if (list.Count == 0) return;
+        if (GameplaySettings.AutoPickAt(Progression.Inventory.Current?.Level ?? 1) && AutoPickSeconds <= 0f)
+        {
+            AutoResolve(list, onPick);
+            return;
+        }
+        _queue.Enqueue(new Pending(list, onPick, chest: true));
+        if (!IsOpen && !_resolving) Present();
+    }
+
     /// <summary>Close without choosing and drop anything still queued. Used when
     /// the run ends underneath an open panel.</summary>
     public void Cancel()
@@ -171,6 +186,7 @@ public sealed partial class LevelUpPanel : Control
         _current.Clear();
         _current.AddRange(next.Offers);
         _callback = next.Callback;
+        _chestHand = next.Chest;
 
         // Chosen when a hand opens, not per card: a queue keeps one layout.
         if (!IsOpen)
@@ -182,7 +198,9 @@ public sealed partial class LevelUpPanel : Control
         LayoutCards();
 
         _banishMode = false;
-        UpdateSubheading();
+        _heading.Text = Loc.T(_chestHand ? "EVOLUTION" : "LEVEL UP");
+        _compactHeader.Text = _heading.Text;
+        UpdateSubheading(_chestHand ? Loc.T("A weapon is ready to evolve") : null);
         RefreshControls();
 
         // The camera keeps the mouse captured for steering, which hides the
@@ -230,6 +248,7 @@ public sealed partial class LevelUpPanel : Control
     }
 
     private bool _holdingMouse;
+    private bool _chestHand;
 
     /// <summary>Fill and position one card per current offer; hide the rest.
     /// Shared by opening the panel and by reroll/banish replacing cards.</summary>

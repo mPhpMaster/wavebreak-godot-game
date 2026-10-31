@@ -40,13 +40,15 @@ public sealed partial class Codex : Control
         Characters = 1 << 2,
         Challenges = 1 << 3,
         Lore = 1 << 4,
-        All = Quests | Secrets | Characters | Challenges | Lore,
+        Evolutions = 1 << 5,
+        All = Quests | Secrets | Characters | Challenges | Lore | Evolutions,
     }
 
     private static readonly (Tab Tab, string Label)[] Tabs =
     {
         (Tab.All, "All"), (Tab.Quests, "Quests"), (Tab.Secrets, "Secrets"),
         (Tab.Characters, "Characters"), (Tab.Challenges, "Challenges"), (Tab.Lore, "Shrines & Tomes"),
+        (Tab.Evolutions, "Evolutions"),
     };
 
     /// <summary>Set by the menu so the last card can hand focus down to it.</summary>
@@ -157,12 +159,14 @@ public sealed partial class Codex : Control
             if (u.Secret) { secretsTotal++; if (Profile.IsUnlocked(u.Id)) secretsEarned++; }
         _stats.Text =
             Loc.F("UNLOCKED {0}/{1}   ·   SECRETS {2}/{3}   ·   ", Profile.UnlockedIds.Count, Unlocks.All.Count, secretsEarned, secretsTotal) +
+            Loc.F("EVOLUTIONS {0}/{1}   ·   ", Profile.FoundEvolutions.Count, Data.Evolutions.All.Count) +
             Loc.F("runs {0}   wins {1}   kills {2}   ", Profile.Get(Profile.Runs), Profile.Get(Profile.Wins), Profile.Get(Profile.TotalKills)) +
             Loc.F("bosses {0}   best {1:00}:{2:00}   best level {3}", Profile.Get(Profile.BossesKilled), best / 60, best % 60, Profile.Get(Profile.BestLevel));
 
         foreach (UnlockDef u in Unlocks.All) AddCard(UnlockCard(u), TabsOf(u));
         foreach (SecretKindDef k in SecretSpawner.Kinds) AddCard(ShrineCard(k), Tab.Secrets | Tab.Lore);
         foreach (Data.TomeDef t in Data.Tomes.All) AddCard(TomeCard(t), Tab.Lore);
+        foreach (Data.EvolutionDef e in Data.Evolutions.All) AddCard(EvolutionCard(e), Tab.Evolutions);
         foreach (ChallengeDef c in Challenges.All) AddCard(ChallengeCard(c), Tab.Challenges);
         foreach (MapChallengeDef m in MapChallenges.All) AddCard(MapChallengeCard(m), Tab.Challenges);
 

@@ -214,6 +214,7 @@ public static partial class ContentAudit
             AuditIcons();
             AuditCute(system);              // ContentAudit.CuteEnemies.cs
             AuditHeroes(system);            // ContentAudit.Heroes.cs
+            AuditEvolutions(system);        // ContentAudit.Evolutions.cs
             AuditLocalisation();    // ContentAudit.Loc.cs
             AuditMapChallenges();   // map challenges, Toggler, slots, cute shrines (ContentAudit.MapChallenges.cs)
             AuditMusic();           // tracks per map, every file loads, Boombox catalogue (ContentAudit.Music.cs)

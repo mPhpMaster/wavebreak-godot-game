@@ -265,6 +265,7 @@ public sealed partial class NetSession : Node
         }
         StepHandshake();   // NetSession.Handshake.cs
         StepMigration();   // NetSession.Migration.cs
+        StepEvolutions((float)delta);   // NetSession.Evolutions.cs
         ProcessRun((float)delta);
         StepTrade((float)delta);   // NetSession.Trade.cs
         ProcessTest((float)delta);

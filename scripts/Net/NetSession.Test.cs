@@ -129,6 +129,7 @@ public sealed partial class NetSession
             else if (arg.StartsWith("--coop-levelup-at=")) s._testLevelUpAt = arg["--coop-levelup-at=".Length..].ToFloat();
             else if (arg == "--coop-check-perks") s._testCheckPerks = true;   // NetSession.Perks.cs
             else if (arg.StartsWith("--coop-expect-loop=")) s._testExpectLoop = arg["--coop-expect-loop=".Length..].ToInt();
+            else if (arg == "--coop-check-evolve") s._testCheckEvolve = true;   // NetSession.Evolutions.cs
         }
         if (PlayerName == DefaultName()) PlayerName = s._testRole == "host" ? "Host" : "Guest";
         GD.Print($"[coop-test] role={s._testRole} players={s._testPlayers} seconds={s._testSeconds}");
@@ -342,6 +343,7 @@ public sealed partial class NetSession
 
         line += " " + AwarenessTestCheck(role, problems);   // NetSession.Awareness.cs
         line += " " + PerkTestCheck(role, problems);        // NetSession.Perks.cs
+        line += " " + EvolutionTestCheck(problems);         // NetSession.Evolutions.cs
         line += HeroTestCheck(problems);                     // NetSession.Test.Heroes.cs
         if (_testExpectLoop > 0)
         {

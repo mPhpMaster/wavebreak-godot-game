@@ -27,14 +27,14 @@ public sealed partial class LevelUpPanel
     private void Fill(Card card, Offer offer, int index)
     {
         Rarity rarity = offer.Rarity;
-        Color colour = Catalog.RarityColor(rarity);
+        Color colour = offer.IsEvolution ? EvolutionGold : Catalog.RarityColor(rarity);
 
         // Rarity colours the frame; the definition's own tint colours the name, so
         // an item's card and the thing it produces in the world match. Two signals
         // rather than one, and neither is load-bearing on its own — the rarity is
         // also spelled out in words.
         card.Stripe.Color = colour;
-        card.Rarity.Text = $"{Loc.T(Catalog.RarityName(rarity))}   {Loc.T(KindOf(offer))}";
+        card.Rarity.Text = RarityLine(offer);
         card.Rarity.AddThemeColorOverride("font_color", colour);
 
         card.Icon.Set(Icons.For(offer), colour);
@@ -55,6 +55,7 @@ public sealed partial class LevelUpPanel
             Rarity.Epic      => new Color(0.13f, 0.09f, 0.18f, 0.98f),
             _                => CardBack,
         };
+        if (offer.IsEvolution) card.Base = EvolutionBack;
         Paint(card, card.Button.HasFocus());
 
         card.Button.TooltipText = $"{index + 1}. {Loc.T(offer.Title)} — {offer.Effect}";
@@ -105,7 +106,7 @@ public sealed partial class LevelUpPanel
     private static string EffectText(Offer offer)
     {
         if (offer.Item is not { } item || item.Effects is null || item.Effects.Count == 0)
-            return offer.Effect;
+            return offer.Effect + EvolutionHint(offer);
 
         var text = new StringBuilder(96);
         foreach (ItemEffect effect in item.Effects)
@@ -115,7 +116,7 @@ public sealed partial class LevelUpPanel
             text.Append(Catalog.DescribeEffect(effect));
         }
 
-        return text.Length > 0 ? text.ToString() : offer.Effect;
+        return (text.Length > 0 ? text.ToString() : offer.Effect) + EvolutionHint(offer);
     }
 
     /// <summary>The one-word category under the rarity: which of the five attack
@@ -135,8 +136,32 @@ public sealed partial class LevelUpPanel
                 _                      => "· WEAPON",
             };
 
+        if (offer.IsEvolution) return "EVOLUTION";
+        if (offer.IsDecline) return "";
         if (offer.Tome is not null) return offer.Tome is PerkDef ? "· PERK" : "· TOME";
         return offer.Item is not null ? "· ITEM" : "· SUPPLY";
+    }
+
+    // ------------------------------------------------------------ evolutions
+
+    private static readonly Color EvolutionGold = new(1.00f, 0.82f, 0.28f);
+    private static readonly Color EvolutionBack = new(0.30f, 0.20f, 0.05f, 0.99f);
+
+    private static string RarityLine(Offer offer)
+        => offer.IsEvolution ? Loc.T("★ EVOLUTION ★") : offer.IsDecline ? ""
+            : $"{Loc.T(Catalog.RarityName(offer.Rarity))}   {Loc.T(KindOf(offer))}";
+
+    /// <summary>The extra line that makes the pairing discoverable: which
+    /// catalyst a weapon card needs, and which held weapon a catalyst card
+    /// feeds. Nothing for a weapon that has no evolution.</summary>
+    private static string EvolutionHint(Offer offer)
+    {
+        if (offer.Weapon is { } w && Evolutions.ForWeapon(w.Id) is { } byWeapon)
+            return "\n" + Loc.F("Evolves with {0}", Loc.T(Evolutions.CatalystName(byWeapon)));
+        string? id = offer.Item?.Id ?? offer.Tome?.Id;
+        if (Evolutions.ForCatalyst(id) is { } e && Main.Instance?.Weapons.Get(e.WeaponId) is { Evolution: null })
+            return "\n" + Loc.F("Catalyst for {0}", Loc.T(Evolutions.WeaponName(e)));
+        return "";
     }
 
     // ------------------------------------------------------------- plumbing

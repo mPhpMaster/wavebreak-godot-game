@@ -210,6 +210,7 @@ public sealed partial class AudioDirector : Node
         EventBus.Subscribe<PlayerMoved>(OnPlayerMoved);
         EventBus.Subscribe<RunEnded>(OnRunEnded);
         SubscribeChestSounds();
+        SubscribeEvolutionSound();
         SubscribeShrineSounds();
         SubscribeHeroSounds();
         _subscribed = true;
@@ -233,6 +234,7 @@ public sealed partial class AudioDirector : Node
         EventBus.Unsubscribe<PlayerMoved>(OnPlayerMoved);
         EventBus.Unsubscribe<RunEnded>(OnRunEnded);
         UnsubscribeChestSounds();
+        UnsubscribeEvolutionSound();
         UnsubscribeShrineSounds();
         UnsubscribeHeroSounds();
     }

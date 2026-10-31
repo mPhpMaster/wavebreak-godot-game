@@ -93,6 +93,9 @@ public sealed partial class Autopilot
 
     private static float Score(Offer offer)
     {
+        // Always: it is the strongest thing on any table, and the sim should fire it.
+        if (offer.IsEvolution) return 9f;
+
         if (offer.Weapon is { } weapon)
         {
             WeaponSystem? ws = Main.Instance?.Weapons;
@@ -107,7 +110,7 @@ public sealed partial class Autopilot
                 float core = (up.Has(UpgradeStat.Damage) ? 0.15f : 0f)
                            + (up.Has(UpgradeStat.AttackSpeed) ? 0.1f : 0f)
                            + (up.Has(UpgradeStat.Projectiles) ? 0.2f : 0f);
-                return 1.9f + (int)up.Rarity * 0.22f + 0.08f * up.Lines.Count + core;
+                return 1.9f + (int)up.Rarity * 0.22f + 0.08f * up.Lines.Count + core + EvolutionFocus(weapon.Id);
             }
             return owned < 3 ? 3.0f : 1.4f + (int)weapon.Rarity * 0.15f;
         }
@@ -121,7 +124,7 @@ public sealed partial class Autopilot
                 Stat.MaxHealth or Stat.Armor or Stat.HealthRegen => 0.2f,
                 _ => 0f,
             };
-            return (level > 0 ? 2.2f : 1.8f) + bias;
+            return (level > 0 ? 2.2f : 1.8f) + bias + CatalystBias(tome.Id);
         }
 
         if (offer.Item is { } item)
@@ -135,11 +138,24 @@ public sealed partial class Autopilot
                 if ((sign < 0f) != lowerIsGood && MathF.Abs(sign) > 1e-4f) downside = true;
             }
             float s = 1.5f + (int)item.Rarity * 0.25f;
-            return downside ? s - 0.8f : s;
+            return (downside ? s - 0.8f : s) + CatalystBias(item.Id);
         }
 
         return 0.2f; // supply
     }
+
+    /// <summary>A catalyst for a held, unevolved weapon is worth a pick, and so
+    /// the unattended runs reach their evolutions.</summary>
+    private static float CatalystBias(string id)
+    {
+        if (Evolutions.ForCatalyst(id) is not { } e || Main.Instance?.Weapons.Get(e.WeaponId) is not { Evolution: null }) return 0f;
+        return EvolutionOffers.HasCatalyst(e, Inventory.Current, TomeBook.Current) ? 0f : 1.2f;
+    }
+
+    /// <summary>With the catalyst in hand, finishing that weapon beats anything
+    /// but the card it leads to.</summary>
+    private static float EvolutionFocus(string weaponId)
+        => EvolutionOffers.Pull(weaponId) > 1f ? 1.5f : 0f;
 
     private static void Log(string what)
     {

@@ -184,6 +184,7 @@ public sealed partial class Hud : Control
         EventBus.Subscribe<GoldGained>(OnGoldGained);
         EventBus.Subscribe<EnemyKilled>(OnEnemyKilled);
         EventBus.Subscribe<WeaponAcquired>(OnWeaponAcquired);
+        EventBus.Subscribe<WeaponEvolved>(OnWeaponEvolved);
         EventBus.Subscribe<PlayerDamaged>(OnPlayerDamaged);
         EventBus.Subscribe<PhaseStarted>(OnPhaseStarted);
         EventBus.Subscribe<PortalOpened>(OnPortalOpened);
@@ -200,6 +201,7 @@ public sealed partial class Hud : Control
         EventBus.Unsubscribe<GoldGained>(OnGoldGained);
         EventBus.Unsubscribe<EnemyKilled>(OnEnemyKilled);
         EventBus.Unsubscribe<WeaponAcquired>(OnWeaponAcquired);
+        EventBus.Unsubscribe<WeaponEvolved>(OnWeaponEvolved);
         EventBus.Unsubscribe<PlayerDamaged>(OnPlayerDamaged);
         EventBus.Unsubscribe<PhaseStarted>(OnPhaseStarted);
         EventBus.Unsubscribe<PortalOpened>(OnPortalOpened);

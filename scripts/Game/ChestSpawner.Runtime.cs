@@ -11,6 +11,9 @@ namespace Wavebreak.Game;
 
 public sealed partial class ChestSpawner
 {
+    /// <summary>--check-evolutions: a chest it can open from anywhere.</summary>
+    internal Chest? FirstUsableForTest() => _chests.Find(Usable);
+
     // ---------------------------------------------------------------- frame
 
     public override void _Process(double delta)

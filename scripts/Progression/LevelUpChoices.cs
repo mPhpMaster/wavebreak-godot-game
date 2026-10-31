@@ -120,6 +120,15 @@ public sealed class LevelUpChoices
     /// <summary>A fresh hand for a level-up.</summary>
     public List<Offer> Roll(int count = Cards) => _pool.Roll(count, _weapons, _inventory, _stats);
 
+    /// <summary>A hand as the player sees it: <paramref name="count"/> cards, plus
+    /// the gold EVOLUTION card when something is ready (Offer.Evolution.cs).</summary>
+    public List<Offer> Hand(int count = Cards)
+    {
+        List<Offer> hand = Roll(count);
+        if (EvolutionOffers.NextReady(_weapons, _inventory, TomeBook.Current) is { } e) hand.Add(Offer.ForEvolution(e));
+        return hand;
+    }
+
     /// <summary>
     /// Spend a reroll and draw a new hand of the same size. Tries a few times to
     /// avoid handing back the identical set — a reroll that changes nothing reads
@@ -131,10 +140,12 @@ public sealed class LevelUpChoices
         fresh = new List<Offer>();
         if (RerollsLeft <= 0) return false;
 
-        int count = Math.Max(1, current.Count);
+        int count = 0;
+        foreach (Offer o in current) if (!o.IsEvolution) count++;   // Hand adds the gold card back
+        count = Math.Max(1, count);
         for (int attempt = 0; attempt < 4; attempt++)
         {
-            fresh = Roll(count);
+            fresh = Hand(count);
             if (!SameSet(fresh, current)) break;
         }
 

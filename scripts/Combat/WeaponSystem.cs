@@ -177,6 +177,31 @@ public sealed partial class WeaponSystem : Node
         return owned is null ? !IsFull : owned.CanLevel;
     }
 
+    /// <summary>Turn a held weapon into its evolved form. False, and nothing
+    /// changed, when the weapon is not held or has already evolved; whether the
+    /// player may is <see cref="Progression.EvolutionOffers"/>'s question.</summary>
+    public bool Evolve(EvolutionDef evolution)
+    {
+        if (Find(evolution.WeaponId) is not { Evolution: null } runtime) return false;
+        runtime.Evolve(evolution);
+        if (Body is not null) ExplosionFx.Play(MuzzlePosition, 3.2f, evolution.Tint);
+        EventBus.Publish(new PopupRequested(MuzzlePosition + Vector3.Up * 1.4f, Meta.Loc.T(evolution.Name), evolution.Tint, 1.9f));
+        EventBus.Publish(new WeaponEvolved(evolution.WeaponId, evolution.Id, MuzzlePosition));
+        GD.Print($"[evolve] {evolution.WeaponId} -> {evolution.Id} level={runtime.Level}");
+        return true;
+    }
+
+    /// <summary>Weapons evolved so far this run.</summary>
+    public int EvolvedCount
+    {
+        get
+        {
+            int n = 0;
+            for (int i = 0; i < _weapons.Count; i++) if (_weapons[i].Evolution is not null) n++;
+            return n;
+        }
+    }
+
     public bool Has(string id) => Find(id) is not null;
 
     /// <summary>The runtime of an owned weapon, or null.</summary>
@@ -309,6 +334,8 @@ public sealed partial class WeaponSystem : Node
             if (mega) amount *= StatusEffects.MegacritMultiplier;
         }
 
+        if (weapon.Echoing && weapon.Evolution is { } echo) amount *= echo.RiderPower;
+
         return new DamageInfo
         {
             Amount = amount,
@@ -320,6 +347,7 @@ public sealed partial class WeaponSystem : Node
             StatusChance = bonus.StatusChance,
             StatusDuration = 1f + bonus.StatusDuration,
             Source = def.Id,
+            Evolution = weapon.Evolution,
         };
     }
 
@@ -344,6 +372,7 @@ public sealed partial class WeaponSystem : Node
         // Statuses after the hit is announced, so a listener sees the hit
         // before the burn it caused.
         StatusEffects.OnHit(this, target, info);
+        Combat.Weapons.EvolutionRiders.OnHit(this, target, info);
 
         if (!PublishDamageNumbers || info.Amount < PopupThreshold) return;
 

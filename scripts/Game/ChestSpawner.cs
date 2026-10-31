@@ -340,7 +340,11 @@ public sealed partial class ChestSpawner : Node
 
         // A held hero signature weapon can be honed by a chest: 15% of standard
         // chests, 35% of gilded ones, while it still has levels to gain.
-        if (TrySignatureUpgrade(chest, gilded, cost, player)) return true;
+        if (TrySignatureUpgrade(chest, gilded, cost, player))
+        {
+            Main.Instance?.OfferEvolutionAtChest();
+            return true;
+        }
         // Sometimes a perk level instead of an item (Combat/Weapons/PerkProcs.Chests.cs).
         Offer reward = OfferPool.Current is { } pool
             ? Combat.Weapons.PerkProcs.RollChestPerk(pool, gilded, Rng) ?? pool.RollChest(inv, player.Stats,
@@ -376,6 +380,7 @@ public sealed partial class ChestSpawner : Node
         EventBus.Publish(new ChestOpened(chest.GlobalPosition, chest.Tier, chest.IsFree, cost, name, rarity));
         GD.Print($"[chest] opened tier={chest.Tier} free={chest.IsFree} cost={cost} reward=\"{name}\" " +
                  $"rarity={rarity} t={_clock:0}s next={NextPrice(ChestTier.Standard)}");
+        Main.Instance?.OfferEvolutionAtChest();
         return true;
     }
 

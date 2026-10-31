@@ -414,7 +414,8 @@ public sealed partial class ResultsScreen : Control
         foreach (Node c in _itemGrid.GetChildren()) c.QueueFree();
         foreach (string id in _weaponOrder)
         {
-            WeaponDef? def = Catalog.WeaponById(id);
+            // The live def, so an evolved weapon reads as what it became.
+            WeaponDef? def = Game.Main.Instance?.Weapons.Get(id)?.Def ?? Catalog.WeaponById(id);
             if (def is null) continue;
             int level = _weaponLevels[id];
             bool maxed = level >= def.MaxLevel;

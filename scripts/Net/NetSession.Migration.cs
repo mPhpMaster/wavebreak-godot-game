@@ -186,6 +186,7 @@ public sealed partial class NetSession
 
         CloseSocket();
         DepartOldHost(oldHost);
+        EvolutionNet.ForgetPeers();
         Migrations++;
         _migrationStartedAt = Now;
         LastOldHost = oldName;

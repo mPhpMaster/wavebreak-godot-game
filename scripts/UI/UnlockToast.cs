@@ -61,12 +61,16 @@ public sealed partial class UnlockToast : Control
 
         EventBus.Subscribe<UnlockEarned>(OnUnlock);
         EventBus.Subscribe<SecretDiscovered>(OnSecret);
+        EventBus.Subscribe<WeaponEvolved>(OnEvolved);
+        EventBus.Subscribe<EvolutionReady>(OnEvolutionReady);
     }
 
     public override void _ExitTree()
     {
         EventBus.Unsubscribe<UnlockEarned>(OnUnlock);
         EventBus.Unsubscribe<SecretDiscovered>(OnSecret);
+        EventBus.Unsubscribe<WeaponEvolved>(OnEvolved);
+        EventBus.Unsubscribe<EvolutionReady>(OnEvolutionReady);
     }
 
     private void OnUnlock(UnlockEarned e)
@@ -80,6 +84,19 @@ public sealed partial class UnlockToast : Control
     {
         foreach (SecretKindDef k in SecretSpawner.Kinds)
             if (k.Id == e.Kind) Enqueue(Loc.F("SECRET FOUND: {0}", k.DisplayName), Loc.T(k.RewardText), k.Glow);
+    }
+
+    private void OnEvolved(WeaponEvolved e)
+    {
+        if (Data.Evolutions.ById(e.EvolutionId) is not { } d) return;
+        Enqueue(Loc.F("EVOLVED: {0}", Loc.T(d.Name)),
+                Loc.F("{0} + {1}", Loc.T(Data.Evolutions.WeaponName(d)), Loc.T(Data.Evolutions.CatalystName(d))), d.Tint);
+    }
+
+    private void OnEvolutionReady(EvolutionReady e)
+    {
+        if (Data.Evolutions.ById(e.EvolutionId) is not { } d) return;
+        Enqueue(Loc.F("EVOLUTION READY: {0}", Loc.T(Data.Evolutions.WeaponName(d))), Loc.T("Your next level-up or chest offers it."), Gold);
     }
 
     /// <summary>Public so other systems (or a test) can raise a banner.</summary>
