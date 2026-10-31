@@ -95,7 +95,14 @@ public sealed partial class MainMenu : Node3D
         page.AddChild(Row("Language", LanguagePicker(), MakeLabel("", 16, Ink)));
 
         Label keys = MakeLabel("", 15, InkDim);
-        static string Key(string action) => Loc.Ltr(Keybinds.Describe(Keybinds.Primary(action)));
+        static string Key(string action) => Loc.Ltr(Keybinds.Describe(Keybinds.Primary(action)) switch
+        {
+            "Minus" => "-",
+            "Equal" => "=",
+            "BracketLeft" or "BraceLeft" => "[",
+            "BracketRight" or "BraceRight" => "]",
+            var name => name,
+        });
         Hints.Follow(keys, () => Loc.F("In a run:  {0} / {1}  volume   ·   {2} / {3}  effects   ·   {4} / {5}  music   ·   {6}  mute",
             Key("volume_down"), Key("volume_up"), Key("sfx_volume_down"), Key("sfx_volume_up"),
             Key("music_volume_down"), Key("music_volume_up"), Key("mute")));
@@ -106,13 +113,15 @@ public sealed partial class MainMenu : Node3D
         var pages = new HBoxContainer();
         pages.AddThemeConstantOverride("separation", 8);
         pages.AddThemeConstantOverride("separation", 6);
-        foreach (Button b in new[] { MenuButton("GAMEPLAY", () => ShowPage("gameplay")), MenuButton("GRAPHICS", () => ShowPage("graphics")), MenuButton("KEY BINDINGS", () => ShowPage("keys")) })
+        foreach (Button b in new[] { MenuButton("GAMEPLAY", () => ShowPage("gameplay")), MenuButton("GRAPHICS", () => ShowPage("graphics")),
+                                     MenuButton("KEY BINDINGS", () => ShowPage("keys")), MenuButton("ACCESSIBILITY", () => ShowPage("access")) })
         {
             b.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-            b.AddThemeFontSizeOverride("font_size", 16);
-            // Three side by side: tighter margins so they share the column.
+            b.AddThemeFontSizeOverride("font_size", 14);
+            b.Alignment = HorizontalAlignment.Center;
+            // Four side by side: tighter margins so they share the column.
             foreach (string box in new[] { "normal", "hover", "pressed", "focus" })
-                if (b.GetThemeStylebox(box) is StyleBoxFlat flat) { flat.ContentMarginLeft = 10; flat.ContentMarginRight = 8; }
+                if (b.GetThemeStylebox(box) is StyleBoxFlat flat) { flat.ContentMarginLeft = 6; flat.ContentMarginRight = 4; }
             pages.AddChild(b);
         }
         page.AddChild(pages);
@@ -170,6 +179,18 @@ public sealed partial class MainMenu : Node3D
     }
 
     private GameplayPanel _gameplay = null!;
+    private AccessibilityPanel _access = null!;
+
+    private Control BuildAccessPage()
+    {
+        var frame = new PanelContainer();
+        var style = new StyleBoxFlat { BgColor = PanelBack, ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 12, ContentMarginBottom = 12 };
+        style.SetCornerRadiusAll(6);
+        frame.AddThemeStyleboxOverride("panel", style);
+        Place(frame, 44f, 186f, 560f, 0f);
+        frame.AddChild(_access = new AccessibilityPanel(() => ShowPage("settings")));
+        return frame;
+    }
 
     private Control BuildGameplayPage()
     {

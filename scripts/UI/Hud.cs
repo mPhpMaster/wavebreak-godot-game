@@ -635,7 +635,7 @@ public sealed partial class Hud : Control
             colour = colour.Lerp(Colors.White, pulse * 0.35f);
         }
 
-        _healthFill.Color = colour.Lerp(Colors.White, _hurtFlash * 0.6f);
+        _healthFill.Color = colour.Lerp(Colors.White, Accessibility.Flash(_hurtFlash) * 0.6f);
 
         float shieldMax = _health.ShieldMax;
         bool hasShield = shieldMax > 0.01f;
@@ -672,8 +672,8 @@ public sealed partial class Hud : Control
 
         Color colour = ready ? DashReady : DashCharging;
         if (player.IsDashing) colour = DashReady.Lerp(Colors.White, 0.5f);
-        _dashFill.Color = colour.Lerp(Colors.White, _dashFlash * 0.7f);
-        _dashHalo.Color = DashReady with { A = _dashFlash * 0.55f };
+        _dashFill.Color = colour.Lerp(Colors.White, Accessibility.Flash(_dashFlash) * 0.7f);
+        _dashHalo.Color = DashReady with { A = Accessibility.Flash(_dashFlash) * 0.55f };
 
         // Countdown in tenths: whole seconds are too coarse for a cooldown that
         // is itself only a few seconds long, and hundredths are noise.

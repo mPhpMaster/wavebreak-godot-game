@@ -297,7 +297,7 @@ public sealed partial class MapShrine : Node3D
         _burst.Restart();
         _burst.Emitting = true;
         Tween t = CreateTween();
-        t.TweenProperty(_light, "light_energy", 7f, 0.12);
+        t.TweenProperty(_light, "light_energy", Meta.Accessibility.ReduceFlashes ? 2f : 7f, 0.12);
         t.TweenProperty(_light, "light_energy", Spent ? 0f : 1.1f, 1.2);
     }
 

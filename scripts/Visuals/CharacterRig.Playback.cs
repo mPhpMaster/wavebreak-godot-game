@@ -57,7 +57,7 @@ public sealed partial class CharacterRig
     public void SetGlow(Color color, float amount) => _glow = new Color(color.R, color.G, color.B, amount);
 
     /// <summary>Directly set the white flash (0..1); the player drives its own.</summary>
-    public void SetFlash(float amount) => _flash = Mathf.Max(_flash, amount);
+    public void SetFlash(float amount) => _flash = Mathf.Max(_flash, Meta.Accessibility.Flash(amount));
 
     /// <summary>Back to a fresh, living pose. Pools call this on reuse.</summary>
     public void ResetState()

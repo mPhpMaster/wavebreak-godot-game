@@ -94,7 +94,7 @@ public static partial class Catalog
     /// each other under the game's heavy orange/red damage flashes — which is why
     /// Legendary is amber rather than the more usual red.
     /// </summary>
-    public static Color RarityColor(Rarity rarity) => rarity switch
+    public static Color RarityColor(Rarity rarity) => Meta.Accessibility.Rarity(rarity) ?? rarity switch
     {
         Rarity.Common    => new Color(0.78f, 0.82f, 0.88f),
         Rarity.Uncommon  => new Color(0.36f, 0.85f, 0.47f),

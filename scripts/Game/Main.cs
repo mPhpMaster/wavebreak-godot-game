@@ -121,6 +121,8 @@ public sealed partial class Main : Node3D
             _ = CheckInputGuards();
         else if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-pad") >= 0)
             _ = PadCheck();                          // Main.PadCheck.cs
+        else if (AccessCheck.Requested() is { } accessDir)
+            _ = AccessCheck.Run(this, accessDir);    // --check-access=<dir>
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--levelup-shot=")) is { } shotArg)
             _ = LevelUpShot(shotArg["--levelup-shot=".Length..]);
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--panel-shot=")) is { } panelArg)

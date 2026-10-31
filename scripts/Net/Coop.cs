@@ -163,7 +163,7 @@ public static class Coop
     }
 
     /// <summary>Per-slot colour for name tags, rings and the team panel.</summary>
-    public static Color SlotColor(int slot) => (slot % MaxPlayers) switch
+    public static Color SlotColor(int slot) => Meta.Accessibility.Slot(slot % MaxPlayers) ?? (slot % MaxPlayers) switch
     {
         0 => new Color(0.45f, 0.85f, 1.00f),
         1 => new Color(1.00f, 0.62f, 0.25f),

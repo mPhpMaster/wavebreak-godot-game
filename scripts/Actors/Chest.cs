@@ -284,7 +284,7 @@ public sealed partial class Chest : Node3D
         {
             _denyFlash = Mathf.Max(0f, _denyFlash - dt * 3f);
             _light.LightColor = Tint.Lerp(DeniedColor, _denyFlash);
-            _light.LightEnergy = Mathf.Max(_light.LightEnergy, _baseEnergy + 2.5f * _denyFlash);
+            _light.LightEnergy = Mathf.Max(_light.LightEnergy, _baseEnergy + 2.5f * Meta.Accessibility.Flash(_denyFlash));
         }
     }
 

@@ -1,6 +1,7 @@
 namespace Wavebreak.Meta;
 
-/// <summary>Arabic for gamepad support (Meta/Keybinds.Pad, UI/PadInput, UI/KeybindPanel).</summary>
+/// <summary>Arabic for gamepad support (Meta/Keybinds.Pad, UI/PadInput,
+/// UI/KeybindPanel) and accessibility (UI/AccessibilityPanel).</summary>
 public static partial class ArabicText
 {
     internal static readonly (string En, string Ar)[] UiPad =
@@ -32,6 +33,14 @@ public static partial class ArabicText
         ("Right stick up", "العصا اليمنى: أعلى"),
         ("Right stick down", "العصا اليمنى: أسفل"),
         ("Pad {0}", "زر {0}"),
+        ("ACCESSIBILITY", "إمكانية الوصول"),
+        ("Colour-blind mode", "وضع عمى الألوان"),
+        ("Deuteranopia (red-green)", "عمى الأخضر (أحمر وأخضر)"),
+        ("Protanopia (red-green)", "عمى الأحمر (أحمر وأخضر)"),
+        ("Tritanopia (blue-yellow)", "عمى الأزرق (أزرق وأصفر)"),
+        ("Changes rarity, team and ping colours, and paints enemy telegraphs with stripes in colours that stay apart.", "يغيّر ألوان الندرة والفريق والإشارات، ويرسم تحذيرات هجمات الأعداء بخطوط وألوان سهلة التمييز."),
+        ("Reduce flashes", "تقليل الومضات"),
+        ("Softens hit flashes, explosions, boss phase changes and the health bar.", "يخفّف ومضات الإصابة والانفجارات وتغيّر مراحل الزعماء وشريط الصحة."),
         ("{0}: hide or replay help", "{0}: إخفاء الشرح أو إعادته"),
         ("{0}: take the highlighted card", "{0}: خذ البطاقة المحددة"),
         ("D-pad: pick a card", "أسهم يد التحكم: اختر بطاقة"),

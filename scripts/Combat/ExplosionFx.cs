@@ -75,16 +75,20 @@ internal sealed partial class ExplosionFx : Node3D, IPooled
 
         fx.GlobalTransform = new Transform3D(Basis.Identity, position);
         fx._mesh.MaterialOverride = CombatVisuals.Glow(tint, additive: true);
-        fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.25f);
+        fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(ShellFade(0.25f));
         fx._mesh.Scale = Flat(fx._radius * 0.35f);
 
         fx._light.LightColor = tint;
         fx._light.OmniRange = fx._radius * 2.6f;
-        fx._light.LightEnergy = 4f;
+        fx._light.LightEnergy = Wavebreak.Meta.Accessibility.Flash(4f);
         fx.Visible = true;
 
         Live.Add(fx);
     }
+
+    /// <summary>Reduced flashes keep the blast's size, at a fraction of its glare.</summary>
+    private static float ShellFade(float fade)
+        => Wavebreak.Meta.Accessibility.ReduceFlashes ? Mathf.Max(fade, 0.72f) : fade;
 
     private static Vector3 Flat(float r) => new(r, r * 0.55f, r);
 
@@ -105,8 +109,8 @@ internal sealed partial class ExplosionFx : Node3D, IPooled
                     // than an inflating balloon.
                     float eased = 1f - (1f - t) * (1f - t);
                     fx._mesh.Scale = Flat(fx._radius * (0.35f + 0.65f * eased));
-                    fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.25f + 0.75f * t);
-                    fx._light.LightEnergy = 4f * (1f - t);
+                    fx._mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(ShellFade(0.25f + 0.75f * t));
+                    fx._light.LightEnergy = Wavebreak.Meta.Accessibility.Flash(4f) * (1f - t);
                     continue;
                 }
                 fx._retired = true;

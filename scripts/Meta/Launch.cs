@@ -88,6 +88,7 @@ public static class Launch
             else if (arg.StartsWith("--menu-review=")) { } // Menu test captures do not skip the title.
             else if (arg.StartsWith("--update-fixture=")) { }
             else if (arg == "--check-pad-menu") PadMenuCheck = true;
+            else if (arg.StartsWith("--colorblind=") || arg == "--reduce-flashes") { }   // Meta/Accessibility: menu captures too
             else if (arg == "--latin-report") { }   // Game/Screenshot: a capture diagnostic, menu or run
             // Net/Steam: allow Steam in an automated run; join a lobby at start (menu flags).
             else if (arg == "--steam-test" || arg.StartsWith("--steam-test=") || arg.StartsWith("--connect-lobby")) { }

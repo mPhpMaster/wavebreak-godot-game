@@ -82,7 +82,7 @@ internal static class SignatureFx
     {
         if (fx is Flash)
         {
-            if (_flashes >= MaxFlashes) { fx.Free(); return false; }
+            if (_flashes >= MaxFlashes || Meta.Accessibility.ReduceFlashes) { fx.Free(); return false; }
             _flashes++;
         }
         Live.Add(fx);

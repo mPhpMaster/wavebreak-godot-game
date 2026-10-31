@@ -239,6 +239,7 @@ public sealed partial class MainMenu : Node3D
         _pages["keys"] = BuildKeysPage();
         _pages["graphics"] = BuildGraphicsPage();
         _pages["gameplay"] = BuildGameplayPage();   // UI/GameplayPanel
+        _pages["access"] = BuildAccessPage();       // UI/AccessibilityPanel
         _pages["shop"] = _shop = new MetaShopPage(() => ShowPage("main"));
         _pages["records"] = BuildLeaderboardPage();
         _pages["run"] = _runPicker = new ChallengePicker(() => ShowPage("play"));
@@ -350,6 +351,10 @@ public sealed partial class MainMenu : Node3D
                 _gameplay.Refresh();
                 _gameplay.FocusFirst();
                 break;
+            case "access":
+                _access.Refresh();
+                _access.FocusFirst();
+                break;
             case "graphics":
                 _graphics.Refresh();
                 if (arg == "bottom") _graphics.FocusLast();
@@ -416,7 +421,7 @@ public sealed partial class MainMenu : Node3D
             GetViewport().SetInputAsHandled();
             if (_page == "updates" && _updatePanel?.CancelBusy() == true) return;
             if (_page == "coop") CoopPage.LeaveSession();   // same as BACK
-            ShowPage(_page switch { "run" => "play", "toggler" => "shop", "keys" or "graphics" or "gameplay" => "settings", _ => "main" });
+            ShowPage(_page switch { "run" => "play", "toggler" => "shop", "keys" or "graphics" or "gameplay" or "access" => "settings", _ => "main" });
         }
     }
 
