@@ -330,7 +330,7 @@ public sealed partial class Main : Node3D
         PerfProbe.Attach(this);
         // --give=id,id: start holding these weapons at max level (effect checks).
         foreach (string arg in OS.GetCmdlineUserArgs())
-            if (arg.StartsWith("--give="))
+            if (arg.StartsWith("--give=") && Meta.Launch.DevAllowed)
                 foreach (string id in arg["--give=".Length..].Split(','))
                     if (id == "all_items") foreach (ItemDef item in Catalog.Items) _inventory.Add(item);
                     else if (Catalog.WeaponById(id) is { } def) _weapons.DevMax(def);

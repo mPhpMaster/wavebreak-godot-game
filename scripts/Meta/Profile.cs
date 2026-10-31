@@ -86,7 +86,8 @@ public static partial class Profile
         _loaded = true;
 
         Launch.Parse();
-        Path = Launch.ProfilePath ?? (Launch.Automated ? null : DefaultPath);
+        // A release's test flags can cheat, so its automated runs never persist.
+        Path = Launch.Automated && !Launch.DevAllowed ? null : Launch.ProfilePath ?? (Launch.Automated ? null : DefaultPath);
         if (Path is null)
         {
             GD.Print("[profile] in-memory (automated run, nothing is saved)");

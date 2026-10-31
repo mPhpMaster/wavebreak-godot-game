@@ -12,6 +12,11 @@ namespace Wavebreak.UI;
 /// other way in. Six tabs: Profile (unlocks, Pearls, shop, tiers), Player,
 /// Build, Spawn, Stage and Info.
 ///
+/// An exported release has no panel at all unless launched with --dev
+/// (<see cref="Launch.DevAllowed"/>): nothing is created, solo or in co-op, and
+/// the self-checks below stay off with it. The editor and debug builds always
+/// have it.
+///
 /// It lives under the scene tree's root rather than in a scene, so it survives
 /// the title -> run -> title scene changes; each scene calls
 /// <see cref="Install"/> from its _Ready, which also tells it the scene changed.
@@ -82,6 +87,11 @@ public sealed partial class DevPanel : CanvasLayer
     public static void Install(Node scene)
     {
         Engine.TimeScale = 1.0;
+        if (!Launch.DevAllowed)
+        {
+            ReportDisabled(scene);
+            return;
+        }
         if (scene is Main main) OnRunStarted(main);
 
         if (Instance is { } existing && IsInstanceValid(existing))

@@ -21,11 +21,22 @@ namespace Wavebreak.UI;
 ///     -- --menu-shot=x.png --devpanel-menu   open it on the title for the menu capture
 ///
 /// All of these are automated launches, so the profile lives in memory only:
-/// nothing the check unlocks or wipes reaches the player's real save.
+/// nothing the check unlocks or wipes reaches the player's real save. In an
+/// exported release they need --dev too; without it the panel does not exist,
+/// so --check-devpanel says so and quits.
 /// </summary>
 public sealed partial class DevPanel
 {
     private static bool _checkStarted, _shotStarted, _menuStarted;
+
+    private static void ReportDisabled(Node scene)
+    {
+        if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-devpanel") < 0) return;
+        GD.Print("DEVPANEL off: release build without --dev");
+        // From a timer: this runs inside the run scene's _Ready.
+        SceneTree tree = scene.GetTree();
+        tree.CreateTimer(1.0, processAlways: true).Timeout += () => tree.Quit();
+    }
 
     private void StartChecks()
     {

@@ -24,6 +24,7 @@ namespace Wavebreak.Meta;
 ///     --steam-test          let an automated run (--menu-shot) start Steam: live co-op checks
 ///     --connect-lobby=&lt;id&gt;  join this Steam lobby at start (same as Steam's +connect_lobby)
 ///     --steam-selftest      check the Steam transport over a fake in-memory Steam, then quit
+///     --dev                 in an exported release: allow the developer panel and test cheats
 /// </summary>
 public static class Launch
 {
@@ -43,6 +44,14 @@ public static class Launch
     /// <summary>--devpanel-menu[=unlock]: open the developer panel on the title
     /// (with --menu-shot); "unlock" also presses Unlock everything.</summary>
     public static string? DevPanelMenu { get; private set; }
+
+    /// <summary>True in the editor and debug builds, and in a release launched
+    /// with --dev (given before or after the "--"). Everything that cheats is
+    /// behind this: a player's copy has no developer panel, and its automated
+    /// launches touch no profile (see <see cref="Profile.EnsureLoaded"/>).</summary>
+    public static bool DevAllowed
+        => OS.IsDebugBuild() || OS.HasFeature("editor")
+           || System.Array.IndexOf(OS.GetCmdlineArgs(), "--dev") >= 0 || System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--dev") >= 0;
 
     /// <summary>True when any game argument other than the menu's own was given.</summary>
     public static bool SkipsMenu { get; private set; }
@@ -82,6 +91,7 @@ public static class Launch
                 SecretTest = true;
                 SkipsMenu = true;
             }
+            else if (arg == "--dev") { }   // a release with the developer panel, otherwise a normal launch
             else if (arg.StartsWith("--menu-review=")) { } // Menu test captures do not skip the title.
             else if (arg.StartsWith("--update-fixture=")) { }
             else if (arg == "--latin-report") { }   // Game/Screenshot: a capture diagnostic, menu or run

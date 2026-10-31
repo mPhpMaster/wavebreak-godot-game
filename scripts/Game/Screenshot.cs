@@ -57,7 +57,7 @@ public static class Screenshot
             else if (arg == "--show-stats")
                 ShowStats = true;
             else if (arg == "--invulnerable")
-                Invulnerable = true;
+                Invulnerable = Meta.Launch.DevAllowed;
         }
     }
 
