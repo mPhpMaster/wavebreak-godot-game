@@ -8,5 +8,8 @@ build/
 shot-*.png.import
 tests/shots/
 
+# Fetched and verified by build.ps1
+thirdparty/steamworks/win64/steam_api64.dll
+
 # Local Python composer caches
 __pycache__/

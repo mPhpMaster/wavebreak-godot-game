@@ -4,6 +4,7 @@
 #   ./build.ps1                 # everything
 #   ./build.ps1 -SkipInstaller  # game + zip only
 #   ./build.ps1 -Run            # also launch the built game when done
+#   ./build.ps1 -SteamDllOnly   # just fetch steam_api64.dll (fresh clone, editor and tests)
 #
 # Paths default to this machine's layout; override with parameters or the
 # GODOT / ISCC environment variables.
@@ -14,7 +15,8 @@ param(
     [string]$ExportDirectory = '',
     [switch]$SkipInstaller,
     [switch]$SkipZip,
-    [switch]$Run
+    [switch]$Run,
+    [switch]$SteamDllOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,6 +27,48 @@ Set-Location $root
 if (-not $env:NUGET_PACKAGES) { $env:NUGET_PACKAGES = 'D:\tools\megabonk\nuget' }
 if (-not $env:TMP) { $env:TMP = 'D:\tools\megabonk\tmp'; $env:TEMP = $env:TMP }
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+
+# Valve's redistributable is not in git. It comes from the Steamworks.NET release
+# that matches the Steamworks.NET package in Wavebreak.csproj, pinned by hash: a
+# new package version means a new URL and hash here, together.
+$steamDll = "$root\thirdparty\steamworks\win64\steam_api64.dll"
+$steamDllHash = '1ADD7F151FA644870A735AE86E68D1F019F296130D8E7C0A7ED3ECC7482DCCBC'
+$steamDllZip = 'https://github.com/rlabrecque/Steamworks.NET/releases/download/2024.8.0/Steamworks.NET-Standalone_2024.8.0.zip'
+$steamDllEntry = 'Windows-x64/steam_api64.dll'
+
+function Get-SteamDll {
+    if (Test-Path $steamDll) {
+        if ((Get-FileHash $steamDll -Algorithm SHA256).Hash -ne $steamDllHash) {
+            throw "$steamDll does not match the pinned SHA-256 $steamDllHash"
+        }
+        return
+    }
+    Write-Host "Fetching steam_api64.dll from $steamDllZip"
+    $work = Join-Path $env:TMP ('wavebreak-steamdll-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force $work | Out-Null
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $zipPath = Join-Path $work 'steamworks.zip'
+        Invoke-WebRequest -Uri $steamDllZip -OutFile $zipPath -UseBasicParsing
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zip = [IO.Compression.ZipFile]::OpenRead($zipPath)
+        try {
+            $entry = $zip.GetEntry($steamDllEntry)
+            if (-not $entry) { throw "$steamDllEntry is not in $steamDllZip" }
+            $candidate = Join-Path $work 'steam_api64.dll'
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $candidate)
+        }
+        finally { $zip.Dispose() }
+        $got = (Get-FileHash $candidate -Algorithm SHA256).Hash
+        if ($got -ne $steamDllHash) { throw "downloaded steam_api64.dll has SHA-256 $got, expected $steamDllHash" }
+        New-Item -ItemType Directory -Force (Split-Path $steamDll) | Out-Null
+        Move-Item $candidate $steamDll
+    }
+    finally { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+Get-SteamDll
+if ($SteamDllOnly) { Write-Host "steam_api64.dll verified: $steamDll"; return }
 
 $version = (Select-String -Path "$root\project.godot" -Pattern '^config/version="([^"]+)"').Matches[0].Groups[1].Value
 Write-Host "Wavebreak $version" -ForegroundColor Cyan
