@@ -236,6 +236,9 @@ public sealed partial class Projectile : Node3D, IPooled
         _template = template;
         _mode = spec.Mode;
         _tint = spec.Tint;
+        _trail = template?.Evolution?.Trail ?? default;
+        _trailFrom = spec.Origin;
+        _trailTimer = 0f;
 
         _hitRadius = MathF.Max(0.15f, spec.HitRadius);
         _blastRadius = MathF.Max(0f, spec.BlastRadius);

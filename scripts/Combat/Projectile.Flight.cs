@@ -12,6 +12,7 @@ public sealed partial class Projectile
     private void Step(float dt)
     {
         _age += dt;
+        if (_trail.A > 0f) StepTrail(dt);
 
         if (_motion != ProjectileMotion.None) { StepMotion(dt); return; }
 
@@ -43,6 +44,23 @@ public sealed partial class Projectile
         }
 
         Contact(next);
+    }
+
+    // Evolved shots leave a short glowing line. Skipped when the pool is busy:
+    // a trail is the first thing to give up, never a real shot.
+    private const float TrailInterval = 0.06f;
+    private const int TrailBudget = 256;
+    private Color _trail;
+    private Vector3 _trailFrom;
+    private float _trailTimer;
+
+    private void StepTrail(float dt)
+    {
+        if ((_trailTimer -= dt) > 0f) return;
+        _trailTimer = TrailInterval;
+        Vector3 at = GlobalPosition;
+        if (Live.Count < TrailBudget) SpawnStreak(_trailFrom, at, 0.14f, _trail, 0.2f);
+        _trailFrom = at;
     }
 
     private void StepCosmetic()

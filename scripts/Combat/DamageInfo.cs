@@ -55,6 +55,11 @@ public sealed class DamageInfo
     /// or absorbed. Nothing downstream should apply an amount when this is set.</summary>
     public bool Nullified;
 
+    /// <summary>The evolution behind this hit, for its rider
+    /// (Combat/Weapons/EvolutionRiders.cs). Null on everything else, and on a
+    /// rider's own hits, so a rider cannot trigger itself.</summary>
+    public Data.EvolutionDef? Evolution;
+
     public DamageInfo Clone() => (DamageInfo)MemberwiseClone();
 }
 

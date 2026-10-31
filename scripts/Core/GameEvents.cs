@@ -73,6 +73,23 @@ public readonly struct WeaponAcquired
     public WeaponAcquired(string id, int newLevel) { Id = id; NewLevel = newLevel; }
 }
 
+/// <summary>A weapon became its evolved form (Data/Evolutions.cs).</summary>
+public readonly struct WeaponEvolved
+{
+    public readonly string WeaponId;
+    public readonly string EvolutionId;
+    public readonly Vector3 At;
+    public WeaponEvolved(string weaponId, string evolutionId, Vector3 at) { WeaponId = weaponId; EvolutionId = evolutionId; At = at; }
+}
+
+/// <summary>A held weapon and its catalyst just came together; the next
+/// level-up or chest will offer the evolution.</summary>
+public readonly struct EvolutionReady
+{
+    public readonly string EvolutionId;
+    public EvolutionReady(string evolutionId) { EvolutionId = evolutionId; }
+}
+
 public readonly struct RunEnded
 {
     public readonly bool Survived;

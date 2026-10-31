@@ -101,9 +101,13 @@ public sealed partial class LevelUpPanel
     private void RefreshControls()
     {
         LevelUpChoices? choices = LevelUpChoices.Current;
-        bool any = choices is not null;
+        bool any = choices is not null && !_chestHand;
         _rerollButton.Visible = _banishButton.Visible = _skipButton.Visible = any;
-        if (choices is null) return;
+        if (!any)
+        {
+            SyncCompactControls();
+            return;
+        }
 
         _rerollButton.Text = Loc.F("REROLL [{0}]   {1}", KeyName(RerollAction), choices.RerollsLeft);
         _banishButton.Text = _banishMode
@@ -161,7 +165,7 @@ public sealed partial class LevelUpPanel
 
     private void DoReroll()
     {
-        if (!IsOpen || _current.Count == 0 || LevelUpChoices.Current is not { } choices) return;
+        if (!IsOpen || _chestHand || _current.Count == 0 || LevelUpChoices.Current is not { } choices) return;
         if (!choices.TryReroll(_current, out List<Offer> fresh) || fresh.Count == 0) return;
 
         _banishMode = false;
@@ -176,7 +180,7 @@ public sealed partial class LevelUpPanel
 
     private void ToggleBanish()
     {
-        if (!IsOpen || LevelUpChoices.Current is not { } choices) return;
+        if (!IsOpen || _chestHand || LevelUpChoices.Current is not { } choices) return;
         if (!_banishMode && choices.BanishesLeft <= 0) return;
         _banishMode = !_banishMode;
         UpdateSubheading();
@@ -196,7 +200,7 @@ public sealed partial class LevelUpPanel
         Offer target = _current[index];
         if (!LevelUpChoices.CanBanish(target))
         {
-            UpdateSubheading(Loc.T("Supply payouts cannot be banished"));
+            UpdateSubheading(Loc.T(target.IsEvolution ? "The evolution card cannot be banished" : "Supply payouts cannot be banished"));
             RefreshControls();
             return;
         }
@@ -219,7 +223,7 @@ public sealed partial class LevelUpPanel
 
     private void DoSkip()
     {
-        if (!IsOpen || LevelUpChoices.Current is not { } choices) return;
+        if (!IsOpen || _chestHand || LevelUpChoices.Current is not { } choices) return;
         if (!choices.TrySkip()) return;
 
         // Same teardown as a pick, minus the callback: the level is simply passed.

@@ -381,6 +381,8 @@ public static class Icons
     /// held carry a green arrow in the corner.</summary>
     public static IconSpec For(Offer offer)
     {
+        if (offer.Evolution is { } evolution && Catalog.WeaponById(evolution.WeaponId) is { } evolved)
+            return For(evolved).WithCorner("up", new Color(1f, 0.82f, 0.28f));
         if (offer.Weapon is { } w)
         {
             IconSpec s = For(w);

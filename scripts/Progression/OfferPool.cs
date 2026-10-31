@@ -20,7 +20,7 @@ namespace Wavebreak.Progression;
 /// rolled, so the UI never has to know how a weapon upgrade differs from an item
 /// stack in order to draw one.
 /// </summary>
-public sealed class Offer
+public sealed partial class Offer
 {
     private Offer(string title, string detail, string description, string effect,
                   Rarity rarity, Color tint,
@@ -92,7 +92,7 @@ public sealed class Offer
     public bool IsTome => Tome is not null;
 
     /// <summary>True for the consolation offer: no weapon, item or tome, just a payout.</summary>
-    public bool IsBonus => Weapon is null && Item is null && Tome is null;
+    public bool IsBonus => Weapon is null && Item is null && Tome is null && Evolution is null;
 
     /// <summary>The definition behind the card (weapon, item or tome), or null
     /// for a supply offer. What a banish removes from the pool.</summary>
@@ -415,7 +415,7 @@ public sealed class OfferPool
             if (weight <= 0f) continue;
 
             _candidates.Add(Offer.ForItem(def, held));
-            _weights.Add(weight);
+            _weights.Add(weight * EvolutionOffers.Pull(def.Id));
         }
 
         AddTomeCandidates(luck);
@@ -461,7 +461,7 @@ public sealed class OfferPool
                 ? WeaponUpgrades.Roll(def, _rng, luck, (int)(_upgradeStats))
                 : null;
             _candidates.Add(Offer.ForWeapon(def, level, upgrade));
-            _weights.Add(weight);
+            _weights.Add(weight * EvolutionOffers.Pull(def.Id));
         }
     }
 
@@ -490,7 +490,7 @@ public sealed class OfferPool
             if (weight <= 0f) continue;
 
             _candidates.Add(Offer.ForTome(def, level));
-            _weights.Add(weight);
+            _weights.Add(weight * EvolutionOffers.Pull(def.Id));
         }
     }
 

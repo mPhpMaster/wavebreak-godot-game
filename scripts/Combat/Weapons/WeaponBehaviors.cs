@@ -42,10 +42,30 @@ internal static class WeaponBehaviors
 
     public static bool Has(string id) => ById.ContainsKey(id);
 
+    /// <summary>The delivery an evolved weapon switches to (Data/Evolutions.cs);
+    /// same strategies, reading the evolved def's numbers.</summary>
+    private static readonly Dictionary<EvolutionDelivery, IWeaponBehavior> ByDelivery = new()
+    {
+        [EvolutionDelivery.Boomerang] = ById["gullwing_chakram"],
+        [EvolutionDelivery.Orbit] = ById["circling_shoal"],
+        [EvolutionDelivery.Chain] = ById["forked_squall"],
+        [EvolutionDelivery.Beam] = ById["lighthouse_beam"],
+        [EvolutionDelivery.Sentry] = ById["driftwood_sentry"],
+        [EvolutionDelivery.Vortex] = ById["maelstrom_seed"],
+        [EvolutionDelivery.Skimstone] = ById["skimstone_sling"],
+        [EvolutionDelivery.Strikes] = ById["thunderhead_censer"],
+        [EvolutionDelivery.Swell] = ById["breaker_swell"],
+    };
+
     /// <summary>Called first thing in <see cref="WeaponRuntime"/>'s fire; false
     /// leaves the weapon to the shape switch.</summary>
     public static bool TryFire(WeaponRuntime weapon, WeaponSystem system, StatSheet stats)
     {
+        if (weapon.Evolution is { } e && ByDelivery.TryGetValue(e.Delivery, out IWeaponBehavior? evolved))
+        {
+            evolved.Fire(weapon, system, stats);
+            return true;
+        }
         if (Signatures.TryFire(weapon, system, stats)) return true;   // Combat/Weapons/Signatures.cs
         if (!ById.TryGetValue(weapon.Def.Id, out IWeaponBehavior? b)) return false;
         b.Fire(weapon, system, stats);

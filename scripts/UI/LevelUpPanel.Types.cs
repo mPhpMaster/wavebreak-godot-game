@@ -45,7 +45,8 @@ public sealed partial class LevelUpPanel
     {
         public readonly List<Offer> Offers;
         public readonly Action<Offer> Callback;
-        public Pending(List<Offer> offers, Action<Offer> callback) { Offers = offers; Callback = callback; }
+        public readonly bool Chest;
+        public Pending(List<Offer> offers, Action<Offer> callback, bool chest = false) { Offers = offers; Callback = callback; Chest = chest; }
     }
 
 }
