@@ -369,6 +369,18 @@ public sealed partial class Main
             await Wait(0.3);
         }
 
+        // --------------------------------------------------------- trade invite
+        var invite = new TradeInvitePanel();
+        AddChild(invite);
+        await Wait(0.1);
+        invite.Open("Bob");
+        await Wait(0.5);
+        Expect($"a trade invite opens focused for a pad ({(Focus() as Button)?.Text})", Inside(invite) && Focus() is Button { Text: var yes } && yes == Loc.T("ACCEPT"));
+        await Tap(JoyButton.B);
+        await Wait(0.2);
+        Expect("B declines it", !invite.IsOpen);
+        invite.QueueFree();
+
         // -------------------------------------------------------------- shrine
         if (ShrineSpawner.Instance is { } shrines && _stages.DevArena is { } arena)
         {

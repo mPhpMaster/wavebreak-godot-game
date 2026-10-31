@@ -8,7 +8,7 @@ namespace Wavebreak.UI;
 /// <summary>
 /// Settings > Accessibility (<see cref="Accessibility"/>): the colour-blind
 /// palette and reduced flashes, with the rarities drawn live so the choice can be
-/// judged. The title's page and the pause menu both show it, framed with BACK.
+/// judged, and the way back to the Classic tutorial. The title's page and the pause menu both show it, framed with BACK.
 /// Every change saves at once.
 /// </summary>
 public sealed partial class AccessibilityPanel : VBoxContainer
@@ -21,6 +21,7 @@ public sealed partial class AccessibilityPanel : VBoxContainer
     private readonly Action _back;
     private OptionButton _vision = null!;
     private CheckButton _flashes = null!;
+    private Label _replayNote = null!;
     private readonly (Label Label, Rarity Rarity)[] _swatches = new (Label, Rarity)[5];
 
     public AccessibilityPanel(Action back) => _back = back;
@@ -57,6 +58,19 @@ public sealed partial class AccessibilityPanel : VBoxContainer
         flashNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         flashNote.CustomMinimumSize = new Vector2(LabelWidth + 260f, 0f);
         AddChild(flashNote);
+
+        var replay = new HBoxContainer();
+        replay.AddThemeConstantOverride("separation", 14);
+        Button again = MainMenu.MenuButton("REPLAY TUTORIAL", () => { ClassicTutorial.Replay(); _replayNote.Text = Loc.T("It plays at the start of your next Classic run."); });
+        again.CustomMinimumSize = new Vector2(0f, 40f);
+        again.AddThemeFontSizeOverride("font_size", 17);
+        replay.AddChild(again);
+        _replayNote = MainMenu.MakeLabel("", 15, InkDim);
+        _replayNote.VerticalAlignment = VerticalAlignment.Center;
+        _replayNote.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _replayNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        replay.AddChild(_replayNote);
+        AddChild(replay);
 
         AddChild(MainMenu.MenuButton("BACK", _back));
         Refresh();

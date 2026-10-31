@@ -24,6 +24,9 @@ namespace Wavebreak.Meta;
 ///     --steam-test          let an automated run (--menu-shot) start Steam: live co-op checks
 ///     --connect-lobby=&lt;id&gt;  join this Steam lobby at start (same as Steam's +connect_lobby)
 ///     --steam-selftest      check the Steam transport over a fake in-memory Steam, then quit
+///     --check-pad-menu      walk every title page with an injected pad (menu flag)
+///     --colorblind=&lt;id&gt;    deuteranopia | protanopia | tritanopia, in an automated run (menu flag)
+///     --reduce-flashes      the same for reduced flashes (menu flag)
 /// </summary>
 public static class Launch
 {
