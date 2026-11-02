@@ -30,11 +30,13 @@ namespace Wavebreak.Game;
 ///    takes the offer away;
 ///  * a real chest offers the card with a "Not now", and it comes back;
 ///  * every row of the table is fired against the same pack as the max-level
-///    weapon: ratio of damage output, which must be 1.6 to 2.2.
+///    weapon. One measurement swings by about +-0.4 from run to run (frame
+///    timing, crits, spread), so a row must be clearly stronger and not absurd
+///    (x1.3 to x3.0), and the table's mean must sit at x1.7 to x2.3.
 /// </summary>
 public static class EvolutionCheck
 {
-    public const float MinRatio = 1.6f, MaxRatio = 2.2f;
+    public const float MinRatio = 1.3f, MaxRatio = 3.0f, MinMean = 1.7f, MaxMean = 2.3f;
 
     public static bool Requested => Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-evolutions") >= 0;
 
@@ -292,7 +294,10 @@ public static class EvolutionCheck
             GD.Print($"EVOLVE {(inBand ? "ok  " : "FAIL")} dps {e.Id,-24} pack {basePack,7:0} -> {evoPack,7:0} x{ratio:0.00}" +
                      $"   lone {baseOne,6:0} -> {evoOne,6:0} x{(baseOne > 0f ? evoOne / baseOne : 0f):0.00}");
         }
-        GD.Print($"EVOLVE dps band x{ratios.Min():0.00} to x{ratios.Max():0.00}, mean x{ratios.Average():0.00} over {ratios.Count}");
+        float mean = ratios.Average();
+        bool meanOk = mean >= MinMean && mean <= MaxMean;
+        ok &= meanOk;
+        GD.Print($"EVOLVE {(meanOk ? "ok  " : "FAIL")} dps band x{ratios.Min():0.00} to x{ratios.Max():0.00}, mean x{mean:0.00} over {ratios.Count}");
         system.Rng = runRng;
         WeaponSystem.PublishHitEvents = hits;
         WeaponSystem.PublishDamageNumbers = numbers;

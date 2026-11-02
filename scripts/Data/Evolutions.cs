@@ -265,7 +265,7 @@ public static class Evolutions
         {
             Id = "evo_cyclone_eye", WeaponId = "tempest_spindle", CatalystId = "tome_fortune",
             Name = "Eye of the Cyclone", Description = "The spindles stop leaving. They wheel around you at speed, and everything that comes close is cut to ribbons.",
-            Delivery = EvolutionDelivery.Orbit, DamageScale = 0.46f, Range = 2.4f, Radius = 0.8f, Speed = 15f,
+            Delivery = EvolutionDelivery.Orbit, DamageScale = 0.55f, Range = 2.0f, Radius = 0.8f, Speed = 15f,
             Tint = new Color(0.72f, 0.9f, 1f),
         },
 
