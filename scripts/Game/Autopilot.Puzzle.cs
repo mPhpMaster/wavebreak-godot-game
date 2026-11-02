@@ -29,6 +29,7 @@ public sealed partial class Autopilot
     /// returns a wish, the bot follows it instead.</summary>
     public static Func<Vector3, Vector3?>? PuzzleSteer { get; set; }
 
+    private static readonly bool DebugBot = Array.IndexOf(OS.GetCmdlineUserArgs(), "--puzzle-bot-log") >= 0;
     private static readonly bool SkipPuzzles = Array.IndexOf(OS.GetCmdlineUserArgs(), "--puzzle-skip") >= 0;
 
     private Vector3 PuzzleThink(PuzzleMap map, Vector3 me)
@@ -57,6 +58,7 @@ public sealed partial class Autopilot
             return map.ExitTarget is { } exit ? Toward(me, exit, 0.4f) : Vector3.Zero;
         }
         int frontier = st.Frontier;
+        if (DebugBot && Engine.GetPhysicsFrames() % 90 == 0) GD.Print($"[puzzle-bot] at={me} room={r} frontier={frontier} focus={map.Focus} t={map.Elapsed:0.0}");
         if (st.SkipOpen && map.SkipPosition is { } skip && (SkipPuzzles || map.Elapsed > plan.SkipSeconds + 25f))
         {
             int at = plan.RoomAt(skip);
@@ -94,12 +96,69 @@ public sealed partial class Autopilot
                 if (!leader) return Hold(room, me);
                 if (st.RuneShowing(room, map.Elapsed, out _)) return Toward(me, room.Centre + new Vector3(1.6f, 0f, 1.6f), 0.5f);
                 int next = room.Sequence[Mathf.Clamp(st.Get(room, PuzzleState.RA), 0, room.Sequence.Length - 1)];
-                return UsePiece(map, room, me, room.World(room.Bells[next]), PuzzleAction.Bell, next);
+                return BellThink(map, room, me, next);
             }
             case RoomKind.Wind: return WindThink(map, room, me);
             case RoomKind.Twin: return TwinThink(map, room, me);
         }
         return Vector3.Zero;
+    }
+
+    /// <summary>Bells stand in a ring round the echo bell: go round outside
+    /// the ring to the bell's spoke, then step in until it is the focus.</summary>
+    private Vector3 BellThink(PuzzleMap map, RoomPlan room, Vector3 me, int bell)
+    {
+        if (map.Focus is { Action: PuzzleAction.Bell } f && f.Index == bell && f.Room == room.Index)
+        {
+            if (Ready(map)) map.RequestInteract();
+            return Vector3.Zero;
+        }
+        Vector3 c = room.Centre;
+        Vector3 b = room.World(room.Bells[bell]);
+        Vector3 spoke = (b - c) with { Y = 0f };
+        spoke = spoke.Normalized();
+        Vector3 off = (me - c) with { Y = 0f };
+        float radius = off.Length();
+        Vector3 stand = b + spoke * 1.5f;
+        if (me.DistanceTo(stand) < 1.2f || (me - b).Length() < 2.2f) return (b - me) with { Y = 0f };
+        Vector3 outward = radius > 0.01f ? off / radius : spoke;
+        // Too far in: out past the ring first. Then round it at about 6.5 m.
+        if (radius < 5.9f) return outward;
+        float turn = outward.Cross(spoke).Y;   // which way round is shorter
+        Vector3 tangent = new Vector3(-outward.Z, 0f, outward.X) * (turn >= 0f ? -1f : 1f);
+        float angle = Mathf.Acos(Mathf.Clamp(outward.Dot(spoke), -1f, 1f));
+        if (angle < 0.25f) return Toward(me, stand, 0.2f);
+        return (tangent + outward * (6.6f - radius) * 0.8f).Normalized();
+    }
+
+    private Vector3 _stuckFrom;
+    private float _stuckFor, _sidestepFor;
+    private Vector3 _sidestep;
+
+    /// <summary>Wanting to move but going nowhere for a second and a half
+    /// (wedged on a pillar corner or a piece): sidestep for a moment.</summary>
+    private Vector3 Unstick(Vector3 me, Vector3 wish)
+    {
+        float dt = (float)_player.GetPhysicsProcessDeltaTime();
+        if (_sidestepFor > 0f)
+        {
+            _sidestepFor -= dt;
+            return _sidestep;
+        }
+        if (wish.LengthSquared() < 0.04f || me.DistanceTo(_stuckFrom) > 0.4f)
+        {
+            _stuckFrom = me;
+            _stuckFor = 0f;
+            return wish;
+        }
+        _stuckFor += dt;
+        if (_stuckFor < 1.5f) return wish;
+        _stuckFor = 0f;
+        _stuckFrom = me;
+        Vector3 w = wish.Normalized();
+        _sidestep = (new Vector3(-w.Z, 0f, w.X) * (_clock % 2f < 1f ? 1f : -1f) - w * 0.5f).Normalized();
+        _sidestepFor = 0.6f;
+        return _sidestep;
     }
 
     /// <summary>Co-op: the lowest slot works the pieces that toggle.</summary>

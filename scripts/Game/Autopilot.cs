@@ -54,7 +54,7 @@ public sealed partial class Autopilot
         // A puzzle map: solve it, claim, leave (Autopilot.Puzzle.cs).
         if (Main.Instance?.Stages is { InPuzzle: true, Puzzle: { } puzzle })
         {
-            Vector3 p = PuzzleThink(puzzle, me);
+            Vector3 p = Unstick(me, PuzzleThink(puzzle, me));
             return p.LengthSquared() > 1f ? p.Normalized() : p;
         }
         Vector3 away = Vector3.Zero;
