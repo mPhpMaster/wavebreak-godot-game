@@ -146,6 +146,8 @@ public sealed partial class Main : Node3D
             _ = EvolutionCheck.Run(this);            // --check-evolutions
         else if (Puzzle.PuzzleCheck.Requested)
             _ = Puzzle.PuzzleCheck.Run(this);        // --check-puzzles (puzzle route)
+        else if (Puzzle.PuzzleCheck.ShotPath is { } puzzleShot)
+            _ = Puzzle.PuzzleCheck.Shot(this, puzzleShot);   // --puzzle-shot=x.png
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--map-tour=")) is { } tourArg)
             _ = MapTour(tourArg["--map-tour=".Length..]);   // Main.MapTour.cs
     }

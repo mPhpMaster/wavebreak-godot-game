@@ -105,7 +105,7 @@ public sealed partial class PuzzleMap
                 n.AddChild(Mesh(new BoxMesh { Size = new Vector3(0.12f, 0.35f, 0.12f) }, Vector3.Down * 0.5f, Flat(BronzeDark)));
                 break;
             default:
-                var ring = Mesh(new TorusMesh { InnerRadius = 0.3f, OuterRadius = 0.44f, RingSegments = 20, Rings = 6 }, Vector3.Zero, glow);
+                var ring = Mesh(new TorusMesh { InnerRadius = 0.3f, OuterRadius = 0.44f, Rings = 20, RingSegments = 6 }, Vector3.Zero, glow);
                 ring.Rotation = new Vector3(Mathf.Pi * 0.5f, 0f, 0f);
                 n.AddChild(ring);
                 var head = Mesh(new CylinderMesh { TopRadius = 0f, BottomRadius = 0.18f, Height = 0.32f, RadialSegments = 3 }, new Vector3(0.38f, 0.1f, 0f), glow);

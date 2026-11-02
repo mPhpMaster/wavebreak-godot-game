@@ -33,6 +33,45 @@ public static class PuzzleCheck
 {
     public static bool Requested => Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-puzzles") >= 0;
 
+    private static string? Arg(string name)
+    {
+        foreach (string a in OS.GetCmdlineUserArgs())
+            if (a.StartsWith(name + "=")) return a[(name.Length + 1)..];
+        return null;
+    }
+
+    /// <summary>--puzzle-shot=x.png: photograph a puzzle map (with
+    /// --puzzle-shot-room=N, default 1; N past the last puzzle room is the
+    /// vault with every room solved; --puzzle-shot-hint shows a hint).</summary>
+    public static string? ShotPath => Arg("--puzzle-shot");
+
+    public static async Task Shot(Main main, string path)
+    {
+        SceneTree tree = main.GetTree();
+        async Task Wait(double s) => await tree.ToSignal(tree.CreateTimer(s, processAlways: true), SceneTreeTimer.SignalName.Timeout);
+        await Wait(1.2);
+        StageDirector stages = main.Stages;
+        if (!stages.InPuzzle) stages.DevEnterPuzzle(0);
+        await Wait(0.5);
+        if (stages.Puzzle is not { } map) { GD.Print("[puzzle] no puzzle map to photograph"); tree.Quit(); return; }
+        int room = Math.Clamp((Arg("--puzzle-shot-room") ?? "1").ToInt(), 1, map.Plan.Rooms.Count - 1);
+        // A believable clock for the card (the rooms before are taken as solved).
+        map.SetElapsed(16f * room + 4f);
+        for (int i = 1; i < room && i < map.Plan.Rooms.Count - 1; i++) map.State.MarkSolved(i, map.Elapsed);
+        map.Flush();
+        RoomPlan r = map.Plan.Rooms[room];
+        var toCentre = -new Vector3(RoomPlan.Dx[r.EntrySide], 0f, RoomPlan.Dz[r.EntrySide]);
+        main.Player.Teleport(r.Centre - toCentre * 3.2f + new Vector3(toCentre.Z, 0f, toCentre.X) * 1.2f + Vector3.Up * 0.3f);
+        PlayerCamera.Instance?.FaceDirection(toCentre);
+        PlayerCamera.Instance?.SnapToTarget();
+        await Wait(1.0);
+        if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--puzzle-shot-hint") >= 0) map.Ask(PuzzleAction.Hint, room, 0);
+        await Wait(room == map.Plan.Rooms.Count - 1 ? 2.9 : 2.0);
+        await Screenshot.Capture(tree, main, path);
+        GD.Print($"[puzzle] shot {path}: room {room} {r.Kind}");
+        tree.Quit();
+    }
+
     private static bool _ok = true;
 
     private static void Expect(string what, bool condition)

@@ -36,6 +36,7 @@ public sealed partial class PuzzleMap
     private StaticBody3D _tall = null!;
     private Portal? _exit;
     private Portal? _skip;
+    private Label3D? _exitSign;
 
     private sealed class DoorView
     {
@@ -117,9 +118,10 @@ public sealed partial class PuzzleMap
         AddChild(_exit);
         _exit.Position = vault.Centre - new Vector3(RoomPlan.Dx[back], 0f, RoomPlan.Dz[back]) * 4.5f;
         _exit.Visible = false;
-        AddChild(new Label3D
+        AddChild(_exitSign = new Label3D
         {
             Name = "ExitSign",
+            Visible = false,
             Text = Meta.Loc.T("EXIT"),
             FontSize = 64,
             PixelSize = 0.012f,
@@ -159,16 +161,14 @@ public sealed partial class PuzzleMap
         float offset = DoorWidth * 0.5f + seg * 0.5f;
         WallSegment(mid + along * offset, along, seg);
         WallSegment(mid - along * offset, along, seg);
-        // Door posts and a lintel, so a doorway reads as one from across the room.
+        // Door posts with a lamp each, so a doorway reads as one from across
+        // the room. No lintel: the camera often looks through a doorway.
         foreach (float s in new[] { -1f, 1f })
-            AddChild(Mesh(new BoxMesh { Size = new Vector3(1.3f, WallHeight + 1.8f, 1.3f) }, mid + along * s * (DoorWidth * 0.5f + 0.4f) + Vector3.Up * ((WallHeight + 1.8f) * 0.5f), Flat(WallCap)));
-        AddChild(Mesh(new BoxMesh { Size = along * (DoorWidth + 2.2f) + new Vector3(0.9f, 0.5f, 0.9f) - along * 0.9f }, mid + Vector3.Up * (WallHeight + 1.55f), Flat(WallCap)));
-        // The arch over the doorway is low, so the tall collider spans it too.
-        _tall.AddChild(new CollisionShape3D
         {
-            Shape = new BoxShape3D { Size = along * DoorWidth + new Vector3(1f, 24f, 1f) - along },
-            Position = mid + Vector3.Up * (WallHeight + 1.8f + 12f),
-        });
+            Vector3 post = mid + along * s * (DoorWidth * 0.5f + 0.4f);
+            AddChild(Mesh(new BoxMesh { Size = new Vector3(1.2f, WallHeight + 0.7f, 1.2f) }, post + Vector3.Up * ((WallHeight + 0.7f) * 0.5f), Flat(WallCap)));
+            AddChild(Mesh(new SphereMesh { Radius = 0.24f, Height = 0.48f, RadialSegments = 10, Rings = 5 }, post + Vector3.Up * (WallHeight + 0.95f), Glow(Teal, 1.8f), false));
+        }
     }
 
     private void WallSegment(Vector3 mid, Vector3 along, float length)
@@ -183,9 +183,9 @@ public sealed partial class PuzzleMap
     /// <summary>A little lantern on the wall top.</summary>
     private void Lantern(Vector3 at)
     {
-        AddChild(Mesh(new CylinderMesh { TopRadius = 0.06f, BottomRadius = 0.08f, Height = 0.7f, RadialSegments = 6 }, at + Vector3.Up * (WallHeight + 0.53f), Flat(BronzeDark)));
-        AddChild(Mesh(new BoxMesh { Size = new Vector3(0.34f, 0.4f, 0.34f) }, at + Vector3.Up * (WallHeight + 1.0f), Flat(BronzeDark)));
-        AddChild(Mesh(new SphereMesh { Radius = 0.14f, Height = 0.28f, RadialSegments = 8, Rings = 4 }, at + Vector3.Up * (WallHeight + 1.0f), Glow(Warm, 2.6f), false));
+        AddChild(Mesh(new CylinderMesh { TopRadius = 0.05f, BottomRadius = 0.07f, Height = 0.6f, RadialSegments = 6 }, at + Vector3.Up * (WallHeight + 0.4f), Flat(BronzeDark)));
+        AddChild(Mesh(new SphereMesh { Radius = 0.2f, Height = 0.4f, RadialSegments = 10, Rings = 5 }, at + Vector3.Up * (WallHeight + 0.85f), Glow(Warm, 2.6f), false));
+        AddChild(Mesh(new CylinderMesh { TopRadius = 0f, BottomRadius = 0.26f, Height = 0.22f, RadialSegments = 8 }, at + Vector3.Up * (WallHeight + 1.12f), Flat(BronzeDark)));
     }
 
     private DoorView BuildDoor(int i)
@@ -211,7 +211,7 @@ public sealed partial class PuzzleMap
         // A lock emblem on both faces: ring and bar. Shape, not colour, says "shut".
         foreach (float f in new[] { -1f, 1f })
         {
-            var ring = Mesh(new TorusMesh { InnerRadius = 0.42f, OuterRadius = 0.6f, RingSegments = 20, Rings = 8 }, Vector3.Up * 1.55f + dir * f * 0.32f, Flat(BronzeDark));
+            var ring = Mesh(new TorusMesh { InnerRadius = 0.42f, OuterRadius = 0.6f, Rings = 20, RingSegments = 8 }, Vector3.Up * 1.55f + dir * f * 0.32f, Flat(BronzeDark));
             ring.Rotation = side % 2 == 0 ? new Vector3(0f, 0f, Mathf.Pi * 0.5f) : new Vector3(Mathf.Pi * 0.5f, 0f, 0f);
             view.Slab.AddChild(ring);
             view.Slab.AddChild(Mesh(new BoxMesh { Size = along * 0.3f + new Vector3(0.12f, 0.9f, 0.12f) - along * 0.12f }, Vector3.Up * 0.85f + dir * f * 0.32f, Flat(BronzeDark)));
@@ -235,7 +235,9 @@ public sealed partial class PuzzleMap
             Name = $"Sign{i}",
             Text = text,
             FontSize = 44,
-            PixelSize = 0.012f,
+            PixelSize = 0.009f,
+            // Read from across a room; gone when the camera is on top of it.
+            VisibilityRangeBegin = 7f,
             OutlineSize = 12,
             Modulate = new Color(1f, 0.97f, 0.88f),
             OutlineModulate = new Color(0.12f, 0.2f, 0.26f, 0.95f),

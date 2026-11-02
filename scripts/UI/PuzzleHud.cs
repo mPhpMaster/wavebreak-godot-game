@@ -22,7 +22,7 @@ public sealed partial class PuzzleHud : Control
 {
     private readonly PuzzleMap _map;
     private PanelContainer _panel = null!;
-    private Label _title = null!, _room = null!, _objective = null!, _clock = null!, _hint = null!, _extra = null!, _team = null!;
+    private Label _room = null!, _objective = null!, _clock = null!, _hint = null!, _extra = null!, _team = null!;
     private PanelContainer _promptPanel = null!;
     private Label _prompt = null!;
     private Control _banner = null!;
@@ -47,7 +47,7 @@ public sealed partial class PuzzleHud : Control
         _panel = CuteStyle.Panel(CuteStyle.Cream, CuteStyle.Seafoam, 18, 10);
         _panel.AnchorLeft = 0.5f; _panel.AnchorRight = 0.5f;
         _panel.AnchorTop = 1f; _panel.AnchorBottom = 1f;
-        _panel.OffsetLeft = -360f; _panel.OffsetRight = 360f;
+        _panel.OffsetLeft = -320f; _panel.OffsetRight = 320f;
         _panel.OffsetTop = -96f; _panel.OffsetBottom = -96f;
         _panel.GrowHorizontal = GrowDirection.Both;
         _panel.GrowVertical = GrowDirection.Begin;
@@ -56,13 +56,13 @@ public sealed partial class PuzzleHud : Control
         var col = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         col.AddThemeConstantOverride("separation", 1);
         _panel.AddChild(col);
-        _title = Line(col, 21, CuteStyle.Ink);
-        _room = Line(col, 17, CuteStyle.Ink);
+        // The puzzle's name is on the phase line at the top; this card is the room.
+        _room = Line(col, 19, CuteStyle.Ink);
         _objective = Line(col, 15, CuteStyle.InkSoft);
         _objective.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _extra = Line(col, 16, new Color(0.18f, 0.45f, 0.55f));
-        _clock = Line(col, 16, CuteStyle.Ink);
-        _hint = Line(col, 14, CuteStyle.InkSoft);
+        _clock = Line(col, 15, CuteStyle.Ink);
+        _hint = Line(col, 13, CuteStyle.InkSoft);
         _team = Line(col, 16, new Color(0.20f, 0.55f, 0.45f));
 
         _promptPanel = CuteStyle.Panel(CuteStyle.Night, CuteStyle.Butter, 14, 8);
@@ -79,7 +79,7 @@ public sealed partial class PuzzleHud : Control
         // The medal banner.
         _banner = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         _banner.AnchorLeft = 0.5f; _banner.AnchorRight = 0.5f;
-        _banner.AnchorTop = 0.24f; _banner.AnchorBottom = 0.24f;
+        _banner.AnchorTop = 0.13f; _banner.AnchorBottom = 0.13f;
         _banner.OffsetLeft = -320f; _banner.OffsetRight = 320f;
         _banner.GrowHorizontal = GrowDirection.Both;
         AddChild(_banner);
@@ -135,7 +135,6 @@ public sealed partial class PuzzleHud : Control
         int r = _map.FocusRoom;
         RoomPlan room = plan.Rooms[Mathf.Clamp(r, 0, plan.Rooms.Count - 1)];
 
-        _title.Text = Loc.F("PUZZLE  ·  {0}", Loc.T(plan.Name));
         _room.Text = room.Kind switch
         {
             RoomKind.Reward => Loc.T(PuzzleText.Title(RoomKind.Reward)),

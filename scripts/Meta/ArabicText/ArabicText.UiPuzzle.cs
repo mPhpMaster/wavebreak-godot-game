@@ -82,7 +82,6 @@ public static partial class ArabicText
         ("PUZZLE {0}/{1}  —  {2}", "لغز {0}/{1}  —  {2}"),
         ("PUZZLE {0}  ·  {1}", "لغز {0}  ·  {1}"),
         ("Solve every room. Faster, with fewer hints, pays better.", "حُلّ كل الغرف. الأسرع وبتلميحات أقل يُكافأ أكثر."),
-        ("PUZZLE  ·  {0}", "لغز  ·  {0}"),
         ("Room {0}/{1}  ·  {2}  ·  solved {3}/{1}", "الغرفة {0}/{1}  ·  {2}  ·  المحلولة {3}/{1}"),
         ("{0}  ·  solved in {1}", "{0}  ·  حُلّ في {1}"),
         ("Time {0}  ·  SKIP PORTAL OPEN (lowest reward)", "الوقت {0}  ·  بوابة التخطي مفتوحة (أدنى مكافأة)"),
