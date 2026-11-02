@@ -33,9 +33,10 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Perks | 15 levelled rules picked like tomes (and sometimes found in chests): chain lightning every Nth hit, shield bubbles from elites, a chilling dash wake, stomps, crits that heal, orbiting XP motes, gold-fuelled damage, a refused lethal blow, a chest-finding beacon, a knock-back pulse, armour for standing still, speed-fuelled attack speed, a cornered damage boost, and two team perks (Crew Beacon buffs nearby allies; Lifeline speeds up the revives you give). Perks share the tome slots |
 | Enemies | 53, including phase bosses with move sets |
 | Characters | 24 with passives, 153 skins, 22 hats. The heroes trio have their own original models (a macaw lookout, a sailor sea-dog and a chibi aviator fox) and each bring a signature weapon that also levels up from chests and the merchant: Sunny the Lookout (Spyglass Glint, a precise beam at whatever you look at), Biscuit the Sea Dog (Mooring Anchor, a ring that holds a crowd until it is hauled in) and Flick the Kite Fox (Skimmer Kite, a kite you steer by running) |
-| Quests | 353 (19 secret), which unlock characters, weapons, items, skins and Pearls |
+| Quests | 356 (19 secret), which unlock characters, weapons, items, skins and Pearls |
 | Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 66 map challenges, the Toggler, leaderboard |
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests; Tide Totems (1-3 per map: press E once and every XP orb and coin on the map flies to you) |
+| Puzzle route | An optional route: a short seeded puzzle map before each of Classic's maps (puzzle, rest, map, rest, puzzle...). Six piece types (crates on pressure plates, mirror beams, gust rings, bell order, lamp levers, twin plates), a few weak guards, a SKIP portal after 2:30, and a gold/silver/bronze medal that pays a better prize for the fight ahead (see [Puzzle route](#puzzle-route)) |
 | Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full, a microwave and (in co-op) the Swap Meet, where two players trade gold, items and tomes. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |
 | Level-up | Three cards with icons (a perk card shows what the level adds and the total); reroll (R), banish (B) and skip (X), which refill a little on each new map; optional compact hand that keeps the game running, and auto-pick by a rule (Settings > Gameplay) |
 | Music | 21 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
@@ -45,6 +46,44 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Settings | Full graphics page (presets, display, scaling/FSR, AA, shadows, effects, FOV, shake, UI scale, weapon-effect opacity, FPS counter), audio, key and controller bindings, accessibility (colour-blind palettes with striped telegraphs, reduced flashes) |
 | Controller | Full gamepad play and menus, stick look with its own sensitivity and dead zones, rebinding, and on-screen hints that follow your bindings and device. Tested with injected input, not yet on real hardware |
 | First run | A short, skippable Classic tutorial, replayable from Settings > Accessibility |
+
+## Puzzle route
+
+Pick **Puzzle Route** (Arabic: مسار الألغاز) on the character page's Route &
+Challenges row, or in the co-op lobby. The run plays Classic's maps at Classic's
+difficulty, and before each one comes a **puzzle map**:
+puzzle, rest stop, map, rest stop, puzzle, and so on to the final boss.
+
+A puzzle map is a chain of three to five rooms drawn from the run's seed, so it
+is different every run; later puzzles and harder tiers add rooms and harder
+pieces. Each room holds one piece type and its door opens when it is solved:
+
+| Room | What to do |
+|---|---|
+| Weighing Room | Walk into crates to push them onto pressure plates; stand on the last plate yourself. A bell resets the crates |
+| Mirror Room | Turn mirrors (E) until the light beam reaches the crystal |
+| Gust Room | Plates sit inside rings of gusting wind: run in while it is calm |
+| Bell Room | Bells ring an order (each has a carved symbol and its own note); strike them in that order. The centre bell rings it again |
+| Lamp Room | Each lever flips several lamps; light them all (lit lamps stand tall) |
+| Twin Plates | Two players stand on both plates at once; alone, a plate keeps a short latch while you run to the other |
+
+The run clock is paused, a few weak guards wander in, and spikes rattle before
+they rise. **H** (or the pad's help button) shows a hint on the next step, at the
+cost of the gold medal. Solve fast with no hints for **gold** (epic chest,
+evolution catalyst or weapon pick, +2 rerolls), a little slower or with one hint
+for **silver** (rare chest, weapon pick or 3 rerolls), and anything else for
+**bronze** (chest or 2 rerolls); claim one prize in the vault and step into the
+exit. After 2:30 a **SKIP** portal opens (+1 reroll and a little gold), so
+nobody is ever stuck. In co-op the host keeps the puzzle state, everyone sees
+the same plates and doors, and late joiners get it all. Endless mode plays the
+route as Classic (no puzzle maps).
+
+![Puzzle map: the Bell Room](docs/screenshots/puzzle-1.png)
+![Puzzle map: the reward vault after a gold medal](docs/screenshots/puzzle-2.png)
+
+For testing: `--route=puzzle`, `--check-puzzles` (prints `PUZZLE PASS`),
+`--puzzle-rooms=twin,crates` to choose the rooms, `--puzzle-skip` to make the
+bot take the skip portal, `--puzzle-shot=x.png --puzzle-shot-room=N` for captures.
 
 ## Optional underwater expedition
 
@@ -252,6 +291,7 @@ Title screen → **CO-OP**.
 | Tab | hold for the big map (fog of war, landmarks, the team, chests, shrines, portal, pings), your stats and your build |
 | Y | hold for the scoreboard |
 | G, middle mouse | ping the spot you look at (co-op; a local marker in single-player) |
+| H | a hint on a puzzle map (Puzzle route) |
 | Esc / P | pause menu (Resume, Settings, End Run, Restart, Main menu, Quit; in co-op, Leave Game instead of End Run and Restart) |
 | M, `[` `]`, `-` `=`, `9` `0` | mute, music volume, master volume, effects volume |
 

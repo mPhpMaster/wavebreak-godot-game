@@ -273,9 +273,9 @@ public static class Routes
         string arrow = Loc.IsRtl ? "  <  " : "  >  ";
         if (r.Id == PuzzleId)
         {
-            // Puzzle > map > puzzle > map ...
-            string puzzle = Loc.T("Puzzle");
-            return string.Join(arrow, r.MapIds.Select(id => puzzle + arrow + Loc.T(Stages.ById(id)?.DisplayName ?? id)));
+            // The maps first: a narrow row cuts the tail, and the route's name says "puzzle" already.
+            string maps = string.Join(arrow, r.MapIds.Select(id => Loc.T(Stages.ById(id)?.DisplayName ?? id)));
+            return Loc.F("{0}, each after a puzzle", maps);
         }
         if (!r.Drawn) return string.Join(arrow, r.MapIds.Select(id => Loc.T(Stages.ById(id)?.DisplayName ?? id)));
         string first = r.StartId.Length > 0 ? Loc.T(Stages.ById(r.StartId)?.DisplayName ?? r.StartId) : "?";

@@ -11,7 +11,7 @@ public static partial class ArabicText
         ("Puzzle Route", "مسار الألغاز"),
         ("Classic's maps, each after a short puzzle map. Solve it fast for a better reward for the fight ahead.",
          "خرائط الوضع الكلاسيكي، وقبل كل منها خريطة ألغاز قصيرة. حُلّها بسرعة لتنال مكافأة أفضل للمعركة القادمة."),
-        ("Puzzle", "لغز"),
+        ("{0}, each after a puzzle", "{0}، وقبل كل منها لغز"),
         // ---- puzzle maps
         ("Tidelock Vaults", "أقبية قفل المدّ"),
         ("Mirrorwater Grotto", "مغارة المياه المرآتية"),

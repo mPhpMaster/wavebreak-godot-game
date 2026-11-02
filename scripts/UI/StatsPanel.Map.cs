@@ -46,6 +46,7 @@ public sealed partial class StatsPanel
     {
         if (Main.Instance?.Stages is not { } stages) return;
         if (stages.InRestRoom) { _mapTitle.Text = Loc.T("MAP"); return; }
+        if (stages.Puzzle is { } puzzle) { _mapTitle.Text = Loc.T(puzzle.Plan.Name); return; }
         int pct = FogOfWar.Instance is { Active: true } fog ? Mathf.RoundToInt(fog.Explored * 100f) : 100;
         _mapTitle.Text = Loc.F("{0}  ·  {1} explored", Loc.T(stages.Stage.DisplayName), $"{pct}%");
     }

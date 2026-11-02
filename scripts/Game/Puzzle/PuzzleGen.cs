@@ -49,9 +49,13 @@ public static class PuzzleGen
     private static ulong SeedFor(ulong runSeed, int puzzleIndex) => runSeed ^ 0x9A22_1E00UL ^ ((ulong)(puzzleIndex + 1) * 0x9E3779B97F4A7C15UL);
 
     /// <summary>The name puzzle <paramref name="puzzleIndex"/> of this run will
-    /// have (the rest room before it says where you go next).</summary>
+    /// have (the rest room before it says where you go next): a seeded start in
+    /// the list, then the next name per puzzle, so a run never repeats one.</summary>
     public static string NameFor(ulong runSeed, int puzzleIndex)
-        => PuzzleText.MapNames[(int)((SeedFor(runSeed, puzzleIndex) >> 7) % (ulong)PuzzleText.MapNames.Count)];
+    {
+        int n = PuzzleText.MapNames.Count;
+        return PuzzleText.MapNames[(int)(((runSeed >> 3) % (ulong)n + (ulong)Math.Max(0, puzzleIndex)) % (ulong)n)];
+    }
 
     public static PuzzlePlan Build(ulong runSeed, int puzzleIndex, int difficulty, int players, string? forced = null)
     {

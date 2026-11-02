@@ -144,6 +144,7 @@ Useful test flags (all after `--`):
 | `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
 | `--check-totem`, `--totem-shot=<prefix>` | Tide Totem self-check (`TOTEM PASS`; no `--auto`, add `--invulnerable`) and its captures (see "Tide Totems") |
 | `--check-evolutions [--check-evolutions-shot=x.png]` | weapon evolutions: one end to end through the real panel and a real chest, then every row measured against its max-level weapon, `EVOLVE PASS/FAIL` (see "Weapon evolutions") |
+| `--check-puzzles`, `--route=puzzle`, `--puzzle-rooms=twin,crates`, `--puzzle-skip`, `--puzzle-shot=x.png [--puzzle-shot-room=N --puzzle-shot-hint]` | puzzle route: generator, solvers, rules, doors, prizes and skip on paper and in the engine (`PUZZLE PASS`); choose the rooms; make the bot skip; captures (see "Puzzle route") |
 | `--check-trade`, `--swap-meet`, `--rest-exit-seconds=N` | swap meet: rules and escrow self-check (`TRADE PASS`), build the stall in single-player (captures), shorten the co-op rest room's countdown (see "Swap meet") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
 | `--coop-expect-migration`, `--coop-no-migrate`, `--coop-late-join`, `--coop-expect-late-join`, `--coop-toast-shot=x.png`, `--coop-mark-file=P --coop-mark-at=S` | host migration and late-join checks (see "Host migration and late join") |
@@ -474,6 +475,76 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
 `--challenges=<ids|all>` is given. `--check-boundary` walks `Stages.All`.
 `StageDef.MusicId` and `EnemyIds` are hooks for music and theme enemies
 (empty = default).
+
+## Puzzle route
+
+`Game/Puzzle/` (`PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`,
+`PuzzleMap*`, `PuzzleRewards`, `PuzzleCheck`), `Game/StageDirector.Puzzle.cs`,
+`Game/Autopilot.Puzzle.cs`, `Net/NetSession.Puzzle.cs`, `UI/PuzzleHud`,
+`Meta/ArabicText/ArabicText.UiPuzzle.cs`, `Data/ContentAudit.Puzzle.cs`.
+
+- **Flow.** Route `puzzle` (appended last: the saved route is an index)
+  plays Classic's maps; `StageDirector` puts a puzzle map before each:
+  puzzle i -> rest -> map i -> boss portal -> rest -> puzzle i+1 ... The
+  index stays the action map's, so the HUD, refills, boss plan and
+  `Stages.ForPhase` see the run they always did. The rest room learned which
+  side of a puzzle it is on (`EnterRestRoom(afterPuzzle)`, `RestEnter` carries
+  it). Endless ignores the route's puzzles: a loop is about the clock, and a
+  puzzle every few minutes of an endless score attack would be filler.
+- **The clock is held** on a puzzle map, as in the rest room: thinking must
+  not cost difficulty-curve time, and a 2-4 minute puzzle at full clock would
+  make every later map harder for the puzzle route than for Classic. The
+  puzzle has its own clock (`PuzzleMap.Elapsed`) for medals, gusts, bells,
+  latches and the SKIP portal. Guards are placed by the puzzle
+  (`EnemyManager.SpawnAt`, 2-4 cheap enemies per room on first entry, scaled
+  for the next map); the director stays off.
+- **Generated, never authored.** A map is a self-avoiding walk of rooms on a
+  macro grid from the run's seed; each room gets a piece type and a layout
+  drawn per run. A room is kept only when `PuzzleSolver` solves it from its
+  start (a BFS for crates, every on/off combination for mirrors and levers,
+  timing margins for gusts and latches) and the way between its doors stays
+  open. Difficulty is the puzzle's number plus a step for Hard and Tempest:
+  more rooms, crates, pushes, mirrors, decoys, bells and levers, shorter calms
+  and latches. A fixed puzzle would be solved once and skipped forever after.
+- **Never block a player.** The SKIP portal opens at 150 s in the first
+  unsolved room (lowest prize); hints point at the next step from the solver
+  run on the room as it stands; a crate room has a reset bell; a twin room
+  latches its plates for a lone player, or after 45 s if a partner wanders
+  off; the bot takes the skip if it is still stuck 25 s after it opened, so
+  `--auto` never hangs.
+- **Rewards feed the fight.** The medal (gold: fast and no hint; silver: a
+  slower time or one hint; bronze) sets the pedestals in the vault: an epic,
+  rare or plain chest roll, the catalyst a held weapon evolves with, a weapon
+  pick, or rerolls, plus bonus rerolls. Prizes are rolled per machine for that
+  player's build; co-op shares the medal, never the prize. An unclaimed prize
+  is taken for you on the way out.
+- **State is one int array** (`PuzzleState`): crates' cells, mirror and
+  lever bits, bells struck, plates held, latches, rooms solved, hints, tier.
+  The host runs the rules (plates from every avatar's position, asks from
+  clients: push, turn, pull, strike, echo, reset, hint) and sends changed
+  slots as pairs, reliably, so a press and a release never arrive swapped;
+  clients draw from the array and hear sounds from its diffs. A late joiner
+  and a survivor reconnecting to a new host get the array whole after the
+  world snapshot; a client that becomes the host already has it. The twin
+  variant depends on the player count, which every machine takes from the
+  roster at the start (the host's count wins on a rebuild).
+- **Not colour alone.** Plates sink, lit lamps stand tall, gust arrows rise,
+  mirrors show their angle, bells carry carved symbols and their own note,
+  twin plates are lettered, medals are a star, diamond, disc or square.
+- **Walls** are low on the world layer (the camera looks over a room from
+  behind the player) with a tall collider on the player-only layer (nobody
+  hops a wall past a puzzle); piece colliders sit on that layer too, so the
+  camera's spring arm never snaps into the player's head at a bell.
+- **Checks.** `--check-puzzles` generates 360 maps (10 seeds, 3 tiers, 6
+  puzzle numbers, 1-2 players), solves every room from scratch and plays the
+  answer through the rules, checks doors, medals and the skip, then enters two
+  puzzles in the engine: one solved room by room through the real asks and
+  the player's body on the plates (doors must open, a prize must change the
+  build, the exit leads to the rest room), one waited out to its SKIP portal.
+  `tests/coop.ps1 -Only coop-puzzle`: the guest presses a plate and the host
+  sees it, a twin room solved by both, a hint asked by the guest reaches
+  everyone, a third player joins mid-puzzle and gets the whole state, and the
+  team leaves together.
 
 ## Quest book, skin recolouring, codex tabs
 
@@ -969,6 +1040,7 @@ responsive and cannot desync where it matters:
 | Phase flow (waves → boss → portal → next map, win, Final Swarm) | host | Reliable `Phase`, `Boss` and `BossDown` messages replay the steps. A client's `StageDirector.Tick` only guards falls. The run clock is synced twice a second |
 | Rest room (entering, leaving, the CONTINUE count, the boss portal's countdown) | host | Reliable `RestEnter` when the host takes the boss portal; leaving is the usual `Phase` message. `RestStatus` (in the portal / total / countdown) and `PortalTimer` stream at 4 and 2 Hz, unreliable. Each machine builds its own room, revives and heals its own player, and shops with its own gold |
 | Trades at the swap meet | host decides; each side moves only its own goods | The host validates both offers and runs the escrow; each machine removes and adds only its own player's gold, items and tomes (see "Swap meet") |
+| Puzzle maps (plates, crates, mirrors, levers, bells, latches, doors, medal, exits) | host decides; each player claims their own prize | Clients ask (push, turn, pull, strike, hint) and draw the host's state array, sent as changed slots (see "Puzzle route") |
 | Tide Totems | host places; first to ask wakes it | `E` sends a request; the host latches every networked orb and coin to the asker and tells everyone the totem sleeps (see "Tide Totems") |
 | Shrines, merchant, microwave, pots, secrets | each player | Each player has their own set, built from the shared seed, and their own rewards. Pot drops are personal (`Pickup.Personal`) |
 
