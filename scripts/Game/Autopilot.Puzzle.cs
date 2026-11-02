@@ -299,24 +299,33 @@ public sealed partial class Autopilot
 
     // ------------------------------------------------------------- walking
 
-    /// <summary>Between rooms: through the doors in order towards <paramref name="target"/>.</summary>
+    /// <summary>Between rooms: through the doors and corridors in order
+    /// towards <paramref name="target"/>. On the puzzle grid it walks the grid
+    /// to the cell before the doorway; from the open strip round the grid it
+    /// lines up with the doorway; lined up, it goes straight through (a
+    /// doorway and its corridor sit on the line between two room centres).</summary>
     private static Vector3 TowardRoom(PuzzleMap map, Vector3 me, int r, int target)
     {
         PuzzlePlan plan = map.Plan;
-        if (r < 0) return Toward(me, plan.Rooms[target].Centre, 0.5f);
-        int step = r < target ? r : r - 1;
-        int into = r < target ? r + 1 : r - 1;
-        Vector3 door = plan.DoorBetween(step);
+        if (r < 0)
+        {
+            int corridor = plan.CorridorAt(me, 1.5f);
+            if (corridor < 0) return Toward(me, plan.Rooms[plan.NearestRoom(me)].Centre, 0.5f);
+            return Toward(me, plan.Rooms[target > corridor ? corridor + 1 : corridor].Centre, 0.5f);
+        }
         RoomPlan here = plan.Rooms[r];
-        // Line up with the doorway first, then go through it.
-        Vector3 inside = door - (door - here.Centre).Normalized() * 2.2f;
-        Vector3 beyond = door + (plan.Rooms[into].Centre - door).Normalized() * 2.5f;
-        int doorCell = here.CellAt(inside);
-        Vector3 flat = me - door;
-        flat.Y = 0f;
-        if (flat.Length() > 2.6f && doorCell >= 0 && here.CellAt(me) != doorCell)
-            return WalkGrid(here, me, doorCell, false);
-        return Toward(me, beyond, 0.3f);
+        int into = r < target ? r + 1 : r - 1;
+        int side = r < target ? here.ExitSide : here.EntrySide;
+        var dir = new Vector3(RoomPlan.Dx[side], 0f, RoomPlan.Dz[side]);
+        Vector3 rel = me - here.Centre;
+        float along = rel.X * dir.X + rel.Z * dir.Z;
+        float across = Mathf.Abs(rel.X * dir.Z - rel.Z * dir.X);
+        float grid = RoomPlan.N * RoomPlan.Cell * 0.5f;
+        int doorCell = RoomPlan.DoorCell(side);
+        int cell = here.CellAt(me);
+        if (across < 1.2f && (along > grid - 1.2f || cell == doorCell)) return Toward(me, plan.Rooms[into].Centre, 0.3f);
+        if (cell >= 0) return WalkGrid(here, me, doorCell, false);
+        return Toward(me, here.Centre + dir * (grid + 1.5f), 0.3f);
     }
 
     private static Vector3 Toward(Vector3 me, Vector3 at, float stop)

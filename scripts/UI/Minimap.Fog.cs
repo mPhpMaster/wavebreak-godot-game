@@ -9,7 +9,8 @@ namespace Wavebreak.UI;
 /// The minimap's map layer: the explored part of the map (UI/FogOfWar's
 /// texture: floor, wall, raised ground and blockers, dark where nobody has
 /// been) clipped to the disc under the markers, and the name of the zone you
-/// are in under the disc on maps that have zones.
+/// are in under the disc on maps that have zones. On a puzzle map, the rooms
+/// the team has found.
 /// </summary>
 public sealed partial class Minimap
 {
@@ -32,6 +33,21 @@ public sealed partial class Minimap
             _fogColors[i] = Colors.White;
         }
         DrawPolygon(_fogPoints, _fogColors, _fogUvs, tex);
+    }
+
+    private readonly Vector2[] _disc = new Vector2[FogSegments];
+
+    /// <summary>A puzzle map has no fog: its found rooms are drawn instead (UI/PuzzleMapView).</summary>
+    private void DrawPuzzle()
+    {
+        if (PuzzleMapView.Current is not { } map) return;
+        float r = _radius - 1.5f;
+        for (int i = 0; i < FogSegments; i++)
+        {
+            float a = Mathf.Tau * i / FogSegments;
+            _disc[i] = _centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r;
+        }
+        PuzzleMapView.Draw(this, map, w => _centre + Map(w), _disc, 1.2f);
     }
 
     private void DrawZoneName(Player me)

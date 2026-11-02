@@ -144,7 +144,7 @@ Useful test flags (all after `--`):
 | `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
 | `--check-totem`, `--totem-shot=<prefix>` | Tide Totem self-check (`TOTEM PASS`; no `--auto`, add `--invulnerable`) and its captures (see "Tide Totems") |
 | `--check-evolutions [--check-evolutions-shot=x.png]` | weapon evolutions: one end to end through the real panel and a real chest, then every row measured against its max-level weapon, `EVOLVE PASS/FAIL` (see "Weapon evolutions") |
-| `--check-puzzles`, `--route=puzzle`, `--puzzle-rooms=twin,crates`, `--puzzle-skip`, `--puzzle-shot=x.png [--puzzle-shot-room=N --puzzle-shot-hint]` | puzzle route: generator, solvers, rules, doors, prizes and skip on paper and in the engine (`PUZZLE PASS`); choose the rooms; make the bot skip; captures (see "Puzzle route") |
+| `--check-puzzles`, `--route=puzzle`, `--puzzle-rooms=twin,crates`, `--puzzle-skip`, `--puzzle-shot=x.png [--puzzle-shot-room=N --puzzle-shot-hint --puzzle-shot-door]` | puzzle route: generator, solvers, rules, doors, prizes and skip on paper and in the engine (`PUZZLE PASS`); choose the rooms; make the bot skip; captures (see "Puzzle route") |
 | `--check-trade`, `--swap-meet`, `--rest-exit-seconds=N` | swap meet: rules and escrow self-check (`TRADE PASS`), build the stall in single-player (captures), shorten the co-op rest room's countdown (see "Swap meet") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
 | `--coop-expect-migration`, `--coop-no-migrate`, `--coop-late-join`, `--coop-expect-late-join`, `--coop-toast-shot=x.png`, `--coop-mark-file=P --coop-mark-at=S` | host migration and late-join checks (see "Host migration and late join") |
@@ -480,7 +480,7 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
 
 `Game/Puzzle/` (`PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`,
 `PuzzleMap*`, `PuzzleRewards`, `PuzzleCheck`), `Game/StageDirector.Puzzle.cs`,
-`Game/Autopilot.Puzzle.cs`, `Net/NetSession.Puzzle.cs`, `UI/PuzzleHud`,
+`Game/Autopilot.Puzzle.cs`, `Net/NetSession.Puzzle.cs`, `UI/PuzzleHud`, `UI/PuzzleMapView`,
 `Meta/ArabicText/ArabicText.UiPuzzle.cs`, `Data/ContentAudit.Puzzle.cs`.
 
 - **Flow.** Route `puzzle` (appended last: the saved route is an index)
@@ -531,10 +531,39 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
 - **Not colour alone.** Plates sink, lit lamps stand tall, gust arrows rise,
   mirrors show their angle, bells carry carved symbols and their own note,
   twin plates are lettered, medals are a star, diamond, disc or square.
-- **Walls** are low on the world layer (the camera looks over a room from
-  behind the player) with a tall collider on the player-only layer (nobody
-  hops a wall past a puzzle); piece colliders sit on that layer too, so the
-  camera's spring arm never snaps into the player's head at a bell.
+- **Rooms are closed halls** (`PuzzleMap.Build.cs`). The 9 x 9 puzzle grid
+  (2 m cells, what the solver and timing checks are tuned for) is inlaid in
+  the middle of a 30 m hall (`RoomPlan.Half`), so the open strip round it
+  holds the props, the guards' spawn corners and the SKIP portal. Walls are
+  14 m to a solid ceiling; the exit doorway has a door slab that slides up
+  into the lintel when the room is solved, onto an 8 m corridor to the next
+  room's open entrance (`RoomPlan.Pitch` = 40 m). Each room is themed by its
+  piece type (colours, trim, Kenney props or primitives: crates and barrels,
+  crystals, banners, gears, statues, chests). Lights: four wall torches and a
+  chandelier per room plus one per corridor, no shadows (three per room on
+  the Low preset), and a dim steep skylight that keeps the pieces' shadows
+  (the graphics page's shadow setting applies); walls and ceiling cast none.
+  The static shell is merged into one mesh per material per room
+  (`Batch`, `SurfaceTool.AppendFrom`).
+- **Seeing.** Each room (with its corridor out) is one node; only the room
+  this machine's player stands in and its two neighbours are drawn
+  (`SyncVisibility`), so in co-op each machine shows rooms near its own
+  player. Walls are opaque and the background is black: no other room and no
+  outside is ever in view. The minimap and Tab map draw the rooms the team
+  has entered, corridors behind open doors and shut doors as bars
+  (`UI/PuzzleMapView`); there is no fog in a puzzle map.
+- **Camera.** Walls, door slabs, corridors, ceiling and beams are world
+  geometry (layer 1), so the camera's spring arm (sphere cast) pulls in at
+  them instead of looking through; indoors the zoom is capped at 12 m
+  (`CameraMaxIndoors`), which keeps the camera under the ceiling at any
+  pitch, and given back on leaving. Pieces collide on the player's layer
+  (64) and a pieces layer (128), never the camera's, so a bell behind the
+  player does not yank the view into their head.
+- **Guards** spawn in the hall's corners farthest from the entrance, collide
+  with the pieces (`Enemy.ExtraWorldMask` = the pieces layer while a puzzle
+  stands; they used to walk through them), and steer round long runs of
+  pillars registered as `MapBlockers`. The bot walks the grid to the doorway
+  cell, lines up with the doorway and goes straight through the corridor.
 - **Checks.** `--check-puzzles` generates 360 maps (10 seeds, 3 tiers, 6
   puzzle numbers, 1-2 players), solves every room from scratch and plays the
   answer through the rules, checks doors, medals and the skip, then enters two

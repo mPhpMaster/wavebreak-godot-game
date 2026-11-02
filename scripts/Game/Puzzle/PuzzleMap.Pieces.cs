@@ -51,9 +51,10 @@ public sealed partial class PuzzleMap
         public int ShowStep = -1;
     }
 
-    // Piece colliders sit on the player-only layer (TallLayer): the camera's
-    // spring arm ignores them, so a bell or a mirror behind the player never
-    // pulls the camera into the back of their head. Guards walk through them.
+    // Piece colliders sit on the player's layer (TallLayer) and the guards'
+    // (PieceLayer), never the camera's: its spring arm ignores them, so a bell
+    // or a mirror behind the player never pulls the camera into the back of
+    // their head, while guards walk round them instead of through them.
     private readonly List<RoomView> _views = new();
     private int[] _prev = Array.Empty<int>();
     private int _drawnVersion = -1;
@@ -80,6 +81,7 @@ public sealed partial class PuzzleMap
         {
             var v = new RoomView();
             _views.Add(v);
+            _into = _roomRoots[room.Index];
             for (int c = 0; c < RoomPlan.N * RoomPlan.N; c++) if (room.Pillar[c]) Pillar(room.World(c));
             switch (room.Kind)
             {
@@ -91,7 +93,9 @@ public sealed partial class PuzzleMap
                 case RoomKind.Twin: BuildTwin(room, v); break;
             }
             foreach (int cell in room.Spikes) v.Spikes.Add(SpikeStrip(room.World(cell)));
+            _into = null;
         }
+        RegisterBlockers();
         _hintMarker = new Node3D { Name = "HintMarker", Visible = false };
         AddChild(_hintMarker);
         var cone = Mesh(new CylinderMesh { TopRadius = 0.42f, BottomRadius = 0f, Height = 0.8f, RadialSegments = 12 }, Vector3.Zero, Glow(new Color(1f, 0.95f, 0.5f), 2.2f), false);
@@ -121,9 +125,9 @@ public sealed partial class PuzzleMap
 
     private void Pillar(Vector3 at)
     {
-        AddChild(Mesh(new CylinderMesh { TopRadius = 0.62f, BottomRadius = 0.72f, Height = 2.3f, RadialSegments = 10 }, at + Vector3.Up * 1.15f, Flat(Wall.Lightened(0.12f))));
-        AddChild(Mesh(new BoxMesh { Size = new Vector3(1.6f, 0.25f, 1.6f) }, at + Vector3.Up * 2.38f, Flat(WallCap)));
-        AddChild(Mesh(new BoxMesh { Size = new Vector3(1.6f, 0.2f, 1.6f) }, at + Vector3.Up * 0.1f, Flat(WallCap)));
+        Put(Mesh(new CylinderMesh { TopRadius = 0.62f, BottomRadius = 0.72f, Height = 2.3f, RadialSegments = 10 }, at + Vector3.Up * 1.15f, Flat(Wall.Lightened(0.12f))));
+        Put(Mesh(new BoxMesh { Size = new Vector3(1.6f, 0.25f, 1.6f) }, at + Vector3.Up * 2.38f, Flat(WallCap)));
+        Put(Mesh(new BoxMesh { Size = new Vector3(1.6f, 0.2f, 1.6f) }, at + Vector3.Up * 0.1f, Flat(WallCap)));
         _tall.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.75f, Height = 2.6f }, Position = at + Vector3.Up * 1.3f });
         _tall.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.75f, Height = 20f }, Position = at + Vector3.Up * 12.6f });
     }
@@ -131,10 +135,10 @@ public sealed partial class PuzzleMap
     private PlateView Plate(Vector3 at, bool round = false)
     {
         var view = new PlateView { Mat = Flat(PlateIdle) };
-        AddChild(Mesh(round ? new CylinderMesh { TopRadius = 1.0f, BottomRadius = 1.05f, Height = 0.1f, RadialSegments = 24 }
+        Put(Mesh(round ? new CylinderMesh { TopRadius = 1.0f, BottomRadius = 1.05f, Height = 0.1f, RadialSegments = 24 }
                             : new BoxMesh { Size = new Vector3(1.9f, 0.1f, 1.9f) }, at + Vector3.Up * 0.05f, Flat(BronzeDark), false));
         view.Top = new Node3D { Position = at + Vector3.Up * 0.16f };
-        AddChild(view.Top);
+        Put(view.Top);
         view.Top.AddChild(Mesh(round ? new CylinderMesh { TopRadius = 0.78f, BottomRadius = 0.82f, Height = 0.16f, RadialSegments = 24 }
                                      : new BoxMesh { Size = new Vector3(1.5f, 0.16f, 1.5f) }, Vector3.Zero, view.Mat, false));
         // A weight mark: a squat dome on the pad.
@@ -147,12 +151,12 @@ public sealed partial class PuzzleMap
         foreach (int p in room.Plates) v.Plates.Add(Plate(room.World(p)));
         foreach (int c in room.CrateStart)
         {
-            var body = new StaticBody3D { Name = "Crate", Position = room.World(c) + Vector3.Up * 0.85f, CollisionLayer = TallLayer, CollisionMask = 0 };
+            var body = new StaticBody3D { Name = "Crate", Position = room.World(c) + Vector3.Up * 0.85f, CollisionLayer = TallLayer | PieceLayer, CollisionMask = 0 };
             body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.7f, 1.7f, 1.7f) } });
-            AddChild(body);
+            Put(body);
             v.CrateBodies.Add(body);
             var mesh = new Node3D { Name = "CrateMesh", Position = body.Position };
-            AddChild(mesh);
+            Put(mesh);
             mesh.AddChild(Mesh(new BoxMesh { Size = new Vector3(1.66f, 1.66f, 1.66f) }, Vector3.Zero, Flat(Crate)));
             foreach (float y in new[] { -0.55f, 0.55f })
                 mesh.AddChild(Mesh(new BoxMesh { Size = new Vector3(1.72f, 0.18f, 1.72f) }, Vector3.Up * y, Flat(CrateBand)));
@@ -161,13 +165,13 @@ public sealed partial class PuzzleMap
         }
         // The reset bell: a small post with a circling arrow.
         Vector3 at = room.World(room.ResetCell);
-        AddChild(Mesh(new CylinderMesh { TopRadius = 0.3f, BottomRadius = 0.4f, Height = 1.1f, RadialSegments = 10 }, at + Vector3.Up * 0.55f, Flat(WallCap)));
+        Put(Mesh(new CylinderMesh { TopRadius = 0.3f, BottomRadius = 0.4f, Height = 1.1f, RadialSegments = 10 }, at + Vector3.Up * 0.55f, Flat(WallCap)));
         var ring = Mesh(new TorusMesh { InnerRadius = 0.32f, OuterRadius = 0.46f, Rings = 18, RingSegments = 6 }, at + Vector3.Up * 1.55f, Flat(Bronze));
         ring.Rotation = new Vector3(Mathf.Pi * 0.5f, 0f, 0f);
-        AddChild(ring);
+        Put(ring);
         var head = Mesh(new CylinderMesh { TopRadius = 0f, BottomRadius = 0.16f, Height = 0.3f, RadialSegments = 3 }, at + new Vector3(0.4f, 1.62f, 0f), Flat(Bronze));
         head.Rotation = new Vector3(0f, 0f, Mathf.Pi);
-        AddChild(head);
+        Put(head);
         _tall.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.45f, Height = 1.6f }, Position = at + Vector3.Up * 0.8f });
     }
 
@@ -176,18 +180,18 @@ public sealed partial class PuzzleMap
         // Emitter: a lamp housing on the wall, its lens facing in.
         Vector3 e = room.World(room.EmitterCell);
         var inward = new Vector3(RoomPlan.Dx[room.EmitterDir], 0f, RoomPlan.Dz[room.EmitterDir]);
-        AddChild(Mesh(new BoxMesh { Size = new Vector3(1.3f, 1.6f, 1.3f) }, e + Vector3.Up * 0.8f, Flat(WallCap)));
+        Put(Mesh(new BoxMesh { Size = new Vector3(1.3f, 1.6f, 1.3f) }, e + Vector3.Up * 0.8f, Flat(WallCap)));
         var lens = Mesh(new CylinderMesh { TopRadius = 0.32f, BottomRadius = 0.32f, Height = 0.3f, RadialSegments = 16 }, e + Vector3.Up * 1.15f + inward * 0.7f, Glow(BeamColour, 3f), false);
         lens.Rotation = room.EmitterDir % 2 == 0 ? new Vector3(0f, 0f, Mathf.Pi * 0.5f) : new Vector3(Mathf.Pi * 0.5f, 0f, 0f);
-        AddChild(lens);
+        Put(lens);
         _tall.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.3f, 1.6f, 1.3f) }, Position = e + Vector3.Up * 0.8f });
 
         // Crystal: a hexagonal prism on a plinth; rises and spins when lit.
         Vector3 r = room.World(room.ReceiverCell);
-        AddChild(Mesh(new BoxMesh { Size = new Vector3(1.3f, 0.7f, 1.3f) }, r + Vector3.Up * 0.35f, Flat(WallCap)));
+        Put(Mesh(new BoxMesh { Size = new Vector3(1.3f, 0.7f, 1.3f) }, r + Vector3.Up * 0.35f, Flat(WallCap)));
         v.ReceiverMat = Flat(Teal.Darkened(0.35f));
         v.Receiver = new Node3D { Position = r + Vector3.Up * 1.2f };
-        AddChild(v.Receiver);
+        Put(v.Receiver);
         v.Receiver.AddChild(Mesh(new CylinderMesh { TopRadius = 0.05f, BottomRadius = 0.42f, Height = 0.9f, RadialSegments = 6 }, Vector3.Up * 0.2f, v.ReceiverMat));
         v.Receiver.AddChild(Mesh(new CylinderMesh { TopRadius = 0.42f, BottomRadius = 0.05f, Height = 0.5f, RadialSegments = 6 }, Vector3.Down * 0.5f, v.ReceiverMat));
         _tall.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.3f, 1.6f, 1.3f) }, Position = r + Vector3.Up * 0.8f });
@@ -195,9 +199,9 @@ public sealed partial class PuzzleMap
         for (int i = 0; i < room.MirrorCells.Length; i++)
         {
             Vector3 at = room.World(room.MirrorCells[i]);
-            AddChild(Mesh(new CylinderMesh { TopRadius = 0.5f, BottomRadius = 0.6f, Height = 0.7f, RadialSegments = 12 }, at + Vector3.Up * 0.35f, Flat(WallCap)));
+            Put(Mesh(new CylinderMesh { TopRadius = 0.5f, BottomRadius = 0.6f, Height = 0.7f, RadialSegments = 12 }, at + Vector3.Up * 0.35f, Flat(WallCap)));
             var turn = new Node3D { Position = at + Vector3.Up * 1.15f, Rotation = new Vector3(0f, MirrorAngle(room.MirrorStart[i]), 0f) };
-            AddChild(turn);
+            Put(turn);
             turn.AddChild(Mesh(new BoxMesh { Size = new Vector3(1.6f, 1.0f, 0.12f) }, Vector3.Zero, new StandardMaterial3D
             {
                 AlbedoColor = Mirror, Metallic = 0.35f, Roughness = 0.1f,
@@ -209,7 +213,7 @@ public sealed partial class PuzzleMap
             _tall.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.62f, Height = 1.8f }, Position = at + Vector3.Up * 0.9f });
         }
         v.Beam = new Node3D { Name = "Beam" };
-        AddChild(v.Beam);
+        Put(v.Beam);
     }
 
     /// <summary>Y rotation of a mirror plate: "/" is +45 degrees, "\" is -45.</summary>
@@ -275,7 +279,7 @@ public sealed partial class PuzzleMap
             var ringMat = Flat(new Color(0.40f, 0.68f, 0.76f));
             var ring = Mesh(new TorusMesh { InnerRadius = room.WindInner, OuterRadius = room.WindOuter, Rings = 64, RingSegments = 8 }, c + Vector3.Up * 0.02f, ringMat, false);
             ring.Scale = new Vector3(1f, 0.03f, 1f);
-            AddChild(ring);
+            Put(ring);
             v.RingMats.Add(ringMat);
             v.Plates.Add(Plate(c, round: true));
             var arrows = new List<Node3D>();
@@ -284,7 +288,7 @@ public sealed partial class PuzzleMap
             {
                 float a = Mathf.Tau * k / count;
                 var arrow = new Node3D { Position = c, Rotation = new Vector3(0f, -a, 0f) };
-                AddChild(arrow);
+                Put(arrow);
                 // A flat arrowhead pointing outward along +X.
                 var head = Mesh(new CylinderMesh { TopRadius = 0f, BottomRadius = 0.28f, Height = 0.6f, RadialSegments = 3 }, Vector3.Zero, Glow(new Color(0.85f, 0.97f, 1f), 1.2f), false);
                 head.Rotation = new Vector3(0f, 0f, -Mathf.Pi * 0.5f);
@@ -300,33 +304,33 @@ public sealed partial class PuzzleMap
         for (int i = 0; i < room.Bells.Length; i++)
         {
             Vector3 at = room.World(room.Bells[i]);
-            AddChild(Mesh(new BoxMesh { Size = new Vector3(0.9f, 1.0f, 0.9f) }, at + Vector3.Up * 0.5f, Flat(WallCap)));
+            Put(Mesh(new BoxMesh { Size = new Vector3(0.9f, 1.0f, 0.9f) }, at + Vector3.Up * 0.5f, Flat(WallCap)));
             // Two posts and a beam, the bell hanging under it.
             foreach (float s in new[] { -0.4f, 0.4f })
-                AddChild(Mesh(new BoxMesh { Size = new Vector3(0.1f, 1.1f, 0.1f) }, at + new Vector3(s, 1.5f, 0f), Flat(BronzeDark)));
-            AddChild(Mesh(new BoxMesh { Size = new Vector3(0.95f, 0.1f, 0.12f) }, at + Vector3.Up * 2.05f, Flat(BronzeDark)));
+                Put(Mesh(new BoxMesh { Size = new Vector3(0.1f, 1.1f, 0.1f) }, at + new Vector3(s, 1.5f, 0f), Flat(BronzeDark)));
+            Put(Mesh(new BoxMesh { Size = new Vector3(0.95f, 0.1f, 0.12f) }, at + Vector3.Up * 2.05f, Flat(BronzeDark)));
             var mat = Flat(Bronze);
             var bell = new Node3D { Position = at + Vector3.Up * 1.55f };
-            AddChild(bell);
+            Put(bell);
             bell.AddChild(Mesh(new CylinderMesh { TopRadius = 0.18f, BottomRadius = 0.36f, Height = 0.55f, RadialSegments = 14 }, Vector3.Zero, mat));
             v.Bells.Add(bell);
             v.BellMats.Add(mat);
             // The bell's symbol floats above it, turning slowly so it reads from anywhere.
             var symbol = Symbol(room.BellSymbols[i], mat);
             symbol.Position = at + Vector3.Up * 2.75f;
-            AddChild(symbol);
+            Put(symbol);
             v.Bells.Add(symbol);
             _tall.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.55f, Height = 2.2f }, Position = at + Vector3.Up * 1.1f });
         }
         // The echo bell in the middle: rings the order again.
         Vector3 c = room.Centre;
-        AddChild(Mesh(new CylinderMesh { TopRadius = 0.5f, BottomRadius = 0.65f, Height = 0.8f, RadialSegments = 12 }, c + Vector3.Up * 0.4f, Flat(WallCap)));
-        AddChild(Mesh(new CylinderMesh { TopRadius = 0.25f, BottomRadius = 0.55f, Height = 0.6f, RadialSegments = 14 }, c + Vector3.Up * 1.15f, Flat(BronzeDark)));
+        Put(Mesh(new CylinderMesh { TopRadius = 0.5f, BottomRadius = 0.65f, Height = 0.8f, RadialSegments = 12 }, c + Vector3.Up * 0.4f, Flat(WallCap)));
+        Put(Mesh(new CylinderMesh { TopRadius = 0.25f, BottomRadius = 0.55f, Height = 0.6f, RadialSegments = 14 }, c + Vector3.Up * 1.15f, Flat(BronzeDark)));
         for (int k = 0; k < 3; k++)
         {
             var wave = Mesh(new TorusMesh { InnerRadius = 0.3f + k * 0.22f, OuterRadius = 0.36f + k * 0.22f, Rings = 20, RingSegments = 4 }, c + Vector3.Up * 1.9f, Glow(Teal, 1.2f), false);
             wave.Rotation = new Vector3(Mathf.Pi * 0.5f, 0f, 0f);
-            AddChild(wave);
+            Put(wave);
         }
         _tall.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.65f, Height = 1.6f }, Position = c + Vector3.Up * 0.8f });
     }
@@ -372,9 +376,9 @@ public sealed partial class PuzzleMap
             // The handle swings along the row's facing: towards the lamps when pulled.
             Vector2 toLamps = (room.Lamps[i] - room.Levers[i]).Normalized();
             float yaw = Mathf.Atan2(toLamps.X, toLamps.Y);
-            AddChild(Mesh(new BoxMesh { Size = new Vector3(0.9f, 0.5f, 0.6f) }, at + Vector3.Up * 0.25f, Flat(WallCap)));
+            Put(Mesh(new BoxMesh { Size = new Vector3(0.9f, 0.5f, 0.6f) }, at + Vector3.Up * 0.25f, Flat(WallCap)));
             var pivot = new Node3D { Position = at + Vector3.Up * 0.5f, Rotation = new Vector3(0f, yaw, 0f) };
-            AddChild(pivot);
+            Put(pivot);
             var handle = new Node3D { Rotation = new Vector3(-0.6f, 0f, 0f) };
             pivot.AddChild(handle);
             handle.AddChild(Mesh(new CylinderMesh { TopRadius = 0.06f, BottomRadius = 0.08f, Height = 1.1f, RadialSegments = 8 }, Vector3.Up * 0.55f, Flat(BronzeDark)));
@@ -385,16 +389,16 @@ public sealed partial class PuzzleMap
         for (int i = 0; i < room.Lamps.Length; i++)
         {
             Vector3 at = room.World(room.Lamps[i]);
-            AddChild(Mesh(new CylinderMesh { TopRadius = 0.32f, BottomRadius = 0.42f, Height = 0.5f, RadialSegments = 10 }, at + Vector3.Up * 0.25f, Flat(WallCap)));
+            Put(Mesh(new CylinderMesh { TopRadius = 0.32f, BottomRadius = 0.42f, Height = 0.5f, RadialSegments = 10 }, at + Vector3.Up * 0.25f, Flat(WallCap)));
             var mat = Flat(new Color(0.35f, 0.38f, 0.42f));
             var lamp = new Node3D { Position = at + Vector3.Up * 0.5f };
-            AddChild(lamp);
+            Put(lamp);
             lamp.AddChild(Mesh(new CylinderMesh { TopRadius = 0.08f, BottomRadius = 0.3f, Height = 1.6f, RadialSegments = 6 }, Vector3.Up * 0.8f, mat));
             v.Lamps.Add(lamp);
             v.LampMats.Add(mat);
             var mark = Mesh(new CylinderMesh { TopRadius = 0.22f, BottomRadius = 0f, Height = 0.4f, RadialSegments = 8 }, at + Vector3.Up * 2.8f, Glow(Warm, 1.8f), false);
             mark.Visible = false;
-            AddChild(mark);
+            Put(mark);
             v.LampMarks.Add(mark);
             _tall.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.42f, Height = 1.6f }, Position = at + Vector3.Up * 0.8f });
         }
@@ -407,7 +411,7 @@ public sealed partial class PuzzleMap
         {
             Vector3 at = room.World(cell);
             v.Plates.Add(Plate(at));
-            AddChild(new Label3D
+            Put(new Label3D
             {
                 Text = k == 0 ? "A" : "B",
                 FontSize = 96,
@@ -420,7 +424,7 @@ public sealed partial class PuzzleMap
             });
             var latch = Mesh(new TorusMesh { InnerRadius = 1.05f, OuterRadius = 1.25f, Rings = 32, RingSegments = 6 }, at + Vector3.Up * 0.12f, Glow(Warm, 1.6f), false);
             latch.Visible = false;
-            AddChild(latch);
+            Put(latch);
             v.Latches.Add(latch);
             k++;
         }
@@ -428,9 +432,9 @@ public sealed partial class PuzzleMap
 
     private Node3D SpikeStrip(Vector3 at)
     {
-        AddChild(Mesh(new BoxMesh { Size = new Vector3(1.9f, 0.06f, 1.9f) }, at + Vector3.Up * 0.03f, Flat(new Color(0.32f, 0.30f, 0.30f)), false));
+        Put(Mesh(new BoxMesh { Size = new Vector3(1.9f, 0.06f, 1.9f) }, at + Vector3.Up * 0.03f, Flat(new Color(0.32f, 0.30f, 0.30f)), false));
         var group = new Node3D { Position = at + Vector3.Down * 0.6f };
-        AddChild(group);
+        Put(group);
         var tip = Flat(Meta.Accessibility.Danger(new Color(0.85f, 0.3f, 0.25f)));
         for (int x = -1; x <= 1; x++)
             for (int z = -1; z <= 1; z++)
@@ -786,9 +790,9 @@ public sealed partial class PuzzleMap
             // behind a closed door from where the team is.
             RoomPlan room = Plan.Rooms[Mathf.Clamp(State.Frontier, 1, Plan.Rooms.Count - 1)];
             int side = room.EntrySide;
-            Vector3 at = room.Centre + new Vector3(RoomPlan.Dx[side], 0f, RoomPlan.Dz[side]) * 4.6f;
+            Vector3 at = room.Centre + new Vector3(RoomPlan.Dx[side], 0f, RoomPlan.Dz[side]) * 11.4f;
             Vector3 across = new(RoomPlan.Dz[side], 0f, RoomPlan.Dx[side]);
-            at += across * 4.2f;
+            at += across * 5.6f;
             _skip = new Portal { Name = "SkipPortal" };
             AddChild(_skip);
             _skip.Position = at;

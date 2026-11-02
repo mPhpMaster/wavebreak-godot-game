@@ -42,6 +42,10 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
     /// on why enemies do not mask against each other.</summary>
     public const uint WorldLayer = 1u << 0;
 
+    /// <summary>More layers every enemy spawned from now on collides with, set
+    /// by a map that has them (a puzzle map's pieces, Game/Puzzle).</summary>
+    public static uint ExtraWorldMask { get; set; }
+
     private const float Gravity = 24f;              // matches project.godot
     private const float Acceleration = 34f;         // m/s^2 toward the desired velocity
     private const float SeparationWeight = 1.35f;
@@ -227,7 +231,7 @@ public sealed partial class Enemy : CharacterBody3D, IDamageable, IPooled
 
         CollisionPriority = IsCityGiant ? 10 : 1;
         CollisionLayer = EnemyLayer | (IsCityGiant ? 1u << 6 : 0u);
-        CollisionMask = WorldLayer | EnemyLayer | (IsCityGiant ? 1u << 6 : 0u);
+        CollisionMask = WorldLayer | EnemyLayer | ExtraWorldMask | (IsCityGiant ? 1u << 6 : 0u);
         if (_collision is not null) _collision.Disabled = false;
 
         ApplyFlash(0f);

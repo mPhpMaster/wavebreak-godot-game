@@ -13,13 +13,28 @@ namespace Wavebreak.Game.Puzzle;
 /// The floor is a <see cref="N"/> x <see cref="N"/> grid of
 /// <see cref="Cell"/>-metre cells. Cell (x, z) is index <c>z * N + x</c>;
 /// side 0 is +X, 1 is +Z, 2 is -X, 3 is -Z (<see cref="Dx"/>, <see cref="Dz"/>).
+///
+/// The grid is the puzzle floor in the middle of a bigger hall
+/// (<see cref="Half"/> metres from the centre to each wall), so the pieces
+/// keep the spacing the solver and the timing checks were tuned for while
+/// the room around them reads as a real interior. A short corridor joins a
+/// room's exit doorway to the next room's entrance.
 /// </summary>
 public sealed class RoomPlan
 {
     public const int N = 9;
     public const float Cell = 2f;
-    /// <summary>Centre to centre between neighbouring rooms: the floor plus a wall.</summary>
-    public const float Pitch = N * Cell + 2f;
+    /// <summary>Centre to each inner wall face: the hall is 30 m across, the
+    /// puzzle grid (18 m) sits in its middle.</summary>
+    public const float Half = 15f;
+    /// <summary>Wall thickness.</summary>
+    public const float WallThick = 1f;
+    /// <summary>Corridor length between one room's outer wall face and the next one's.</summary>
+    public const float Corridor = 8f;
+    /// <summary>Centre to centre between neighbouring rooms: the hall, two walls and a corridor.</summary>
+    public const float Pitch = 2f * (Half + WallThick) + Corridor;
+    /// <summary>Width of a doorway and of the corridor behind it.</summary>
+    public const float CorridorWidth = 4.4f;
     public const int Mid = N / 2;
 
     public static readonly int[] Dx = { 1, 0, -1, 0 };
@@ -106,13 +121,24 @@ public sealed class RoomPlan
         return InGrid(x, z) ? CellOf(x, z) : -1;
     }
 
-    /// <summary>Inside this room's floor (with a margin in from the walls).</summary>
+    /// <summary>Inside this room's hall (with a margin in from the walls).</summary>
     public bool Contains(Vector3 world, float margin = 0f)
+    {
+        Vector3 d = world - Centre;
+        float half = Half - margin;
+        return Mathf.Abs(d.X) <= half && Mathf.Abs(d.Z) <= half;
+    }
+
+    /// <summary>On the puzzle grid (the inlaid floor in the hall's middle).</summary>
+    public bool OnGrid(Vector3 world, float margin = 0f)
     {
         Vector3 d = world - Centre;
         float half = N * Cell * 0.5f - margin;
         return Mathf.Abs(d.X) <= half && Mathf.Abs(d.Z) <= half;
     }
+
+    /// <summary>The middle of the doorway on <paramref name="side"/>, in the wall.</summary>
+    public Vector3 Doorway(int side) => Centre + new Vector3(Dx[side], 0f, Dz[side]) * (Half + WallThick * 0.5f);
 
     /// <summary>The edge cell in front of the door on <paramref name="side"/>.</summary>
     public static int DoorCell(int side) => side switch
@@ -184,7 +210,7 @@ public sealed class PuzzlePlan
         }
     }
 
-    /// <summary>The room under a world position, or -1.</summary>
+    /// <summary>The room under a world position, or -1 (in a corridor or outside).</summary>
     public int RoomAt(Vector3 world)
     {
         for (int i = 0; i < Rooms.Count; i++)
@@ -192,12 +218,43 @@ public sealed class PuzzlePlan
         return -1;
     }
 
-    /// <summary>The middle of the doorway between room <paramref name="i"/> and the next.</summary>
-    public Vector3 DoorBetween(int i)
+    /// <summary>The middle of the doorway out of room <paramref name="i"/> into
+    /// the corridor to the next (where its door stands).</summary>
+    public Vector3 DoorBetween(int i) => Rooms[i].Doorway(Rooms[i].ExitSide);
+
+    /// <summary>The corridor a world position stands in (corridor i runs from
+    /// room i to room i + 1), or -1.</summary>
+    public int CorridorAt(Vector3 world, float margin = 0.4f)
     {
-        RoomPlan a = Rooms[i];
-        int s = a.ExitSide;
-        return a.Centre + new Vector3(RoomPlan.Dx[s], 0f, RoomPlan.Dz[s]) * (RoomPlan.Pitch * 0.5f);
+        for (int i = 0; i + 1 < Rooms.Count; i++)
+        {
+            RoomPlan a = Rooms[i];
+            int s = a.ExitSide;
+            Vector3 d = world - a.Centre;
+            float along = d.X * RoomPlan.Dx[s] + d.Z * RoomPlan.Dz[s];
+            float across = Mathf.Abs(d.X * RoomPlan.Dz[s] - d.Z * RoomPlan.Dx[s]);
+            if (along >= RoomPlan.Half - margin && along <= RoomPlan.Pitch - RoomPlan.Half + margin && across <= RoomPlan.CorridorWidth * 0.5f + margin) return i;
+        }
+        return -1;
+    }
+
+    /// <summary>In a room or a corridor: somewhere a player can stand.</summary>
+    public bool Walkable(Vector3 world) => RoomAt(world) >= 0 || CorridorAt(world) >= 0;
+
+    /// <summary>The room a position belongs to for drawing: its room, or for a
+    /// corridor the room it leads out of (or into, past halfway).</summary>
+    public int NearestRoom(Vector3 world)
+    {
+        int r = RoomAt(world);
+        if (r >= 0) return r;
+        int best = 0;
+        float bestD = float.MaxValue;
+        for (int i = 0; i < Rooms.Count; i++)
+        {
+            float d = new Vector2(world.X - Rooms[i].Centre.X, world.Z - Rooms[i].Centre.Z).LengthSquared();
+            if (d < bestD) { bestD = d; best = i; }
+        }
+        return best;
     }
 
     public string Describe()

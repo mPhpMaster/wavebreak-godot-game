@@ -15,6 +15,9 @@ namespace Wavebreak.UI;
 /// you, your teammates, pings, revealed unopened chests and unused shrines,
 /// the phase boss when it stands in revealed ground, and the open portal.
 ///
+/// On a puzzle map it shows the rooms the team has found instead (no fog
+/// there; UI/PuzzleMapView).
+///
 /// North is up and nothing turns, like the minimap. Always laid out left to
 /// right (a map does not mirror in Arabic; its labels are translated).
 /// Redrawn ten times a second while visible.
@@ -62,6 +65,12 @@ public sealed partial class BigMap : Control
         _rect = new Rect2((Size - new Vector2(side, side)) * 0.5f, new Vector2(side, side));
         DrawRect(_rect, Back);
         _fog = FogOfWar.Instance;
+        if (PuzzleMapView.Current is { } puzzle)
+        {
+            DrawPuzzle(puzzle);
+            return;
+        }
+        _puzzleView = false;
         if (_fog is not { Active: true, Texture: { } tex })
         {
             string rest = Loc.T(Main.Instance?.Stages is { InRestRoom: true } ? "Rest stop: no map here" : "No map");
@@ -85,7 +94,30 @@ public sealed partial class BigMap : Control
         Centred("N", n, 13, Ink);
     }
 
-    private Vector2 Map(Vector3 w) => _rect.Position + _fog!.Uv(w.X, w.Z) * _rect.Size;
+    private Vector2 Map(Vector3 w) => _puzzleView
+        ? _rect.GetCenter() + (new Vector2(w.X, w.Z) - _puzzleMid) * _puzzleScale
+        : _rect.Position + _fog!.Uv(w.X, w.Z) * _rect.Size;
+
+    private bool _puzzleView;
+    private Vector2 _puzzleMid;
+    private float _puzzleScale;
+
+    /// <summary>A puzzle map: the found rooms (UI/PuzzleMapView) fitted to the
+    /// sheet, the players and pings on top.</summary>
+    private void DrawPuzzle(Game.Puzzle.PuzzleMap map)
+    {
+        Rect2 ext = PuzzleMapView.Extent(map.Plan).Grow(6f);
+        _puzzleView = true;
+        _puzzleMid = ext.GetCenter();
+        _puzzleScale = Mathf.Min(_rect.Size.X / ext.Size.X, _rect.Size.Y / ext.Size.Y);
+        PuzzleMapView.Draw(this, map, Map, null, Mathf.Clamp(_rect.Size.X / 300f, 1.5f, 3f));
+        DrawPings();
+        DrawPlayers();
+        DrawRect(_rect, Frame, false, 2f);
+        var n = new Vector2(_rect.GetCenter().X, _rect.Position.Y + 14f);
+        DrawCircle(n, 10f, Label);
+        Centred("N", n, 13, Ink);
+    }
 
     private void DrawZones()
     {
@@ -180,9 +212,12 @@ public sealed partial class BigMap : Control
         float k = 1.25f;
         Vector2[] tri = { centre + dir * 9f * k, centre - dir * 5.5f * k + sideV * 6f * k, centre - dir * 2.8f * k, centre - dir * 5.5f * k - sideV * 6f * k };
         Vector2[] outline = { centre + dir * 12f * k, centre - dir * 7.5f * k + sideV * 8.2f * k, centre - dir * 3.8f * k, centre - dir * 7.5f * k - sideV * 8.2f * k };
-        // A soft ring shows the reveal radius around you.
-        float reveal = FogOfWar.RevealRadius / (2f * _fog!.Extent) * _rect.Size.X;
-        DrawArc(centre, reveal, 0f, Mathf.Tau, 48, mine with { A = 0.35f }, 1.5f, true);
+        // A soft ring shows the reveal radius around you (not in a puzzle: no fog there).
+        if (!_puzzleView)
+        {
+            float reveal = FogOfWar.RevealRadius / (2f * _fog!.Extent) * _rect.Size.X;
+            DrawArc(centre, reveal, 0f, Mathf.Tau, 48, mine with { A = 0.35f }, 1.5f, true);
+        }
         DrawColoredPolygon(outline, Ink);
         DrawColoredPolygon(tri, mine);
     }

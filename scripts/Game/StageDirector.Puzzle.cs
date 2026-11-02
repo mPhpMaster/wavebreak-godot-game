@@ -151,7 +151,7 @@ public sealed partial class StageDirector
     /// <summary>Client already on this puzzle, built for another player count
     /// (a late joiner counts itself; the host built it before): the same map
     /// for the host's count, in place. Nothing is paid and nobody moves,
-    /// unless they now stand outside every room.</summary>
+    /// unless they now stand outside every room and corridor.</summary>
     private void RebuildPuzzle(int players)
     {
         if (_puzzle is not null && GodotObject.IsInstanceValid(_puzzle))
@@ -165,7 +165,7 @@ public sealed partial class StageDirector
         _root.AddChild(_puzzle);
         _root.MoveChild(_puzzle, 0);
         Arena.UseBounds(_puzzle.Bounds);
-        if (plan.RoomAt(_player.GlobalPosition) < 0) _player.Teleport(_puzzle.SpawnPoint + Net.Coop.SpawnOffset);
+        if (!plan.Walkable(_player.GlobalPosition)) _player.Teleport(_puzzle.SpawnPoint + Net.Coop.SpawnOffset);
         Log($"puzzle {_index + 1} rebuilt for {players} players (the host's count)");
     }
 

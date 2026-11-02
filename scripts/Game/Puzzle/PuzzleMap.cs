@@ -103,8 +103,13 @@ public sealed partial class PuzzleMap : Node3D
         Name = "PuzzleMap";
         Current = this;
         SetStatus(Net.Coop.InRun ? 0 : -1, 0, -1f);
+        MapBlockers.Begin(this);
         BuildWorld();     // PuzzleMap.Build.cs
         BuildPieces();    // PuzzleMap.Pieces.cs
+        // Guards collide with the pieces (they used to walk through them).
+        Enemy.ExtraWorldMask = PieceLayer;
+        CapCamera();
+        SyncVisibility();
         var layer = new CanvasLayer { Name = "PuzzleUI", Layer = 3 };
         AddChild(layer);
         layer.AddChild(new UI.PuzzleHud(this));
@@ -115,6 +120,60 @@ public sealed partial class PuzzleMap : Node3D
     public override void _ExitTree()
     {
         if (ReferenceEquals(Current, this)) Current = null;
+        MapBlockers.End(this);
+        if (Enemy.ExtraWorldMask == PieceLayer) Enemy.ExtraWorldMask = 0;
+        RestoreCamera();
+    }
+
+    private float _cameraMax = -1f, _cameraDistance;
+
+    /// <summary>Indoors the camera zooms out no farther than
+    /// <see cref="CameraMaxIndoors"/>, so it stays under the ceiling; its
+    /// spring arm pulls in at walls, door slabs and beams (all world layer).</summary>
+    private void CapCamera()
+    {
+        if (PlayerCamera.Instance is not { } cam || !IsInstanceValid(cam)) return;
+        _cameraMax = cam.MaxDistance;
+        _cameraDistance = cam.Distance;
+        cam.MaxDistance = Mathf.Min(cam.MaxDistance, CameraMaxIndoors);
+        cam.Distance = Mathf.Min(cam.Distance, cam.MaxDistance);
+    }
+
+    private void RestoreCamera()
+    {
+        if (_cameraMax < 0f || PlayerCamera.Instance is not { } cam || !IsInstanceValid(cam)) return;
+        // Give back the zoom the player had, unless they changed it in here.
+        if (cam.Distance >= cam.MaxDistance - 0.01f) cam.Distance = _cameraDistance;
+        cam.MaxDistance = _cameraMax;
+        _cameraMax = -1f;
+    }
+
+    /// <summary>Long runs of pillars (the twin room's divider, rows in the
+    /// crate rooms) as blockers, so guards steer round the end of a wall of
+    /// pieces instead of pressing into it (Game/MapBlockers). Single pieces
+    /// need nothing: the guards slide round them.</summary>
+    private void RegisterBlockers()
+    {
+        var tint = new Color(0.5f, 0.6f, 0.65f);
+        foreach (RoomPlan room in Plan.Rooms)
+        {
+            var used = new bool[RoomPlan.N * RoomPlan.N];
+            for (int c = 0; c < used.Length; c++)
+            {
+                if (!room.Pillar[c] || used[c]) continue;
+                int x = RoomPlan.X(c), z = RoomPlan.Z(c);
+                int lx = 1, lz = 1;
+                while (RoomPlan.InGrid(x + lx, z) && room.Pillar[RoomPlan.CellOf(x + lx, z)] && !used[RoomPlan.CellOf(x + lx, z)]) lx++;
+                if (lx == 1)
+                    while (RoomPlan.InGrid(x, z + lz) && room.Pillar[RoomPlan.CellOf(x, z + lz)] && !used[RoomPlan.CellOf(x, z + lz)]) lz++;
+                for (int i = 0; i < lx; i++) for (int k = 0; k < lz; k++) used[RoomPlan.CellOf(x + i, z + k)] = true;
+                if (lx * lz < 2) continue;
+                Vector3 a = room.World(c), b = room.World(RoomPlan.CellOf(x + lx - 1, z + lz - 1));
+                Vector3 mid = (a + b) * 0.5f;
+                var half = new Vector2((lx - 1) * RoomPlan.Cell * 0.5f + 0.75f, (lz - 1) * RoomPlan.Cell * 0.5f + 0.75f);
+                MapBlockers.Add(new MapBlockers.Blocker(new Vector2(mid.X, mid.Z), half, 0f, 2.6f, MapBlockers.Shape.Box, tint));
+            }
+        }
     }
 
     /// <summary>Where the team arrives: the start room, back from its exit door.</summary>
@@ -124,7 +183,7 @@ public sealed partial class PuzzleMap : Node3D
         {
             RoomPlan s = Plan.Start;
             int side = s.ExitSide;
-            return s.Centre - new Vector3(RoomPlan.Dx[side], 0f, RoomPlan.Dz[side]) * 2f + Vector3.Up * 0.3f;
+            return s.Centre - new Vector3(RoomPlan.Dx[side], 0f, RoomPlan.Dz[side]) * 6f + Vector3.Up * 0.3f;
         }
     }
 
@@ -154,6 +213,7 @@ public sealed partial class PuzzleMap : Node3D
         }
         if (Authority) StepHost(dt);
         SyncPieces(dt);   // PuzzleMap.Pieces.cs
+        SyncVisibility(); // PuzzleMap.Build.cs
     }
 
     /// <summary>Client: the host's clock (twice a second).</summary>
@@ -208,14 +268,21 @@ public sealed partial class PuzzleMap : Node3D
         if (weak.Count == 0) return;
         var rng = new Core.Rng(Plan.Seed ^ (ulong)(r * 7919 + 13));
         int placed = 0;
-        int[] corners = { RoomPlan.CellOf(1, 1), RoomPlan.CellOf(RoomPlan.N - 2, 1), RoomPlan.CellOf(1, RoomPlan.N - 2), RoomPlan.CellOf(RoomPlan.N - 2, RoomPlan.N - 2) };
+        // In the open strip round the puzzle grid, in the hall's corners
+        // farthest from the way in: inside the room, never on a piece.
+        float k = RoomPlan.Half - 3.4f;
+        var corners = new List<Vector3>
+        {
+            room.World(new Vector2(k, k)), room.World(new Vector2(-k, k)), room.World(new Vector2(k, -k)), room.World(new Vector2(-k, -k)),
+        };
+        Vector3 entry = room.EntrySide >= 0 ? room.Doorway(room.EntrySide) : room.Centre;
+        corners.Sort((a, b) => b.DistanceSquaredTo(entry).CompareTo(a.DistanceSquaredTo(entry)));
         for (int i = 0; i < room.Enemies; i++)
         {
-            int cell = corners[(i + rng.RangeInt(0, 4)) % 4];
-            if (PuzzleSolver.Solid(room, cell) || room.NearDoor(cell)) cell = RoomPlan.CellOf(RoomPlan.Mid, RoomPlan.Mid);
-            if (em.SpawnAt(weak[rng.RangeInt(0, weak.Count)], room.World(cell) + Vector3.Up * 0.5f) is not null) placed++;
+            Vector3 at = corners[(i + rng.RangeInt(0, 2)) % 4] + new Vector3(rng.Range(-1f, 1f), 0.5f, rng.Range(-1f, 1f));
+            if (em.SpawnAt(weak[rng.RangeInt(0, weak.Count)], at) is not null) placed++;
         }
-        GD.Print($"[puzzle] room {r} ({room.Kind}) entered: {placed} guards");
+        GD.Print($"[puzzle] room {r} ({room.Kind}) entered: {placed} guards; rooms drawn here {RoomsShown}/{Plan.Rooms.Count}");
     }
 
     private static List<EnemyDef>? _weak;

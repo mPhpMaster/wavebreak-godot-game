@@ -42,7 +42,8 @@ public static class PuzzleCheck
 
     /// <summary>--puzzle-shot=x.png: photograph a puzzle map (with
     /// --puzzle-shot-room=N, default 1; N past the last puzzle room is the
-    /// vault with every room solved; --puzzle-shot-hint shows a hint).</summary>
+    /// vault with every room solved; --puzzle-shot-hint shows a hint;
+    /// --puzzle-shot-door solves room N and photographs its door opening).</summary>
     public static string? ShotPath => Arg("--puzzle-shot");
 
     public static async Task Shot(Main main, string path)
@@ -60,11 +61,33 @@ public static class PuzzleCheck
         for (int i = 1; i < room && i < map.Plan.Rooms.Count - 1; i++) map.State.MarkSolved(i, map.Elapsed);
         map.Flush();
         RoomPlan r = map.Plan.Rooms[room];
+        bool door = Array.IndexOf(OS.GetCmdlineUserArgs(), "--puzzle-shot-door") >= 0 && r.ExitSide >= 0;
         var toCentre = -new Vector3(RoomPlan.Dx[r.EntrySide], 0f, RoomPlan.Dz[r.EntrySide]);
-        main.Player.Teleport(r.Centre - toCentre * 3.2f + new Vector3(toCentre.Z, 0f, toCentre.X) * 1.2f + Vector3.Up * 0.3f);
-        PlayerCamera.Instance?.FaceDirection(toCentre);
+        if (door)
+        {
+            // Facing the way out from the middle of the room.
+            var toDoor = new Vector3(RoomPlan.Dx[r.ExitSide], 0f, RoomPlan.Dz[r.ExitSide]);
+            main.Player.Teleport(r.Centre + toDoor * 3.5f + new Vector3(toDoor.Z, 0f, toDoor.X) * 1.0f + Vector3.Up * 0.3f);
+            PlayerCamera.Instance?.FaceDirection(toDoor);
+        }
+        else
+        {
+            // A few steps in from the entrance, looking across the hall.
+            main.Player.Teleport(r.Centre - toCentre * 5.5f + new Vector3(toCentre.Z, 0f, toCentre.X) * 1.2f + Vector3.Up * 0.3f);
+            PlayerCamera.Instance?.FaceDirection(toCentre);
+        }
         PlayerCamera.Instance?.SnapToTarget();
         await Wait(1.0);
+        if (door)
+        {
+            map.State.MarkSolved(room, map.Elapsed);
+            map.Flush();
+            await Wait(0.9);
+            await Screenshot.Capture(tree, main, path);
+            GD.Print($"[puzzle] shot {path}: room {room} {r.Kind} door {map.DoorOpenness(room):0.00} open");
+            tree.Quit();
+            return;
+        }
         if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--puzzle-shot-hint") >= 0) map.Ask(PuzzleAction.Hint, room, 0);
         await Wait(room == map.Plan.Rooms.Count - 1 ? 2.9 : 2.0);
         await Screenshot.Capture(tree, main, path);

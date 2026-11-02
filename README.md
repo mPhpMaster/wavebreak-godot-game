@@ -56,7 +56,12 @@ puzzle, rest stop, map, rest stop, puzzle, and so on to the final boss.
 
 A puzzle map is a chain of three to five rooms drawn from the run's seed, so it
 is different every run; later puzzles and harder tiers add rooms and harder
-pieces. Each room holds one piece type and its door opens when it is solved:
+pieces. Each room is a closed hall (about 30 m across, 14 m to the ceiling,
+lit by torches and dressed for its puzzle: a workshop, an observatory, a bell
+temple, a foundry...), with the puzzle laid into the middle of its floor. Its
+door stays shut until the room is solved, then slides open onto a short
+corridor to the next room; you only ever see the room you are in. The minimap
+and the Tab map show the rooms you have found:
 
 | Room | What to do |
 |---|---|
@@ -83,7 +88,8 @@ route as Classic (no puzzle maps).
 
 For testing: `--route=puzzle`, `--check-puzzles` (prints `PUZZLE PASS`),
 `--puzzle-rooms=twin,crates` to choose the rooms, `--puzzle-skip` to make the
-bot take the skip portal, `--puzzle-shot=x.png --puzzle-shot-room=N` for captures.
+bot take the skip portal, `--puzzle-shot=x.png --puzzle-shot-room=N` for captures
+(`--puzzle-shot-door` photographs that room's door opening).
 
 ## Optional underwater expedition
 

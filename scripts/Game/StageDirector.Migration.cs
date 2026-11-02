@@ -132,7 +132,7 @@ public sealed partial class StageDirector
     public Vector3 ClampToPlay(Vector3 at)
     {
         if (State == PhaseState.RestRoom) return RestRoom.SpawnPoint;
-        if (State == PhaseState.Puzzle && Puzzle is { } puzzle && puzzle.Plan.RoomAt(at) < 0) return puzzle.SpawnPoint;
+        if (State == PhaseState.Puzzle && Puzzle is { } puzzle && !puzzle.Plan.Walkable(at)) return puzzle.SpawnPoint;
         return at.Y < -5f ? Arena.Centre + Vector3.Up * 0.3f : at + Vector3.Up * 0.3f;
     }
 }

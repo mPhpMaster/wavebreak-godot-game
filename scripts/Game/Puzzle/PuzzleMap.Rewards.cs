@@ -57,7 +57,7 @@ public sealed partial class PuzzleMap
             float x = (i - (_offers.Count - 1) * 0.5f) * 4.2f;
             Vector3 at = vault.Centre + toEntry * 1.5f + across * x;
             var root = new Node3D { Name = $"Pedestal{i}", Position = at };
-            AddChild(root);
+            _roomRoots[^1].AddChild(root);
             root.AddChild(Mesh(new CylinderMesh { TopRadius = 0.7f, BottomRadius = 0.85f, Height = 1.0f, RadialSegments = 12 }, Vector3.Up * 0.5f, Flat(WallCap)));
             PuzzleRewardOffer offer = _offers[i];
             Node3D prize = Prize(offer);
