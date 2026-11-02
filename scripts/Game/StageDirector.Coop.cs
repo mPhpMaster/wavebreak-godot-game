@@ -16,7 +16,9 @@ public sealed partial class StageDirector
     /// <summary>The host entered phase <paramref name="index"/>.</summary>
     public void NetPhase(int index)
     {
-        if (index == _index || index < 0 || index >= _stages.Count) return;
+        // The same index is news after a rest room or a puzzle: puzzle i, and
+        // the rest after it, lead into map i (the puzzle route).
+        if (index == _index && State is not (PhaseState.RestRoom or PhaseState.Puzzle) || index < 0 || index >= _stages.Count) return;
         Log($"host moved to phase {index + 1}");
         if (_loopRestart && index == 0) NextIndex();   // no rest room (--no-rest-room): a new loop's list
         EnterPhase(index);

@@ -187,6 +187,7 @@ public sealed partial class Hud : Control
         EventBus.Subscribe<WeaponEvolved>(OnWeaponEvolved);
         EventBus.Subscribe<PlayerDamaged>(OnPlayerDamaged);
         EventBus.Subscribe<PhaseStarted>(OnPhaseStarted);
+        EventBus.Subscribe<PuzzleStarted>(OnPuzzleStarted);
         EventBus.Subscribe<PortalOpened>(OnPortalOpened);
     }
 
@@ -204,6 +205,7 @@ public sealed partial class Hud : Control
         EventBus.Unsubscribe<WeaponEvolved>(OnWeaponEvolved);
         EventBus.Unsubscribe<PlayerDamaged>(OnPlayerDamaged);
         EventBus.Unsubscribe<PhaseStarted>(OnPhaseStarted);
+        EventBus.Unsubscribe<PuzzleStarted>(OnPuzzleStarted);
         EventBus.Unsubscribe<PortalOpened>(OnPortalOpened);
     }
 
@@ -393,6 +395,12 @@ public sealed partial class Hud : Control
     {
         _phaseLabel.Text = Loc.F("PHASE {0}/{1}  —  {2}", e.Phase, e.PhaseCount, Upper(e.StageName));
         ShowCard(Loc.F("PHASE {0}  ·  {1}", e.Phase, Upper(e.StageName)), Loc.T(e.Tagline), Ink);
+    }
+
+    private void OnPuzzleStarted(PuzzleStarted e)
+    {
+        _phaseLabel.Text = Loc.F("PUZZLE {0}/{1}  —  {2}", e.Puzzle, e.Count, Upper(e.Name));
+        ShowCard(Loc.F("PUZZLE {0}  ·  {1}", e.Puzzle, Upper(e.Name)), Loc.T("Solve every room. Faster, with fewer hints, pays better."), PortalTint);
     }
 
     private void OnPortalOpened(PortalOpened e)
@@ -589,6 +597,10 @@ public sealed partial class Hud : Control
                 break;
             case StageDirector.PhaseState.RestRoom:
                 status = Loc.T("REST STOP  ·  CLOCK PAUSED");
+                tint = PortalTint;
+                break;
+            case StageDirector.PhaseState.Puzzle:
+                status = Loc.T("PUZZLE  ·  CLOCK PAUSED");
                 tint = PortalTint;
                 break;
             default:

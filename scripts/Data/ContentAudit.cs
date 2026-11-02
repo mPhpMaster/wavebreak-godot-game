@@ -220,6 +220,7 @@ public static partial class ContentAudit
             AuditMusic();           // tracks per map, every file loads, Boombox catalogue (ContentAudit.Music.cs)
             AuditUnderwater();
             AuditExpeditions();
+            AuditPuzzles();         // the puzzle route (ContentAudit.Puzzle.cs)
         }
         catch (Exception e)
         {

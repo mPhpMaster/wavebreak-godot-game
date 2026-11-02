@@ -41,6 +41,10 @@
 #                  a player who joins during loop 2, holds the same maps and twist.
 #   coop-latejoin  host + guest start; a third player joins about 20 s into the
 #                  run, gets the world snapshot, the team's level, and plays.
+#   coop-puzzle    puzzle route: the guest presses a plate and the host sees it,
+#                  a twin-plate room is solved by both together, a hint asked
+#                  by the guest reaches everyone, and a player joining mid-puzzle
+#                  gets the whole puzzle state (NetSession.Test.Puzzle.cs).
 # Swap meet (NetSession.Trade.cs, NetSession.Test.Trade.cs):
 #   coop-trade     in the rest room the host asks the guest to trade: 40 gold +
 #                  1 stat item for one of the guest's tomes; both READY; the
@@ -71,7 +75,7 @@ param(
     [float]$Seconds = 60,
     [int]$Port = 7777,
     [switch]$SkipBuild,
-    # Run only these scenarios (coop, coop-hostleft, coop-version, coop-content, coop-forge, coop-hijack, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-endless, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
+    # Run only these scenarios (coop, coop-hostleft, coop-version, coop-content, coop-forge, coop-hijack, coop-fallback, coop-heroes, coop-flick, coop-migrate, coop-latejoin, coop-puzzle, coop-endless, coop-trade, coop-trade-ar, coop-trade-timeout); all when empty.
     [string[]]$Only = @()
 )
 
@@ -304,6 +308,22 @@ Invoke-Multi 'coop-latejoin' @(
     @{ Name = 'a'; Delay = 4; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA $lj" },
     @{ Name = 'late'; Delay = 0; WaitFile = $mark; Shot = $true; Args = "--coop-join=127.0.0.1:$Port --coop-name=Late --coop-late-join --give=evo_sunken_sun --coop-check-evolve $lj" }
 ) 240
+
+# 4a. Puzzle route (NetSession.Test.Puzzle.cs): host and guest open on a
+# twin-plate room; the guest stands on plate B and the host must see it pressed
+# before stepping on A, so the room is solved by the two together; the guest
+# asks for a hint through the host; then a third player joins mid-puzzle and
+# must get the whole puzzle state (twin room solved, its door open, built for
+# the host's player count). Everyone claims a prize and leaves through the
+# exit together into the rest room. --puzzle-rooms must match on every machine.
+$mark = Join-Path $shotDir 'coop-puzzle.mark'
+Remove-Item $mark -ErrorAction SilentlyContinue
+$pz = "--auto --invulnerable --coop-puzzle-test --puzzle-rooms=twin,levers --coop-seconds=200 --coop-down-at=999"
+Invoke-Multi 'coop-puzzle' @(
+    @{ Name = 'host'; Delay = 0; Shot = $false; Args = "--coop-host=$Port --coop-name=Host --coop-players=2 --route=puzzle --seed=3 `"--coop-mark-file=$mark`" $pz" },
+    @{ Name = 'a'; Delay = 4; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA $pz" },
+    @{ Name = 'late'; Delay = 0; WaitFile = $mark; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=Late --coop-late-join $pz" }
+) 300
 
 # 4b. Endless (Meta/EndlessMode.cs): a portal opens 5 s into every map, so the
 # team goes round the loop fast; a third player joins during loop 2. Each loop

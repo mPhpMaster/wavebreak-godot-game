@@ -101,7 +101,8 @@ public sealed partial class NetSession
         var d = new List<float>(WsHeader + 256);
         for (int i = 0; i < WsHeader; i++) d.Add(0f);
         StageDirector st = _main.Stages;
-        d[WsKind] = lateJoin ? 1f : 0f;
+        // Bit 0: a late join. Bit 1: the rest room the team is in follows a puzzle.
+        d[WsKind] = (lateJoin ? 1f : 0f) + (st.RestAfterPuzzle ? 2f : 0f);
         d[WsPhase] = st.PhaseIndex;
         d[WsState] = (int)st.State;
         d[WsSeconds] = _main.Run.Seconds;
@@ -159,6 +160,7 @@ public sealed partial class NetSession
         SendTotems(peer);   // NetSession.Totems.cs
         SendReefHarvest(peer);
         SendCaveDiscovery(peer);
+        SendPuzzle(peer);   // NetSession.Puzzle.cs
     }
 
     /// <summary>The team's average level (rounded down), without <paramref name="except"/>.</summary>
@@ -181,7 +183,8 @@ public sealed partial class NetSession
     private void WorldSnap(float[] d)
     {
         if (!Coop.IsClient || _main is null || !IsInstanceValid(_main) || d.Length < WsHeader) return;
-        bool late = d[WsKind] > 0.5f;
+        bool late = ((int)d[WsKind] & 1) != 0;
+        bool restAfterPuzzle = ((int)d[WsKind] & 2) != 0;
         int enemies = (int)d[WsEnemies], pickups = (int)d[WsPickups], chests = (int)d[WsChests];
         int o = WsHeader;
         if (o + enemies * WsEnemyStride + pickups * WsPickupStride + chests * WsChestStride > d.Length) return;
@@ -190,7 +193,7 @@ public sealed partial class NetSession
 
         // 1. The endless loop, then the map (a change clears the field, so first).
         EndlessMode.NetSetLoop((int)d[WsLoop]);
-        st.CatchUpMap((int)d[WsPhase], state, (int)d[WsRouteLoop]);
+        st.CatchUpMap((int)d[WsPhase], state, (int)d[WsRouteLoop], restAfterPuzzle);
         _main.Run.SyncClock(d[WsSeconds], d[WsPhaseSeconds]);
 
         // 2. Enemies: keep matching puppets, drop the rest, add the missing.

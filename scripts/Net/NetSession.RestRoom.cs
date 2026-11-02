@@ -39,18 +39,19 @@ public sealed partial class NetSession
     }
 
     /// <summary>Host: the team goes into the rest room after phase
-    /// <paramref name="clearedIndex"/> + 1.</summary>
-    public void SendRestRoom(int clearedIndex)
+    /// <paramref name="clearedIndex"/> + 1, or after the puzzle before it
+    /// (<paramref name="afterPuzzle"/>, the puzzle route).</summary>
+    public void SendRestRoom(int clearedIndex, bool afterPuzzle = false)
     {
         if (!_go) return;
         FlushEvents();
         _chests.Clear();
         _claimedChests.Clear();
-        Rpc(MethodName.RestEnter, clearedIndex);
+        Rpc(MethodName.RestEnter, clearedIndex, afterPuzzle);
     }
 
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void RestEnter(int clearedIndex)
+    private void RestEnter(int clearedIndex, bool afterPuzzle)
     {
         if (!Coop.IsClient || _main is null || !IsInstanceValid(_main)) return;
         _chests.Clear();
@@ -63,7 +64,7 @@ public sealed partial class NetSession
             me.Health.Kill();
         }
         bool wasDown = me is not null && IsInstanceValid(me) && !me.IsAlive;
-        _main.Stages.NetRestRoom(clearedIndex);
+        _main.Stages.NetRestRoom(clearedIndex, afterPuzzle);
         if (wasDown && me!.IsAlive) RestRevives++;
     }
 

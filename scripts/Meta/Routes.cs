@@ -77,10 +77,20 @@ public static class Routes
         list.Add(new("skyline-run", "Bellspire Ascent (side map)",
             "Bellspire Ward, Stormwatch Harbour, Cinder Reach. Grapple through a city under siege by stone wardens.",
             new[] { "bellspire", "stormwatch", "cinder" }));
+        // Classic's maps with a seeded puzzle map before each (Game/StageDirector.Puzzle.cs).
+        list.Add(new(PuzzleId, Game.Puzzle.PuzzleText.RouteName,
+            "Classic's maps, each after a short puzzle map. Solve it fast for a better reward for the fight ahead.",
+            new[] { "thornmeadow", "rimeglass", "cinder" }));
         return list;
     }
 
     private const string SelectedKey = "route";
+
+    /// <summary>The puzzle route: Classic's maps, a puzzle map before each.</summary>
+    public const string PuzzleId = "puzzle";
+
+    /// <summary>Routes that play Classic's maps in Classic's order.</summary>
+    public static bool ClassicMaps(RouteDef r) => r.Id is "classic" or PuzzleId;
 
     public static RouteDef? ById(string id) => All.FirstOrDefault(r => r.Id == id);
 
@@ -142,7 +152,7 @@ public static class Routes
             route = new RouteDef("custom", "Custom", "", explicitMaps);
             stages = Build(route, seed, explicitMaps.Length);
         }
-        else stages = route.Id == "classic" && phases == Length ? Stages.Run : Build(route, seed, phases);
+        else stages = ClassicMaps(route) && phases == Length ? Stages.Run : Build(route, seed, phases);
 
         stages = MapChallenges.Twist(stages);   // map challenge twist, on a copy of its map
         EndlessMode.BindSeed(seed);
@@ -161,7 +171,7 @@ public static class Routes
     {
         phases = Math.Clamp(phases, 1, Stages.All.Count);
         var maps = new List<StageDef>();
-        if (!route.Drawn && route.Id == "classic" && phases > Length)
+        if (!route.Drawn && ClassicMaps(route) && phases > Length)
         {
             // The classic three plus the extra maps they need, all in rising
             // order: Gravemoor before Shallows, so a 4-map run adds the harder one.
@@ -261,6 +271,12 @@ public static class Routes
     {
         // Arabic reads right to left, so its arrow points left.
         string arrow = Loc.IsRtl ? "  <  " : "  >  ";
+        if (r.Id == PuzzleId)
+        {
+            // Puzzle > map > puzzle > map ...
+            string puzzle = Loc.T("Puzzle");
+            return string.Join(arrow, r.MapIds.Select(id => puzzle + arrow + Loc.T(Stages.ById(id)?.DisplayName ?? id)));
+        }
         if (!r.Drawn) return string.Join(arrow, r.MapIds.Select(id => Loc.T(Stages.ById(id)?.DisplayName ?? id)));
         string first = r.StartId.Length > 0 ? Loc.T(Stages.ById(r.StartId)?.DisplayName ?? r.StartId) : "?";
         return $"{first}{arrow}?{arrow}?";

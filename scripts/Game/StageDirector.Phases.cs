@@ -17,6 +17,7 @@ public sealed partial class StageDirector
         _index = index;
         StageDef stage = Stage;
         FreeRestRoom();
+        FreePuzzle();
 
         if (_portal is not null && GodotObject.IsInstanceValid(_portal)) _portal.QueueFree();
         _portal = null;

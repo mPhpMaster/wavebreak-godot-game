@@ -75,10 +75,14 @@ public sealed partial class StageDirector
     public float RestClockIn { get; private set; }
     public float RestClockOut { get; private set; }
 
-    private void EnterRestRoom()
+    private void EnterRestRoom(bool afterPuzzle = false)
     {
-        if (_index >= _stages.Count - 1 && !_loopRestart) { EnterPhase(_index + 1); return; }
-        _restNext = NextIndex();
+        if (!afterPuzzle && _index >= _stages.Count - 1 && !_loopRestart) { EnterPhase(_index + 1); return; }
+        // After a puzzle the room leads into the map that puzzle stood before;
+        // after a map, on the puzzle route, into the next puzzle.
+        _restAfterPuzzle = afterPuzzle;
+        _restNext = afterPuzzle ? _index : NextIndex();
+        _restIntoPuzzle = !afterPuzzle && PuzzleRoute;
 
         if (_portal is not null && GodotObject.IsInstanceValid(_portal)) _portal.QueueFree();
         _portal = null;
@@ -93,6 +97,7 @@ public sealed partial class StageDirector
         // freed map is noticed (a removed chest has no transform to ask).
         ChestSpawner.Instance?.Clear();
         FreeRestRoom();
+        FreePuzzle();
 
         // Orbs still on the floor were earned; they follow into the room.
         Pickup.AttractAll();
@@ -100,7 +105,8 @@ public sealed partial class StageDirector
         _enemies.Quiet = true;
         ApplyScaling(1f);
 
-        _rest = new RestRoom(_index + 1, _stages[_restNext].DisplayName);
+        string next = _restIntoPuzzle ? Game.Puzzle.PuzzleGen.NameFor(_run.Seed, _restNext) : _stages[_restNext].DisplayName;
+        _rest = new RestRoom(afterPuzzle ? Mathf.Max(1, _index) : _index + 1, next);
         _root.AddChild(_rest);
         _root.MoveChild(_rest, 0);
         Arena.UseBounds(RestRoom.Bounds);
@@ -113,16 +119,16 @@ public sealed partial class StageDirector
         // the body does it, as with every other revive.
         if (Net.Coop.InRun && !_player.IsAlive) _player.Health.Revive(1f);
 
-        Interactables.Instance?.UseRestRoom(_rest, _index + 1, _rest.Stations);
+        Interactables.Instance?.UseRestRoom(_rest, afterPuzzle ? Mathf.Max(1, _index) : _index + 1, _rest.Stations);
 
         State = PhaseState.RestRoom;
         _restCountdown = -1f;
         _restStatusTimer = 0f;
         RestRoomsVisited++;
         RestClockIn = _run.Seconds;
-        Log($"rest room after phase {_index + 1}; next '{_stages[_restNext].DisplayName}' (clock held at {_run.Clock})");
+        Log($"rest room after {(afterPuzzle ? "puzzle" : "phase")} {_index + 1}; next '{next}' (clock held at {_run.Clock})");
 
-        if (Net.Coop.IsHost) Net.NetSession.Instance?.SendRestRoom(_index);
+        if (Net.Coop.IsHost) Net.NetSession.Instance?.SendRestRoom(_index, afterPuzzle);
         if (Net.Coop.InRun) Net.NetSession.Instance?.PlaceRemotes(RestRoom.SpawnPoint);
     }
 
@@ -198,7 +204,8 @@ public sealed partial class StageDirector
         // Swap meet: close every open trade (escrows go home) before the Phase message.
         if (Net.Coop.IsHost) Net.NetSession.Instance?.TradeRoomEnding();
         _enemies.Quiet = false;
-        EnterPhase(Mathf.Clamp(_restNext, 0, _stages.Count - 1));
+        if (_restIntoPuzzle) EnterPuzzle(Mathf.Clamp(_restNext, 0, _stages.Count - 1));
+        else EnterPhase(Mathf.Clamp(_restNext, 0, _stages.Count - 1));
     }
 
     /// <summary>Called by <see cref="EnterPhase"/>: a new map replaces the room.</summary>
@@ -218,9 +225,9 @@ public sealed partial class StageDirector
 
     /// <summary>Client: the host took the team into the rest room after
     /// clearing phase <paramref name="clearedIndex"/> + 1.</summary>
-    public void NetRestRoom(int clearedIndex)
+    public void NetRestRoom(int clearedIndex, bool afterPuzzle = false)
     {
-        if (State == PhaseState.RestRoom || clearedIndex < 0 || (clearedIndex >= _stages.Count - 1 && !_loopRestart)) return;
+        if (State == PhaseState.RestRoom || clearedIndex < 0 || (!afterPuzzle && clearedIndex >= _stages.Count - 1 && !_loopRestart)) return;
         if (clearedIndex != _index)
         {
             // A missed Phase message: line the index up before entering.
@@ -228,7 +235,7 @@ public sealed partial class StageDirector
             _index = clearedIndex;
         }
         Log("host moved the team into the rest room");
-        EnterRestRoom();
+        EnterRestRoom(afterPuzzle);
     }
 
     // --------------------------------------------------------------- dev

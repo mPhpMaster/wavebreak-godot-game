@@ -171,6 +171,11 @@ public sealed partial class Player : CharacterBody3D, IDamageable
     /// <summary>Horizontal velocity the controller is producing, ignoring knockback.</summary>
     public Vector3 PlanarVelocity => _moveVelocity;
 
+    /// <summary>The direction the player is trying to move this physics step
+    /// (keys, stick or <see cref="MoveOverride"/>), before walls have their
+    /// say: a puzzle crate is pushed by walking into it.</summary>
+    public Vector3 MoveWish { get; private set; }
+
     /// <summary>Seconds until the dash is ready again; 0 means ready.</summary>
     public float DashCooldownRemaining => _dashCooldown;
 

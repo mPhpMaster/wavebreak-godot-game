@@ -67,7 +67,7 @@ public sealed partial class StageDirector
     /// <summary>Late join / reconnect, first half: be on the host's map (or
     /// in its rest room), on the map list of the host's Endless loop. Run before
     /// the snapshot's enemies are placed, since a map change clears the field.</summary>
-    public void CatchUpMap(int index, PhaseState state, int routeLoop)
+    public void CatchUpMap(int index, PhaseState state, int routeLoop, bool restAfterPuzzle = false)
     {
         bool newList = routeLoop != RouteLoop;
         UseRouteOfLoop(routeLoop);
@@ -75,7 +75,21 @@ public sealed partial class StageDirector
         {
             // After a loop's last boss the room leads to the next loop's first map.
             if (Meta.EndlessMode.Active && index >= _stages.Count - 1) _loopRestart = true;
-            if (State != PhaseState.RestRoom) NetRestRoom(index);
+            if (State != PhaseState.RestRoom || _restAfterPuzzle != restAfterPuzzle || _index != index)
+            {
+                if (State == PhaseState.RestRoom) FreeRestRoom();
+                State = PhaseState.Waves;
+                _index = index;
+                NetRestRoom(index, restAfterPuzzle);
+            }
+            return;
+        }
+        // A puzzle map: be on it now (before the snapshot's enemies are placed);
+        // its state, and the host's player count, come in the puzzle message
+        // that follows the snapshot (NetSession.Puzzle.cs).
+        if (state == PhaseState.Puzzle)
+        {
+            if (State != PhaseState.Puzzle || index != _index) EnterPuzzle(index);
             return;
         }
         if ((index != _index || State == PhaseState.RestRoom || newList) && index >= 0 && index < _stages.Count)
@@ -118,6 +132,7 @@ public sealed partial class StageDirector
     public Vector3 ClampToPlay(Vector3 at)
     {
         if (State == PhaseState.RestRoom) return RestRoom.SpawnPoint;
+        if (State == PhaseState.Puzzle && Puzzle is { } puzzle && puzzle.Plan.RoomAt(at) < 0) return puzzle.SpawnPoint;
         return at.Y < -5f ? Arena.Centre + Vector3.Up * 0.3f : at + Vector3.Up * 0.3f;
     }
 }

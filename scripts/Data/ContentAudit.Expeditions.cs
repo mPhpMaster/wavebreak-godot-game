@@ -21,7 +21,7 @@ public static partial class ContentAudit
         }
         Check(Stages.All.Count == 6 && !Stages.All.Contains(Stages.Bellspire), "expeditions: default map pool preserved");
         Check(Stages.ById("bellspire") == Stages.Bellspire, "expeditions: city lookup");
-        Check(Routes.All[^2].Id == "reef-dive" && Routes.All[^1].Id == "skyline-run", "expeditions: saved route indices preserved");
+        Check(Routes.IndexOf(Routes.ById("reef-dive")!) == 11 && Routes.IndexOf(Routes.ById("skyline-run")!) == 12, "expeditions: saved route indices preserved");
         RouteDef city = Routes.ById("skyline-run")!;
         foreach (int count in new[] { 3, 4, 5 })
         {

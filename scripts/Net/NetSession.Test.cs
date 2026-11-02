@@ -169,6 +169,7 @@ public sealed partial class NetSession
         TestRestRoom((float)GetProcessDeltaTime());
         StepTradeTest();       // NetSession.Test.Trade.cs
         StepMigrationTest();   // NetSession.Test.Migration.cs
+        if (StepPuzzleTest()) return;   // NetSession.Test.Puzzle.cs (wall time: the run clock is held on puzzles)
 
         if (Coop.IsHost && _testHostQuitAt > 0f)
         {
@@ -286,7 +287,8 @@ public sealed partial class NetSession
         if (!reachedEnd) problems.Add(reason);
 
         // Host migration / late join runs have their own checks (NetSession.Test.Migration.cs).
-        if (MigrationTestLine(role, problems, phase) is { } migrationLine) line = migrationLine;
+        if (PuzzleTestLine(role, problems) is { } puzzleLine) line = puzzleLine;   // NetSession.Test.Puzzle.cs
+        else if (MigrationTestLine(role, problems, phase) is { } migrationLine) line = migrationLine;
         else if (TradeTestLine(role, problems, phase) is { } tradeLine) line = tradeLine;   // NetSession.Test.Trade.cs
         else if (role == "host")
         {

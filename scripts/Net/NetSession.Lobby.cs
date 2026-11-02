@@ -278,7 +278,7 @@ public sealed partial class NetSession
         GD.Print($"[coop] starting run seed={seed} players={Coop.Roster.Count}");
         string route = Routes.Selected.Id;
         foreach (string arg in OS.GetCmdlineUserArgs())
-            if (arg is "--route=reef-dive" or "--route=skyline-run") route = arg["--route=".Length..];
+            if (arg is "--route=reef-dive" or "--route=skyline-run" or "--route=" + Routes.PuzzleId) route = arg["--route=".Length..];
         Rpc(MethodName.StartRun, (long)seed, difficulty, route);
     }
 

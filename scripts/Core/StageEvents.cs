@@ -38,3 +38,25 @@ public readonly struct PortalOpened
     public readonly Vector3 Position;
     public PortalOpened(int phase, Vector3 position) { Phase = phase; Position = position; }
 }
+
+/// <summary>A puzzle map was entered (puzzle route, Game/Puzzle). Puzzle is
+/// 1-based; Count is how many the run has.</summary>
+public readonly struct PuzzleStarted
+{
+    public readonly int Puzzle;
+    public readonly int Count;
+    public readonly string Name;
+    public PuzzleStarted(int puzzle, int count, string name) { Puzzle = puzzle; Count = count; Name = name; }
+}
+
+/// <summary>A puzzle map's last room was solved (or the team took the SKIP
+/// portal). Tier is a Game.Puzzle.RewardTier; published once per map on every
+/// machine, for the banner and the quests.</summary>
+public readonly struct PuzzleFinished
+{
+    public readonly int Tier;
+    public readonly float Seconds;
+    public readonly int Hints;
+    public readonly bool Skipped;
+    public PuzzleFinished(int tier, float seconds, int hints, bool skipped) { Tier = tier; Seconds = seconds; Hints = hints; Skipped = skipped; }
+}

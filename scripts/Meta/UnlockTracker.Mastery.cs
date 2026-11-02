@@ -26,6 +26,7 @@ public sealed partial class UnlockTracker
     private bool _victory;
     private bool _quietChecked;
     private int _runEvolutions;
+    private int _puzzles;
     private readonly HashSet<string> _readyAnnounced = new();
     private readonly HashSet<string> _maxedWeapons = new();
     private readonly HashSet<string> _maxedTomes = new();
@@ -44,6 +45,7 @@ public sealed partial class UnlockTracker
         EventBus.Subscribe<WeaponEvolved>(OnMasteryEvolved);
         EventBus.Subscribe<PortalOpened>(OnMasteryPortal);
         EventBus.Subscribe<FinalBossDefeated>(OnMasteryFinalBoss);
+        EventBus.Subscribe<PuzzleFinished>(OnMasteryPuzzle);
     }
 
     private void UnsubscribeMastery()
@@ -56,6 +58,7 @@ public sealed partial class UnlockTracker
         EventBus.Unsubscribe<WeaponEvolved>(OnMasteryEvolved);
         EventBus.Unsubscribe<PortalOpened>(OnMasteryPortal);
         EventBus.Unsubscribe<FinalBossDefeated>(OnMasteryFinalBoss);
+        EventBus.Unsubscribe<PuzzleFinished>(OnMasteryPuzzle);
     }
 
     // ------------------------------------------------------------- events
@@ -114,6 +117,14 @@ public sealed partial class UnlockTracker
     }
 
     private void OnMasteryPortal(PortalOpened e) => NoteMapClear();
+
+    /// <summary>A puzzle map solved (a skip does not count); gold is a feat.</summary>
+    private void OnMasteryPuzzle(PuzzleFinished e)
+    {
+        if (e.Skipped) return;
+        _puzzles++;
+        if (e.Tier == (int)Game.Puzzle.RewardTier.Gold) _feats.Add(Quests.FeatPuzzleGold);
+    }
 
     /// <summary>The run is won at this moment: count the last map's clear,
     /// start the Final Swarm clock and judge the "win while ..." feats on the
@@ -219,6 +230,7 @@ public sealed partial class UnlockTracker
             Metric.RunTomesMaxed => _maxedTomes.Count,
             Metric.EvolutionsFound => Profile.FoundEvolutions.Count,
             Metric.RunEvolutions => _runEvolutions,
+            Metric.TotalPuzzles => stored + (live ? _puzzles : 0),
             _ => float.NaN,
         };
         return !float.IsNaN(value);
@@ -277,6 +289,7 @@ public sealed partial class UnlockTracker
         AddLifetime(Metric.TotalAirJumps, _airJumps);
         AddLifetime(Metric.TotalDashes, _dashes);
         AddLifetime(Metric.TotalGoldEarned, _goldEarned);
+        AddLifetime(Metric.TotalPuzzles, _puzzles);
         // TotalSlams and TotalElites are the profile's own Slams/ElitesKilled,
         // which Commit already adds.
     }

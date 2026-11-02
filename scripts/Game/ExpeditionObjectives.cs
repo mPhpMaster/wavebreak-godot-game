@@ -6,7 +6,7 @@ public static class ExpeditionObjectives
 {
     public static string Describe(StageDirector stages)
     {
-        if (stages.InRestRoom) return "";
+        if (stages.InRestRoom || stages.InPuzzle) return "";   // the puzzle card says what to do
         if (stages.State == StageDirector.PhaseState.PortalOpen) return Loc.T("Objective: enter the portal together.");
         if (stages.State == StageDirector.PhaseState.Boss) return Loc.T("Objective: defeat the phase boss.");
         if (Arena.IsCity) return Loc.T("Objective: strike glowing cores and defeat the warden.");

@@ -107,7 +107,7 @@ public sealed partial class FogOfWar : Node
         using var timing = Prof.Scope("UI.fog");
         float dt = (float)delta;
         if (Main.Instance is not { } main || main.Stages is null) return;
-        if (main.Stages.InRestRoom) { Active = false; return; }
+        if (main.Stages.InRestRoom || main.Stages.InPuzzle) { Active = false; return; }
         if (Arena.FeaturesVersion != _arenaVersion) Reset(main);
         if (!Active) return;
 

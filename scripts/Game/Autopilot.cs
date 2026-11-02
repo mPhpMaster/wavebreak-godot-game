@@ -51,6 +51,12 @@ public sealed partial class Autopilot
         Vector3 me = _player.GlobalPosition;
         // Between maps: shop, rest, continue (Autopilot.RestRoom.cs).
         if (Main.Instance?.Stages is { InRestRoom: true, Rest: { } room }) return RestRoomThink(room, me);
+        // A puzzle map: solve it, claim, leave (Autopilot.Puzzle.cs).
+        if (Main.Instance?.Stages is { InPuzzle: true, Puzzle: { } puzzle })
+        {
+            Vector3 p = PuzzleThink(puzzle, me);
+            return p.LengthSquared() > 1f ? p.Normalized() : p;
+        }
         Vector3 away = Vector3.Zero;
         int considered = 0;
         float nearest = float.MaxValue;

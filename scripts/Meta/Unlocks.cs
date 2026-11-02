@@ -96,6 +96,7 @@ public enum Metric
     EvolutionsFound,    // different evolutions ever made (Profile.FoundEvolutions)
     RunEvolutions,      // weapons evolved this run
     Feat,               // 1 once the one-off feat in Key has happened (see Quests.Feat*)
+    TotalPuzzles,       // puzzle maps solved (not skipped), lifetime (puzzle route)
 }
 
 public enum RewardKind { Character, Weapon, Item, Skin, Hat, Pearls }

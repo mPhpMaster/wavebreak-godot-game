@@ -50,6 +50,7 @@ public sealed partial class Player
         _slideCooldown = Mathf.Max(0f, _slideCooldown - dt);
 
         Vector3 wish = alive ? ReadMoveInput() : Vector3.Zero;
+        MoveWish = wish;
         float walk = Stats.Get(Stat.MoveSpeed);
 
         bool dashPressed = alive && (Game.Arena.IsCity

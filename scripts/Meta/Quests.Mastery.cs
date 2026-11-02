@@ -20,6 +20,7 @@ public static partial class Quests
     public const string FeatBossFreeze = "boss_freeze";
     public const string FeatBossSlam = "boss_slam";
     public const string FeatQuietMinute = "quiet_minute";
+    public const string FeatPuzzleGold = "puzzle_gold";
 
     /// <summary>The stat key a row reads. Built once per row (see
     /// <see cref="UnlockDef.StatKey"/>); "" for metrics that have none.</summary>
@@ -69,6 +70,7 @@ public static partial class Quests
         Metric.TotalSlams => Profile.TotalSlams,
         Metric.TotalElites => Profile.ElitesKilled,
         Metric.TotalGoldEarned => "q.gold",
+        Metric.TotalPuzzles => "q.puzzles",
         _ => null,
     };
 
@@ -348,6 +350,11 @@ public static class MasteryQuests
         list.Add(P("qm_evo_8", "Changing Tide", "Discover 8 evolutions.", Metric.EvolutionsFound, 8, 150));
         list.Add(P("qm_evo_all", "Every Shape of Water", "Discover every evolution.", Metric.EvolutionsFound, Evolutions.All.Count, 400));
         list.Add(P("qm_evo_run3", "Arsenal of the Deep", "Hold 3 evolved weapons in a single run.", Metric.RunEvolutions, 3, 120));
+
+        // ---- the puzzle route (Game/Puzzle)
+        list.Add(P("qm_puzzle_3", "Puzzle Box", "Solve 3 puzzle maps in total.", Metric.TotalPuzzles, 3, 60));
+        list.Add(P("qm_puzzle_12", "Master Locksmith", "Solve 12 puzzle maps in total.", Metric.TotalPuzzles, 12, 150));
+        list.Add(P("qm_puzzle_gold", "Golden Logic", "Earn a gold medal on a puzzle map.", Metric.Feat, 1, 100, Quests.FeatPuzzleGold));
 
         // ---- secrets
         list.Add(P("qm_feat_nochest", "Empty Hold", "Win a run without opening a chest.", Metric.Feat, 1, 150, Quests.FeatNoChestWin,

@@ -43,7 +43,7 @@ public static partial class Keybinds
         ("ping", "Ping (mark a spot)"),
         ("camera_zoom_in", "Zoom in"),
         ("camera_zoom_out", "Zoom out"),
-        ("help_toggle", "Hide or replay help"),
+        ("help_toggle", "Help, puzzle hint"),
         ("pause", "Pause"),
         ("levelup_reroll", "Level-up: reroll"),
         ("levelup_banish", "Level-up: banish"),
@@ -90,6 +90,10 @@ public static partial class Keybinds
         AddHookAction("city_hook_right", MouseButton.Right, Key.V, JoyButton.RightShoulder);
         AddCityAction("dash", Key.Shift, JoyButton.X);
         AddPadDefaults();   // Keybinds.Pad.cs: project.godot ships keys only
+        // Help ships on the pad's d-pad only; H is its key: the puzzle maps'
+        // hint (Game/Puzzle/PuzzleMap). The tutorials still read only the pad.
+        if (InputMap.HasAction("help_toggle") && Get("help_toggle", 0) is null)
+            InputMap.ActionAddEvent("help_toggle", new InputEventKey { PhysicalKeycode = Key.H });
 
         foreach (var (action, _) in Actions)
         {

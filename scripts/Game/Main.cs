@@ -144,6 +144,8 @@ public sealed partial class Main : Node3D
             _ = Trade.TradeCheck.Run(this);          // --check-trade (swap meet rules and escrow)
         else if (EvolutionCheck.Requested)
             _ = EvolutionCheck.Run(this);            // --check-evolutions
+        else if (Puzzle.PuzzleCheck.Requested)
+            _ = Puzzle.PuzzleCheck.Run(this);        // --check-puzzles (puzzle route)
         else if (System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--map-tour=")) is { } tourArg)
             _ = MapTour(tourArg["--map-tour=".Length..]);   // Main.MapTour.cs
     }
@@ -371,8 +373,9 @@ public sealed partial class Main : Node3D
         if (_loading || Run is null || _stages is null || Run.Over) return;
 
         // The rest room between maps holds the run clock and the enemy
-        // director (Game/StageDirector.RestRoom.cs).
-        bool resting = _stages.InRestRoom;
+        // director (Game/StageDirector.RestRoom.cs); so does a puzzle map,
+        // whose few guards are placed by the puzzle itself (StageDirector.Puzzle.cs).
+        bool resting = _stages.InRestRoom || _stages.InPuzzle;
         if (!resting) Run.Tick(dt);
         // Before the enemy director: a phase change clears the field and sets
         // the new multipliers, and the spawns this frame should already see them.

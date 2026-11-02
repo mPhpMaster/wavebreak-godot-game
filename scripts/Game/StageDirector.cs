@@ -44,6 +44,9 @@ public sealed partial class StageDirector
         /// <summary>The last boss died and the run is won; an endless, escalating
         /// swarm follows until death (see <see cref="Game.FinalSwarm"/>).</summary>
         FinalSwarm,
+        /// <summary>A puzzle map (puzzle route) before the next action map.
+        /// Run clock held, as in the rest room. See StageDirector.Puzzle.cs.</summary>
+        Puzzle,
     }
 
     /// <summary>Pressure added per 30 s a boss outlives its grace window, as a
@@ -139,7 +142,8 @@ public sealed partial class StageDirector
     /// <summary>The open portal, for the HUD arrow and the autopilot.</summary>
     public Vector3? PortalPosition => State == PhaseState.PortalOpen && _portal is not null && GodotObject.IsInstanceValid(_portal)
         ? _portal.GlobalPosition
-        : State == PhaseState.RestRoom && Rest is { } rest ? rest.ExitPosition : null;
+        : State == PhaseState.RestRoom && Rest is { } rest ? rest.ExitPosition
+        : State == PhaseState.Puzzle && Puzzle is { } puzzle ? puzzle.ExitTarget : null;
 
     public StageDirector(Node3D root, RunState run, EnemyManager enemies, Player player, PlayerCamera camera,
                          IReadOnlyList<StageDef> stages, IReadOnlyList<EnemyDef> roster)
@@ -176,7 +180,10 @@ public sealed partial class StageDirector
         // The boundary check walks every map there is, not just this run's route.
         bool checkBoundary = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-boundary") >= 0;
         if (checkBoundary) _stages = Data.Stages.All;
-        EnterPhase(Mathf.Clamp(_startPhase - 1, 0, _stages.Count - 1));
+        int start = Mathf.Clamp(_startPhase - 1, 0, _stages.Count - 1);
+        // The puzzle route opens on a puzzle (StageDirector.Puzzle.cs).
+        if (PuzzleRoute && !checkBoundary) EnterPuzzle(start);
+        else EnterPhase(start);
         GD.Print($"META bosses={string.Join(",", System.Array.ConvertAll(PlannedBosses, b => b?.Id ?? "none"))}");
 
         if (checkBoundary)
@@ -317,13 +324,18 @@ public sealed partial class StageDirector
                     else
                     {
                         Log($"portal entered -> phase {_index + 2}/{_stages.Count}");
-                        EnterPhase(NextIndex());
+                        if (PuzzleRoute) EnterPuzzle(NextIndex());
+                        else EnterPhase(NextIndex());
                     }
                 }
                 break;
 
             case PhaseState.RestRoom:
                 StepRestRoom(dt);
+                break;
+
+            case PhaseState.Puzzle:
+                StepPuzzle(dt);
                 break;
 
             case PhaseState.FinalSwarm:
