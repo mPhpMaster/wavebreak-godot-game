@@ -80,6 +80,19 @@ public sealed partial class PuzzleMap
     /// <summary>How a room kind dresses its hall.</summary>
     private readonly record struct Look(Color Floor, Color Wall, Color Low, Color Trim, Color Ceiling, Color Light);
 
+    /// <summary>Which drawn surface (Game/Puzzle/HallSurfaces) each part of a hall wears.</summary>
+    private readonly record struct Surfaces(HallSurfaces.Kind Floor, HallSurfaces.Kind Wall, HallSurfaces.Kind Low, HallSurfaces.Kind Ceiling);
+
+    private static Surfaces SurfacesFor(RoomKind kind) => kind switch
+    {
+        // Workshop: boards underfoot, brick walls, panelled dado, a timber ceiling.
+        RoomKind.Crates => new(HallSurfaces.Kind.Planks, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Planks, HallSurfaces.Kind.Planks),
+        // Foundry: iron floor plates and sooty brick.
+        RoomKind.Levers => new(HallSurfaces.Kind.Slabs, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Ashlar, HallSurfaces.Kind.Planks),
+        // Everywhere else: flagstones, dressed stone, a brick dado, plaster above.
+        _ => new(HallSurfaces.Kind.Flagstone, HallSurfaces.Kind.Ashlar, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Plaster),
+    };
+
     private static Look LookFor(RoomKind kind) => kind switch
     {
         // Workshop: plank floor, brick, timber.
@@ -200,8 +213,11 @@ public sealed partial class PuzzleMap
         var batch = new Batch();
         Vector3 c = room.Centre;
         float h = RoomPlan.Half, t = RoomPlan.WallThick, outer = h + t;
-        StandardMaterial3D floor = Detail(look.Floor, 0.18f), wall = Detail(look.Wall, 0.12f), lowWall = Detail(look.Low, 0.2f);
-        StandardMaterial3D trim = Shared(look.Trim), ceiling = Shared(look.Ceiling), pilaster = Detail(look.Wall.Darkened(0.12f), 0.12f);
+        Surfaces kinds = SurfacesFor(room.Kind);
+        StandardMaterial3D floor = HallSurfaces.Material(kinds.Floor, look.Floor), wall = HallSurfaces.Material(kinds.Wall, look.Wall);
+        StandardMaterial3D lowWall = HallSurfaces.Material(kinds.Low, look.Low), ceiling = HallSurfaces.Material(kinds.Ceiling, look.Ceiling);
+        StandardMaterial3D trim = Detail(look.Trim, 0.25f), pilaster = HallSurfaces.Material(HallSurfaces.Kind.Ashlar, look.Wall.Darkened(0.12f));
+        StandardMaterial3D inlay = HallSurfaces.Material(HallSurfaces.Kind.Marble, Stone);
 
         // Floor: the hall's own, the puzzle grid inlaid in its middle (light
         // stone and a checker, as the pieces were drawn for), a trim frame.
@@ -209,7 +225,7 @@ public sealed partial class PuzzleMap
         float g = RoomPlan.N * RoomPlan.Cell * 0.5f;
         if (room.Kind is not (RoomKind.Start or RoomKind.Reward))
         {
-            batch.Box(c + Vector3.Up * 0.005f, new Vector3(g * 2f, 0.01f, g * 2f), Shared(Stone));
+            batch.Box(c + Vector3.Up * 0.005f, new Vector3(g * 2f, 0.01f, g * 2f), inlay);
             var tiles = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = new BoxMesh { Size = new Vector3(1.94f, 0.04f, 1.94f) } };
             var dark = new List<Transform3D>();
             for (int cell = 0; cell < RoomPlan.N * RoomPlan.N; cell++)
@@ -217,12 +233,12 @@ public sealed partial class PuzzleMap
                     dark.Add(new Transform3D(Basis.Identity, room.World(cell) + new Vector3(0f, 0.005f, 0f)));
             tiles.InstanceCount = dark.Count;
             for (int k = 0; k < dark.Count; k++) tiles.SetInstanceTransform(k, dark[k]);
-            Put(new MultiMeshInstance3D { Multimesh = tiles, MaterialOverride = Shared(StoneDark), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            Put(new MultiMeshInstance3D { Multimesh = tiles, MaterialOverride = HallSurfaces.Material(HallSurfaces.Kind.Marble, StoneDark), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         }
         else
         {
             // A rug of light stone where a grid would be.
-            batch.Box(c + Vector3.Up * 0.005f, new Vector3(g * 1.4f, 0.01f, g * 1.4f), Shared(Stone));
+            batch.Box(c + Vector3.Up * 0.005f, new Vector3(g * 1.4f, 0.01f, g * 1.4f), inlay);
         }
         foreach (int s in new[] { -1, 1 })
         {
@@ -279,14 +295,14 @@ public sealed partial class PuzzleMap
         foreach (float x in new[] { -7.5f, 0f, 7.5f })
         {
             Vector3 at = c + new Vector3(x, WallHeight - 0.35f, 0f);
-            batch.Box(at, new Vector3(0.8f, 0.7f, h * 2f), Shared(look.Ceiling.Lightened(0.15f)));
+            batch.Box(at, new Vector3(0.8f, 0.7f, h * 2f), HallSurfaces.Material(HallSurfaces.Kind.Planks, look.Ceiling.Lightened(0.15f)));
             _solids.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(0.8f, 0.7f, h * 2f) }, Position = at });
         }
 
         // A chandelier over the middle: the room's main light.
         Chandelier(batch, c + Vector3.Up * 9.5f, look);
 
-        if (i < Plan.Rooms.Count - 1) BuildCorridor(batch, room, look);
+        if (i < Plan.Rooms.Count - 1) BuildCorridor(batch, room, look, kinds);
         BuildSign(room, i);
         Dress(room, look, rng);
         batch.Commit(_into!);
@@ -364,7 +380,7 @@ public sealed partial class PuzzleMap
 
     /// <summary>From room <paramref name="room"/>'s exit doorway to the next
     /// room's entrance: floor, walls, ceiling and one lamp.</summary>
-    private void BuildCorridor(Batch batch, RoomPlan room, Look look)
+    private void BuildCorridor(Batch batch, RoomPlan room, Look look, Surfaces kinds)
     {
         int side = room.ExitSide;
         var dir = new Vector3(RoomPlan.Dx[side], 0f, RoomPlan.Dz[side]);
@@ -373,17 +389,17 @@ public sealed partial class PuzzleMap
         Vector3 mid = room.Centre + dir * (start + len * 0.5f);
         float w = DoorWidth, ht = DoorHeight;
         Vector3 Size(float across, float y, float lengthwise) => along * across + dir.Abs() * lengthwise + Vector3.Up * y;
-        batch.Box(mid + Vector3.Down * 0.15f, Size(w + 2f, 0.3f, len + 0.2f), Detail(look.Floor.Darkened(0.1f), 0.18f));
+        batch.Box(mid + Vector3.Down * 0.15f, Size(w + 2f, 0.3f, len + 0.2f), HallSurfaces.Material(kinds.Floor, look.Floor.Darkened(0.1f)));
         batch.Box(mid + Vector3.Up * 0.01f, Size(w - 1.2f, 0.02f, len + 0.2f), Shared(look.Trim.Darkened(0.2f)));
         foreach (float s in new[] { -1f, 1f })
         {
             Vector3 at = mid + along * s * (w * 0.5f + 0.5f) + Vector3.Up * (ht * 0.5f + 0.25f);
             Vector3 size = Size(1f, ht + 0.5f, len + 0.2f);
-            batch.Box(at, size, Detail(look.Low, 0.2f), shadow: false);
+            batch.Box(at, size, HallSurfaces.Material(HallSurfaces.Kind.Brick, look.Low), shadow: false);
             _solids.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = at });
         }
         Vector3 roof = mid + Vector3.Up * (ht + 0.3f);
-        batch.Box(roof, Size(w + 2f, 0.6f, len + 0.2f), Shared(look.Ceiling), shadow: false);
+        batch.Box(roof, Size(w + 2f, 0.6f, len + 0.2f), HallSurfaces.Material(kinds.Ceiling, look.Ceiling), shadow: false);
         _solids.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = Size(w + 2f, 0.6f, len + 0.2f) }, Position = roof });
         // Ribs across the ceiling and a lamp in the middle.
         for (int k = -1; k <= 1; k++)
@@ -408,7 +424,8 @@ public sealed partial class PuzzleMap
         view.Body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = mid + Vector3.Up * (size.Y * 0.5f) });
         AddChild(view.Body);
         _roomRoots[i].AddChild(view.Slab);
-        view.Slab.AddChild(Mesh(new BoxMesh { Size = size }, Vector3.Up * (size.Y * 0.5f), Shared(Bronze)));
+        // Timber boards, mapped on the slab itself so the grain rides up with it.
+        view.Slab.AddChild(Mesh(new BoxMesh { Size = size }, Vector3.Up * (size.Y * 0.5f), HallSurfaces.Material(HallSurfaces.Kind.Planks, Bronze, world: false)));
         // Studded bands and a lock emblem on both faces: ring and bar. Shape, not colour, says "shut".
         foreach (float f in new[] { -1f, 1f })
         {

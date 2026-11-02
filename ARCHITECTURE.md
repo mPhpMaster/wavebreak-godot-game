@@ -545,6 +545,16 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   (the graphics page's shadow setting applies); walls and ceiling cast none.
   The static shell is merged into one mesh per material per room
   (`Batch`, `SurfaceTool.AppendFrom`).
+- **Surfaces** (`HallSurfaces.cs`). Floors, walls, dado, ceiling, corridors,
+  the grid inlay and the door slabs wear drawn textures: flagstone, ashlar,
+  brick, timber boards, iron slabs, plaster and marble, each a tileable
+  albedo (tinted by the room's palette colour, so one texture serves every
+  kind of hall) plus a normal map from the same height field (bevelled block
+  edges, sunk grout). Built once per resolution from FastNoiseLite and C#
+  courses, mipmapped, mapped by world triplanar so a texel is the same size
+  on every face (the door slab maps in its own space so the boards ride up
+  with it). One material per (surface, colour), shared by all rooms. 128 px
+  and no normal maps on Low, 256 on Medium/High, 512 on Ultra.
 - **Seeing.** Each room (with its corridor out) is one node; only the room
   this machine's player stands in and its two neighbours are drawn
   (`SyncVisibility`), so in co-op each machine shows rooms near its own

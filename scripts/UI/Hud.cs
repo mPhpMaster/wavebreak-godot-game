@@ -139,7 +139,11 @@ public sealed partial class Hud : Control
     /// <summary>Seconds left on the title card, counting down. The card is
     /// faded by this rather than by a tween so a pause (level-up) holds it.</summary>
     private float _cardTime;
+    private float _cardLength = CardSeconds;
     private const float CardSeconds = 3.6f;
+    /// <summary>A puzzle's card: shorter, so it is gone before the first door
+    /// and its interact prompt need the middle of the screen.</summary>
+    private const float PuzzleCardSeconds = 2.2f;
     private string _lastStatus = "";
     private bool _subscribed;
 
@@ -380,12 +384,12 @@ public sealed partial class Hud : Control
     /// steps aside while they are up and comes back (with its time left) after.</summary>
     private void OnLevelUpOpen(bool open) => _card.Visible = !open && _cardTime > 0f;
 
-    private void ShowCard(string title, string subtitle, Color tint)
+    private void ShowCard(string title, string subtitle, Color tint, float seconds = CardSeconds)
     {
         _cardTitle.Text = title;
         _cardTitle.AddThemeColorOverride("font_color", tint);
         _cardSubtitle.Text = subtitle;
-        _cardTime = CardSeconds;
+        _cardTime = _cardLength = seconds;
         _card.Visible = !LevelUpPanel.AnyOpen;
     }
 
@@ -400,7 +404,7 @@ public sealed partial class Hud : Control
     private void OnPuzzleStarted(PuzzleStarted e)
     {
         _phaseLabel.Text = Loc.F("PUZZLE {0}/{1}  —  {2}", e.Puzzle, e.Count, Upper(e.Name));
-        ShowCard(Loc.F("PUZZLE {0}  ·  {1}", e.Puzzle, Upper(e.Name)), Loc.T("Solve every room. Faster, with fewer hints, pays better."), PortalTint);
+        ShowCard(Loc.F("PUZZLE {0}  ·  {1}", e.Puzzle, Upper(e.Name)), Loc.T("Solve every room. Faster, with fewer hints, pays better."), PortalTint, PuzzleCardSeconds);
     }
 
     private void OnPortalOpened(PortalOpened e)
@@ -558,8 +562,8 @@ public sealed partial class Hud : Control
         {
             _cardTime -= dt;
             // Quick fade in, hold, slow fade out.
-            float shown = CardSeconds - _cardTime;
-            float alpha = Mathf.Min(Mathf.Clamp(shown / 0.25f, 0f, 1f), Mathf.Clamp(_cardTime / 0.9f, 0f, 1f));
+            float shown = _cardLength - _cardTime;
+            float alpha = Mathf.Min(Mathf.Clamp(shown / 0.25f, 0f, 1f), Mathf.Clamp(_cardTime / (_cardLength < CardSeconds ? 0.6f : 0.9f), 0f, 1f));
             _card.Modulate = new Color(1f, 1f, 1f, alpha);
             if (_cardTime <= 0f) _card.Visible = false;
         }
