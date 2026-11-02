@@ -49,16 +49,25 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 
 ## Puzzle route
 
-Pick **Puzzle Route** (Arabic: مسار الألغاز) on the character page's Route &
-Challenges row, or in the co-op lobby. The run plays Classic's maps at Classic's
-difficulty, and before each one comes a **puzzle map**:
+Press **PUZZLE ROUTE: OFF** beside the route bar on the PLAY page (the pad's X
+button does it from anywhere on the page) to turn it **ON** (Arabic: مسار
+الألغاز); press it again to go back to the route you had before, or Classic.
+The same toggle sits beside the route pill on the Route & Challenges page and,
+for the host, in the co-op lobby; the route pill and the lobby's Route arrows
+still step through every route. It is greyed out, with the reason under it,
+while a map challenge or Endless is selected. The run plays Classic's maps at
+Classic's difficulty, and before each one comes a **puzzle map**:
 puzzle, rest stop, map, rest stop, puzzle, and so on to the final boss.
 
 A puzzle map is a chain of three to five rooms drawn from the run's seed, so it
 is different every run; later puzzles and harder tiers add rooms and harder
 pieces. Each room is a closed hall (about 30 m across, 14 m to the ceiling,
 lit by torches and dressed for its puzzle: a workshop, an observatory, a bell
-temple, a foundry...), with the puzzle laid into the middle of its floor. Its
+temple, a foundry...), with the puzzle laid into the middle of its floor. The
+halls are built from drawn surfaces, not flat colours: flagstone floors with
+grout, dressed-stone and brick walls, timber boards and iron plates, each kind
+of room in its own palette (generated once, no downloads; 128 px without
+normal maps on the Low preset, 256 px on Medium and High, 512 px on Ultra). Its
 door stays shut until the room is solved, then slides open onto a short
 corridor to the next room; you only ever see the room you are in. The minimap
 and the Tab map show the rooms you have found:
