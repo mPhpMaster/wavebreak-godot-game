@@ -83,16 +83,16 @@ public sealed partial class PuzzleHud : Control
         _banner.OffsetLeft = -320f; _banner.OffsetRight = 320f;
         _banner.GrowHorizontal = GrowDirection.Both;
         AddChild(_banner);
-        _medal = new Medal { CustomMinimumSize = new Vector2(0f, 120f), MouseFilter = MouseFilterEnum.Ignore };
+        _medal = new Medal { CustomMinimumSize = new Vector2(0f, 76f), MouseFilter = MouseFilterEnum.Ignore };
         _banner.AddChild(_medal);
         var card = CuteStyle.Panel(CuteStyle.Night, CuteStyle.Butter, 18, 12);
         card.MouseFilter = MouseFilterEnum.Ignore;
         _banner.AddChild(card);
         var inner = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         card.AddChild(inner);
-        _bannerTier = CuteStyle.Title("", 40, CuteStyle.OnNight, HorizontalAlignment.Center);
+        _bannerTier = CuteStyle.Title("", 32, CuteStyle.OnNight, HorizontalAlignment.Center);
         inner.AddChild(_bannerTier);
-        _bannerLine = CuteStyle.Text("", 18, CuteStyle.OnNightDim, HorizontalAlignment.Center);
+        _bannerLine = CuteStyle.Text("", 16, CuteStyle.OnNightDim, HorizontalAlignment.Center);
         _bannerLine.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         inner.AddChild(_bannerLine);
 
@@ -118,7 +118,8 @@ public sealed partial class PuzzleHud : Control
             ? Loc.T("Skipped. A small consolation is on its way.")
             : Loc.F("Solved in {0}  ·  hints: {1}", RunState.Format(e.Seconds), e.Hints) + "\n" + Loc.T("Claim one reward in the vault, then take the exit.");
         _banner.Visible = true;
-        _bannerFor = e.Skipped ? 3f : 5.5f;
+        _banner.Modulate = Colors.White;
+        _bannerFor = e.Skipped ? 3f : 4.5f;
     }
 
     public override void _Process(double delta)
@@ -128,7 +129,9 @@ public sealed partial class PuzzleHud : Control
         bool show = !Net.Coop.IsPaused(GetTree()) && !LevelUpPanel.AnyOpen;
         _panel.Visible = show;
         _bannerFor -= dt;
+        // Small and short-lived, then fading: it sits over the vault's prize labels.
         if (_bannerFor <= 0f) _banner.Visible = false;
+        else if (_bannerFor < 0.8f) _banner.Modulate = new Color(1f, 1f, 1f, _bannerFor / 0.8f);
 
         PuzzleState st = _map.State;
         PuzzlePlan plan = _map.Plan;
