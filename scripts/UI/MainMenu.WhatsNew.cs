@@ -11,6 +11,12 @@ public sealed partial class MainMenu
         var entry = MenuButton("WHAT'S NEW", OpenWhatsNew);
         Place(entry, 470, 610, 520, 44);
         _pages["main"].AddChild(entry);
+        // The newest thing to try, over the button that tells the rest.
+        Label fresh = MakeLabel("NEW: Puzzle route. Switch it on beside the route on the PLAY page.", 15, Gold);
+        fresh.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        fresh.VerticalAlignment = VerticalAlignment.Bottom;
+        Place(fresh, 470, 556, 520, 48);
+        _pages["main"].AddChild(fresh);
     }
 
     private void OfferWhatsNew()

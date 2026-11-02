@@ -18,7 +18,8 @@ namespace Wavebreak.UI;
 ///   <b>Modifiers</b> — the twelve global run modifiers (Meta/Challenges) as
 ///   toggles, any number at once, with the combined Pearls multiplier.
 ///
-/// The route pill cycles Meta/Routes. Every change is saved at once. All
+/// The route pill cycles Meta/Routes; the puzzle pill beside it switches the
+/// puzzle route on and off (Routes.SetPuzzle). Every change is saved at once. All
 /// controls are focusable buttons, so keyboard and gamepad navigation come from
 /// the built-in ui_* actions like the rest of the menu.
 /// </summary>
@@ -45,7 +46,7 @@ public sealed partial class ChallengePicker : Control
     private bool _modifiersView;
     private string _map = "thornmeadow";
 
-    private Button _tabMaps = null!, _tabMods = null!, _route = null!, _clear = null!, _backButton = null!;
+    private Button _tabMaps = null!, _tabMods = null!, _route = null!, _puzzle = null!, _clear = null!, _backButton = null!;
     private Control _mapsView = null!, _modsView = null!;
     private readonly List<(string Id, Button Button, Label Count)> _mapTabs = new();
     private GridContainer _cards = null!;
@@ -98,11 +99,25 @@ public sealed partial class ChallengePicker : Control
         col.AddChild(top);
         _tabMaps = CuteStyle.Pill(Loc.T("Map challenges"), CuteStyle.Lavender, () => ShowView(false), 17);
         _tabMods = CuteStyle.Pill(Loc.T("Modifiers"), CuteStyle.Butter, () => ShowView(true), 17);
-        foreach (Button b in new[] { _tabMaps, _tabMods }) { b.CustomMinimumSize = new Vector2(190f, 40f); top.AddChild(b); }
+        foreach (Button b in new[] { _tabMaps, _tabMods }) { b.CustomMinimumSize = new Vector2(164f, 40f); top.AddChild(b); }
         var spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore };
         top.AddChild(spacer);
-        _route = CuteStyle.Pill("", CuteStyle.Sky, PressRoute, 16);
-        _route.CustomMinimumSize = new Vector2(520f, 40f);
+        // The puzzle route in one press, beside the pill that cycles them all.
+        _puzzle = CuteStyle.Pill("", CuteStyle.Mint, PressPuzzle, 15);
+        _puzzle.CustomMinimumSize = new Vector2(222f, 40f);
+        _puzzle.ClipText = true;
+        _puzzle.Name = "PuzzleRouteToggle";
+        _puzzle.Icon = Icons.Texture("puzzle");
+        _puzzle.ExpandIcon = true;
+        _puzzle.AddThemeConstantOverride("icon_max_width", 22);
+        _puzzle.AddThemeColorOverride("icon_normal_color", CuteStyle.Ink);
+        _puzzle.AddThemeColorOverride("icon_focus_color", CuteStyle.Ink);
+        _puzzle.AddThemeColorOverride("icon_hover_color", CuteStyle.Ink);
+        _puzzle.AddThemeColorOverride("icon_disabled_color", CuteStyle.InkSoft);
+        _puzzle.FocusEntered += ShowPuzzleText;
+        top.AddChild(_puzzle);
+        _route = CuteStyle.Pill("", CuteStyle.Sky, PressRoute, 15);
+        _route.CustomMinimumSize = new Vector2(560f, 40f);
         _route.ClipText = true;
         top.AddChild(_route);
 
@@ -356,6 +371,24 @@ public sealed partial class ChallengePicker : Control
         ShowText("next", CuteStyle.Sky, Loc.F("Route: {0}", r.Name), $"{Routes.DescribeMaps(r)}.  {Loc.T(r.Blurb)}");
     }
 
+    private void PressPuzzle()
+    {
+        if (Routes.PuzzleBlockedReason() is not null) { ShowPuzzleText(); return; }
+        Routes.SetPuzzle(!Routes.PuzzleSelected);
+        Profile.Save();
+        Refresh();
+        ShowPuzzleText();
+    }
+
+    private void ShowPuzzleText()
+    {
+        string? blocked = Routes.PuzzleBlockedReason();
+        bool on = blocked is null && Routes.PuzzleSelected;
+        ShowText("puzzle", CuteStyle.Mint, on ? "PUZZLE ROUTE: ON" : "PUZZLE ROUTE: OFF", blocked ?? (on
+            ? "A short puzzle map before each of Classic's maps. Press to go back to the route you had."
+            : "Press for the puzzle route: a short puzzle map before each of Classic's maps."));
+    }
+
     private void ClearAll()
     {
         Challenges.ClearSelection();
@@ -373,6 +406,12 @@ public sealed partial class ChallengePicker : Control
         _route.Text = sel is not null
             ? Loc.F("Route:  {0}   (map challenge)", Routes.DescribeMaps(Routes.ById("start:" + sel.MapId) ?? r))
             : Loc.F("Route:  {0}   ·   {1}", r.Name, Routes.DescribeMaps(r));
+        string? blocked = Routes.PuzzleBlockedReason();
+        bool puzzleOn = blocked is null && Routes.PuzzleSelected;
+        _puzzle.Text = Loc.T(puzzleOn ? "PUZZLE ROUTE: ON" : "PUZZLE ROUTE: OFF");
+        _puzzle.Disabled = blocked is not null;
+        _puzzle.TooltipText = blocked is null ? "" : Loc.T(blocked);
+        CuteStyle.StylePill(_puzzle, CuteStyle.Mint, puzzleOn);
 
         foreach (var (id, b, count) in _mapTabs)
         {

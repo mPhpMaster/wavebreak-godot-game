@@ -44,6 +44,17 @@ public static class PadMenuCheck
                     else dropped = true;
                 }
             Expect($"{page}: walking keeps focus ({seen.Count} controls)", !dropped);
+            if (page is "play" or "run")
+                Expect($"{page}: the puzzle route toggle is reachable", new List<Control>(seen).Exists(c => c.Name == "PuzzleRouteToggle"));
+            if (page == "play")
+            {
+                // X switches the puzzle route from anywhere on the page, and back.
+                bool before = Meta.Routes.PuzzleSelected;
+                await Tap(JoyButton.X);
+                bool flipped = Meta.Routes.PuzzleSelected != before;
+                await Tap(JoyButton.X);
+                Expect("play: X switches the puzzle route on and back off", flipped && Meta.Routes.PuzzleSelected == before);
+            }
 
             // Everything pressable should be reachable: by focus, or listed as
             // a mouse shortcut for something a pad does another way.

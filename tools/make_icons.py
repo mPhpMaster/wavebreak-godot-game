@@ -53,6 +53,7 @@ KENNEY = {
     "award": (BOARD, "award.png"),
     "dice": (BOARD, "dice_detailed.png"),
     "lock": (BOARD, "lock_closed.png"),
+    "puzzle": (BOARD, "puzzle.png"),
     "target": (GAME, "target.png"),
     "star": (GAME, "star.png"),
     "fastforward": (GAME, "fastForward.png"),

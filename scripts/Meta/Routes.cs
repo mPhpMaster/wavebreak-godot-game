@@ -120,6 +120,43 @@ public static class Routes
         return All[i];
     }
 
+    /// <summary>The route picked before the puzzle toggle switched to the
+    /// puzzle route, so switching it off goes back there.</summary>
+    private const string BeforePuzzleKey = "route_before_puzzle";
+
+    /// <summary>The saved choice is the puzzle route.</summary>
+    public static bool PuzzleSelected => Selected.Id == PuzzleId;
+
+    /// <summary>Why the puzzle toggle cannot be used right now (an English
+    /// line for Loc.T), or null. Endless never visits puzzle maps; a map
+    /// challenge picks its own route (solo only: co-op ignores challenges).</summary>
+    public static string? PuzzleBlockedReason(bool coop = false)
+    {
+        if (EndlessMode.Selected) return "Endless has no puzzle maps. Switch Endless off to play the puzzle route.";
+        if (!coop && MapChallenges.Selected is not null) return "A map challenge sets its own route. Clear it to play the puzzle route.";
+        return null;
+    }
+
+    /// <summary>The puzzle toggle: on selects the puzzle route and remembers
+    /// the route it replaced; off returns to that route (Classic if none).
+    /// Does not save.</summary>
+    public static RouteDef SetPuzzle(bool on)
+    {
+        int puzzle = IndexOf(ById(PuzzleId)!);
+        int current = IndexOf(Selected);
+        if (on && current != puzzle)
+        {
+            Profile.SetMeta(BeforePuzzleKey, current);
+            Profile.SetMeta(SelectedKey, puzzle);
+        }
+        else if (!on && current == puzzle)
+        {
+            long before = Profile.GetMeta(BeforePuzzleKey);
+            Profile.SetMeta(SelectedKey, before > 0 && before < All.Count && before != puzzle ? before : 0);
+        }
+        return Selected;
+    }
+
     /// <summary>The route of the run in progress (for logs and the HUD).</summary>
     public static RouteDef Active { get; private set; } = null!;
 

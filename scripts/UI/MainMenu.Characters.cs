@@ -43,16 +43,33 @@ public sealed partial class MainMenu : Node3D
             charList.AddChild(b);
         }
         _difficulty = new DifficultyPicker();
-        _difficulty.Changed += () => _runButton.Text = RouteBarText();
+        _difficulty.Changed += RefreshRouteBar;   // Endless switches the puzzle toggle off
         list.AddChild(_difficulty);
 
         // Route & challenges (UI/ChallengePicker), above the character panel: the
         // panel grows with skin, hat and passive rows and would cover it below.
+        // As wide as the panel, no wider: the puzzle toggle stands beside it.
         _runButton = MenuButton("", () => ShowPage("run"));
         Place(_runButton, 470f, 186f, 520f, 42f);
+        _runButton.AddThemeFontSizeOverride("font_size", 18);
+        _runButton.ClipText = true;
+        _runButton.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         _runButton.MouseEntered += () => _runButton.GrabFocus();
         page.AddChild(_runButton);
         _difficulty.Button.FocusNeighborRight = _difficulty.Button.GetPathTo(_runButton);
+
+        // The puzzle route in one press (Meta/Routes.SetPuzzle); the route
+        // page's pill still cycles every route. A note under it says why it
+        // is off limits with a map challenge or Endless.
+        _puzzleToggle = PuzzleToggle(TogglePuzzleRoute);
+        Place(_puzzleToggle, 1000f, 186f, 262f, 42f);
+        _puzzleToggle.MouseEntered += () => _puzzleToggle.GrabFocus();
+        page.AddChild(_puzzleToggle);
+        _puzzleNote = MakeLabel("", 14, Gold);
+        _puzzleNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        Place(_puzzleNote, 1000f, 234f, 262f, 64f);
+        page.AddChild(_puzzleNote);
+        PadInput.DeviceChanged += RefreshRouteBar;   // the [X] on the toggle
         _startButton = MenuButton("START RUN", () => { if (_shownCharacter is { } sel) StartRun(sel); });
         _startButton.AddThemeColorOverride("font_color", Gold);
         _startButton.AddThemeColorOverride("font_focus_color", Gold);
@@ -184,6 +201,60 @@ public sealed partial class MainMenu : Node3D
     {
         DifficultyTier tier = EndlessMode.Selected ? DifficultyTiers.All[0] : DifficultyTiers.Selected;
         return ChallengePicker.Summary() + "  ·  " + Loc.F("{0} maps, portal {1} s", tier.Phases, tier.PortalSeconds);
+    }
+
+    /// <summary>The route bar and the puzzle toggle beside it.</summary>
+    private void RefreshRouteBar()
+    {
+        if (_runButton is null || !IsInstanceValid(_runButton)) return;
+        _runButton.Text = RouteBarText();
+        _runButton.TooltipText = _runButton.Text;   // in full, when the bar trims it
+        string? blocked = Routes.PuzzleBlockedReason();
+        StylePuzzleToggle(_puzzleToggle, Routes.PuzzleSelected && blocked is null, blocked, padKey: true);
+        _puzzleNote.Text = blocked is null ? "" : Loc.T(blocked);
+    }
+
+    private void TogglePuzzleRoute()
+    {
+        if (Routes.PuzzleBlockedReason() is not null) return;
+        Routes.SetPuzzle(!Routes.PuzzleSelected);
+        Profile.Save();
+        RefreshRouteBar();
+    }
+
+    /// <summary>The PUZZLE ROUTE: ON/OFF toggle, on this page and in the CO-OP
+    /// lobby: the puzzle glyph, then the state.</summary>
+    internal static Button PuzzleToggle(Action pressed)
+    {
+        Button b = MenuButton("", pressed);
+        b.Name = "PuzzleRouteToggle";
+        b.Icon = Icons.Texture("puzzle");
+        b.ExpandIcon = true;
+        b.AddThemeConstantOverride("icon_max_width", 26);
+        b.AddThemeConstantOverride("h_separation", 10);
+        b.AddThemeFontSizeOverride("font_size", 18);
+        b.ClipText = true;
+        b.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        return b;
+    }
+
+    /// <summary>Show the toggle as on or off, or greyed out when
+    /// <paramref name="blocked"/> gives a reason (it keeps focus, so a pad can
+    /// still land on it and read why). With <paramref name="padKey"/> the pad
+    /// button that presses it from anywhere on the page leads the text.</summary>
+    internal static void StylePuzzleToggle(Button b, bool on, string? blocked, bool padKey)
+    {
+        string state = Loc.T(on ? "PUZZLE ROUTE: ON" : "PUZZLE ROUTE: OFF");
+        b.Text = padKey && PadInput.UsingPad ? $"[{Keybinds.PadLabel(JoyButton.X)}]  {state}" : state;
+        b.Disabled = blocked is not null;
+        b.TooltipText = Loc.T(blocked ?? (on
+            ? "A short puzzle map before each of Classic's maps. Press to go back to the route you had."
+            : "Press for the puzzle route: a short puzzle map before each of Classic's maps."));
+        Color tint = blocked is not null ? Locked : on ? Gold : Ink;
+        foreach (string slot in new[] { "font_color", "font_disabled_color" }) b.AddThemeColorOverride(slot, tint);
+        foreach (string slot in new[] { "icon_normal_color", "icon_disabled_color", "icon_hover_color", "icon_pressed_color" })
+            b.AddThemeColorOverride(slot, tint);
+        b.AddThemeColorOverride("icon_focus_color", blocked is not null ? Locked : Gold);
     }
 
     private void StartRun(CharacterDef c)

@@ -81,6 +81,8 @@ public sealed partial class CoopPage : Control
     private readonly List<Button> _difficultyArrows = new();
     private Label _route = null!;
     private readonly List<Button> _routeArrows = new();
+    private Button _puzzleToggle = null!;
+    private Label _puzzleNote = null!;
     private Label _status = null!;
     private Label _note = null!;
     private Label _players = null!;
@@ -221,6 +223,22 @@ public sealed partial class CoopPage : Control
         _players.AutoTranslateMode = AutoTranslateModeEnum.Disabled;
         box.AddChild(_players);
 
+        // The puzzle route in one press, for the host (the Route arrows still
+        // step through every route). Here, not under the arrows: the left
+        // column already reaches the bottom of a 720p window.
+        var puzzleRow = new HBoxContainer();
+        puzzleRow.AddThemeConstantOverride("separation", 12);
+        _puzzleToggle = MainMenu.PuzzleToggle(TogglePuzzle);
+        _puzzleToggle.CustomMinimumSize = new Vector2(290f, 42f);
+        puzzleRow.AddChild(_puzzleToggle);
+        _puzzleNote = MainMenu.MakeLabel("", 14, InkDim);
+        _puzzleNote.AutoTranslateMode = AutoTranslateModeEnum.Disabled;   // set translated
+        _puzzleNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _puzzleNote.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _puzzleNote.VerticalAlignment = VerticalAlignment.Center;
+        puzzleRow.AddChild(_puzzleNote);
+        box.AddChild(puzzleRow);
+
         var buttons = new HBoxContainer();
         buttons.AddThemeConstantOverride("separation", 8);
         _ready = MainMenu.MenuButton("READY", ToggleReady);
@@ -335,6 +353,11 @@ public sealed partial class CoopPage : Control
             arrow.Visible = !Coop.IsClient;
             arrow.Disabled = Coop.InRun || Launch.Automated;
         }
+        // A client sees the host's choice; Endless (the host's) has no puzzle maps.
+        string? puzzleBlocked = Coop.IsClient ? "The host picks the route." : Routes.PuzzleBlockedReason(coop: true);
+        MainMenu.StylePuzzleToggle(_puzzleToggle, route.Id == Routes.PuzzleId && (Coop.IsClient || puzzleBlocked is null), puzzleBlocked, padKey: false);
+        if (Coop.InRun || Launch.Automated) _puzzleToggle.Disabled = true;
+        _puzzleNote.Text = puzzleBlocked is null ? Loc.T("A puzzle map before each map, for everyone.") : Loc.T(puzzleBlocked);
 
         string status;
         bool warn = false;

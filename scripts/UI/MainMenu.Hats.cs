@@ -107,6 +107,10 @@ public sealed partial class MainMenu
             case InputEventJoypadButton { Pressed: true, ButtonIndex: JoyButton.Y }:
                 if (_hatBuy.Visible && !_hatBuy.Disabled) BuyHat();
                 return true;
+            case InputEventJoypadButton { Pressed: true, ButtonIndex: JoyButton.X }:
+                // The puzzle toggle from anywhere on the page (its text names the button).
+                TogglePuzzleRoute();
+                return true;
             case InputEventJoypadMotion { Axis: JoyAxis.TriggerLeft or JoyAxis.TriggerRight } t when PadInput.NewAxisPress(t):
                 CycleHat(t.Axis == JoyAxis.TriggerLeft ? -1 : 1);
                 return true;

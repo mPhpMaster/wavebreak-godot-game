@@ -75,6 +75,8 @@ public sealed partial class MainMenu : Node3D
     private CoopPage _coop = null!;
     private CoopLineup? _lineup;
     private Button _runButton = null!;
+    private Button _puzzleToggle = null!;
+    private Label _puzzleNote = null!;
     private Label _pearls = null!;
 
     public override void _Ready()
@@ -347,8 +349,8 @@ public sealed partial class MainMenu : Node3D
                 break;
             case "play":
                 _difficulty.Refresh();
-                _runButton.Text = RouteBarText();
-                int i = Math.Max(0, IndexOfCharacter(arg.Length > 0 ? arg : Profile.SelectedCharacter));
+                RefreshRouteBar();
+                int i =Math.Max(0, IndexOfCharacter(arg.Length > 0 ? arg : Profile.SelectedCharacter));
                 _charButtons[i].GrabFocus();
                 ScrollRosterTo(_charButtons[i]);
                 PickCharacter(Characters.All[i], focusStart: false);
@@ -407,6 +409,7 @@ public sealed partial class MainMenu : Node3D
     public override void _ExitTree()
     {
         Net.SteamLobby.JoinRequested -= OnSteamJoinRequested;
+        PadInput.DeviceChanged -= RefreshRouteBar;
         StopUpdates();
     }
 

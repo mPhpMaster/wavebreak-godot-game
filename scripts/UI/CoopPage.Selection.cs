@@ -98,6 +98,17 @@ public sealed partial class CoopPage
         Refresh();
     }
 
+    /// <summary>Host (or no session yet): the puzzle route on or off; off
+    /// goes back to the route picked before (Routes.SetPuzzle).</summary>
+    private void TogglePuzzle()
+    {
+        if (Coop.IsClient || Coop.InRun || Routes.PuzzleBlockedReason(coop: true) is not null) return;
+        Routes.SetPuzzle(!Routes.PuzzleSelected);
+        Profile.Save();
+        if (Coop.IsHost) NetSession.Instance?.SetLobbyRoute();
+        Refresh();
+    }
+
     private void LookChanged()
     {
         Profile.Save();
