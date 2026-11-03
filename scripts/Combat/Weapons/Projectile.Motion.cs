@@ -190,6 +190,19 @@ public sealed partial class Projectile
     private void StepBoomerang(float dt)
     {
         Spin(dt, 18f);
+        if (_style == Weapons.ShotStyle.Loop && !_phase)
+        {
+            // Glass Gale: the heading keeps turning, so the needles fly a full
+            // loop and come back through the other side instead of out-and-back.
+            float span = MathF.Max(0.2f, _p0 * Mathf.Pi);   // a loop as wide as the reach
+            _velocity = _velocity.Rotated(Vector3.Up, (_styleIndex % 2 == 0 ? 1f : -1f) * Mathf.Tau / span * dt);
+            Vector3 lp = GlobalPosition + _velocity * dt;
+            GlobalPosition = lp;
+            SweepOnce(lp, _hitRadius);
+            if (_age >= span * 0.5f && !_styleFlag) { _styleFlag = true; _pierced.Clear(); Weapons.DistinctStats.Note("gale_loop"); }
+            if (_age >= span) { _phase = true; _pierced.Clear(); }
+            return;
+        }
         if (!_phase && _age >= _p0)
         {
             _phase = true;
@@ -224,8 +237,15 @@ public sealed partial class Projectile
     {
         float a = _p0 + _p1 * _age;
         Vector3 c = Muzzle;
+        float ring = _p2;
+        if (_style == Weapons.ShotStyle.Breathe)
+        {
+            // Eye of the Cyclone: the wheel breathes in and out, so it sweeps a band.
+            ring = _p2 * (1f + 0.3f * MathF.Sin(_age * 4.2f));
+            Weapons.DistinctStats.Note("cyclone_breathe");
+        }
         // Knee height: blades passing in front of the camera stay under its line of sight.
-        Vector3 at = new Vector3(c.X + MathF.Sin(a) * _p2, c.Y - 0.55f, c.Z + MathF.Cos(a) * _p2);
+        Vector3 at = new Vector3(c.X + MathF.Sin(a) * ring, c.Y - 0.55f, c.Z + MathF.Cos(a) * ring);
         // Point the fin along its direction of travel.
         Place(at, new Vector3(MathF.Cos(a), 0f, -MathF.Sin(a)) * MathF.Sign(_p1 == 0f ? 1f : _p1));
 
@@ -242,6 +262,16 @@ public sealed partial class Projectile
     {
         _tickTimer -= dt;
         float left = _life - _age;
+        if (_style == Weapons.ShotStyle.Grow)
+        {
+            // Bloomtide: the patch spreads while it lasts (60% to 120% of its size).
+            float g = 0.6f + 0.6f * MathF.Min(1f, _age / MathF.Max(0.1f, _life * 0.7f));
+            if (_p2 <= 0f) _p2 = _hitRadius;
+            _hitRadius = _p2 * g;
+            float shown = MathF.Min(_hitRadius, Weapons.FxGuard.MaxCentredRadius);
+            _mesh.Scale = new Vector3(shown, MathF.Min(shown, 1.2f), shown);
+            if (g > 1f) Weapons.DistinctStats.Note("bloom_grow");
+        }
         _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(left < 0.5f ? 1f - left / 0.5f : 0.7f);
         if (_tickTimer > 0f) return;
         _tickTimer = _tick;
@@ -298,7 +328,7 @@ public sealed partial class Projectile
             float off = bolts <= 1 ? 0f : 14f * (i / (float)(bolts - 1) - 0.5f);
             ProjectileSpec bolt = new()
             {
-                Mode = ProjectileMode.Straight,
+                Mode = _style == Weapons.ShotStyle.Hive ? ProjectileMode.Homing : ProjectileMode.Straight,
                 Origin = GlobalPosition + Vector3.Up * 0.1f,
                 Direction = dir.Rotated(Vector3.Up, Mathf.DegToRad(off)),
                 Speed = _p1,
@@ -307,6 +337,15 @@ public sealed partial class Projectile
                 Pierce = 0,
                 Tint = _tint,
             };
+            if (_style == Weapons.ShotStyle.Hive)
+            {
+                // Plague Hive: the hive lets out wasps that pick their own targets.
+                bolt.Mesh = Weapons.LookMeshes.Wasp; bolt.MeshScale = 0.2f;
+                bolt.Style = Weapons.ShotStyle.HiveWasp; bolt.Impact = Weapons.ImpactKind.Spore; bolt.StyleIndex = i;
+                bolt.Speed *= 0.7f;
+                bolt.Range *= 1.4f;
+                Weapons.DistinctStats.Note("hive_wasp");
+            }
             Spawn(_system, bolt, _template.Clone());
         }
     }
@@ -326,6 +365,13 @@ public sealed partial class Projectile
             return;
         }
 
+        if (_style == Weapons.ShotStyle.Drift && Targeting.Nearest(GlobalPosition, _p0 * 2.5f) is { } prey)
+        {
+            // Frozen Gyre: the gyre wanders after the nearest body instead of holding still.
+            Vector3 step = FlatDirection(prey.Position - GlobalPosition, Vector3.Zero) * (1.6f * dt);
+            GlobalPosition += step;
+            if (step.LengthSquared() > 0f) Weapons.DistinctStats.Note("gyre_drift");
+        }
         // Flat, capped (SpawnMotion) and fading further when it sits on a player:
         // at max area it was a solid dome over the player and the camera.
         float vs = _p2 * (1f + 0.1f * MathF.Sin(_age * 14f));
@@ -354,6 +400,14 @@ public sealed partial class Projectile
     private void StepRicochet(float dt)
     {
         Spin(dt, 20f);
+        if (_style == Weapons.ShotStyle.Skip)
+        {
+            // Skimstone: it hops along the ground between skips.
+            _mesh.Position = new Vector3(0f, MathF.Abs(MathF.Sin(_age * 11f)) * 0.45f - 0.2f, 0f);
+            Weapons.DistinctStats.Note("skim_hop");
+        }
+        else if (_style == Weapons.ShotStyle.Harpoon)
+            _mesh.Rotation = new Vector3(0f, 0f, _age * 6f);   // the harpoon flies point first, rolling
         Vector3 next = GlobalPosition + _velocity * dt;
         GlobalPosition = next;
 
@@ -397,20 +451,53 @@ public sealed partial class Projectile
     private void StepStrike()
     {
         float t = Mathf.Clamp(_age / MathF.Max(0.01f, _life), 0f, 1f);
-        GlobalPosition = _anchor + Vector3.Up * (_p0 * (1f - t * t));
-        _mesh.Rotation = new Vector3(_age * 5f, _age * 3f, 0f);
+        GlobalPosition = StyleStrike(t) ?? _anchor + Vector3.Up * (_p0 * (1f - t * t));
+        _mesh.Rotation = _style switch
+        {
+            Weapons.ShotStyle.Erupt or Weapons.ShotStyle.Bolt => new Vector3(0f, _age * 2f, 0f),
+            Weapons.ShotStyle.Meteor => new Vector3(0.6f, _age * 2f, 0f),
+            _ => new Vector3(_age * 5f, _age * 3f, 0f),
+        };
     }
 
     // _anchor = centre; _p0 = expansion speed; _p1 = mesh height scale
     private void StepRing()
     {
-        float r = MathF.Max(0.3f, _p0 * _age);
+        float travel = _age;
+        if (_style == Weapons.ShotStyle.March)
+        {
+            // Winter's Keep: advance, stand, advance (speed 0..2x, averaging 1x).
+            const float beat = 0.6f;
+            travel = _age + MathF.Sin(Mathf.Tau * _age / beat) * beat / Mathf.Tau;
+            Weapons.DistinctStats.Note("keep_march");
+        }
+        float r = MathF.Max(0.3f, _p0 * travel);
         GlobalPosition = _anchor;
         // Knee-high and already see-through: several of these rolling out at
         // once used to stack into a wall across the whole screen.
         _mesh.Scale = new Vector3(r, MathF.Min(_p1, 1.6f) * 0.35f, r);
         float t = _age / MathF.Max(0.01f, _life);
         _mesh.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.4f + 0.6f * t * t);
+        if (_style == Weapons.ShotStyle.Front) { SweepFront(r); return; }
         SweepOnce(_anchor, r);
+    }
+
+    /// <summary>Breakwater Cleaver's wave: only the forward third of the ring
+    /// (+-60 degrees round the heading it was thrown along) cuts.</summary>
+    private void SweepFront(float r)
+    {
+        // The node was launched facing the swing, and the arc mesh faces -Z.
+        Vector3 fwd = FlatDirection(-GlobalTransform.Basis.Z, Vector3.Forward);
+        int n = Targeting.Overlap(_anchor, r, MotionBuffer);
+        for (int i = 0; i < n; i++)
+        {
+            IDamageable t = MotionBuffer[i];
+            if (_pierced.Contains(t)) continue;
+            Vector3 to = FlatDirection(t.Position - _anchor, fwd);
+            if (to.Dot(fwd) < 0.5f) continue;
+            _pierced.Add(t);
+            ApplyHit(t, _anchor, 1f);
+            Weapons.DistinctStats.Note("wave_front");
+        }
     }
 }

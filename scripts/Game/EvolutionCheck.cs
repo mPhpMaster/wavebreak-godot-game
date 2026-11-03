@@ -219,7 +219,7 @@ public static class EvolutionCheck
         }
     }
 
-    private static float Output(WeaponSystem system, WeaponDef def, EvolutionDef? evolution, List<Vector3> at, float hp)
+    internal static float Output(WeaponSystem system, WeaponDef def, EvolutionDef? evolution, List<Vector3> at, float hp)
     {
         var dummies = at.Select(v => new Dummy(system.MuzzlePosition + v, hp)).ToList();
         Targeting.Source = into =>
@@ -259,13 +259,13 @@ public static class EvolutionCheck
         return total / (frames * dt);
     }
 
-    private static readonly List<Vector3> Pack = new()
+    internal static readonly List<Vector3> Pack = new()
     {
         new(2.0f, 0f, 0.6f), new(-1.6f, 0f, 1.4f), new(0.4f, 0f, -2.4f), new(3.4f, 0f, -1.6f),
         new(5.5f, 0f, 1.2f), new(-5.0f, 0f, -2.4f), new(2.6f, 0f, 5.2f), new(8.0f, 0f, 0.4f),
     };
 
-    private static readonly List<Vector3> Single = new() { new(1.6f, 0f, 0f) };
+    internal static readonly List<Vector3> Single = new() { new(1.6f, 0f, 0f) };
 
     /// <summary>Every row, pack and lone target, against the max-level weapon
     /// firing at the same bodies with the same stats. The pack is what must land

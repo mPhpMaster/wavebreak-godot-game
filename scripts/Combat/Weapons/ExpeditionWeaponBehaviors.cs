@@ -32,6 +32,7 @@ internal sealed class ReefShotgun : IWeaponBehavior
                 HitRadius = weapon.Def.Radius * stats.Get(Stat.AreaSize),
                 Pierce = weapon.Def.Pierce + weapon.Bonus.Pierce, Tint = weapon.Def.Tint,
             };
+            WeaponLooks.Dress(ref spec, WeaponLooks.For(weapon), i);   // round pellets, not bolts
             Projectile.Spawn(system, spec, system.BuildDamage(weapon));
         }
         system.NoteShots(count);
@@ -45,6 +46,10 @@ internal sealed class SkylineSwords : IWeaponBehavior
     public void Fire(WeaponRuntime weapon, WeaponSystem system, StatSheet stats)
     {
         float reach = weapon.Def.Range * (1 + weapon.Bonus.Range) * stats.Get(Stat.AreaSize) * (1 + weapon.Bonus.Area);
+        // Twin Horizons' echo is the air striking again further out: longer reach,
+        // drawn as a line laid across the far edge of the swing.
+        bool horizon = weapon.Echoing && weapon.Evolution is { Id: "evo_twin_horizons" };
+        if (horizon) reach *= 1.15f;
         Vector3 origin = system.MuzzlePosition, heading = system.AimAt(origin, reach);
         Targeting.Overlap(origin, reach, _targets);
         int swings = Math.Clamp(weapon.BaseProjectiles + weapon.BonusShots(stats), 2, 6);
@@ -56,14 +61,20 @@ internal sealed class SkylineSwords : IWeaponBehavior
             foreach (IDamageable target in _targets)
             {
                 if (!target.IsAlive || (target.Position - origin).Normalized().Dot(forward) < arc) continue;
+                // The far air strikes: the echo spares what stands right at your feet.
+                if (horizon && (target.Position - origin).Length() < reach * 0.3f) continue;
                 if (system.Body is { } body && target is Node3D { } targetBody && targetBody.IsInsideTree()
                     && !Game.WorldSight.Clear(body, origin, target.Position)) continue;
                 DamageInfo damage = hit.Clone(); damage.Direction = (target.Position - origin).Normalized();
                 target.TakeDamage(damage); system.ReportHit(target, damage);
             }
-            Projectile.SpawnSwipe(origin + Vector3.Right * (blade % 2 == 0 ? -.2f : .2f), forward,
-                reach, weapon.Def.SpreadDegrees / 2, weapon.Def.Tint);
+            // Two crescents swept in opposite directions, so the pair crosses.
+            if (!horizon)
+                DistinctFx.Sweep(origin + Vector3.Right * (blade % 2 == 0 ? -.2f : .2f), forward,
+                    reach, weapon.Def.SpreadDegrees / 2, weapon.Def.Tint, blade % 2 == 0 ? 1f : -1f, 0.16f, LookMeshes.BladeArc);
         }
+        if (horizon) { DistinctFx.Horizon(origin, heading, reach, weapon.Def.Tint); DistinctStats.Note("horizon_echo"); }
+        else DistinctStats.Note("skyline_cross");
         system.NoteShots(swings);
     }
 }

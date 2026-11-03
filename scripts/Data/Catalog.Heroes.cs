@@ -62,7 +62,7 @@ public static partial class Catalog
         new WeaponDef
         {
             Id = Signatures.Kite, DisplayName = "Stormfang Blades",
-            Description = "Flick throws twin storm blades at nearby enemies. They cut on the way out and back, even while standing still. Movement adds up to 25% damage.",
+            Description = "Flick throws twin storm blades at nearby enemies. They tack side to side on the way out and cut again on the way back, even while standing still. Movement adds up to 25% damage.",
             Rarity = Rarity.Rare, Shape = AttackShape.Projectile, Element = Element.Physical,
             Damage = 16f, Cooldown = 1.2f, Projectiles = 2, ProjectileSpeed = 22f, Range = 14f, Radius = 0.65f,
             Knockback = 1.8f, CritChance = 0.06f, ProcCoefficient = 0.35f, SpreadDegrees = 10f,

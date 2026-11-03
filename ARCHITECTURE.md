@@ -143,6 +143,7 @@ Useful test flags (all after `--`):
 | `--map-tour=<prefix>` | photograph the current map: the start facing N/E/S/W, each zone, the Tab big map, the minimap, an overhead view; use with `--route=beacon` (Stormwatch Harbour first) |
 | `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
 | `--check-totem`, `--totem-shot=<prefix>` | Tide Totem self-check (`TOTEM PASS`; no `--auto`, add `--invulnerable`) and its captures (see "Tide Totems") |
+| `--check-distinct`, `--distinct-dps`, `--distinct-shot=<dir> [--distinct-only=a,b]` | look-alike weapons made distinct: rows, twists and budget (`DISTINCT PASS/FAIL`), the 30 s balance table, per-group captures (see "Distinct weapons") |
 | `--check-evolutions [--check-evolutions-shot=x.png]` | weapon evolutions: one end to end through the real panel and a real chest, then every row measured against its max-level weapon, `EVOLVE PASS/FAIL` (see "Weapon evolutions") |
 | `--check-puzzles`, `--route=puzzle`, `--puzzle-rooms=twin,crates`, `--puzzle-skip`, `--puzzle-shot=x.png [--puzzle-shot-room=N --puzzle-shot-hint --puzzle-shot-door]` | puzzle route: generator, solvers, rules, doors, prizes and skip on paper and in the engine (`PUZZLE PASS`); choose the rooms; make the bot skip; captures (see "Puzzle route") |
 | `--check-trade`, `--swap-meet`, `--rest-exit-seconds=N` | swap meet: rules and escrow self-check (`TRADE PASS`), build the stall in single-player (captures), shorten the co-op rest room's countdown (see "Swap meet") |
@@ -672,6 +673,85 @@ per weapon. The codex has an Evolutions tab: the recipe always shows, the evolve
 name and text only once made (profile section `[evolutions]`, saved on the spot).
 Quests: `qm_evo_*`.
 
+## Distinct weapons (look-alikes fixed)
+
+`Combat/Weapons/WeaponLooks.cs`, `LookMeshes.cs`, `Projectile.Style.cs`,
+`DistinctFx.cs`, `LighthouseSweep.cs`, `Combat/WeaponRuntime.Looks.cs`,
+`Audio/SfxSynth.Voices.cs`, `Game/DistinctCheck.cs`, `Game/DistinctShowcase.cs`;
+the audit and the per-weapon table are in `docs/weapon-audit.md`.
+
+**Why.** Weapons are data and the first eighteen had no delivery of their own,
+so the five `AttackShape`s drew five things: every straight shot and seeker the
+same capsule, every shell the same sphere, every field the same disc, every
+swing the same wedge, one firing sound per shape. Evolutions that borrow an
+expansion delivery wore that weapon's mesh, and riders of a kind looked alike.
+
+**One table.** `WeaponLooks` has a row per weapon id and per evolution id that
+needs one: mesh and size, a `ShotStyle` (the flight twist), an `ImpactKind`,
+and a `WeaponVoice` with a pitch. `WeaponLooks.For(runtime)` prefers the
+evolution's row. A shot carries its row in `ProjectileSpec` (`Mesh`, `Style`,
+`Impact`, `StyleIndex`, `Target`); a spec without them is the old plain shot,
+which is what keeps everything else (enemy shots, procs, turret bolts) exactly
+as it was. `Projectile.Style.cs` holds the twists behind a handful of hooks in
+`Projectile.Flight.cs`/`Projectile.Motion.cs` (step, steer, contact, break,
+detonate, apply hit); cosmetic wobble moves the mesh, never the hit point.
+Melee and field twists (lunge, slam, ramp, pull, pulse) are in
+`WeaponRuntime.Looks.cs`, keyed by weapon id because their shapes have no
+projectile to carry a style.
+
+**Twists are behaviour.** Each look-alike group's members now differ in what
+they do as well as how they look (splits, stream, lob, carpet, toughest target,
+spread targets, holds its line, ramp, pull, slam, sweep, loop, breathe, march,
+drift, reel, walking barrage). Balance is measured, not guessed:
+`--distinct-dps` fires every weapon and evolution for 30 s at the evolution
+check's pack and lone target (frozen field, same crit rolls) and prints one
+line each; the before/after table is in the audit. `--check-evolutions` keeps
+its band.
+
+**Effects.** `DistinctFx` runs on `SignatureFx` (stepped from
+`Projectile.UpdateAll`, so it pauses with the run and the audit's fire tests
+drain it): at most 40 live, per-hit sparks capped at 18 a second and skipped on
+the Low preset (`WeaponLooks.Extras`), flat on the ground and size-capped by
+`FxGuard`, faded through `GraphicsSettings.FxFade`, and softened under reduced
+flashes (`Accessibility`); the aura light now goes through `Accessibility.Flash`
+too. Identity is carried by shape, motion and sound, never by colour alone, so
+the colour-blind palettes need nothing new.
+
+**Sound.** `WeaponFired` now carries the weapon and evolution id; the audio
+director maps the row's voice to one of twelve new `Sfx` voices (appended to the
+enum so older seeds do not move), as quiet and as thinned as the shape sounds.
+
+**Co-op.** Nothing new on the wire, protocol unchanged: weapons run on their
+owner's machine and remote players never drew each other's shots. New
+knockback directions and the Maul's stun use the existing hit batch and
+crowd-control forwarding.
+
+**The rule for new weapons.** A new weapon (or evolution, or rider) must differ
+from every weapon of its shape in mechanic *and* in look, not only in numbers and
+tint. Checklist before adding one:
+
+1. Find its group in `docs/weapon-audit.md` (same shape and targeting) and say in
+   one line what it *does* that no member does (pattern, travel, timing, target
+   choice, on-hit, pierce/split/bounce, status).
+2. Give it a row in `WeaponLooks`: its own silhouette (`LookMeshes`, unit-sized,
+   forward -Z, grey two-tone so the tint applies), a `ShotStyle` or a delivery of
+   its own, an `ImpactKind`, and a voice/pitch no group member uses.
+3. Add it to `DistinctShowcase.Groups` and to the table in `DistinctCheck` (its
+   visual and its twist counter, bumped with `DistinctStats.Note` where the twist
+   happens).
+4. Measure with `--distinct-dps` (and `--check-evolutions` for an evolution) and
+   keep it in its band; update the audit's table.
+5. Effects: through `DistinctFx`/`SignatureFx`, FxGuard caps, `FxFade`, reduced
+   flashes, and only cosmetic extras behind `WeaponLooks.Extras` (Low preset).
+6. Arabic for any new or changed description (`scripts/Meta/ArabicText/`).
+7. Run `--check-distinct` and look at a `--distinct-shot` frame of its group.
+
+**Checks.** `--check-distinct`: every group member has a row, no two members of
+a group share a visual, a twist or a voice (one plain reference allowed), each
+twist actually fires in a 30 s run (`DistinctStats` counters), and the effect
+budget holds; `DISTINCT PASS/FAIL`. `--distinct-shot=<dir>` [`--distinct-only=a,b`]
+photographs each group member alone at a frozen ring of enemies.
+
 ## Heroes trio and signature weapons
 
 Three more characters (`Meta/Characters.Heroes.cs`): Sunny the Lookout,
@@ -727,7 +807,7 @@ static constructor) delivered by `Combat/Weapons/Signatures.cs`:
 |---|---|---|---|---|
 | Spyglass Glint | precise | instant thin beam at the enemy nearest the centre of the camera's view (13° sight cone, elites first); a sighted shot is a guaranteed crit, +2.5%/m past 4 m (max +60%), +15% per body pierced; nothing in sight falls back to the nearest enemy | +1 pierce, 19° cone | a bullseye kill reflects into the farthest enemy within 12 m |
 | Mooring Anchor | control | thrown at the nearest enemy; impact, then a rope ring for 3 s (x Duration): chafe ticks, chill-slow, an inward pull at and just past the edge; then hauled home through everything still inside | the haul stuns | the haul drags the ring together, then a second slam |
-| Skimmer Kite | movement | a kite on a string trails low behind you (loops round you when idle); every tick the string and the kite (x2) cut what they touch, scaled 0.7-2.2x by the kite's speed, so turning and running is the aim | +1 kite | every 2 s each kite drops lightning on an enemy near it |
+| Stormfang Blades (id `skimmer_kite`) | movement | twin fang blades thrown at the nearest enemy (3D aim); outbound they tack up to 0.7 m either side of the line (a zigzag lane, unlike the Gullwing Chakram's straight throw), then fly straight home and cut again; moving adds up to +25% damage (`Signatures.StormBlades.cs`) | Crosswind: returning blades hit 1.5x | Storm Blades: a third blade and lightning damage |
 
 Exclusivity: `OfferPool.BuildCandidates` never offers a signature as a new
 weapon (live system or ledger path), so only its owner holds one; held, it

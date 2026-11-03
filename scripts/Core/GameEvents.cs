@@ -125,7 +125,12 @@ public readonly struct WeaponFired
 {
     public readonly Vector3 Position;
     public readonly Data.AttackShape Shape;
-    public WeaponFired(Vector3 position, Data.AttackShape shape) { Position = position; Shape = shape; }
+    /// <summary>Which weapon, and its evolution if any: the audio director
+    /// picks the weapon's own voice from these (Combat/Weapons/WeaponLooks.cs).</summary>
+    public readonly string? WeaponId;
+    public readonly string? EvolutionId;
+    public WeaponFired(Vector3 position, Data.AttackShape shape, string? weaponId = null, string? evolutionId = null)
+    { Position = position; Shape = shape; WeaponId = weaponId; EvolutionId = evolutionId; }
 }
 
 /// <summary>Which movement verb a <see cref="PlayerMoved"/> reports.</summary>

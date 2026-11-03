@@ -52,5 +52,16 @@ public struct ProjectileSpec
 
     /// <summary>Explicit lifetime in seconds. 0 derives it from range and speed.</summary>
     public float Lifetime;
+
+    // ---- a weapon's own look and flight twist (Combat/Weapons/WeaponLooks.cs,
+    // Projectile.Style.cs). Left default, a shot is the plain shot it always was.
+    internal Mesh? Mesh;
+    internal float MeshScale;
+    internal Weapons.ShotStyle Style;
+    internal Weapons.ImpactKind Impact;
+    /// <summary>Which shot of its volley this is (wasps pick different targets).</summary>
+    internal int StyleIndex;
+    /// <summary>Where a lobbed shot lands.</summary>
+    internal Vector3 Target;
 }
 

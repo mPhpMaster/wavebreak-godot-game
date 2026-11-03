@@ -100,6 +100,17 @@ internal static class WeaponBehaviors
         sys.ReportHit(target, info);
     }
 
+    /// <summary>Put the weapon's (or its evolution's) style on a delivery's shot
+    /// and return the mesh it should wear (WeaponLooks.cs).</summary>
+    private static Mesh Styled(WeaponRuntime w, ref ProjectileSpec spec, Mesh fallback, int index = 0)
+    {
+        Look look = WeaponLooks.For(w);
+        spec.Style = look.Style;
+        spec.Impact = look.Impact;
+        spec.StyleIndex = index;
+        return look.Mesh ?? fallback;
+    }
+
     private static ProjectileSpec Spec(WeaponSystem sys, WeaponDef d, Vector3 dir, float speed, float range, float hitRadius)
         => new()
         {
@@ -126,14 +137,31 @@ internal static class WeaponBehaviors
             float radius = MathF.Max(0.3f, d.Radius * Area(s));
             Vector3 aim = sys.AimAt(sys.MuzzlePosition, d.Range);
             float outward = d.Range / speed;
+            float full = outward;
+            bool loop = WeaponLooks.For(w).Style == ShotStyle.Loop;
+            if (loop)
+            {
+                // Glass Gale's loops: every other one is sized to reach the
+                // nearest body, the rest sweep the whole reach.
+                float to = d.Range;
+                if (Targeting.Nearest(sys.MuzzlePosition, d.Range) is { } near)
+                {
+                    Vector3 off = near.Position - sys.MuzzlePosition;
+                    off.Y = 0f;
+                    to = Mathf.Clamp(off.Length(), 1.2f, d.Range);
+                }
+                outward = to / speed;
+            }
             for (int i = 0; i < n; i++)
             {
                 ProjectileSpec spec = Spec(sys, d, aim.Rotated(Vector3.Up, Mathf.DegToRad(Spread(d, i, n))), speed, d.Range, radius);
-                spec.Lifetime = outward * 3.5f + 1f;
+                float leg = loop && i % 2 == 1 ? full : outward;
+                spec.Lifetime = leg * 3.5f + 1f;
+                Mesh mesh = Styled(w, ref spec, ExpansionVisuals.Chakram, i);
                 Projectile.SpawnMotion(sys, spec, sys.BuildDamage(w), new Projectile.MotionSpec
                 {
-                    Motion = ProjectileMotion.Boomerang, Mesh = ExpansionVisuals.Chakram, MeshScale = radius * 0.9f,
-                    P0 = outward, P1 = 1.25f,
+                    Motion = ProjectileMotion.Boomerang, Mesh = mesh, MeshScale = radius * 0.9f,
+                    P0 = leg, P1 = 1.25f,
                 });
             }
             sys.NoteShots(n);
@@ -156,9 +184,10 @@ internal static class WeaponBehaviors
             {
                 ProjectileSpec spec = Spec(sys, d, Vector3.Forward, 0f, 1f, radius);
                 spec.Lifetime = life;
+                Mesh mesh = Styled(w, ref spec, ExpansionVisuals.Fin, i);
                 Projectile.SpawnMotion(sys, spec, sys.BuildDamage(w), new Projectile.MotionSpec
                 {
-                    Motion = ProjectileMotion.Orbit, Mesh = ExpansionVisuals.Fin, MeshScale = radius * 1.1f,
+                    Motion = ProjectileMotion.Orbit, Mesh = mesh, MeshScale = radius * 1.1f,
                     P0 = i * Mathf.Tau / n, P1 = angular, P2 = orbit, Tick = 0.45f,
                 });
             }
@@ -219,7 +248,10 @@ internal static class WeaponBehaviors
             {
                 Hit.Add(current);
                 Vector3 to = current.Position + Vector3.Up * 0.6f;
-                Projectile.SpawnStreak(from, to, 0.16f, d.Tint, 0.16f);
+                // Forked Squall: a kinked bolt, not a straight bar (the perk and
+                // item chains stay straight and thin).
+                DistinctFx.Jagged(from, to, d.Tint, 0.09f, 0.18f, 4);
+                DistinctStats.Note("squall_jag");
                 Strike(sys, current, template, from, scale);
                 scale *= 0.88f;
                 from = to;
@@ -256,6 +288,18 @@ internal static class WeaponBehaviors
             Vector3 origin = sys.MuzzlePosition;
             Vector3 aim = sys.AimAt(origin, d.Range);
             DamageInfo template = sys.BuildDamage(w);
+            if (w.Evolution is null && d.Id == "lighthouse_beam")
+            {
+                // The lamp turns: the beam sweeps an arc through the aim and burns
+                // each body once as it passes (LighthouseSweep.cs).
+                for (int b = 0; b < n; b++)
+                    SignatureFx.Add(new LighthouseSweep(sys, origin, aim.Rotated(Vector3.Up, Mathf.DegToRad(Spread(d, b, n))),
+                        d.Range, width, template, d.Tint, b % 2 == 0 ? 1f : -1f));
+                DistinctStats.Note("lighthouse_sweep");
+                sys.NoteShots(n);
+                return;
+            }
+            bool truthline = w.Evolution is { Id: "evo_truthline_rail" };
             for (int b = 0; b < n; b++)
             {
                 Vector3 dir = aim.Rotated(Vector3.Up, Mathf.DegToRad(Spread(d, b, n)));
@@ -271,8 +315,11 @@ internal static class WeaponBehaviors
                     float side = (rel - dir * along).Length();
                     if (side > width + Targeting.AssumedTargetRadius) continue;
                     Strike(sys, t, template, origin);
+                    // Truthline Rail: a glint of glass on everything the line went through.
+                    if (truthline) { DistinctFx.HitSpark(ImpactKind.Glass, t.Position, d.Tint); DistinctStats.Note("truthline_glint"); }
                 }
-                Projectile.SpawnStreak(origin, origin + dir * d.Range, width * 1.4f, d.Tint, 0.2f);
+                // Truthline is a hair-thin white line that flicks out; the lamp sweeps.
+                Projectile.SpawnStreak(origin, origin + dir * d.Range, truthline ? 0.12f : width * 1.4f, d.Tint, truthline ? 0.12f : 0.2f);
             }
             sys.NoteShots(n);
         }
@@ -320,9 +367,10 @@ internal static class WeaponBehaviors
             spec.Origin = origin + side * 1.2f + Vector3.Down * 0.2f;
             spec.Lifetime = MathF.Max(1f, w.Interval * 0.9f) * Duration(s);
             DamageInfo t = sys.BuildDamage(w);
+            Mesh mesh = Styled(w, ref spec, ExpansionVisuals.Sentry);
             Projectile.SpawnMotion(sys, spec, t, new Projectile.MotionSpec
             {
-                Motion = ProjectileMotion.Turret, Mesh = ExpansionVisuals.Sentry, MeshScale = 0.55f,
+                Motion = ProjectileMotion.Turret, Mesh = mesh, MeshScale = 0.55f,
                 P0 = d.Range, P1 = Speed(d, s),
                 // Radius doubles as the sentry's own fire interval; attack speed shortens it.
                 Tick = d.Radius / MathF.Max(0.1f, s.Get(Stat.AttackSpeed)),
@@ -361,9 +409,10 @@ internal static class WeaponBehaviors
                 spec.Origin = spec.Origin with { Y = hold.Y };
                 spec.BlastRadius = pull * 0.8f;
                 spec.Lifetime = dist / spec.Speed + 2.2f * Duration(s);
+                Mesh mesh = Styled(w, ref spec, ExpansionVisuals.Whorl, i);
                 Projectile.SpawnMotion(sys, spec, sys.BuildDamage(w), new Projectile.MotionSpec
                 {
-                    Motion = ProjectileMotion.Vortex, Mesh = ExpansionVisuals.Whorl, MeshScale = pull * 0.45f,
+                    Motion = ProjectileMotion.Vortex, Mesh = mesh, MeshScale = pull * 0.45f,
                     Anchor = hold, P0 = pull, P1 = 2.6f, P2 = pull * 0.45f, Tick = 0.25f,
                 });
             }
@@ -385,9 +434,10 @@ internal static class WeaponBehaviors
             {
                 ProjectileSpec spec = Spec(sys, d, aim.Rotated(Vector3.Up, Mathf.DegToRad(Spread(d, i, n))), speed, d.Range, radius);
                 spec.Lifetime = d.Range / speed;
+                Mesh mesh = Styled(w, ref spec, ExpansionVisuals.Pebble, i);
                 Projectile.SpawnMotion(sys, spec, sys.BuildDamage(w), new Projectile.MotionSpec
                 {
-                    Motion = ProjectileMotion.Ricochet, Mesh = ExpansionVisuals.Pebble, MeshScale = radius * 0.9f,
+                    Motion = ProjectileMotion.Ricochet, Mesh = mesh, MeshScale = radius * (mesh == ExpansionVisuals.Pebble ? 0.9f : 1.4f),
                     P0 = 9f * Area(s),
                 });
             }
@@ -409,7 +459,9 @@ internal static class WeaponBehaviors
             DamageInfo template = sys.BuildDamage(w);
             int count = Targeting.Cone(origin, aim, reach, half, Buffer);
             for (int i = 0; i < count; i++) Strike(sys, Buffer[i], template, origin);
-            Projectile.SpawnSwipe(origin, aim, reach, half, d.Tint);
+            // Sleet, not a sheet: puffs that drift out along the cone.
+            DistinctFx.Breath(origin, aim, reach, half, d.Tint);
+            DistinctStats.Note("horn_breath");
             sys.NoteShots(1);
         }
     }
@@ -426,9 +478,20 @@ internal static class WeaponBehaviors
             float blast = MathF.Max(0.6f, d.Radius * Area(s));
             Vector3 origin = sys.MuzzlePosition;
             int found = Targeting.Overlap(origin, d.Range, Buffer);
+            bool broadside = w.Evolution is { Id: "evo_broadside_barrage" };
+            Vector3 line = Vector3.Zero, lineAt = Vector3.Zero;
+            if (broadside)
+            {
+                // A walking barrage: the shells land in a row through the nearest
+                // body, along the aim, instead of on random ones.
+                lineAt = Targeting.Nearest(origin, d.Range)?.Position ?? origin + sys.AimDirection * (d.Range * 0.5f);
+                line = Projectile.FlatDirection(lineAt - origin, sys.AimDirection);
+                DistinctStats.Note("broadside_line");
+            }
             for (int i = 0; i < n; i++)
             {
-                Vector3 at = found > 0
+                Vector3 at = broadside ? lineAt + line * ((i - (n - 1) * 0.5f) * 1.2f)
+                    : found > 0
                     ? Buffer[Rng.RangeInt(0, found)].Position
                     : origin + Rng.OnUnitCircleXZ() * Rng.Range(2f, d.Range);
                 Vector3 ground = new(at.X, Ground(origin).Y, at.Z);
@@ -437,9 +500,10 @@ internal static class WeaponBehaviors
                 spec.Origin = ground + Vector3.Up * 9f;
                 spec.BlastRadius = blast;
                 spec.Lifetime = 0.55f + 0.08f * i;      // staggered so a volley rattles down
+                Mesh mesh = Styled(w, ref spec, ExpansionVisuals.Stone, i);
                 Projectile.SpawnMotion(sys, spec, sys.BuildDamage(w), new Projectile.MotionSpec
                 {
-                    Motion = ProjectileMotion.Strike, Mesh = ExpansionVisuals.Stone, MeshScale = 0.35f + blast * 0.08f,
+                    Motion = ProjectileMotion.Strike, Mesh = mesh, MeshScale = mesh == ExpansionVisuals.Stone ? 0.35f + blast * 0.08f : 0.42f,
                     Anchor = ground, P0 = 9f,
                 });
             }
@@ -468,9 +532,10 @@ internal static class WeaponBehaviors
                 ProjectileSpec spec = Spec(sys, d, Vector3.Forward, 0f, 1f, 0.5f);
                 spec.Origin = centre;
                 spec.Lifetime = reach / speed;
+                Mesh mesh = Styled(w, ref spec, ExpansionVisuals.Crest, i);
                 Projectile.SpawnMotion(sys, spec, hit.Clone(), new Projectile.MotionSpec
                 {
-                    Motion = ProjectileMotion.Ring, Mesh = ExpansionVisuals.Crest, MeshScale = 1f,
+                    Motion = ProjectileMotion.Ring, Mesh = mesh, MeshScale = 1f,
                     Anchor = centre, P0 = speed, P1 = 1f + d.Radius,
                 });
             }
