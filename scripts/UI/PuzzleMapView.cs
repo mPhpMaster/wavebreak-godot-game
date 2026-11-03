@@ -108,7 +108,7 @@ public static class PuzzleMapView
             ci.DrawLine(a, b, c, width, true);
             return;
         }
-        foreach (Vector2[] part in Geometry2D.ClipPolylineWithPolygon(new[] { a, b }, clip))
+        foreach (Vector2[] part in Geometry2D.IntersectPolylineWithPolygon(new[] { a, b }, clip))
             if (part.Length >= 2) ci.DrawLine(part[0], part[^1], c, width, true);
     }
 
