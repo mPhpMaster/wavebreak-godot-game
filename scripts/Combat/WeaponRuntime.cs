@@ -20,7 +20,7 @@ namespace Wavebreak.Combat;
 /// weapon that fires twelve projectiles should not ask twelve times what the
 /// area size is.
 /// </summary>
-public sealed class WeaponRuntime
+public sealed partial class WeaponRuntime
 {
     /// <summary>Cap on shots resolved in a single tick. A frame spike must not
     /// turn into a stored volley that all lands at once; the excess is dropped.</summary>
@@ -126,6 +126,7 @@ public sealed class WeaponRuntime
         Evolution = evolution;
         Def = evolution.Evolve(Def);
         _cooldown = 0f;
+        RereadLook();   // WeaponRuntime.Looks.cs
     }
 
     // ------------------------------------------------------------------ tick
@@ -194,7 +195,7 @@ public sealed class WeaponRuntime
 
         // Announced after the shot resolves, so a listener sees the same muzzle
         // position the shot used. Combat holds no reference to audio.
-        Core.EventBus.Publish(new Core.WeaponFired(system.MuzzlePosition, Def.Shape));
+        Core.EventBus.Publish(new Core.WeaponFired(system.MuzzlePosition, Def.Shape, Def.Id, Evolution?.Id));
     }
 
     /// <summary>Shots per volley: the weapon's own count plus the player's bonus,
@@ -251,6 +252,9 @@ public sealed class WeaponRuntime
             Tint = Def.Tint,
         };
 
+        // Each weapon's own shot and twist (WeaponRuntime.Looks.cs).
+        if (FireStyled(system, spec, heading, count)) { system.NoteShots(count); return; }
+
         for (int i = 0; i < count; i++)
         {
             spec.Direction = heading.Rotated(Vector3.Up, Mathf.DegToRad(SpreadOffset(i, count)));
@@ -285,6 +289,7 @@ public sealed class WeaponRuntime
 
         Vector3 origin = system.MuzzlePosition;
         Vector3 heading = system.AimAt(origin, reach);
+        if (FireMeleeStyled(system, origin, heading, reach, halfArc)) return;   // WeaponRuntime.Looks.cs
 
         // One roll for the swing. A single arc is one attack, and splitting the
         // crit per target would make a wide swing statistically safer than a
@@ -303,7 +308,7 @@ public sealed class WeaponRuntime
             system.ReportHit(target, info);
         }
 
-        Projectile.SpawnSwipe(origin, heading, reach, halfArc, Def.Tint);
+        DrawSwing(origin, heading, reach, halfArc);
         system.NoteShots(1);
     }
 
@@ -327,9 +332,11 @@ public sealed class WeaponRuntime
             // Pushed outward from the player, so a field with knockback clears
             // space around you instead of shoving everything one way.
             info.Direction = Projectile.FlatDirection(target.Position - centre, Vector3.Forward);
+            ShapeAuraHit(info, target, centre);   // WeaponRuntime.Looks.cs
             target.TakeDamage(info);
             system.ReportHit(target, info);
         }
+        AfterAuraTick(system, centre, radius, count);
 
         // Kick the pulse so the field visibly throbs on each tick — otherwise a
         // persistent aura gives no feedback that it is doing anything.
@@ -376,6 +383,7 @@ public sealed class WeaponRuntime
         float shown = MathF.Min(radius, Weapons.FxGuard.MaxCentredRadius);
         _auraDisc!.Scale = new Vector3(shown, 1f, shown);
         _auraLight!.OmniRange = shown * 1.7f;
+        EnsureOrnament(shown);
     }
 
     private void AnimateAura(float dt)
@@ -385,7 +393,8 @@ public sealed class WeaponRuntime
         _pulse = MathF.Max(0f, _pulse - dt * 3.2f);
         _auraDisc.Transparency = Wavebreak.Meta.GraphicsSettings.FxFade(0.35f - 0.35f * _pulse);
         if (_auraLight is not null && GodotObject.IsInstanceValid(_auraLight))
-            _auraLight.LightEnergy = 0.5f + 1.6f * _pulse;
+            _auraLight.LightEnergy = Meta.Accessibility.Flash(0.5f + 1.6f * _pulse);
+        AnimateOrnament(dt);
     }
 
     /// <summary>Tear down anything this weapon put in the world. Called when the
@@ -398,6 +407,8 @@ public sealed class WeaponRuntime
         _auraRoot = null;
         _auraDisc = null;
         _auraLight = null;
+        _ornament = null;
+        _emberStacks.Clear();
     }
 
     internal void HidePersistentVisuals()

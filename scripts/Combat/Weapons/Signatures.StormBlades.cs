@@ -52,6 +52,7 @@ public static partial class Signatures
         private readonly MeshInstance3D? _mesh, _trail;
         private readonly HashSet<IDamageable> _hit = new();
         private Vector3 _position, _direction;
+        private Vector3 _tack, _line;
         private float _travelled, _age;
         private bool _returning;
 
@@ -61,7 +62,10 @@ public static partial class Signatures
             _system = system; _position = origin; _direction = direction;
             _speed = speed; _range = range; _radius = radius; _damage = damage;
             _crosswind = crosswind;
-            _mesh = SignatureFx.NewMesh(ExpansionVisuals.Chakram, SignatureFx.Mat(tint));
+            // Its own blade, not the Gullwing Chakram's disc (docs/weapon-audit.md).
+            _mesh = SignatureFx.NewMesh(LookMeshes.Fang, SignatureFx.Mat(tint));
+            _tack = direction;
+            _line = origin;
             _trail = SignatureFx.NewMesh(CombatVisuals.Slab, SignatureFx.Line(tint.Lightened(0.25f)));
         }
 
@@ -80,7 +84,21 @@ public static partial class Signatures
                 _direction = home.Normalized();
             }
             float step = _speed * delta * (_returning ? 1.4f : 1f);
-            _position += _direction * step;
+            // Outbound, a storm blade tacks like a kite: it zigzags up to 0.7 m
+            // either side of its line (a triangle wave, 0.28 s a tack), cutting a
+            // wider lane than a straight throw; the line itself still runs
+            // through the aimed body (the Gullwing Chakram flies straight and hangs).
+            if (!_returning)
+            {
+                _line += _direction * step;
+                Vector3 side = _tack.Cross(Vector3.Up);
+                side = side.LengthSquared() > 1e-4f ? side.Normalized() : Vector3.Right;
+                float phase = _age / 0.28f + 0.25f;   // on the line at the start of each tack pair
+                float tri = 1f - 4f * MathF.Abs(phase - MathF.Floor(phase + 0.5f));
+                _position = _line + side * (0.7f * tri);
+                if (_age < delta * 1.5f) DistinctStats.Note("fang_tack");
+            }
+            else _position += _direction * step;
             Sweep(previous, _position);
             _travelled += step;
             if (!_returning && _travelled >= _range)
@@ -90,8 +108,10 @@ public static partial class Signatures
             }
             if (_mesh is { } mesh && GodotObject.IsInstanceValid(mesh))
             {
-                mesh.GlobalTransform = new Transform3D(new Basis(Vector3.Up, _age * 22f)
-                    .Scaled(Vector3.One * Mathf.Min(_radius, FxGuard.MaxBlade)), _position);
+                // Points along its flight and rolls, instead of spinning flat like a disc.
+                Vector3 h = _returning ? _direction : _tack;
+                var face = new Basis(Vector3.Up, MathF.Atan2(-h.X, -h.Z)).Rotated(h.Normalized(), _age * 9f);
+                mesh.GlobalTransform = new Transform3D(face.Scaled(Vector3.One * Mathf.Min(_radius * 1.3f, FxGuard.MaxBlade)), _position);
                 mesh.Transparency = SignatureFx.Fade(0f);
             }
             if (_trail is { } trail && GodotObject.IsInstanceValid(trail))

@@ -276,7 +276,7 @@ public static partial class Catalog
         {
             Id = "splinter_rail",
             DisplayName = "Splinter Rail",
-            Description = "A shard of rail glass, thrown flat and fast. Punches through one body before it breaks.",
+            Description = "A shard of rail glass, thrown flat and fast. Punches through one body, then breaks into two splinters that fly on.",
             Rarity = Rarity.Common,
             Shape = AttackShape.Projectile,
             Element = Element.Physical,
@@ -305,7 +305,7 @@ public static partial class Catalog
         {
             Id = "sparkfan",
             DisplayName = "Fan of Sparks",
-            Description = "Three arcs at once, wide enough to be careless with. Terrible at distance, unfair up close.",
+            Description = "Three crackling sparks at once, jittering as they fly. Unfair up close; they fizzle toward the end of their reach.",
             Rarity = Rarity.Common,
             Shape = AttackShape.Projectile,
             Element = Element.Lightning,
@@ -364,7 +364,7 @@ public static partial class Catalog
         {
             Id = "riptide_blades",
             DisplayName = "Riptide Blades",
-            Description = "Twin cold edges worked in short, fast strokes. Narrow, relentless, and very hungry.",
+            Description = "Twin cold edges driven in short, fast lunges, left and right. Narrow, relentless, and very hungry.",
             Rarity = Rarity.Uncommon,
             Shape = AttackShape.Melee,
             Element = Element.Ice,
@@ -394,7 +394,7 @@ public static partial class Catalog
         {
             Id = "ember_halo",
             DisplayName = "Ember Halo",
-            Description = "A ring of slow fire that will not go out. Standing near you is the mistake.",
+            Description = "A ring of slow fire that will not go out. It singes what wanders in and burns hotter the longer they stay.",
             Rarity = Rarity.Uncommon,
             Shape = AttackShape.Aura,
             Element = Element.Fire,
@@ -423,7 +423,7 @@ public static partial class Catalog
         {
             Id = "static_field",
             DisplayName = "Static Field",
-            Description = "A slow, wide pulse. It shoves as much as it burns, which is usually what you needed.",
+            Description = "A slow, wide pulse that discharges in arcs. It shoves as much as it burns, which is usually what you needed.",
             Rarity = Rarity.Rare,
             Shape = AttackShape.Aura,
             Element = Element.Lightning,
@@ -452,7 +452,7 @@ public static partial class Catalog
         {
             Id = "mortar_shell",
             DisplayName = "Mortar Shell",
-            Description = "Lobbed, slow, and enormously final. Aim where they will be, not where they are.",
+            Description = "Lobbed high onto a marked spot, slow and enormously final. It flies over everything in between and lands only where it was aimed.",
             Rarity = Rarity.Rare,
             Shape = AttackShape.Explosive,
             Element = Element.Fire,
@@ -481,7 +481,7 @@ public static partial class Catalog
         {
             Id = "bloomcap_spores",
             DisplayName = "Bloomcap Spores",
-            Description = "Fat green pods that split on contact. Not impressive alone. Rarely alone.",
+            Description = "Fat spotted pods that burst on contact and split into two seedlings, which hop aside and pop. Not impressive alone. Rarely alone.",
             Rarity = Rarity.Uncommon,
             Shape = AttackShape.Explosive,
             Element = Element.Poison,
@@ -510,7 +510,7 @@ public static partial class Catalog
         {
             Id = "wisp_seeker",
             DisplayName = "Wisp Seeker",
-            Description = "Two pale lights that pick their own target and are patient about reaching it.",
+            Description = "Two pale lights that drift and bob a moment before they choose a target, then curve in, patient about reaching it.",
             Rarity = Rarity.Rare,
             Shape = AttackShape.Homing,
             Element = Element.Ice,
@@ -542,7 +542,7 @@ public static partial class Catalog
         {
             Id = "judgement_lance",
             DisplayName = "Judgement Lance",
-            Description = "It selects one target, and then it selects everything standing behind that target.",
+            Description = "It selects one target. After the first strike it stops steering and holds its line, and everything standing behind that target pays.",
             Rarity = Rarity.Legendary,
             Shape = AttackShape.Homing,
             Element = Element.Lightning,
@@ -582,7 +582,7 @@ public static partial class Catalog
         {
             Id = "brinespike",
             DisplayName = "Brinespike",
-            Description = "A barbed spike of crusted salt, thrown hard. It goes through the first of them and keeps its mind on the rest.",
+            Description = "A barbed spike of crusted salt, thrown hard. It drags what it skewers along the line and bites harder for every body already on it.",
             Rarity = Rarity.Uncommon,
             Shape = AttackShape.Projectile,
             Element = Element.Poison,
@@ -613,7 +613,7 @@ public static partial class Catalog
         {
             Id = "glasswire_needles",
             DisplayName = "Glasswire Needles",
-            Description = "A fistful of drawn-glass needles. Most of them only sting. Some of them find the seam.",
+            Description = "A stream of drawn-glass needles, one after another, each finding its own aim. Most of them only sting. Some find the seam, and glint when they do.",
             Rarity = Rarity.Common,
             Shape = AttackShape.Projectile,
             Element = Element.Physical,
@@ -644,7 +644,7 @@ public static partial class Catalog
         {
             Id = "rimeheart",
             DisplayName = "Rimeheart",
-            Description = "A close ring of cutting cold. It does not push anything away. It would rather they stayed.",
+            Description = "A close ring of cutting cold. It does not push anything away. It draws them gently in; it would rather they stayed.",
             Rarity = Rarity.Uncommon,
             Shape = AttackShape.Aura,
             Element = Element.Ice,
@@ -675,7 +675,7 @@ public static partial class Catalog
         {
             Id = "forgefall_maul",
             DisplayName = "Forgefall Maul",
-            Description = "Still glowing from the anvil. You will not swing it often, and you will not need to.",
+            Description = "Still glowing from the anvil. Brought down overhead, it cracks the ground ahead of you and stuns whatever stands in the middle.",
             Rarity = Rarity.Rare,
             Shape = AttackShape.Melee,
             Element = Element.Fire,
@@ -705,7 +705,7 @@ public static partial class Catalog
         {
             Id = "hailstone_cluster",
             DisplayName = "Hailstone Cluster",
-            Description = "Three fist-sized stones of old ice that burst when they land. Throw them where you are about to stop being.",
+            Description = "Three fist-sized stones of old ice, thrown low across where they stand. Each skips once and shatters where it lands.",
             Rarity = Rarity.Common,
             Shape = AttackShape.Explosive,
             Element = Element.Ice,
@@ -736,7 +736,7 @@ public static partial class Catalog
         {
             Id = "blightwasp_swarm",
             DisplayName = "Blightwasp Swarm",
-            Description = "A papery nest that will not stay shut. What leaves it chooses its own target, and it is never you.",
+            Description = "A papery nest that will not stay shut. Each wasp that leaves it picks a different target, and it is never you.",
             Rarity = Rarity.Uncommon,
             Shape = AttackShape.Homing,
             Element = Element.Poison,
@@ -767,7 +767,7 @@ public static partial class Catalog
         {
             Id = "searing_longshot",
             DisplayName = "Searing Longshot",
-            Description = "A single white-hot bolt from very far away. It arrives before the sound does.",
+            Description = "A single white-hot bolt from very far away, at the toughest thing in reach. It leaves a line of smoke and arrives before the sound does.",
             Rarity = Rarity.Rare,
             Shape = AttackShape.Projectile,
             Element = Element.Fire,
@@ -798,7 +798,7 @@ public static partial class Catalog
         {
             Id = "tempest_spindle",
             DisplayName = "Tempest Spindle",
-            Description = "A brass spindle wound with live weather. Each thread it lets go of finds three throats before it frays.",
+            Description = "A brass spindle wound with live weather. Each thread corkscrews out, and after every throat it finds it snaps on to one it has not touched yet.",
             Rarity = Rarity.Epic,
             Shape = AttackShape.Homing,
             Element = Element.Lightning,

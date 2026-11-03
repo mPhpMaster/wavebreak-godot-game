@@ -144,6 +144,12 @@ public sealed partial class Main : Node3D
             _ = Trade.TradeCheck.Run(this);          // --check-trade (swap meet rules and escrow)
         else if (EvolutionCheck.Requested)
             _ = EvolutionCheck.Run(this);            // --check-evolutions
+        else if (DistinctCheck.Requested)
+            _ = DistinctCheck.Run(this);             // --check-distinct (look-alike weapons made distinct)
+        else if (DistinctShowcase.ShotDir is { } distinctDir)
+            _ = DistinctShowcase.Shots(this, distinctDir);   // --distinct-shot=<dir>
+        else if (DistinctShowcase.DpsRequested)
+            _ = DistinctShowcase.Dps(this);          // --distinct-dps (balance table)
         else if (Puzzle.PuzzleCheck.Requested)
             _ = Puzzle.PuzzleCheck.Run(this);        // --check-puzzles (puzzle route)
         else if (Puzzle.GauntletCheck.Requested)

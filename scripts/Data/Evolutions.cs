@@ -156,63 +156,63 @@ public static class Evolutions
         new()
         {
             Id = "evo_breakwater_cleaver", WeaponId = "cleaver_arc", CatalystId = "tome_breadth",
-            Name = "Breakwater Cleaver", Description = "Every swing keeps going: a wall of water rolls out from the blade and cuts whatever it reaches.",
+            Name = "Breakwater Cleaver", Description = "Every swing keeps going: a wall of water rolls forward from the blade and cuts whatever it reaches.",
             Rider = EvolutionRider.Wave, RiderPower = 0.07f, RiderRadius = 6f, DamageScale = 1.35f,
             Tint = new Color(0.55f, 0.92f, 0.96f),
         },
         new()
         {
             Id = "evo_undertow_blades", WeaponId = "riptide_blades", CatalystId = "tome_tempo",
-            Name = "Undertow Blades", Description = "Each cut drags a second cut behind it, a heartbeat later, out of the same cold water.",
+            Name = "Undertow Blades", Description = "Each cut drags a second cut behind it, a heartbeat later, out of the same cold water, and that one pulls them back toward you.",
             Rider = EvolutionRider.Echo, RiderPower = 0.75f, DamageScale = 1.15f,
             Tint = new Color(0.45f, 0.82f, 1f),
         },
         new()
         {
             Id = "evo_sunken_sun", WeaponId = "ember_halo", CatalystId = "emberbrand",
-            Name = "Sunken Sun", Description = "The halo burns white, and pieces of it fall out of the sky on whatever dares to stand nearby.",
+            Name = "Sunken Sun", Description = "The halo burns white, and burning pieces of it fall at a slant on whatever dares to stand nearby.",
             Rider = EvolutionRider.Meteor, RiderPower = 1f, RiderCount = 2, RiderRadius = 2.6f, RiderEvery = 2, DamageScale = 1.5f,
             Tint = new Color(1f, 0.72f, 0.28f),
         },
         new()
         {
             Id = "evo_stormcage", WeaponId = "static_field", CatalystId = "sparking_limpet",
-            Name = "Stormcage", Description = "The field fills until it cannot hold, then spits bolts of lightning out in every direction.",
+            Name = "Stormcage", Description = "The field fills until it cannot hold, then forks lightning into everything around you.",
             Rider = EvolutionRider.Nova, RiderPower = 0.7f, RiderCount = 10, RiderRadius = 16f, DamageScale = 1.4f,
             Tint = new Color(0.72f, 0.82f, 1f),
         },
         new()
         {
             Id = "evo_broadside_barrage", WeaponId = "mortar_shell", CatalystId = "ballast_stone",
-            Name = "Broadside Barrage", Description = "You stop aiming. A whole ship's worth of shells comes down on the enemies around you.",
+            Name = "Broadside Barrage", Description = "You stop aiming. A ship's broadside of cannonballs comes in at a slant and walks a row of blasts through the nearest of them.",
             Delivery = EvolutionDelivery.Strikes, ExtraProjectiles = 2, DamageScale = 0.62f, Range = 20f,
             Tint = new Color(1f, 0.55f, 0.25f),
         },
         new()
         {
             Id = "evo_bloomtide", WeaponId = "bloomcap_spores", CatalystId = "tome_renewal",
-            Name = "Bloomtide", Description = "The pods take root where they burst, and the water around them stays poisonous for a long while.",
+            Name = "Bloomtide", Description = "The pods take root where they burst, and a patch of poison spores spreads there for a long while.",
             Rider = EvolutionRider.Pool, RiderPower = 0.3f, RiderRadius = 2.4f, RiderEvery = 3, DamageScale = 0.95f,
             Tint = new Color(0.72f, 1f, 0.42f),
         },
         new()
         {
             Id = "evo_aurora_choir", WeaponId = "wisp_seeker", CatalystId = "tome_insight",
-            Name = "Aurora Choir", Description = "The wisps sing as they go, and each verse sends a ring of cold light out around you.",
+            Name = "Aurora Choir", Description = "The wisps sing as they go, and each verse sends slow motes of cold light spiralling out around you.",
             Rider = EvolutionRider.Nova, RiderPower = 0.42f, RiderCount = 6, RiderRadius = 13f, DamageScale = 1.25f,
             Tint = new Color(0.62f, 1f, 0.92f),
         },
         new()
         {
             Id = "evo_final_verdict", WeaponId = "judgement_lance", CatalystId = "tome_fracture",
-            Name = "Final Verdict", Description = "The lance passes sentence on one body, and the sentence jumps to everyone standing beside it.",
+            Name = "Final Verdict", Description = "The lance passes sentence on one body, and the sentence comes down from above on everyone standing beside it.",
             Rider = EvolutionRider.Arc, RiderPower = 0.16f, RiderCount = 3, RiderRadius = 6f, DamageScale = 1.4f,
             Tint = new Color(1f, 0.93f, 0.55f),
         },
         new()
         {
             Id = "evo_deepwater_harpoon", WeaponId = "brinespike", CatalystId = "tome_leeches",
-            Name = "Deepwater Harpoon", Description = "It no longer stops at the far end of the line. It turns, finds the next body, and goes on hunting.",
+            Name = "Deepwater Harpoon", Description = "It no longer stops at the far end of the line. It turns, finds the next body, hooks it and reels it toward you.",
             Delivery = EvolutionDelivery.Skimstone, DamageScale = 1.05f, Radius = 0.5f,
             ExtraPierce = -5,
             Tint = new Color(0.5f, 1f, 0.62f),
@@ -220,14 +220,14 @@ public static class Evolutions
         new()
         {
             Id = "evo_glass_gale", WeaponId = "glasswire_needles", CatalystId = "tome_gales",
-            Name = "Glass Gale", Description = "The needles fly out on the wind and the wind brings them home, through everything they missed.",
-            Delivery = EvolutionDelivery.Boomerang, DamageScale = 0.38f, Speed = 18f, Radius = 0.45f, Spread = 20f,
+            Name = "Glass Gale", Description = "The needles ride the wind in a wide loop, through the nearest of them and round again, and the wind brings them home.",
+            Delivery = EvolutionDelivery.Boomerang, DamageScale = 0.9f, Speed = 18f, Radius = 0.45f, Spread = 20f,
             Tint = new Color(0.82f, 0.96f, 1f),
         },
         new()
         {
             Id = "evo_winters_keep", WeaponId = "rimeheart", CatalystId = "tome_shells",
-            Name = "Winter's Keep", Description = "The cold stops waiting for enemies to come close. Rings of frost march outward from you in a slow, killing tide.",
+            Name = "Winter's Keep", Description = "The cold stops waiting for enemies to come close. Rings of frost spikes march outward from you, step by step, in a slow, killing tide.",
             Delivery = EvolutionDelivery.Swell, DamageScale = 0.95f, Range = 4.2f, Radius = 1.2f, Speed = 6f,
             Shape = AttackShape.Projectile,
             CooldownScale = 0.7f,
@@ -236,35 +236,35 @@ public static class Evolutions
         new()
         {
             Id = "evo_worldforge_maul", WeaponId = "forgefall_maul", CatalystId = "tome_edges",
-            Name = "Worldforge Maul", Description = "The ground gives up. Each blow tears a line of molten bursts away from you toward the enemy.",
+            Name = "Worldforge Maul", Description = "The ground gives up. Each blow raises a line of molten spikes out of the earth, away from you toward the enemy.",
             Rider = EvolutionRider.Quake, RiderPower = 0.22f, RiderCount = 4, RiderRadius = 12f, DamageScale = 1.35f,
             Tint = new Color(1f, 0.5f, 0.2f),
         },
         new()
         {
             Id = "evo_frozen_gyre", WeaponId = "hailstone_cluster", CatalystId = "tome_tides",
-            Name = "Frozen Gyre", Description = "The hail stops falling and starts circling, dragging the pack into one point before it all lets go.",
+            Name = "Frozen Gyre", Description = "The hail stops falling and starts circling, wandering after the pack and dragging it into one point before it all lets go.",
             Delivery = EvolutionDelivery.Vortex, DamageScale = 0.62f, ExtraProjectiles = -2, Radius = 2.8f, Speed = 16f,
             Tint = new Color(0.78f, 0.93f, 1f),
         },
         new()
         {
             Id = "evo_plague_hive", WeaponId = "blightwasp_swarm", CatalystId = "tome_currents",
-            Name = "Plague Hive", Description = "The swarm builds a home where you stand, and keeps sending out more of itself long after you walk on.",
+            Name = "Plague Hive", Description = "The swarm builds a hive where you stand, and keeps sending out wasps that pick their own targets long after you walk on.",
             Delivery = EvolutionDelivery.Sentry, DamageScale = 0.68f, Radius = 0.42f, Range = 16f, Speed = 18f, CooldownScale = 3f,
             Tint = new Color(0.66f, 0.95f, 0.3f),
         },
         new()
         {
             Id = "evo_sunlance", WeaponId = "searing_longshot", CatalystId = "sextant_lens",
-            Name = "Sunlance", Description = "A hit is no longer the end of the shot. Whatever it touches bursts into flame and takes its neighbours with it.",
+            Name = "Sunlance", Description = "A hit is no longer the end of the shot. Whatever it touches bursts into a ring of flame that takes its neighbours with it.",
             Rider = EvolutionRider.Blast, RiderPower = 0.1f, RiderRadius = 3.4f, DamageScale = 1.6f, ExtraPierce = 1,
             Tint = new Color(1f, 0.82f, 0.4f),
         },
         new()
         {
             Id = "evo_cyclone_eye", WeaponId = "tempest_spindle", CatalystId = "tome_fortune",
-            Name = "Eye of the Cyclone", Description = "The spindles stop leaving. They wheel around you at speed, and everything that comes close is cut to ribbons.",
+            Name = "Eye of the Cyclone", Description = "The spindles stop leaving. They wheel around you, breathing in and out, and everything that comes close is cut to ribbons.",
             Delivery = EvolutionDelivery.Orbit, DamageScale = 0.55f, Range = 2.0f, Radius = 0.8f, Speed = 15f,
             Tint = new Color(0.72f, 0.9f, 1f),
         },
@@ -273,14 +273,14 @@ public static class Evolutions
         new()
         {
             Id = "evo_stormwing", WeaponId = "gullwing_chakram", CatalystId = "gull_feather",
-            Name = "Stormwing", Description = "A full flock of rings leaves your hands at once, and each kill throws splinters of whalebone off the wing.",
+            Name = "Stormwing", Description = "A full flock of rings leaves your hands at once, and each kill throws a fan of whalebone splinters on along the blow.",
             Rider = EvolutionRider.Shards, RiderPower = 0.5f, RiderCount = 6, RiderRadius = 9f, ExtraProjectiles = 3, Spread = 200f, DamageScale = 1.85f,
             Tint = new Color(0.96f, 0.92f, 0.7f),
         },
         new()
         {
             Id = "evo_knife_reef", WeaponId = "circling_shoal", CatalystId = "tome_slack_water",
-            Name = "Knife Reef", Description = "More fins, and they do not forgive: whatever they finish breaks apart into glass that keeps on cutting.",
+            Name = "Knife Reef", Description = "More fins, and they do not forgive: whatever they finish breaks into glass that turns on the nearest body.",
             Rider = EvolutionRider.Shards, RiderPower = 0.45f, RiderCount = 6, RiderRadius = 7f, ExtraProjectiles = 2, DamageScale = 1.5f,
             Tint = new Color(0.72f, 0.95f, 1f),
         },
@@ -294,21 +294,21 @@ public static class Evolutions
         new()
         {
             Id = "evo_reef_of_teeth", WeaponId = "barnacle_mines", CatalystId = "tome_plenty",
-            Name = "Reef of Teeth", Description = "The mines breed and bite. Anything they kill scatters shell in every direction.",
+            Name = "Reef of Teeth", Description = "The mines breed and bite. Anything they kill throws bits of shell that burst where they land.",
             Rider = EvolutionRider.Shards, RiderPower = 0.6f, RiderCount = 8, RiderRadius = 9f, ExtraProjectiles = 1, DamageScale = 1.45f,
             Tint = new Color(1f, 0.72f, 0.5f),
         },
         new()
         {
             Id = "evo_breaching_gun", WeaponId = "reef_shotgun", CatalystId = "gutting_hook",
-            Name = "Breaching Gun", Description = "Every pellet carries a shaped charge. What it hits comes apart in a small, wet explosion.",
+            Name = "Breaching Gun", Description = "Every pellet carries a shaped charge: the blast goes on through what it hits, in a cone behind it.",
             Rider = EvolutionRider.Blast, RiderPower = 0.5f, RiderRadius = 2.2f, RiderEvery = 2, DamageScale = 1.55f,
             Tint = new Color(0.4f, 1f, 0.9f),
         },
         new()
         {
             Id = "evo_twin_horizons", WeaponId = "skyline_swords", CatalystId = "whetstone",
-            Name = "Twin Horizons", Description = "The pair strikes, and a moment later the air it passed through strikes again.",
+            Name = "Twin Horizons", Description = "The pair strikes, and a moment later a line of air further out strikes again.",
             Rider = EvolutionRider.Echo, RiderPower = 0.8f, DamageScale = 1.05f,
             Tint = new Color(0.9f, 0.95f, 1f),
         },

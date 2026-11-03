@@ -99,6 +99,8 @@ public sealed partial class AudioDirector : Node
         Sfx.Land           => new(-16f, 0.06f, 0.1f, 1, false, 2),
         Sfx.RunWin         => new(-8f, 0.0f, 1f, 1, false, 7),
         Sfx.RunLose        => new(-8f, 0.0f, 1f, 1, false, 7),
+        // Weapon voices: as quiet and as thinned as the shape sounds they replace.
+        >= Sfx.FireGlass   => new(-29f, 0.06f, 0.45f, 1, false, 0),
         _                  => new(-18f, 0.05f, 0.1f, 1, false, 1),
     };
 
@@ -397,14 +399,32 @@ public sealed partial class AudioDirector : Node
     private void OnWeaponFired(WeaponFired e)
     {
         if (Combat.Weapons.Signatures.ConsumeFired()) return;   // plays its own sound (AudioDirector.Heroes.cs)
-        Sfx id = e.Shape switch
+        // Each weapon's own voice and pitch (Combat/Weapons/WeaponLooks.cs);
+        // the shape's sound for anything without one.
+        (Combat.Weapons.WeaponVoice voice, float pitch) = Combat.Weapons.WeaponLooks.VoiceOf(e.WeaponId, e.EvolutionId);
+        Sfx id = voice switch
         {
-            AttackShape.Melee => Sfx.FireMelee,
-            AttackShape.Aura => Sfx.FireAura,
-            AttackShape.Explosive => Sfx.FireExplosive,
-            _ => Sfx.FireProjectile,
+            Combat.Weapons.WeaponVoice.Glass => Sfx.FireGlass,
+            Combat.Weapons.WeaponVoice.Zap => Sfx.FireZap,
+            Combat.Weapons.WeaponVoice.Thunk => Sfx.FireThunk,
+            Combat.Weapons.WeaponVoice.Crack => Sfx.FireCrack,
+            Combat.Weapons.WeaponVoice.Chime => Sfx.FireChime,
+            Combat.Weapons.WeaponVoice.Buzz => Sfx.FireBuzz,
+            Combat.Weapons.WeaponVoice.Pop => Sfx.FirePop,
+            Combat.Weapons.WeaponVoice.Whoosh => Sfx.FireWhoosh,
+            Combat.Weapons.WeaponVoice.Hiss => Sfx.FireHiss,
+            Combat.Weapons.WeaponVoice.Hum => Sfx.FireHum,
+            Combat.Weapons.WeaponVoice.Clang => Sfx.FireClang,
+            Combat.Weapons.WeaponVoice.Twang => Sfx.FireTwang,
+            _ => e.Shape switch
+            {
+                AttackShape.Melee => Sfx.FireMelee,
+                AttackShape.Aura => Sfx.FireAura,
+                AttackShape.Explosive => Sfx.FireExplosive,
+                _ => Sfx.FireProjectile,
+            },
         };
-        Play(id);
+        Play(id, pitch: pitch);
     }
 
     private void OnEnemyDamaged(EnemyDamaged e)
@@ -596,7 +616,9 @@ public sealed partial class AudioDirector : Node
 
         var sb = new StringBuilder("AUDIO");
         sb.Append(" played=").Append(total);
-        sb.Append(" fire=").Append(P(Sfx.FireProjectile) + P(Sfx.FireMelee) + P(Sfx.FireAura) + P(Sfx.FireExplosive));
+        int voices = 0;
+        for (Sfx v = Sfx.FireGlass; v <= Sfx.FireTwang; v++) voices += P(v);
+        sb.Append(" fire=").Append(P(Sfx.FireProjectile) + P(Sfx.FireMelee) + P(Sfx.FireAura) + P(Sfx.FireExplosive) + voices);
         sb.Append(" hit=").Append(P(Sfx.EnemyHit));
         sb.Append(" death=").Append(P(Sfx.EnemyDeath) + P(Sfx.EliteDeath));
         sb.Append(" hurt=").Append(P(Sfx.PlayerHurt));

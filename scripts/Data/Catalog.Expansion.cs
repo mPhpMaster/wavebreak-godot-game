@@ -109,7 +109,7 @@ public static partial class Catalog
         W(new WeaponDef
         {
             Id = "lighthouse_beam", DisplayName = "Lighthouse Beam",
-            Description = "A lamp meant to warn ships off the rocks, turned on the things that came out of them instead.",
+            Description = "A lamp meant to warn ships off the rocks, turned on the things that came out of them. The beam sweeps across them as the lamp turns.",
             Rarity = Rarity.Rare, Shape = AttackShape.Projectile, Element = Element.Fire,   // element: Burn status fits here
             Damage = 30f, Cooldown = 2.0f, Projectiles = 1, ProjectileSpeed = 0f, Range = 20f, Radius = 0.5f,
             Knockback = 3f, CritChance = 0.08f, ProcCoefficient = 1.2f, SpreadDegrees = 20f,

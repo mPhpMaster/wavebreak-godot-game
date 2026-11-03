@@ -259,6 +259,7 @@ public sealed partial class Projectile : Node3D, IPooled
         Place(spec.Origin, dir);
         Dress();
         ClearMotion();   // Combat/Weapons/Projectile.Motion.cs
+        BeginStyle(spec);   // Combat/Weapons/Projectile.Style.cs
     }
 
     /// <summary>
@@ -334,6 +335,7 @@ public sealed partial class Projectile : Node3D, IPooled
         _lock = null;
         _pierced.Clear();
         ClearMotion();
+        EndStyle();
     }
 
     /// <summary>Horizontal component, normalised, with a fallback for a vector

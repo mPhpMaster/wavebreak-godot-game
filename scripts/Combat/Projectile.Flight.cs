@@ -15,6 +15,7 @@ public sealed partial class Projectile
         if (_trail.A > 0f) StepTrail(dt);
 
         if (_motion != ProjectileMotion.None) { StepMotion(dt); return; }
+        if (IsLobbed) { StepLob(); return; }   // Combat/Weapons/Projectile.Style.cs
 
         if (_mode == ProjectileMode.Cosmetic)
         {
@@ -43,6 +44,7 @@ public sealed partial class Projectile
             GlobalPosition = next;
         }
 
+        if (_style != Weapons.ShotStyle.None) StyleAfterMove(dt);
         Contact(next);
     }
 
@@ -115,9 +117,11 @@ public sealed partial class Projectile
             // A corpse a pierce shot happened to fly through does not spend a
             // pierce charge. The target reports that by nullifying the hit.
             if (info.Nullified) continue;
+            if (_style != Weapons.ShotStyle.None) OnStyleHit(target, info, at);
 
             if (_pierceLeft-- <= 0)
             {
+                StyleBreak(at);
                 Retire();
                 return;
             }
@@ -126,8 +130,9 @@ public sealed partial class Projectile
 
     private void Steer(float dt)
     {
+        if (StyleHoldsCourse) return;   // a lance that has struck holds its line
         if (_lock is null || !_lock.IsAlive)
-            _lock = Targeting.Nearest(GlobalPosition, HomingSeekRange);
+            _lock = StyleLock() ?? Targeting.Nearest(GlobalPosition, HomingSeekRange);
 
         if (_lock is null || !_lock.IsAlive) return;
 
@@ -143,7 +148,8 @@ public sealed partial class Projectile
         float current = MathF.Atan2(_velocity.X, _velocity.Z);
         float target = MathF.Atan2(desired.X, desired.Z);
         float delta = Mathf.Wrap(target - current, -Mathf.Pi, Mathf.Pi);
-        float turn = Mathf.Clamp(delta, -HomingTurnRate * dt, HomingTurnRate * dt);
+        float rate = HomingTurnRate * StyleTurn();
+        float turn = Mathf.Clamp(delta, -rate * dt, rate * dt);
 
         float heading = current + turn;
         _velocity = new Vector3(MathF.Sin(heading), 0f, MathF.Cos(heading)) * speed;
@@ -169,7 +175,7 @@ public sealed partial class Projectile
             ApplyHit(target, at, falloff);
         }
 
-        ExplosionFx.Play(at, blast, _tint);
+        if (!StyleDetonate(at, blast)) ExplosionFx.Play(at, blast, _tint);
         Retire();
     }
 
@@ -182,6 +188,7 @@ public sealed partial class Projectile
         info.Direction = push.LengthSquared() > 1e-6f
             ? push.Normalized()
             : FlatDirection(_velocity, Vector3.Forward);
+        if (_style != Weapons.ShotStyle.None) StyleShapeHit(info, target);
 
         target.TakeDamage(info);
         _system?.ReportHit(target, info);

@@ -12,6 +12,8 @@ public enum Sfx
     PlayerHurt, XpPickup, GoldPickup, LevelUp,
     Dash, Jump, AirJump, Slide, SlamStart, SlamImpact, Land,
     RunWin, RunLose,
+    // Weapon voices (SfxSynth.Voices.cs): kept last so the seeds above do not move.
+    FireGlass, FireZap, FireThunk, FireCrack, FireChime, FireBuzz, FirePop, FireWhoosh, FireHiss, FireHum, FireClang, FireTwang,
 }
 
 /// <summary>
@@ -55,6 +57,7 @@ internal static partial class SfxSynth
     public static int Variants(Sfx id) => id switch
     {
         Sfx.FireProjectile or Sfx.FireMelee or Sfx.FireAura or Sfx.FireExplosive => 3,
+        >= Sfx.FireGlass => 2,
         Sfx.EnemyHit or Sfx.EnemyDeath or Sfx.PlayerHurt => 3,
         Sfx.Jump or Sfx.Land => 2,
         _ => 1,
@@ -174,7 +177,7 @@ internal static partial class SfxSynth
                 Arpeggio(b, new[] { 392f, 311.13f, 261.63f, 196f }, 0.22f, 2.5f, glide: 0.97f);
                 break;
             default:
-                b = New(0.05f);
+                b = BuildVoice(id, rng, d) ?? New(0.05f);
                 break;
         }
 
