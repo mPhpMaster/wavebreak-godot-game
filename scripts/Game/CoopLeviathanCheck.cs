@@ -36,7 +36,7 @@ public sealed partial class CoopLeviathanCheck : Node
         CollisionShape3D? collider = boss is null ? null : ReefCheckHelpers.Find<CollisionShape3D>(boss);
         bool ok = boss?.Def is { Id: ReefLeviathanModels.Id, Height: >= 32, Radius: >= 15 }
             && rig?.Spec is { IsImported: true, Id: "boss:wertt-leviathan" }
-            && Mathf.IsEqualApprox(rig.Spec.ScenePitch, -Mathf.Pi * .5f)
+            && Mathf.IsEqualApprox(rig.Spec.ScenePitch, ReefLeviathanModels.Pitch) && Mathf.IsEqualApprox(rig.Spec.SceneRoll, ReefLeviathanModels.Roll)
             && collider?.Shape is CapsuleShape3D { Height: >= 32, Radius: >= 15 }
             && boss.Health < boss.MaxHealth && player.ShotgunRecoilSpeed <= .801f;
         GD.Print($"COOP LEVIATHAN {(ok ? "PASS" : "FAIL")} role={Coop.Mode} id={boss?.Def?.Id} height={boss?.Def?.Height} radius={boss?.Def?.Radius} model={rig?.Spec.Id} hp={boss?.Health}/{boss?.MaxHealth}");

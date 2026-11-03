@@ -50,6 +50,9 @@ public sealed partial class SwimmingHint : CanvasLayer
         if (player.IsBreaching) _label.Text = Loc.T("BREACHING: steer and fall back into the water");
         else if (Game.WaterSurfaceHeight.At(player.GlobalPosition) - player.CenterPosition.Y < 7f)
             _label.Text = Loc.F("Hold {0} + {1} near the surface to breach", up, Keybinds.Hint("dash"));
+        else if (player.InReefCurrent)
+            _label.Text = Loc.T("CURRENT: ride it for speed, or swim sideways to leave") + "\n"
+                + Loc.F("SWIM  |  Hold {0}: rise  |  Hold {1}: dive", up, down);
         else if (Game.ReefCurrents.VelocityAt(player.GlobalPosition).Length() > 0.5f)
             _label.Text = Loc.T("CURRENT: steer sideways to leave the flow") + "\n"
                 + Loc.F("SWIM  |  Hold {0}: rise  |  Hold {1}: dive", up, down);

@@ -24,6 +24,7 @@ public static class ReefGuardianModels
         var spec = ModelSpec.FromScene(scene, def.Height, id: "guardian:quaternius-shark");
         spec.PreserveSceneRootTransform = true;
         spec.NativeSwimmingClip = true;
+        spec.SceneYaw = Mathf.Pi;   // the Quaternius fish face +Z; the rig swims toward -Z (it swam tail first)
         if (swim is not null)
             foreach (AnimSlot slot in new[] { AnimSlot.Idle, AnimSlot.Walk, AnimSlot.Run, AnimSlot.Dash, AnimSlot.Jump, AnimSlot.Fall })
                 spec.Clips[slot] = swim;

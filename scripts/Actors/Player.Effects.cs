@@ -30,6 +30,7 @@ public sealed partial class Player
     {
         _swimWeaponRecoil = Vector3.Zero;
         _swimVerticalVelocity = 0;
+        _currentDrift = Vector3.Zero;
         ReleaseHook();
         _cityBallistic = false;
         CoreStrikeFeedback = "";

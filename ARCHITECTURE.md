@@ -148,6 +148,7 @@ Useful test flags (all after `--`):
 | `--check-trade`, `--swap-meet`, `--rest-exit-seconds=N` | swap meet: rules and escrow self-check (`TRADE PASS`), build the stall in single-player (captures), shorten the co-op rest room's countdown (see "Swap meet") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
 | `--coop-expect-migration`, `--coop-no-migrate`, `--coop-late-join`, `--coop-expect-late-join`, `--coop-toast-shot=x.png`, `--coop-mark-file=P --coop-mark-at=S` | host migration and late-join checks (see "Host migration and late join") |
+| `--check-currents [--currents-shot=<prefix>]`, `--currents-fingerprint` | reef water currents self-check (`CURRENTS PASS/FAIL`) and captures; print the seeded schedule's hash (co-op peers must match) (see "Reef water currents") |
 | `--check-browse`, `--fake-browse`, `--lobby=public\|invite` | public games list: filter/format self-check (`BROWSE PASS`), made-up rows for a `--menu-shot`, the lobby type for this run |
 | `--compact-levelup`, `--autopick-rule=<id>` | Settings > Gameplay for this run only (compact hand; auto-pick by rule) |
 | `--steam-selftest` | Steam transport over a fake in-memory Steam: frames, handshake, relay, ordering, refusal, timeouts. Prints `STEAM SELFTEST PASS/FAIL` |
@@ -475,6 +476,58 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
 `--challenges=<ids|all>` is given. `--check-boundary` walks `Stages.All`.
 `StageDef.MusicId` and `EnemyIds` are hooks for music and theme enemies
 (empty = default).
+
+### Reef water currents
+
+`Game/ReefCurrentField` (added by `Arena.Dressing` on underwater maps) runs five
+slots. Each slot loops: a random gap (4-14 s), then one `ReefCurrentFlow` - a
+capsule 15-40 m long, level, slanted, updraft or downdraft - with a 1.5 s
+telegraph (drawn, no push), 8-20 s of push, a 2 s fade. The push is added to
+the swimmer's velocity in `Player.StepSwimming` through `Player.Currents`
+(eased in and out); the old fixed `ReefCurrents` are untouched.
+
+Decisions worth keeping:
+
+- **No network traffic.** Cycle k of slot i is a pure function of the run seed,
+  the map id/layout seed, i and k, and its times are on the phase clock, which
+  the host already keeps in step (`NetSession` Clock RPC and snapshots). So
+  peers agree without a message and without a protocol change; each machine
+  pushes only its own swimmer and remote swimmers look carried because their
+  owners were. Not seeded by the phase number: host and client can build the
+  map either side of the phase change.
+- **Generation order is fixed.** Cycles are made by always extending the slot
+  that ends first (`EnsureUntil`), so a late joiner that jumps to minute five
+  makes exactly the cycles a peer that played through made (the overlap test
+  between slots depends on that order).
+- **Placement trusts only geometry every peer builds alike**: terrain and cave
+  path analytically, then a sphere sweep against static bodies, ignoring prop
+  colliders and their foundations (prop density follows the graphics preset).
+  Currents keep their radius + 2 m off the seabed, + 3 m under the lowest wave,
+  clear of the cliffs and the cave. `--currents-fingerprint` prints a hash of
+  the first ten minutes; host and client print the same line.
+- **Strength vs swim speed.** 6-7.5 m/s against a 6.5 m/s base swimmer: carried
+  when idle, about double speed with the flow, near standstill head-on, and
+  out in a second or two sideways.
+- Visuals (`Visuals/ReefCurrentStreams`): additive, fog-free streak ribbons,
+  bubbles and a faint banded tube, faded by distance in the shader; counts
+  scale with the graphics preset (Low 35%); the telegraph pulses unless
+  reduce-flashes is on. Minimap: `Minimap.Currents`. Sound: `Audio/ReefCurrentAudio`
+  (synthesised loop on the ReefWater bus). Self-checks other than
+  `--check-currents` switch the random cycles off so they are never pushed.
+- `--check-currents [--currents-shot=<prefix>]` (`Game/CurrentsCheck`,
+  `CURRENTS PASS/FAIL`): forced currents carry an idle swimmer horizontally,
+  up and down, not during the telegraph; with/against/across behave as above;
+  a current is gone when its fade ends; fifteen minutes of the seeded schedule
+  are re-tested for open water and lifetimes, walked vs jumped vs rebuilt give
+  the same cycles, and another seed differs.
+
+The Reef Leviathan's import lies diagonally in its file; `ReefLeviathanModels`
+turns it with measured angles (head to -Z, wing plane level, back up) and
+`CharacterRig.BuildImported` centres a laid-down import from its turned
+vertices, mid-way up its body height. `--check-leviathan` / `--check-guardian`
+with `--leviathan-shot=` / `--guardian-shot=` take orthographic side, top and
+front portraits (`Game/CreaturePortrait`: the player camera is switched off and
+the HUD hidden for the capture) and assert that the rig faces the way it swims.
 
 ## Puzzle route
 

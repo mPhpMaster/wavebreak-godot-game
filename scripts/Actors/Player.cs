@@ -347,6 +347,7 @@ public sealed partial class Player : CharacterBody3D, IDamageable
         if (OS.GetCmdlineUserArgs().Contains("--check-cave-ui"))
             AddChild(new Game.CaveUiCheck(this, System.Array.Find(OS.GetCmdlineUserArgs(), a => a.StartsWith("--cave-ui-capture="))?["--cave-ui-capture=".Length..]));
         if (OS.GetCmdlineUserArgs().Contains("--check-reef-systems")) AddChild(new Game.ReefSystemsCheck(this));
+        if (OS.GetCmdlineUserArgs().Contains("--check-currents")) AddChild(new Game.CurrentsCheck(this));
         if (OS.GetCmdlineUserArgs().Contains("--coop-check-city")) AddChild(new Game.CoopCityCheck());
         if (OS.GetCmdlineUserArgs().Contains("--coop-check-swim")) AddChild(new Game.CoopSwimmingCheck());
         if (OS.GetCmdlineUserArgs().Contains("--coop-check-reef")) AddChild(new Game.CoopReefHarvestCheck());

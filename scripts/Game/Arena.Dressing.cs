@@ -36,7 +36,7 @@ public sealed partial class Arena : Node3D
             var bubbles = atmosphere.GetNode<MultiMeshInstance3D>("VisibleBubbleStreams");
             AddChild(new ReefAtmosphere(world, sun, (ShaderMaterial)bubbles.MaterialOverride));
         }
-        if (_stage.Underwater) { AddChild(new ReefCurrentVisuals()); AddChild(new ReefFishSchools()); }
+        if (_stage.Underwater) { AddChild(new ReefCurrentVisuals()); AddChild(new ReefFishSchools()); AddChild(new ReefCurrentField()); }
         // The new sky and sun take the player's graphics settings at once.
         Meta.GraphicsSettings.ApplyScene(this);
     }

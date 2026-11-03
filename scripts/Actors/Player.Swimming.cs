@@ -95,7 +95,7 @@ public sealed partial class Player
         }
         _swimVerticalVelocity = y;
         _externalVelocity = _externalVelocity.MoveToward(Vector3.Zero, 12f * dt);
-        Vector3 current = ReefCurrents.VelocityAt(GlobalPosition);
+        Vector3 current = ReefCurrents.VelocityAt(GlobalPosition) + StepCurrentDrift(dt);
         Velocity = new Vector3(_moveVelocity.X + _externalVelocity.X, y, _moveVelocity.Z + _externalVelocity.Z) + current + SwimmingRecoil(dt);
         Vector3 beforeMove = GlobalPosition;
         MoveAndSlide();

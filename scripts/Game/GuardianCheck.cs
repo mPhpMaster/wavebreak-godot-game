@@ -60,7 +60,12 @@ public sealed partial class GuardianCheck : Node
                     "the real boss spawns fully submerged above the seabed");
                 LeviathanVerification.Combat(_player, guardian);
                 float pursuitDistance = guardian.AimPoint.DistanceTo(_player.CenterPosition);
+                Vector3 swimFrom = guardian.GlobalPosition;
                 EnemyManager.DevFrozen = false; await Wait(.8f); EnemyManager.DevFrozen = true;
+                Vector3 swam = (guardian.GlobalPosition - swimFrom) with { Y = 0 };
+                Vector3 nose = -rig.GlobalBasis.Z with { Y = 0 };
+                GD.Print($"CREATURE swam={swam} nose={nose.Normalized()} alignment={(swam.Length() > .05f ? swam.Normalized().Dot(nose.Normalized()) : 1f):0.00}");
+                Require(swam.Length() < .05f || swam.Normalized().Dot(nose.Normalized()) > .5f, "the Leviathan's rig faces the way it swims");
                 Require(guardian.GlobalPosition.IsFinite() && guardian.AimPoint.DistanceTo(_player.CenterPosition) <= pursuitDistance + .5f
                     && guardian.GlobalPosition.Y + guardian.Def.Height <= WaterSurfaceHeight.At(guardian.GlobalPosition) + .1f,
                     "huge boss navigates toward the swimmer while remaining submerged");
@@ -72,12 +77,6 @@ public sealed partial class GuardianCheck : Node
             foreach (string arg in OS.GetCmdlineUserArgs())
                 if (arg.StartsWith("--guardian-shot=") || arg.StartsWith("--leviathan-shot="))
                 {
-                    var portrait = new Camera3D { Current = true, Position = guardian.GlobalPosition + new Vector3(_boss ? 45 : 8, _boss ? 25 : 4, _boss ? 52 : 10) };
-                    portrait.Projection = Camera3D.ProjectionType.Orthogonal;
-                    portrait.Size = _boss ? 55 : 10;
-                    GetTree().CurrentScene.AddChild(portrait);
-                    portrait.MakeCurrent();
-                    GD.Print($"CREATURE camera={GetViewport().GetCamera3D()?.Name} at={portrait.GlobalPosition} fov={portrait.Fov}");
                     if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--creature-static") >= 0)
                     {
                         rig.SetProcess(false); animation!.Stop();
@@ -85,9 +84,7 @@ public sealed partial class GuardianCheck : Node
                             if (node is MeshInstance3D mesh)
                                 for (int shape = 0; shape < mesh.GetBlendShapeCount(); shape++) mesh.SetBlendShapeValue(shape, 0);
                     }
-                    portrait.LookAt(guardian.GlobalPosition + Vector3.Up * (_boss ? 12 : 1));
-                    await Wait(3);
-                    await Screenshot.Capture(GetTree(), this, arg[(arg.IndexOf('=') + 1)..]);
+                    await CreaturePortrait.Capture(this, guardian, rig, _boss ? 60 : 10, arg[(arg.IndexOf('=') + 1)..]);
                 }
             GD.Print(_boss ? "LEVIATHAN PASS" : "GUARDIAN PASS"); GetTree().Quit();
         }

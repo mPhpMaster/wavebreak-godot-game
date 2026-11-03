@@ -136,6 +136,16 @@ stay marked, with distant minimap markers pinned to its rim. Nearby ordinary
 and elite enemies show health bars within 14 m in 3D; walls, fog, distance and
 screen clutter hide them. Bosses retain their existing dedicated bar.
 
+Water currents come and go across the basin: a faint glassy tube with sea-foam
+streaks and bubbles appears about 1.5 seconds before it starts to flow, runs
+for 8 to 20 seconds, then fades and opens somewhere else. Currents run level,
+on a slant, or straight up and down. Inside one you are carried along; swim
+with it for a big speed boost, or swim sideways to leave (head-on you barely
+hold your place). They show faintly on the minimap and have a soft rushing
+sound. Fewer streaks are drawn on the Low preset, and with reduce flashes on
+the warning glows steadily instead of pulsing. In co-op every player sees the
+same currents at the same moments.
+
 For co-op, the host selects Reef Dive before opening CO-OP and starting the
 lobby. The host's route is sent to all peers, including late joiners; swimming
 pose and full vertical velocity ride on player state. All peers need this build
@@ -145,7 +155,8 @@ original map pool. For development use `--route=reef-dive`, or `--route=lumenree
 for only the basin. `--check-swim --route=reef-dive --invulnerable --seed=42`
 checks the real swimming controller, depth limits, pose flags and transitions.
 Additional focused flags: `--check-swim-pose`, `--check-breach`,
-`--check-reef-systems`, `--check-reef-expedition`. Validation and remaining
+`--check-reef-systems`, `--check-reef-expedition`, `--check-currents`
+(`--currents-shot=<prefix>` saves a horizontal and a vertical current). Validation and remaining
 manual acceptance limits are recorded in [the reef handoff](docs/UNDERWATER-IMPLEMENTATION.md).
 Side maps resolve through `Stages.ById`; `Stages.All` remains the standard pool.
 

@@ -112,6 +112,7 @@ public sealed partial class Minimap : Control
         DrawArc(_centre, _radius * 0.25f, 0f, Mathf.Tau, 32, Ring, 1f, true);
         DrawFog();      // Minimap.Fog.cs: the explored map under everything
         DrawPuzzle();   // Minimap.Fog.cs: a puzzle map's found rooms
+        DrawCurrents(); // Minimap.Currents.cs: reef water currents, faint
 
         DrawChestsAndShrines();
         DrawEnemies();

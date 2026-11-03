@@ -164,9 +164,11 @@ public sealed partial class CharacterRig
             spec.SceneScale = scale; // measured once per spec
             if (spec.PreserveSceneRootTransform && (spec.ScenePitch != 0 || spec.SceneRoll != 0))
             {
-                Aabb oriented = new Transform3D(spec.SceneBasis, Vector3.Zero)
-                    * new Aabb(box.Position * scale, box.Size * scale);
-                spec.SceneOffset = new Vector3(-oriented.GetCenter().X, -oriented.Position.Y, -oriented.GetCenter().Z);
+                // Measured from the turned vertices: turning the source box instead
+                // inflates it for a body lying diagonally in its file, which floated
+                // the model off-centre. A laid-down swimmer sits mid-way up its body.
+                Aabb oriented = MeasureVertices(inst, new Transform3D(spec.SceneBasis.Scaled(Vector3.One * scale), Vector3.Zero));
+                spec.SceneOffset = new Vector3(-oriented.GetCenter().X, spec.Height * .5f - oriented.GetCenter().Y, -oriented.GetCenter().Z);
             }
         }
         visual.Scale = Vector3.One * scale;
@@ -254,6 +256,27 @@ public sealed partial class CharacterRig
         if (m == _overlay) return;
         _overlay = m;
         foreach (GeometryInstance3D g in _geoms) g.MaterialOverlay = m;
+    }
+
+    private static Aabb MeasureVertices(Node3D root, Transform3D turn)
+    {
+        Aabb box = new();
+        bool any = false;
+        void Walk(Node n, Transform3D xf)
+        {
+            Transform3D here = n is Node3D n3 ? xf * n3.Transform : xf;
+            if (n is MeshInstance3D { Mesh: { } mesh })
+                for (int surface = 0; surface < mesh.GetSurfaceCount(); surface++)
+                    foreach (Vector3 v in mesh.SurfaceGetArrays(surface)[(int)Mesh.ArrayType.Vertex].AsVector3Array())
+                    {
+                        Vector3 p = here * v;
+                        box = any ? box.Expand(p) : new Aabb(p, Vector3.Zero);
+                        any = true;
+                    }
+            foreach (Node child in n.GetChildren()) Walk(child, here);
+        }
+        Walk(root, turn);
+        return box;
     }
 
     private static Aabb MeasureScene(Node3D root)
