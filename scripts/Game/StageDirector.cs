@@ -181,8 +181,8 @@ public sealed partial class StageDirector
         bool checkBoundary = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--check-boundary") >= 0;
         if (checkBoundary) _stages = Data.Stages.All;
         int start = Mathf.Clamp(_startPhase - 1, 0, _stages.Count - 1);
-        // The puzzle route opens on a puzzle (StageDirector.Puzzle.cs).
-        if (PuzzleRoute && !checkBoundary) EnterPuzzle(start);
+        // The puzzle route and the Puzzle Gauntlet open on a puzzle (StageDirector.Puzzle.cs).
+        if ((PuzzleRoute || GauntletRoute) && !checkBoundary) EnterPuzzle(start);
         else EnterPhase(start);
         GD.Print($"META bosses={string.Join(",", System.Array.ConvertAll(PlannedBosses, b => b?.Id ?? "none"))}");
 

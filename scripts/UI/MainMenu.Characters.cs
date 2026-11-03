@@ -65,9 +65,14 @@ public sealed partial class MainMenu : Node3D
         Place(_puzzleToggle, 1000f, 186f, 262f, 42f);
         _puzzleToggle.MouseEntered += () => _puzzleToggle.GrabFocus();
         page.AddChild(_puzzleToggle);
+        // Under it, the Puzzle Gauntlet: puzzle maps only (UI/MainMenu.Gauntlet.cs).
+        _gauntletToggle = GauntletToggle(ToggleGauntlet);
+        Place(_gauntletToggle, 1000f, 234f, 262f, 42f);
+        _gauntletToggle.MouseEntered += () => _gauntletToggle.GrabFocus();
+        page.AddChild(_gauntletToggle);
         _puzzleNote = MakeLabel("", 14, Gold);
         _puzzleNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        Place(_puzzleNote, 1000f, 234f, 262f, 64f);
+        Place(_puzzleNote, 1000f, 282f, 262f, 64f);
         page.AddChild(_puzzleNote);
         PadInput.DeviceChanged += RefreshRouteBar;   // the [X] on the toggle
         _startButton = MenuButton("START RUN", () => { if (_shownCharacter is { } sel) StartRun(sel); });
@@ -200,6 +205,7 @@ public sealed partial class MainMenu : Node3D
     private static string RouteBarText()
     {
         DifficultyTier tier = EndlessMode.Selected ? DifficultyTiers.All[0] : DifficultyTiers.Selected;
+        if (Routes.GauntletSelected && Routes.PuzzleBlockedReason() is null) return ChallengePicker.Summary() + "  ·  " + GauntletBarText();
         return ChallengePicker.Summary() + "  ·  " + Loc.F("{0} maps, portal {1} s", tier.Phases, tier.PortalSeconds);
     }
 
@@ -211,6 +217,7 @@ public sealed partial class MainMenu : Node3D
         _runButton.TooltipText = _runButton.Text;   // in full, when the bar trims it
         string? blocked = Routes.PuzzleBlockedReason();
         StylePuzzleToggle(_puzzleToggle, Routes.PuzzleSelected && blocked is null, blocked, padKey: true);
+        StyleGauntletToggle(_gauntletToggle, Routes.GauntletSelected && blocked is null, blocked);
         _puzzleNote.Text = blocked is null ? "" : Loc.T(blocked);
     }
 

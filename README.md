@@ -36,7 +36,7 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Quests | 356 (19 secret), which unlock characters, weapons, items, skins and Pearls |
 | Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 66 map challenges, the Toggler, leaderboard |
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests; Tide Totems (1-3 per map: press E once and every XP orb and coin on the map flies to you) |
-| Puzzle route | An optional route: a short seeded puzzle map before each of Classic's maps (puzzle, rest, map, rest, puzzle...). Six piece types (crates on pressure plates, mirror beams, gust rings, bell order, lamp levers, twin plates), a few weak guards, a SKIP portal after 2:30, and a gold/silver/bronze medal that pays a better prize for the fight ahead (see [Puzzle route](#puzzle-route)) |
+| Puzzle route | An optional route: a short seeded puzzle map before each of Classic's maps (puzzle, rest, map, rest, puzzle...). Ten room kinds that never repeat before you have met them all (crates on pressure plates, mirror beams, gust rings, bell order, lamp levers, a sliding ice stone, water pipes, timed braziers, a balance with weights, a lantern path), every one solvable alone, a few weak guards, a SKIP portal after 2:30, and a gold/silver/bronze medal that pays a better prize for the fight ahead. **PUZZLES ONLY** plays six puzzle maps back to back with no fights (see [Puzzle route](#puzzle-route)) |
 | Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full, a microwave and (in co-op) the Swap Meet, where two players trade gold, items and tomes. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |
 | Level-up | Three cards with icons (a perk card shows what the level adds and the total); reroll (R), banish (B) and skip (X), which refill a little on each new map; optional compact hand that keeps the game running, and auto-pick by a rule (Settings > Gameplay) |
 | Music | 21 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
@@ -79,7 +79,17 @@ and the Tab map show the rooms you have found:
 | Gust Room | Plates sit inside rings of gusting wind: run in while it is calm |
 | Bell Room | Bells ring an order (each has a carved symbol and its own note); strike them in that order. The centre bell rings it again |
 | Lamp Room | Each lever flips several lamps; light them all (lit lamps stand tall) |
-| Twin Plates | Two players stand on both plates at once; alone, a plate keeps a short latch while you run to the other |
+| Ice Hall | Push the rune stone: on the ice it slides until something stops it. Stop it on the socket with its rune. A post resets the stone |
+| Aqueduct Room | Stand on a pipe tile and press E to turn it; line the pipes up so the water runs from the spout to the basin |
+| Ember Hall | Light braziers (E); each burns for a while, its flame shrinking. Have them all burning at once: pick the shortest round |
+| Counting Room | Press a pedestal to move its numbered weight to the left pan, the right pan, or back; level the balance against its counterweight |
+| Lantern Path | Start on the star tile, then step onto tiles next to the last one lit; light every tile in one unbroken path. A post starts over |
+
+Every room can be solved by one player; in co-op anyone can work any piece.
+The old Twin Plates room, which needed a player on each of two plates at
+once, is gone.
+A run draws its rooms from a shuffle bag, so you meet every kind before one
+comes back.
 
 The run clock is paused, a few weak guards wander in, and spikes rattle before
 they rise. **H** (or the pad's help button) shows a hint on the next step, at the
@@ -92,13 +102,22 @@ nobody is ever stuck. In co-op the host keeps the puzzle state, everyone sees
 the same plates and doors, and late joiners get it all. Endless mode plays the
 route as Classic (no puzzle maps).
 
+**PUZZLES ONLY** (under the puzzle route toggle on the PLAY page, and beside it
+in the co-op lobby; Arabic: ألغاز فقط) is the Puzzle Gauntlet: six puzzle maps
+back to back, each harder than the last, with no guards, no prizes and no rest
+stops. The exit of one leads into the next; after the sixth, the results screen
+counts your gold, silver and bronze medals and keeps your best score.
+
 ![Puzzle map: the Bell Room](docs/screenshots/puzzle-1.png)
 ![Puzzle map: the reward vault after a gold medal](docs/screenshots/puzzle-2.png)
 
 For testing: `--route=puzzle`, `--check-puzzles` (prints `PUZZLE PASS`),
-`--puzzle-rooms=twin,crates` to choose the rooms, `--puzzle-skip` to make the
-bot take the skip portal, `--puzzle-shot=x.png --puzzle-shot-room=N` for captures
-(`--puzzle-shot-door` photographs that room's door opening).
+`--route=puzzles` (the gauntlet; `--check-gauntlet[=results.png]` with
+`--auto` lets the bot play it through and prints `GAUNTLET PASS`), `--puzzle-rooms=trail,crates` to choose the
+rooms, `--puzzle-skip` to make the bot take the skip portal,
+`--puzzle-shot=x.png --puzzle-shot-room=N` for captures (`--puzzle-shot-kind=id`
+puts that kind in room 1, `--puzzle-shot-door` photographs that room's door
+opening).
 
 ## Optional underwater expedition
 

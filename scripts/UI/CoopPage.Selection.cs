@@ -109,6 +109,16 @@ public sealed partial class CoopPage
         Refresh();
     }
 
+    /// <summary>Host (or no session yet): the Puzzle Gauntlet on or off (Routes.SetGauntlet).</summary>
+    private void ToggleGauntlet()
+    {
+        if (Coop.IsClient || Coop.InRun || Routes.PuzzleBlockedReason(coop: true) is not null) return;
+        Routes.SetGauntlet(!Routes.GauntletSelected);
+        Profile.Save();
+        if (Coop.IsHost) NetSession.Instance?.SetLobbyRoute();
+        Refresh();
+    }
+
     private void LookChanged()
     {
         Profile.Save();

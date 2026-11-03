@@ -12,7 +12,8 @@ namespace Wavebreak.UI;
 /// drawn: the rooms someone has entered, the corridor out of a room once its
 /// door is open, a shut door as a bar across its doorway, and the open EXIT
 /// and SKIP portals. Room outlines are the hall walls, with the puzzle grid
-/// inlaid; solved rooms are tinted.
+/// inlaid and the room kind's mark (<see cref="PuzzleKind.Glyph"/>) in the middle;
+/// solved rooms are tinted.
 /// </summary>
 public static class PuzzleMapView
 {
@@ -24,6 +25,7 @@ public static class PuzzleMapView
     private static readonly Color DoorShut = new(0.95f, 0.66f, 0.30f);
     private static readonly Color Exit = new(0.55f, 1.00f, 0.92f);
     private static readonly Color Skip = new(1.00f, 0.72f, 0.45f);
+    private static readonly Color Glyph = new(1f, 0.92f, 0.70f, 0.95f);
 
     /// <summary>The puzzle map standing now, or null.</summary>
     public static PuzzleMap? Current => Main.Instance?.Stages is { InPuzzle: true, Puzzle: { } map } ? map : null;
@@ -65,6 +67,14 @@ public static class PuzzleMapView
             Quad(ci, Square(room.Centre, h, toScreen), fill, Wall, clip, line * 1.4f);
             if (room.Kind is not (RoomKind.Start or RoomKind.Reward))
                 Quad(ci, Square(room.Centre, g, toScreen), Colors.Transparent, Grid, clip, line);
+            // The kind's mark in the middle of the room, once it is big enough to read.
+            if (room.Def is { } kind)
+            {
+                Vector2 at = toScreen(room.Centre);
+                float size = (toScreen(room.Centre + new Vector3(3.2f, 0f, 0f)) - at).Length();
+                if (size >= 4f && (clip is null || Geometry2D.IsPointInPolygon(at, clip)))
+                    kind.Glyph(ci, at, size, map.State.Solved(i) ? Exit : Glyph);
+            }
             // A shut door: a bar across the doorway.
             if (i + 1 < plan.Rooms.Count && !map.DoorIsOpen(i))
             {

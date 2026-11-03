@@ -41,7 +41,6 @@ public static partial class ArabicText
         ("Gust Room", "غرفة الهبّات"),
         ("Bell Room", "غرفة الأجراس"),
         ("Lamp Room", "غرفة المصابيح"),
-        ("Twin Plates", "اللوحان التوأمان"),
         ("Reward Vault", "قبو المكافآت"),
         // ---- objectives
         ("Head through the door. Solve each room to open the next.", "اعبر الباب. حُلّ كل غرفة ليُفتح باب التالية."),
@@ -50,8 +49,6 @@ public static partial class ArabicText
         ("Cross the gust rings while the wind is calm and touch every plate.", "اعبر حلقات الهبّات حين تهدأ الريح والمس كل لوح."),
         ("Strike the bells in the order they rang.", "اقرع الأجراس بالترتيب الذي رنّت به."),
         ("Pull levers until every lamp stands tall and lit.", "اسحب الأذرع حتى يقف كل مصباح عالياً مضاءً."),
-        ("Step on one plate, then reach the other before its latch runs out.", "قف على لوح، ثم اذهب إلى الآخر قبل أن ينتهي قفله."),
-        ("Two players: stand on both plates at the same time.", "لاعبان: قفا على اللوحين في الوقت نفسه."),
         ("Claim one reward, then step into the exit portal.", "خذ مكافأة واحدة، ثم ادخل بوابة الخروج."),
         // ---- hints
         ("Hint: the marked crate moves next, in the arrow's direction. The bell resets the crates.",
@@ -60,7 +57,6 @@ public static partial class ArabicText
         ("Hint: wait at the ring's edge until the arrows drop, then run straight in.", "تلميح: انتظر عند حافة الحلقة حتى تنخفض الأسهم، ثم اركض إلى الداخل مباشرة."),
         ("Hint: the next bell is marked. Strike the centre bell to hear the order again.", "تلميح: الجرس التالي معلَّم. اقرع الجرس الأوسط لتسمع الترتيب مرة أخرى."),
         ("Hint: the marked lever is part of the answer.", "تلميح: الذراع المعلَّم جزء من الحل."),
-        ("Hint: the plate keeps its latch for a few seconds after you step off.", "تلميح: يبقى اللوح مقفلاً بضع ثوانٍ بعد أن تنزل عنه."),
         ("Hint: solve the room to open its door.", "تلميح: حُلّ الغرفة ليُفتح بابها."),
         // ---- prompts
         ("Turn the mirror", "أدِر المرآة"),
@@ -116,10 +112,6 @@ public static partial class ArabicText
         ("Lamps lit: {0}/{1}", "مصابيح مضاءة: {0}/{1}"),
         ("Plates held: {0}/{1}", "ألواح مضغوطة: {0}/{1}"),
         ("Stand by a mirror to turn it.", "قف بجانب مرآة لتديرها."),
-        ("A held", "A مضغوط"),
-        ("A free", "A حر"),
-        ("B held", "B مضغوط"),
-        ("B free", "B حر"),
         ("EXIT", "خروج"),
         ("Help, puzzle hint", "المساعدة، تلميح اللغز"),
     };

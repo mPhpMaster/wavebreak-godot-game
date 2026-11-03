@@ -47,6 +47,8 @@ public static class PadMenuCheck
             if (page is "play" or "run")
                 Expect($"{page}: the puzzle route toggle is reachable", new List<Control>(seen).Exists(c => c.Name == "PuzzleRouteToggle"));
             if (page == "play")
+                Expect("play: the PUZZLES ONLY toggle is reachable", new List<Control>(seen).Exists(c => c.Name == "GauntletToggle"));
+            if (page == "play")
             {
                 // X switches the puzzle route from anywhere on the page, and back.
                 bool before = Meta.Routes.PuzzleSelected;

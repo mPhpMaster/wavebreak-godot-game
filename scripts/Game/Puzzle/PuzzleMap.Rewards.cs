@@ -29,6 +29,14 @@ public sealed partial class PuzzleMap
             if (IsInstanceValid(p) && p.GetChildCount() > 1 && p.GetChild(1) is Node3D prize) prize.RotateY(dt * 1.2f);
         if (!State.Finished || _offers is not null) return;
         RewardTier tier = State.Tier;
+        if (Plan.Gauntlet)
+        {
+            // The Puzzle Gauntlet has no fight to equip for: the medal is the prize.
+            _offers = new List<PuzzleRewardOffer>();
+            AudioDirector.PlayPuzzle(PuzzleSound.Reward);
+            Announce(tier);
+            return;
+        }
         var rng = new Rng(Plan.Seed ^ 0x9E3E_A4D5UL ^ (ulong)(Net.Coop.InRun ? Net.NetSession.Instance?.LocalSlot ?? 0 : 0) * 0x2545F491UL);
         _offers = PuzzleRewards.Roll(tier, rng);
         PuzzleRewards.GrantBonus(tier);
@@ -136,6 +144,12 @@ public sealed partial class PuzzleMap
     /// taken for you, and a skip pays its consolation.</summary>
     public void GrantOnLeave()
     {
+        if (Plan.Gauntlet)
+        {
+            if (State.Finished) SyncRewards(0f);
+            else if (!_announced) Announce(RewardTier.Skipped);
+            return;
+        }
         if (State.Finished)
         {
             SyncRewards(0f);

@@ -82,6 +82,7 @@ public sealed partial class CoopPage : Control
     private Label _route = null!;
     private readonly List<Button> _routeArrows = new();
     private Button _puzzleToggle = null!;
+    private Button _gauntletToggle = null!;
     private Label _puzzleNote = null!;
     private Label _status = null!;
     private Label _note = null!;
@@ -229,8 +230,12 @@ public sealed partial class CoopPage : Control
         var puzzleRow = new HBoxContainer();
         puzzleRow.AddThemeConstantOverride("separation", 12);
         _puzzleToggle = MainMenu.PuzzleToggle(TogglePuzzle);
-        _puzzleToggle.CustomMinimumSize = new Vector2(290f, 42f);
+        _puzzleToggle.CustomMinimumSize = new Vector2(250f, 42f);
         puzzleRow.AddChild(_puzzleToggle);
+        // Beside it, the Puzzle Gauntlet (puzzle maps only) for the whole team.
+        _gauntletToggle = MainMenu.GauntletToggle(ToggleGauntlet);
+        _gauntletToggle.CustomMinimumSize = new Vector2(250f, 42f);
+        puzzleRow.AddChild(_gauntletToggle);
         _puzzleNote = MainMenu.MakeLabel("", 14, InkDim);
         _puzzleNote.AutoTranslateMode = AutoTranslateModeEnum.Disabled;   // set translated
         _puzzleNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -356,8 +361,11 @@ public sealed partial class CoopPage : Control
         // A client sees the host's choice; Endless (the host's) has no puzzle maps.
         string? puzzleBlocked = Coop.IsClient ? "The host picks the route." : Routes.PuzzleBlockedReason(coop: true);
         MainMenu.StylePuzzleToggle(_puzzleToggle, route.Id == Routes.PuzzleId && (Coop.IsClient || puzzleBlocked is null), puzzleBlocked, padKey: false);
-        if (Coop.InRun || Launch.Automated) _puzzleToggle.Disabled = true;
-        _puzzleNote.Text = puzzleBlocked is null ? Loc.T("A puzzle map before each map, for everyone.") : Loc.T(puzzleBlocked);
+        MainMenu.StyleGauntletToggle(_gauntletToggle, route.Id == Routes.GauntletId && (Coop.IsClient || puzzleBlocked is null), puzzleBlocked);
+        if (Coop.InRun || Launch.Automated) _puzzleToggle.Disabled = _gauntletToggle.Disabled = true;
+        _puzzleNote.Text = puzzleBlocked is not null ? Loc.T(puzzleBlocked)
+            : route.Id == Routes.GauntletId ? Loc.T("Puzzle maps only, back to back, for everyone.")
+            : Loc.T("A puzzle map before each map, for everyone.");
 
         string status;
         bool warn = false;

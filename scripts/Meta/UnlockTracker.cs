@@ -123,7 +123,8 @@ public sealed partial class UnlockTracker : Node
         TickQuests(0);
         PollMastery();
         Evaluate();
-        if (first) Leaderboard.RecordRun(_main!, _won, _phase);
+        // A Puzzle Gauntlet has no fight to rank (Game/StageDirector.Gauntlet.cs).
+        if (first && !StageDirector.GauntletRoute) Leaderboard.RecordRun(_main!, _won, _phase);
         Commit();
     }
 
