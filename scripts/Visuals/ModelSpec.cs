@@ -134,6 +134,10 @@ public sealed class ModelSpec
     /// <summary>Yaw (radians) applied to the imported scene so it faces -Z.</summary>
     public float SceneYaw;
     public float ScenePitch;
+    /// <summary>Roll (radians) about the model's long axis once the pitch has laid it down.</summary>
+    public float SceneRoll;
+    /// <summary>The imported scene's turn: pitch, then roll, then yaw.</summary>
+    public Basis SceneBasis => new Basis(Vector3.Up, SceneYaw) * new Basis(Vector3.Back, SceneRoll) * new Basis(Vector3.Right, ScenePitch);
 
     /// <summary>
     /// Wrap an imported, animated character as a spec. Example:

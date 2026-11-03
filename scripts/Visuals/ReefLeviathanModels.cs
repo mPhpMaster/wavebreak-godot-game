@@ -23,7 +23,8 @@ public static class ReefLeviathanModels
         spec.PreserveSceneRootTransform = true;
         spec.NativeSwimmingClip = true;
         spec.ScenePitch = -Mathf.Pi * .5f;
-        spec.SceneAlbedoFloor = .8f;
+        spec.SceneRoll = -Mathf.Pi * .5f;   // the import lies on its side: fins up and down
+        spec.SceneAlbedoFloor = .55f;   // .8 washed the teal hide out to near white under the reef light
         if (swim is not null)
             foreach (AnimSlot slot in new[] { AnimSlot.Idle, AnimSlot.Walk, AnimSlot.Run, AnimSlot.Dash, AnimSlot.Jump, AnimSlot.Fall })
                 spec.Clips[slot] = swim;

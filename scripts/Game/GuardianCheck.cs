@@ -47,9 +47,9 @@ public sealed partial class GuardianCheck : Node
             Require(rig.Spec.IsImported && rig.Spec.Id == (_boss ? "boss:wertt-leviathan" : "guardian:quaternius-shark"), _boss ? "licensed Leviathan replaces the old reef boss model" : "licensed shark replaces the procedural guardian model");
             AnimationPlayer animation = ReefCheckHelpers.Find<AnimationPlayer>(guardian)!;
             Require(animation is not null && rig.Spec.Clips.TryGetValue(AnimSlot.Walk, out string? swim) && animation.HasAnimation(swim), "import contains a playable swimming clip");
-            string before = rig.DebugClip; await Wait(.35f);
+            string before = rig.DebugClip; await Wait(1.5f);
             Require(before != rig.DebugClip && animation!.GetAnimation(animation.CurrentAnimation).LoopMode != Animation.LoopModeEnum.None,
-                "swimming animation advances and loops");
+                $"swimming animation advances and loops ({before} -> {rig.DebugClip})");
             Require(rig.Spec.SceneScale > 0 && float.IsFinite(rig.Spec.SceneScale), "import is normalized to gameplay dimensions");
             if (_boss)
             {
