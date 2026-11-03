@@ -1965,3 +1965,20 @@ proves the path end to end and reports damage ratios.
 focus alive, and `Keybinds.Hint` with `UI/Hints` replaces fixed key names.
 `--check-pad`, `--check-pad-menu`, `--check-access` and `--check-tutorial` use
 injected events, so real controllers are still unverified.
+
+## 1.6.0 fixes
+
+**Stray phase boss.** `EnemyManager.ReturnStrayBoss` (called from
+`StageDirector.UpdateBoss`) puts a phase boss that is more than 25 m past
+`Arena.Radius` back on the spawn ring around the player (Leviathan: its own
+volume-aware placement), while the player is on the map. One verification run
+lost Thresher Prime 1.7 km off Thornmeadow and the fight took nine minutes.
+The cause was not reproduced; the log line `boss was off the map; returned to x,z`
+marks when it happens again.
+
+**Hidden enemies.** `NearbyEnemySelection.Nearby` skips enemies that are not
+visible in the tree (burrowed), so no health bar floats over empty ground.
+
+**Imported model turn.** `ModelSpec.SceneRoll` joins pitch and yaw;
+`ModelSpec.SceneBasis` (yaw * roll * pitch) is used for the visual and its
+oriented bounds. The Reef Leviathan uses measured angles.

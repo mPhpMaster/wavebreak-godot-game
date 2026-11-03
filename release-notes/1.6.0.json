@@ -1,0 +1,15 @@
+{
+  "Version": "1.6.0",
+  "Title": "Puzzles for everyone, reef currents and distinct weapons",
+  "Changes": [
+    "Five new puzzle rooms: Ice Hall, Aqueduct Room, Ember Hall, Counting Room and Lantern Path. A run shows every kind before one repeats.",
+    "The room that needed one player on every plate is gone. Every puzzle can be solved by one player or by the whole team.",
+    "New PUZZLES ONLY mode on the PLAY page and in the CO-OP lobby: six puzzle maps in a row, harder each time, ending with your medals.",
+    "Lumenreef Basin has water currents that appear and vanish at random, level or vertical, and carry you along when you swim into them.",
+    "Weapons that looked or played alike now differ: 19 groups got their own pattern, shape, impact and firing sound, with balance kept.",
+    "The Reef Leviathan swims upright with its own colours, and cave sharks swim head first.",
+    "No health bars float over hidden burrowing enemies, and puzzle rooms stay inside the minimap circle.",
+    "A phase boss thrown far off the map now comes back near the players instead of walking back for minutes.",
+    "Co-op protocol 17: all players must update together."
+  ]
+}

@@ -63,6 +63,29 @@ public sealed partial class EnemyManager
     }
 
     /// <summary>
+    /// Put a boss that is well past the map's edge back on the spawn ring
+    /// around <paramref name="around"/>. One 1.6.0 verification run lost a
+    /// phase boss 1.7 km off the map and spent four minutes walking it back.
+    /// Host / single player only; returns where it went, or null.
+    /// </summary>
+    public Vector3? ReturnStrayBoss(Enemy boss, Vector3 around)
+    {
+        float limit = Game.Arena.Radius + 25f;
+        Vector3 p = boss.GlobalPosition;
+        if (Net.Coop.IsClient || !boss.IsAlive || boss.Def is not { } def || Game.Arena.Radius <= 0f
+            || p.X * p.X + p.Z * p.Z <= limit * limit
+            || around.X * around.X + around.Z * around.Z > limit * limit) return null;   // the player is on the map
+        if (Net.Coop.IsHost) around = SpawnAnchor(around);
+        bool found = def.Id == Visuals.ReefLeviathanModels.Id
+            ? TryLeviathanSpawn(def, around, out Vector3 point)
+            : TryFindSpawnPoint(around, out point);
+        if (!found) return null;
+        boss.GlobalPosition = point;
+        boss.Velocity = Vector3.Zero;
+        return point;
+    }
+
+    /// <summary>
     /// Remove every enemy without a kill and empty the credit bank, for a map
     /// change. Unlike <see cref="Reset"/> it keeps the director's wave clock,
     /// so arriving on a new map does not replay the opening elite schedule.

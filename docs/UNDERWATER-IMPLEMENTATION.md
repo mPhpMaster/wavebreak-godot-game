@@ -97,3 +97,9 @@ Implemented only the authorized portal markers/elevation/discovery and nearby en
 Evidence in Windows Temp: wavebreak-cave-ui-final-check.log, wavebreak-cave-ui-final-en.log, wavebreak-cave-ui-final-ar.log, wavebreak-cave-ui-coop-host.log, wavebreak-cave-ui-coop-client.log. Captures use wavebreak-cave-ui-final-en/ar prefixes, suffixes hidden, entrance, both, fullmap and health.
 
 At the user's explicit request, launched one persistent manual English single-player reef-dive window from the latest build, without auto/check/capture/invulnerability/Steam or Dummy audio. Verified a responding Wavebreak window and live reef startup log. Existing sound settings were preserved. The user game was left open.
+
+## 1.6.0 follow-up: random currents, the Leviathan pose, hidden enemies
+
+- Random water currents (`Game/ReefCurrentField`, check `--route=reef-dive --character=nori --check-currents`): five slots per underwater map. Each slot waits 4-14 s, warns for 1.5 s (visible, no push), carries swimmers for 8-20 s, fades over 2 s and moves elsewhere. Flows are level, slanted or vertical and 15-40 m long, placed only in open water. Their schedule comes from the run seed and the phase clock, so co-op peers agree with no extra traffic. Each machine pushes only its own player. The two old fixed `ReefCurrents` remain. Details are in ARCHITECTURE.md, "Reef water currents".
+- Reef Leviathan: the import lies diagonally in its file, so the pose uses angles measured from the mesh (pitch, roll and yaw on `ModelSpec.SceneBasis`). Fins are level, the back is up and the nose leads. `SceneAlbedoFloor` dropped from .8 to .55 so the hide stays teal. The cave shark guardian was turned 180° to swim head first.
+- Nearby enemy health bars now skip enemies that are not visible (burrowed), so no bar floats over empty ground.

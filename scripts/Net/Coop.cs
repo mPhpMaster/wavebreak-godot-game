@@ -47,7 +47,7 @@ public static class Coop
     /// <summary>Protocol tag; a client from another build is turned away
     /// instead of desyncing halfway into a run. It goes into the content hash
     /// that the handshake compares with the game version (<see cref="CoopBuild"/>).</summary>
-    public const string Protocol = "wavebreak-coop-16";   // 16: enclosed puzzle halls (doors, corridors, piece colliders); 15: puzzle route (PuzzleEnter/Set/Clock/Ask/Full, RestEnter after a puzzle); 14: raw build handshake, rejoin identity, map rosters, boss plan, player scaling, evolutions
+    public const string Protocol = "wavebreak-coop-17";   // 17: puzzle room kinds as plug-ins (new kinds, no two-player rooms, Use action, Puzzle Gauntlet), reef currents from the run seed; 16: enclosed puzzle halls (doors, corridors, piece colliders); 15: puzzle route (PuzzleEnter/Set/Clock/Ask/Full, RestEnter after a puzzle); 14: raw build handshake, rejoin identity, map rosters, boss plan, player scaling, evolutions
 
     /// <summary>The public half of a rejoin token.</summary>
     public static string ProofOf(string token)

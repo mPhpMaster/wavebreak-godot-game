@@ -30,6 +30,9 @@ public sealed partial class StageDirector
             return;
         }
 
+        if (_boss is { } stray && _enemies.ReturnStrayBoss(stray, _player.GlobalPosition) is { } back)
+            Log($"boss was off the map; returned to {back.X:0},{back.Z:0}");
+
         // One line every 30 s of a boss fight: how far along it is and why. A
         // fight that stalls is otherwise invisible in a headless run's log.
         if (_boss is { } b && _run.PhaseSeconds >= _nextBossReport)
