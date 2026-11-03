@@ -12,22 +12,24 @@ namespace Wavebreak.Game.Puzzle;
 /// route cannot trap a player, in two halves, printing PUZZLE lines and then
 /// PUZZLE PASS or PUZZLE FAIL.
 ///
-/// <b>On paper</b>, for many seeds, every puzzle number, three tiers and one
-/// and two players: the map is generated twice (it must come out the same),
-/// every room is solved from scratch by <see cref="PuzzleSolver"/> and that
-/// answer is played through the real rules in <see cref="PuzzleState"/> (the
-/// room must end solved and its door open), the way between each room's doors
-/// is open, timing rooms leave their margin, every piece type turns up, the
-/// medal thresholds hold, and the SKIP portal opens on time and pays the lowest
-/// tier.
+/// <b>On paper.</b> Every registered kind, for many seeds and every
+/// difficulty: it needs one player, generates the same room twice, keeps its
+/// doors connected, is not solved before anyone touches it, points a hint at
+/// something in the room, and its own solution script, driven with ONE body
+/// through the real rules (<see cref="PaperDriver"/>), solves it. Then whole
+/// maps for many seeds, tiers and puzzle numbers: generated the same twice,
+/// the right number of rooms, no kind twice in a map, every room solved alone
+/// the same way, medals and the SKIP portal; and the run's shuffle bag shows
+/// every kind once before any repeats.
 ///
-/// <b>In the engine</b>, on this run: two puzzle maps are entered through the
-/// stage director; each room is solved through the real map (crates pushed and
-/// mirrors, levers and bells used through <see cref="PuzzleMap.Ask"/>, plates
-/// stood on by the player's real body), every door must open, the vault must
-/// offer prizes and a claim must change the build; then the exit leads into the
-/// rest room. A second map waits out its clock, its SKIP portal must open, and
-/// walking into it must leave with the skip's rerolls paid.
+/// <b>In the engine</b>, on this run: every kind is entered through the stage
+/// director (two maps share them) and each room is solved through the real
+/// map by the same scripts (<see cref="LiveDriver"/>: the player's body
+/// teleported onto plates and tiles, asks through <see cref="PuzzleMap.Ask"/>);
+/// every door must open, the vault must offer prizes and a claim must change
+/// the build; the exit leads into the rest room. A last map waits out its
+/// clock, its SKIP portal must open, and walking into it must leave with the
+/// skip's rerolls paid.
 /// </summary>
 public static class PuzzleCheck
 {
@@ -42,8 +44,9 @@ public static class PuzzleCheck
 
     /// <summary>--puzzle-shot=x.png: photograph a puzzle map (with
     /// --puzzle-shot-room=N, default 1; N past the last puzzle room is the
-    /// vault with every room solved; --puzzle-shot-hint shows a hint;
-    /// --puzzle-shot-door solves room N and photographs its door opening).</summary>
+    /// vault with every room solved; --puzzle-shot-kind=id puts that kind in
+    /// room 1; --puzzle-shot-hint shows a hint; --puzzle-shot-door solves
+    /// room N and photographs its door opening).</summary>
     public static string? ShotPath => Arg("--puzzle-shot");
 
     public static async Task Shot(Main main, string path)
@@ -52,7 +55,9 @@ public static class PuzzleCheck
         async Task Wait(double s) => await tree.ToSignal(tree.CreateTimer(s, processAlways: true), SceneTreeTimer.SignalName.Timeout);
         await Wait(1.2);
         StageDirector stages = main.Stages;
-        if (!stages.InPuzzle) stages.DevEnterPuzzle(0);
+        string? kindId = Arg("--puzzle-shot-kind");
+        if (kindId is not null) stages.DevEnterPuzzle(0, kindId);
+        else if (!stages.InPuzzle) stages.DevEnterPuzzle(0);
         await Wait(0.5);
         if (stages.Puzzle is not { } map) { GD.Print("[puzzle] no puzzle map to photograph"); tree.Quit(); return; }
         int room = Math.Clamp((Arg("--puzzle-shot-room") ?? "1").ToInt(), 1, map.Plan.Rooms.Count - 1);
@@ -72,9 +77,10 @@ public static class PuzzleCheck
         }
         else
         {
-            // A few steps in from the entrance, looking across the hall.
-            main.Player.Teleport(r.Centre - toCentre * 5.5f + new Vector3(toCentre.Z, 0f, toCentre.X) * 1.2f + Vector3.Up * 0.3f);
+            // On the grid's edge by the entrance, looking down across the hall.
+            main.Player.Teleport(r.Centre - toCentre * 8.6f + new Vector3(toCentre.Z, 0f, toCentre.X) * 1.2f + Vector3.Up * 0.3f);
             PlayerCamera.Instance?.FaceDirection(toCentre);
+            PlayerCamera.Instance?.SetPitchDegrees(-38f);
         }
         PlayerCamera.Instance?.SnapToTarget();
         await Wait(1.0);
@@ -84,14 +90,14 @@ public static class PuzzleCheck
             map.Flush();
             await Wait(0.9);
             await Screenshot.Capture(tree, main, path);
-            GD.Print($"[puzzle] shot {path}: room {room} {r.Kind} door {map.DoorOpenness(room):0.00} open");
+            GD.Print($"[puzzle] shot {path}: room {room} {r.KindId} door {map.DoorOpenness(room):0.00} open");
             tree.Quit();
             return;
         }
         if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--puzzle-shot-hint") >= 0) map.Ask(PuzzleAction.Hint, room, 0);
         await Wait(room == map.Plan.Rooms.Count - 1 ? 2.9 : 2.0);
         await Screenshot.Capture(tree, main, path);
-        GD.Print($"[puzzle] shot {path}: room {room} {r.Kind}");
+        GD.Print($"[puzzle] shot {path}: room {room} {r.KindId} hint={map.HintShown}");
         tree.Quit();
     }
 
@@ -109,6 +115,7 @@ public static class PuzzleCheck
         async Task Wait(double s) => await tree.ToSignal(tree.CreateTimer(s, processAlways: true), SceneTreeTimer.SignalName.Timeout);
         await Wait(1.0);
 
+        Kinds();
         Paper();
         await Live(main, Wait);
 
@@ -116,44 +123,111 @@ public static class PuzzleCheck
         tree.Quit();
     }
 
-    // ------------------------------------------------------------- paper
+    // ----------------------------------------------------------- drivers
 
-    private static readonly ulong[] Seeds = { 1, 7, 42, 99, 1234, 4242, 9001, 31337, 777777, 20261102 };
-
-    private static void Paper()
+    /// <summary>The rules alone, one body, instant: a solution script runs to
+    /// the end in one call.</summary>
+    public sealed class PaperDriver : IPuzzleDriver
     {
-        var seen = new HashSet<RoomKind>();
-        int maps = 0, rooms = 0;
-        ulong started = Time.GetTicksMsec();
-        foreach (ulong seed in Seeds)
-            foreach (int tier in new[] { 0, 1, 3 })
-                for (int index = 0; index < 6; index++)
-                    foreach (int players in new[] { 1, 2 })
-                    {
-                        int d = PuzzleGen.DifficultyFor(index, tier);
-                        PuzzlePlan plan = PuzzleGen.Build(seed, index, d, players);
-                        PuzzlePlan again = PuzzleGen.Build(seed, index, d, players);
-                        string tag = $"seed={seed} tier={tier} puzzle={index + 1} players={players}";
-                        Expect($"{tag}: same map twice", plan.Describe() == again.Describe()
-                               && new PuzzleState(plan).Hash() == new PuzzleState(again).Hash()
-                               && plan.Rooms.Select(r => (r.MacroX, r.MacroZ)).SequenceEqual(again.Rooms.Select(r => (r.MacroX, r.MacroZ))));
-                        Expect($"{tag}: {PuzzleGen.RoomsFor(d)} puzzle rooms", plan.PuzzleRooms == PuzzleGen.RoomsFor(d));
-                        Expect($"{tag}: a twin room with two players", players < 2 || plan.Rooms.Any(r => r.Kind == RoomKind.Twin));
-                        Expect($"{tag}: rooms do not overlap", plan.Rooms.Select(r => (r.MacroX, r.MacroZ)).Distinct().Count() == plan.Rooms.Count);
-                        for (int i = 1; i < plan.Rooms.Count - 1; i++)
-                        {
-                            seen.Add(plan.Rooms[i].Kind);
-                            Expect($"{tag} room {i} {plan.Rooms[i].Kind}: solvable", SolveOnPaper(plan, i, players, out string why) || Fail(why));
-                            rooms++;
-                        }
-                        Expect($"{tag}: medals", Medals(plan));
-                        Expect($"{tag}: skip", SkipOnPaper(plan));
-                        maps++;
-                    }
-        foreach (RoomKind k in Enum.GetValues<RoomKind>())
-            if (k is not (RoomKind.Start or RoomKind.Reward))
-                Expect($"piece type {k} appears", seen.Contains(k));
-        GD.Print($"PUZZLE paper maps={maps} rooms={rooms} kinds={seen.Count} ms={Time.GetTicksMsec() - started}");
+        public PuzzleState State { get; }
+        public float Now { get; private set; }
+        private Vector3? _at;
+        private readonly int _room;
+
+        public PaperDriver(PuzzleState state, int room, float now)
+        {
+            State = state;
+            _room = room;
+            Now = now;
+        }
+
+        private void Tick()
+        {
+            var bodies = new List<Vector3>();
+            if (_at is { } p) bodies.Add(p);
+            State.Step(bodies, Now, 1);
+        }
+
+        public Task Stand(Vector3 world)
+        {
+            _at = world;
+            Now += 0.05f;
+            Tick();
+            return Task.CompletedTask;
+        }
+
+        public Task Ask(PuzzleAction action, int a, int b = 0)
+        {
+            Now += 0.05f;
+            Tick();
+            State.Act(_room, action, a, b, Now);
+            return Task.CompletedTask;
+        }
+
+        public Task Wait(float seconds)
+        {
+            // Step through the wait, so time-driven rules see every moment.
+            for (float left = seconds; left > 0f; left -= 0.1f)
+            {
+                Now += Mathf.Min(0.1f, left);
+                Tick();
+            }
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>The live map: the real player teleported, real asks, real time.</summary>
+    private sealed class LiveDriver : IPuzzleDriver
+    {
+        private readonly PuzzleMap _map;
+        private readonly Player _player;
+        private readonly Func<double, Task> _wait;
+        private readonly int _room;
+
+        public LiveDriver(PuzzleMap map, Player player, Func<double, Task> wait, int room)
+        {
+            _map = map;
+            _player = player;
+            _wait = wait;
+            _room = room;
+        }
+
+        public PuzzleState State => _map.State;
+        public float Now => _map.Elapsed;
+
+        public async Task Stand(Vector3 world)
+        {
+            _player.Teleport(world + Vector3.Up * 0.3f);
+            await _wait(0.15);
+        }
+
+        public async Task Ask(PuzzleAction action, int a, int b = 0)
+        {
+            _map.Ask(action, _room, a, b);
+            await _wait(0.05);
+        }
+
+        public Task Wait(float seconds) => _wait(seconds);
+    }
+
+    /// <summary>Run a kind's script on paper from the room's current state.</summary>
+    public static bool SolveOnPaper(PuzzlePlan plan, int r, out string why)
+    {
+        var st = new PuzzleState(plan);
+        RoomPlan room = plan.Rooms[r];
+        // Earlier rooms are taken as solved, as the doors would require.
+        for (int i = 1; i < r; i++) st.MarkSolved(i, 1f);
+        why = "";
+        if (room.Def is not { } kind) { why = "no kind"; return false; }
+        if (st.Solved(r)) { why = "solved before anyone touched it"; return false; }
+        if (!PuzzleSolver.DoorsConnected(room)) { why = "doors cut off"; return false; }
+        var d = new PaperDriver(st, r, 10f);
+        Task<string?> run = kind.Solve(d, room, r);
+        if (!run.IsCompleted) { why = "the script waited for something on paper"; return false; }
+        if (run.Result is { } failed) { why = failed; return false; }
+        if (!st.Solved(r)) { why = "the answer did not solve it"; return false; }
+        if (!st.DoorOpen(r)) { why = "door stayed shut"; return false; }
+        return true;
     }
 
     private static bool Fail(string why)
@@ -162,106 +236,90 @@ public static class PuzzleCheck
         return false;
     }
 
-    /// <summary>Solve room <paramref name="r"/> from its start with the solver
-    /// alone and play the answer through the rules.</summary>
-    private static bool SolveOnPaper(PuzzlePlan plan, int r, int players, out string why)
+    // ------------------------------------------------------------- kinds
+
+    private static void Kinds()
     {
-        why = "";
-        var st = new PuzzleState(plan);
-        RoomPlan room = plan.Rooms[r];
-        // Earlier rooms are taken as solved, as the doors would require.
-        for (int i = 1; i < r; i++) st.MarkSolved(i, 1f);
-        if (st.Solved(r)) { why = "solved before anyone touched it"; return false; }
-        if (!PuzzleSolver.DoorsConnected(room)) { why = "doors cut off"; return false; }
-        float t = 10f;
-        var at = new List<Vector3>();
-        switch (room.Kind)
+        ulong started = Time.GetTicksMsec();
+        IReadOnlyList<PuzzleKind> all = PuzzleKinds.All;
+        Expect($"at least ten kinds ({all.Count})", all.Count >= 10);
+        Expect("ids are unique", all.Select(k => k.Id).Distinct().Count() == all.Count);
+        Expect("no twin room (it needed two players)", PuzzleKinds.ById("twin") is null);
+        int rooms = 0;
+        foreach (PuzzleKind kind in all)
         {
-            case RoomKind.Crates:
-            {
-                List<int>? moves = PuzzleSolver.SolveCrates(room, room.EntryCell, room.CrateStart, out int pushes);
-                if (moves is null) { why = "no crate solution"; return false; }
-                int p = room.EntryCell;
-                foreach (int side in moves)
+            Expect($"{kind.Id}: needs one player", kind.MinPlayers == 1);
+            Expect($"{kind.Id}: text", kind.Title.Length > 0 && kind.Objective.Length > 0 && kind.Hint.Length > 0);
+            for (ulong seed = 1; seed <= 40; seed++)
+                for (int d = 0; d <= PuzzleGen.MaxDifficulty; d++)
                 {
-                    int next = PuzzleSolver.Step(p, side);
-                    int crate = Array.IndexOf(st.Crates(room), next);
-                    if (crate >= 0 && !st.Push(r, crate, side, t)) { why = "a push the solver made was refused"; return false; }
-                    p = next;
+                    PuzzlePlan plan = PuzzleGen.Build(seed * 7919, (int)(seed % 6), d, 1, kind.Id);
+                    PuzzlePlan again = PuzzleGen.Build(seed * 7919, (int)(seed % 6), d, 1, kind.Id);
+                    string tag = $"{kind.Id} seed={seed} d={d}";
+                    RoomPlan room = plan.Rooms[1];
+                    Expect($"{tag}: built", ReferenceEquals(room.Def, kind));
+                    Expect($"{tag}: same room twice", new PuzzleState(plan).Hash() == new PuzzleState(again).Hash()
+                           && room.Pillar.SequenceEqual(again.Rooms[1].Pillar) && room.Fixed.SequenceEqual(again.Rooms[1].Fixed));
+                    var st = new PuzzleState(plan);
+                    PuzzleHint? hint = kind.HintAt(st, room, room.World(room.EntryCell), 5f);
+                    Expect($"{tag}: a hint in the room", hint is { } h && room.Contains(h.At, -1f));
+                    Expect($"{tag}: solved alone", SolveOnPaper(plan, 1, out string why) || Fail($"{tag}: {why}"));
+                    rooms++;
                 }
-                at.Add(room.World(p));
-                st.Step(at, t, players);
-                if (pushes < 1) { why = "no push needed"; return false; }
-                break;
-            }
-            case RoomKind.Mirrors:
+        }
+        GD.Print($"PUZZLE kinds={all.Count} [{string.Join(",", all.Select(k => k.Id))}] rooms={rooms} ms={Time.GetTicksMsec() - started}");
+    }
+
+    // ------------------------------------------------------------- paper
+
+    private static readonly ulong[] Seeds = { 1, 7, 42, 99, 1234, 4242, 9001, 31337, 777777, 20261102 };
+
+    private static void Paper()
+    {
+        var seen = new HashSet<PuzzleKind>();
+        int maps = 0, rooms = 0;
+        ulong started = Time.GetTicksMsec();
+        int bag = PuzzleKinds.Bag.Count;
+        foreach (ulong seed in Seeds)
+        {
+            // The bag: every kind once before any comes back, across the run.
+            List<PuzzleKind> seq = PuzzleKinds.Sequence(seed, bag * 3);
+            for (int b = 0; b < 3; b++)
+                Expect($"seed={seed}: bag {b} holds every kind once", seq.Skip(b * bag).Take(bag).Distinct().Count() == bag);
+            for (int i = 1; i < seq.Count; i++)
+                Expect($"seed={seed}: room {i} repeats the room before", !ReferenceEquals(seq[i], seq[i - 1]));
+            foreach (int tier in new[] { 0, 1, 3 })
             {
-                int start = st.Get(room, PuzzleState.RA);
-                if (PuzzleSolver.Beam(room, start).Hit) { why = "beam lit at the start"; return false; }
-                int answer = PuzzleSolver.SolveMirrors(room, start);
-                if (answer < 0) { why = "no mirror solution"; return false; }
-                for (int i = 0; i < room.MirrorCells.Length; i++)
-                    if (((answer ^ start) >> i & 1) != 0) st.TurnMirror(r, i, t);
-                break;
-            }
-            case RoomKind.Levers:
-            {
-                int answer = PuzzleSolver.SolveLevers(room, 0);
-                if (answer <= 0) { why = "no lever solution"; return false; }
-                for (int i = 0; i < room.Levers.Length; i++)
-                    if ((answer >> i & 1) != 0) st.PullLever(r, i, t);
-                break;
-            }
-            case RoomKind.Runes:
-            {
-                at.Add(room.Centre);
-                st.Step(at, t, players);
-                t += 1f + room.Sequence.Length * PuzzleGen.RuneBeat;
-                if (st.StrikeBell(r, (room.Sequence[0] + 1) % room.Bells.Length, t) != StrikeResult.Wrong) { why = "a wrong bell was not wrong"; return false; }
-                t += 1f + room.Sequence.Length * PuzzleGen.RuneBeat;
-                StrikeResult last = StrikeResult.Ignored;
-                foreach (int b in room.Sequence) last = st.StrikeBell(r, b, t += 0.5f);
-                if (last != StrikeResult.Done) { why = $"the shown order did not finish ({last})"; return false; }
-                break;
-            }
-            case RoomKind.Wind:
-            {
-                if (!PuzzleSolver.WindCrossable(room)) { why = "calm too short"; return false; }
-                foreach (Vector2 c in room.WindCentres)
+                var runKinds = new List<PuzzleKind>();
+                for (int index = 0; index < 6; index++)
                 {
-                    at.Clear();
-                    at.Add(room.World(c));
-                    st.Step(at, t += 1f, players);
+                    int d = PuzzleGen.DifficultyFor(index, tier);
+                    PuzzlePlan plan = PuzzleGen.ForRun(seed, index, tier, 1);
+                    PuzzlePlan again = PuzzleGen.ForRun(seed, index, tier, 2);
+                    string tag = $"seed={seed} tier={tier} puzzle={index + 1}";
+                    Expect($"{tag}: same map twice (and for any team size)", plan.Describe() == again.Describe()
+                           && new PuzzleState(plan).Hash() == new PuzzleState(again).Hash()
+                           && plan.Rooms.Select(r => (r.MacroX, r.MacroZ)).SequenceEqual(again.Rooms.Select(r => (r.MacroX, r.MacroZ))));
+                    Expect($"{tag}: {PuzzleGen.RoomsFor(d)} puzzle rooms", plan.PuzzleRooms == PuzzleGen.RoomsFor(d));
+                    Expect($"{tag}: rooms do not overlap", plan.Rooms.Select(r => (r.MacroX, r.MacroZ)).Distinct().Count() == plan.Rooms.Count);
+                    var kinds = plan.Rooms.Where(r => r.Def is not null).Select(r => r.Def!).ToList();
+                    Expect($"{tag}: no kind twice in a map ({plan.Describe()})", kinds.Distinct().Count() == kinds.Count);
+                    runKinds.AddRange(kinds);
+                    for (int i = 1; i < plan.Rooms.Count - 1; i++)
+                    {
+                        seen.Add(plan.Rooms[i].Def!);
+                        Expect($"{tag} room {i} {plan.Rooms[i].KindId}: solved alone", SolveOnPaper(plan, i, out string why) || Fail($"{tag} room {i}: {why}"));
+                        rooms++;
+                    }
+                    Expect($"{tag}: medals", Medals(plan));
+                    Expect($"{tag}: skip", SkipOnPaper(plan));
+                    maps++;
                 }
-                break;
-            }
-            case RoomKind.Twin:
-            {
-                if (!PuzzleSolver.TwinSoloSolvable(room)) { why = "latch too short for one player"; return false; }
-                if (players >= 2)
-                {
-                    at.Add(room.World(room.PlateA));
-                    st.Step(at, t, players);
-                    if (st.Solved(r)) { why = "one plate solved a two-player room"; return false; }
-                    at.Add(room.World(room.PlateB));
-                    st.Step(at, t + 0.1f, players);
-                    if (st.Get(room, PuzzleState.RAssist) != 0) { why = "assist on with two players"; return false; }
-                }
-                else
-                {
-                    at.Add(room.World(room.PlateA));
-                    st.Step(at, t, 1);
-                    at.Clear();
-                    st.Step(at, t += 0.1f, 1);
-                    at.Add(room.World(room.PlateB));
-                    st.Step(at, t + PuzzleSolver.TwinWalkSeconds(room), 1);
-                }
-                break;
+                Expect($"seed={seed} tier={tier}: the run's first {bag} rooms are every kind", runKinds.Take(bag).Distinct().Count() == Math.Min(bag, runKinds.Count));
             }
         }
-        if (!st.Solved(r)) { why = "the answer did not solve it"; return false; }
-        if (!st.DoorOpen(r)) { why = "door stayed shut"; return false; }
-        return true;
+        foreach (PuzzleKind k in PuzzleKinds.Bag) Expect($"kind {k.Id} appears in generated maps", seen.Contains(k));
+        GD.Print($"PUZZLE paper maps={maps} rooms={rooms} kinds={seen.Count} ms={Time.GetTicksMsec() - started}");
     }
 
     private static bool Medals(PuzzlePlan plan)
@@ -291,18 +349,24 @@ public static class PuzzleCheck
     {
         StageDirector stages = main.Stages;
         Player player = main.Player;
+        List<string> ids = PuzzleKinds.Bag.Select(k => k.Id).ToList();
+        int half = (ids.Count + 1) / 2;
+        var passes = new List<string?> { string.Join(",", ids.Take(half)), string.Join(",", ids.Skip(half)), null };
 
-        for (int pass = 0; pass < 2; pass++)
+        for (int pass = 0; pass < passes.Count; pass++)
         {
-            int index = pass;
-            if (!stages.DevEnterPuzzle(index)) { Expect("enter a puzzle map", false); return; }
+            int index = Math.Min(pass, 1);
+            if (!stages.DevEnterPuzzle(index, passes[pass])) { Expect("enter a puzzle map", false); return; }
             await wait(1.0);
             if (stages.Puzzle is not { } map) { Expect("puzzle map in the tree", false); return; }
-            GD.Print($"PUZZLE live puzzle={index + 1} name='{map.Plan.Name}' rooms={map.Plan.Describe()}");
+            GD.Print($"PUZZLE live pass={pass} puzzle={index + 1} name='{map.Plan.Name}' rooms={map.Plan.Describe()}");
+            // No guards: their kills would level the player up, and the level-up
+            // panel pauses the game in a check that has no bot to pick a card.
+            foreach (RoomPlan room in map.Plan.Rooms) room.Enemies = 0;
             Expect("in the puzzle state", stages.InPuzzle);
             float clock = main.Run.Seconds;
 
-            if (pass == 1)
+            if (passes[pass] is null)
             {
                 // Wait out the clock: the SKIP portal must open and lead out.
                 map.SetElapsed(map.Plan.SkipSeconds + 0.5f);
@@ -322,11 +386,19 @@ public static class PuzzleCheck
 
             for (int r = 1; r < map.Plan.Rooms.Count - 1; r++)
             {
-                bool solved = await SolveLive(map, r, player, wait);
-                Expect($"live room {r} {map.Plan.Rooms[r].Kind} solved", solved);
+                RoomPlan room = map.Plan.Rooms[r];
+                player.Teleport(room.World(room.EntryCell) + Vector3.Up * 0.3f);
+                await wait(0.3);
+                // A hint must mark something in the room.
+                map.Ask(PuzzleAction.Hint, r, 0);
+                await wait(0.2);
+                Expect($"live room {r} {room.KindId}: hint shown", map.HintShown);
+                string? why = await room.Def!.Solve(new LiveDriver(map, player, wait, r), room, r);
+                bool solved = await Until(() => map.State.Solved(r), 4.0, wait);
+                Expect($"live room {r} {room.KindId} solved{(why is null ? "" : " (" + why + ")")}", why is null && solved);
                 await wait(0.3);
                 Expect($"live door {r} opened", map.DoorIsOpen(r));
-                GD.Print($"PUZZLE live room={r} kind={map.Plan.Rooms[r].Kind} solved={solved} door={map.DoorIsOpen(r)} t={map.Elapsed:0.0}");
+                GD.Print($"PUZZLE live room={r} kind={room.KindId} solved={solved} door={map.DoorIsOpen(r)} t={map.Elapsed:0.0}");
             }
             Expect("puzzle finished", map.State.Finished);
             Expect($"tier given ({map.State.Tier})", map.State.Tier >= RewardTier.Bronze);
@@ -360,75 +432,5 @@ public static class PuzzleCheck
             await wait(0.1);
         }
         return true;
-    }
-
-    /// <summary>Solve one room through the live map: the same asks a player's
-    /// keys make, and the player's real body on the plates.</summary>
-    private static async Task<bool> SolveLive(PuzzleMap map, int r, Player player, Func<double, Task> wait)
-    {
-        RoomPlan room = map.Plan.Rooms[r];
-        PuzzleState st = map.State;
-        void Stand(Vector3 at) => player.Teleport(at + Vector3.Up * 0.3f);
-        Stand(room.World(room.EntryCell));
-        await wait(0.3);
-        switch (room.Kind)
-        {
-            case RoomKind.Crates:
-            {
-                List<int>? moves = PuzzleSolver.SolveCrates(room, room.EntryCell, st.Crates(room), out _);
-                if (moves is null) return false;
-                int p = room.EntryCell;
-                foreach (int side in moves)
-                {
-                    int next = PuzzleSolver.Step(p, side);
-                    int crate = Array.IndexOf(st.Crates(room), next);
-                    if (crate >= 0) map.Ask(PuzzleAction.Push, r, crate, side);
-                    p = next;
-                }
-                await wait(0.2);
-                Stand(room.World(p));
-                break;
-            }
-            case RoomKind.Mirrors:
-            {
-                int bits = st.Get(room, PuzzleState.RA);
-                int answer = PuzzleSolver.SolveMirrors(room, bits);
-                for (int i = 0; i < room.MirrorCells.Length; i++)
-                    if (((answer ^ bits) >> i & 1) != 0) map.Ask(PuzzleAction.Mirror, r, i);
-                break;
-            }
-            case RoomKind.Levers:
-            {
-                int answer = PuzzleSolver.SolveLevers(room, st.Get(room, PuzzleState.RA));
-                for (int i = 0; i < room.Levers.Length; i++)
-                    if ((answer >> i & 1) != 0) map.Ask(PuzzleAction.Lever, r, i);
-                break;
-            }
-            case RoomKind.Runes:
-            {
-                Stand(room.Centre + new Vector3(2f, 0f, 2f));
-                await wait(1.2 + room.Sequence.Length * PuzzleGen.RuneBeat);
-                foreach (int b in room.Sequence)
-                {
-                    map.Ask(PuzzleAction.Bell, r, b);
-                    await wait(0.15);
-                }
-                break;
-            }
-            case RoomKind.Wind:
-                foreach (Vector2 c in room.WindCentres)
-                {
-                    Stand(room.World(c));
-                    await wait(0.3);
-                }
-                break;
-            case RoomKind.Twin:
-                Stand(room.World(room.PlateA));
-                await wait(0.3);
-                Stand(room.World(room.PlateB));
-                await wait(0.3);
-                break;
-        }
-        return await Until(() => st.Solved(r), 3.0, wait);
     }
 }

@@ -101,7 +101,7 @@ public sealed partial class NetSession
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void PuzzleAsk(int index, int action, int room, int a, int b)
     {
-        if (!Coop.IsHost || !PuzzleOpen(index) || action is < 1 or > (int)PuzzleAction.Hint) return;
+        if (!Coop.IsHost || !PuzzleOpen(index) || action is < 1 or > (int)PuzzleAction.Use) return;
         PuzzleAsksFromClients++;
         PuzzleMap.Current!.Apply((PuzzleAction)action, room, a, b);
     }

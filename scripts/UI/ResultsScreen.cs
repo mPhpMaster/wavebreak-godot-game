@@ -313,7 +313,11 @@ public sealed partial class ResultsScreen : Control
         _seed.Text = run is null ? "" : Loc.F("seed {0}", run.Seed);
 
         WriteBadges();
-        WriteTiles(run, inventory);
+        if (!WriteGauntlet())   // ResultsScreen.Puzzle.cs
+        {
+            WriteTiles(run, inventory);
+            WritePuzzleTile();
+        }
         WritePearls();
         WriteBuild();
 

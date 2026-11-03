@@ -41,6 +41,10 @@ public sealed class RoomPlan
     public static readonly int[] Dz = { 0, 1, 0, -1 };
 
     public RoomKind Kind;
+    /// <summary>What a puzzle room holds (null for the start room and the vault).</summary>
+    public PuzzleKind? Def;
+    /// <summary>The kind's own layout (its class, set by <see cref="PuzzleKind.Generate"/>).</summary>
+    public object? Data;
     public int Index;
     public int MacroX, MacroZ;
     /// <summary>Side the team comes in through, or -1 (the start room).</summary>
@@ -51,41 +55,19 @@ public sealed class RoomPlan
     public int Slot;
 
     public readonly bool[] Pillar = new bool[N * N];
+    /// <summary>Cells a fixed piece stands in (an emitter, a reset bell, a
+    /// spout): solid to walking and to crates, like a pillar, but the kind
+    /// draws them.</summary>
+    public readonly bool[] Fixed = new bool[N * N];
+    /// <summary>Pieces that stand off the grid's cell centres (levers, bells,
+    /// braziers), in room-local metres: the bot walks round them.</summary>
+    public readonly List<Vector2> Spots = new();
 
-    // Crates: pushable crates and the plates they (and one player) hold down.
-    public int[] CrateStart = System.Array.Empty<int>();
-    public int[] Plates = System.Array.Empty<int>();
-    public int ResetCell = -1;
-    public int CratePushes;
+    /// <summary>The kind's layout as its own type.</summary>
+    public T Layout<T>() where T : class => (T)Data!;
 
-    // Mirrors: an emitter on a wall cell shining inward, a crystal on another.
-    public int EmitterCell = -1;
-    public int EmitterDir;
-    public int ReceiverCell = -1;
-    public int[] MirrorCells = System.Array.Empty<int>();
-    /// <summary>Starting orientation per mirror: 0 is "/", 1 is "\".</summary>
-    public int[] MirrorStart = System.Array.Empty<int>();
-
-    // Wind: plates on islands inside gusting rings.
-    public Vector2[] WindCentres = System.Array.Empty<Vector2>();
-    public float WindInner = 1.2f, WindOuter = 4f;
-    public float Calm = 3f, Gust = 2f;
-    public float[] WindPhase = System.Array.Empty<float>();
-
-    // Runes: bells round the room, the order to strike them, an echo bell.
-    public Vector2[] Bells = System.Array.Empty<Vector2>();
-    public RuneSymbol[] BellSymbols = System.Array.Empty<RuneSymbol>();
-    public int[] Sequence = System.Array.Empty<int>();
-
-    // Levers: each flips a mask of lamps; the start is a scrambled board.
-    public Vector2[] Levers = System.Array.Empty<Vector2>();
-    public Vector2[] Lamps = System.Array.Empty<Vector2>();
-    public int[] LeverMasks = System.Array.Empty<int>();
-    public int LampStart;
-
-    // Twin plates: A and B, apart; the latch a lone player gets.
-    public int PlateA = -1, PlateB = -1;
-    public float Latch = 8f;
+    /// <summary>Kind id for logs ("start", "crates", "reward").</summary>
+    public string KindId => Def?.Id ?? Kind.ToString().ToLowerInvariant();
 
     /// <summary>Spike strips: cells that rise and fall on the puzzle clock.</summary>
     public int[] Spikes = System.Array.Empty<int>();
@@ -168,8 +150,15 @@ public sealed class RoomPlan
         return false;
     }
 
-    /// <summary>The cell a crate may never enter: in front of either door.</summary>
+    /// <summary>The cell a pushed piece may never enter: in front of either door.</summary>
     public bool CrateForbidden(int cell) => cell == EntryCell || cell == ExitCell;
+
+    /// <summary>A piece stands near this local point (the bot walks round it).</summary>
+    public bool NearSpot(Vector2 local, float r)
+    {
+        foreach (Vector2 p in Spots) if (p.DistanceTo(local) < r) return true;
+        return false;
+    }
 }
 
 /// <summary>A whole puzzle map: the rooms in order, from the start room
@@ -180,6 +169,8 @@ public sealed class PuzzlePlan
     public int PuzzleIndex;
     public int Difficulty;
     public int Players;
+    /// <summary>Puzzle Gauntlet: no guards and no prize pedestals.</summary>
+    public bool Gauntlet;
     public string Name = "";
     public readonly List<RoomPlan> Rooms = new();
     /// <summary>Values in a <see cref="PuzzleState"/> for this plan.</summary>
@@ -260,7 +251,7 @@ public sealed class PuzzlePlan
     public string Describe()
     {
         var parts = new List<string>();
-        foreach (RoomPlan r in Rooms) parts.Add(r.Kind.ToString());
+        foreach (RoomPlan r in Rooms) parts.Add(r.KindId);
         return string.Join(",", parts);
     }
 }

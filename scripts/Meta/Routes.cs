@@ -81,6 +81,11 @@ public static class Routes
         list.Add(new(PuzzleId, Game.Puzzle.PuzzleText.RouteName,
             "Classic's maps, each after a short puzzle map. Solve it fast for a better reward for the fight ahead.",
             new[] { "thornmeadow", "rimeglass", "cinder" }));
+        // Puzzle maps only, back to back (Game/StageDirector.Gauntlet.cs). Appended
+        // after the puzzle route: the saved choice is an index.
+        list.Add(new(GauntletId, Game.Puzzle.PuzzleText.GauntletName,
+            "Six puzzle maps back to back, each harder than the last. No fights: just medals.",
+            new[] { "thornmeadow", "rimeglass", "cinder" }));
         return list;
     }
 
@@ -89,8 +94,14 @@ public static class Routes
     /// <summary>The puzzle route: Classic's maps, a puzzle map before each.</summary>
     public const string PuzzleId = "puzzle";
 
+    /// <summary>The Puzzle Gauntlet: puzzle maps only, back to back.</summary>
+    public const string GauntletId = "puzzles";
+
+    /// <summary>Puzzle maps in a Puzzle Gauntlet run (its difficulty climbs with each).</summary>
+    public const int GauntletPuzzles = 6;
+
     /// <summary>Routes that play Classic's maps in Classic's order.</summary>
-    public static bool ClassicMaps(RouteDef r) => r.Id is "classic" or PuzzleId;
+    public static bool ClassicMaps(RouteDef r) => r.Id is "classic" or PuzzleId or GauntletId;
 
     public static RouteDef? ById(string id) => All.FirstOrDefault(r => r.Id == id);
 
@@ -127,6 +138,9 @@ public static class Routes
     /// <summary>The saved choice is the puzzle route.</summary>
     public static bool PuzzleSelected => Selected.Id == PuzzleId;
 
+    /// <summary>The saved choice is the Puzzle Gauntlet.</summary>
+    public static bool GauntletSelected => Selected.Id == GauntletId;
+
     /// <summary>Why the puzzle toggle cannot be used right now (an English
     /// line for Loc.T), or null. Endless never visits puzzle maps; a map
     /// challenge picks its own route (solo only: co-op ignores challenges).</summary>
@@ -140,19 +154,28 @@ public static class Routes
     /// <summary>The puzzle toggle: on selects the puzzle route and remembers
     /// the route it replaced; off returns to that route (Classic if none).
     /// Does not save.</summary>
-    public static RouteDef SetPuzzle(bool on)
+    public static RouteDef SetPuzzle(bool on) => SetPuzzleRoute(PuzzleId, on);
+
+    /// <summary>The PUZZLES ONLY toggle: the same as <see cref="SetPuzzle"/>
+    /// for the Puzzle Gauntlet. Does not save.</summary>
+    public static RouteDef SetGauntlet(bool on) => SetPuzzleRoute(GauntletId, on);
+
+    private static bool IsPuzzleRoute(int index) => All[index].Id is PuzzleId or GauntletId;
+
+    private static RouteDef SetPuzzleRoute(string id, bool on)
     {
-        int puzzle = IndexOf(ById(PuzzleId)!);
+        int target = IndexOf(ById(id)!);
         int current = IndexOf(Selected);
-        if (on && current != puzzle)
+        if (on && current != target)
         {
-            Profile.SetMeta(BeforePuzzleKey, current);
-            Profile.SetMeta(SelectedKey, puzzle);
+            // Switching between the two puzzle routes keeps the route before both.
+            if (!IsPuzzleRoute(current)) Profile.SetMeta(BeforePuzzleKey, current);
+            Profile.SetMeta(SelectedKey, target);
         }
-        else if (!on && current == puzzle)
+        else if (!on && current == target)
         {
             long before = Profile.GetMeta(BeforePuzzleKey);
-            Profile.SetMeta(SelectedKey, before > 0 && before < All.Count && before != puzzle ? before : 0);
+            Profile.SetMeta(SelectedKey, before > 0 && before < All.Count && !IsPuzzleRoute((int)before) ? before : 0);
         }
         return Selected;
     }
@@ -181,7 +204,7 @@ public static class Routes
             else explicitMaps = v.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 
-        int phases = PhasesFor(DifficultyTiers.Active);
+        int phases = route.Id == GauntletId && !EndlessMode.Active ? GauntletPuzzles : PhasesFor(DifficultyTiers.Active);
         IReadOnlyList<StageDef> stages;
         if (explicitMaps is { Length: > 0 })
         {

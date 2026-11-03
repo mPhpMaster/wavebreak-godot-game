@@ -3,24 +3,27 @@ using Godot;
 using Wavebreak.Actors;
 using Wavebreak.Game;
 using Wavebreak.Game.Puzzle;
+using Wavebreak.Game.Puzzle.Kinds;
 
 namespace Wavebreak.Net;
 
 /// <summary>
 /// The co-op puzzle check (<c>--coop-puzzle-test</c>, tests/coop.ps1
 /// scenario <c>coop-puzzle</c>): a host and a guest on the puzzle route,
-/// whose first puzzle opens on a twin-plate room (<c>--puzzle-rooms=twin,levers</c>),
-/// then a third player who joins in the middle of the puzzle.
+/// whose first puzzle opens on a lantern path then a lamp room
+/// (<c>--puzzle-rooms=trail,levers</c>), then a third player who joins in the
+/// middle of the puzzle. No room needs two players; either one solves.
 ///
-///   * the guest stands on plate B; the host must see it pressed (its own
-///     state, from the guest's avatar) before it steps on plate A, and the
-///     guest must see the press come back from the host;
-///   * the twin room must be solved by the two of them together: assist off,
-///     two players connected;
+///   * the lantern path is solved by the GUEST alone, by its body: the host
+///     holds back in the strip by the entrance and must see tiles light from
+///     the guest's avatar while it stands on none, and the guest must see its
+///     own steps come back from the host;
+///   * the lamp room is solved by the HOST alone (its own asks) while the
+///     guest holds back;
 ///   * the guest asks for a hint over the network; everyone must see it;
-///   * the host writes the mark file then and both wait; the late joiner must
-///     arrive on the same puzzle with the whole state (twin room solved, its
-///     door open, the host's player count), and the team carries on;
+///   * the host writes the mark file once the path is lit and both wait; the
+///     late joiner must arrive on the same puzzle with the whole state (path
+///     solved, its door open, the host's player count), and the team carries on;
 ///   * everyone claims a prize and leaves through the exit together
 ///     (<c>all</c>) into the rest room.
 ///
@@ -29,9 +32,11 @@ namespace Wavebreak.Net;
 public sealed partial class NetSession
 {
     private bool _ptOn, _ptParsed;
-    private bool _ptPlateSeen, _ptPlateEcho, _ptTwinTogether, _ptTwinSolved, _ptHintSent, _ptHintEcho;
+    private bool _ptTileSeen, _ptTileEcho, _ptPathByGuest, _ptPathSolved, _ptLampsByHost, _ptHintSent, _ptHintEcho;
+    private bool _ptHostOnTile;
+    private int _ptHostAsksInLamps = -1;
     private bool _ptLateState, _ptDoorOpen, _ptPlayersMatch, _ptLeft;
-    private double _ptWaitUntil = -1, _ptLeftAt = -1, _ptBSeenAt = -1, _ptFullAt = -1;
+    private double _ptWaitUntil = -1, _ptLeftAt = -1, _ptFullAt = -1;
     private string _ptExit = "";
     private RewardTier _ptTier;
 
@@ -40,7 +45,23 @@ public sealed partial class NetSession
         if (_ptParsed) return;
         _ptParsed = true;
         _ptOn = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--coop-puzzle-test") >= 0;
-        if (_ptOn) Autopilot.PuzzleSteer = PuzzleTestSteer;
+        if (!_ptOn) return;
+        Autopilot.PuzzleSteer = PuzzleTestSteer;
+        Autopilot.PuzzleLeaderOverride = PuzzleTestLeader;
+    }
+
+    private static int TrailRoom(PuzzleMap map) => map.Plan.Rooms.FindIndex(r => r.Def is TrailKind);
+    private static int LampRoom(PuzzleMap map) => map.Plan.Rooms.FindIndex(r => r.Def is LeversKind);
+
+    /// <summary>Who works which room: the guest the lantern path, the host
+    /// the lamp room; the late joiner neither.</summary>
+    private bool? PuzzleTestLeader(int room)
+    {
+        if (PuzzleMap.Current is not { } map) return null;
+        if (_testLateJoinClient) return false;
+        if (room == TrailRoom(map)) return Coop.IsClient;
+        if (room == LampRoom(map)) return Coop.IsHost;
+        return null;
     }
 
     /// <summary>Per frame in a test run (from ProcessTest). True when the
@@ -55,39 +76,47 @@ public sealed partial class NetSession
         if (PuzzleMap.Current is { } map && st.InPuzzle)
         {
             PuzzleState s = map.State;
-            int twin = map.Plan.Rooms.FindIndex(r => r.Kind == RoomKind.Twin);
-            if (twin > 0)
+            int trail = TrailRoom(map), lamps = LampRoom(map);
+            if (trail > 0)
             {
-                RoomPlan room = map.Plan.Rooms[twin];
-                bool bOn = (s.Get(room, PuzzleState.RPressed) & 2) != 0;
-                if (Coop.IsHost && bOn && !_ptPlateSeen && _remotes.Count > 0)
+                RoomPlan room = map.Plan.Rooms[trail];
+                int lit = s.Get(room, PuzzleState.RA);
+                Player? me = Player.Instance;
+                bool meOnTile = me is not null && room.CellAt(me.GlobalPosition) is int c && c >= 0
+                                && System.Array.IndexOf(room.Layout<TrailKind.Data>().Cells, c) >= 0;
+                if (Coop.IsHost && !s.Solved(trail)) _ptHostOnTile |= meOnTile && lit != 0;
+                if (Coop.IsHost && lit != 0 && !meOnTile && !_ptTileSeen && _remotes.Count > 0)
                 {
-                    // The host's own player is not on B: the press is the guest's.
-                    Player? me = Player.Instance;
-                    if (me is null || room.CellAt(me.GlobalPosition) != room.PlateB)
-                    {
-                        _ptPlateSeen = true;
-                        _ptBSeenAt = now;
-                        GD.Print("[coop-test] host sees the guest's plate B pressed");
-                    }
+                    _ptTileSeen = true;
+                    GD.Print("[coop-test] host sees the guest's steps light the path");
                 }
-                if (Coop.IsClient && bOn) _ptPlateEcho = true;
-                if (s.Solved(twin) && !_ptTwinSolved)
+                if (Coop.IsClient && !_testLateJoinClient && lit != 0) _ptTileEcho = true;
+                if (s.Solved(trail) && !_ptPathSolved)
                 {
-                    _ptTwinSolved = true;
-                    _ptTwinTogether = s.Get(room, PuzzleState.RAssist) == 0 && map.Plan.Players >= 2;
-                    GD.Print($"[coop-test] twin room solved (assist={s.Get(room, PuzzleState.RAssist)} players={map.Plan.Players})");
+                    _ptPathSolved = true;
+                    _ptPathByGuest = Coop.IsHost ? !_ptHostOnTile && _ptTileSeen : true;
+                    GD.Print($"[coop-test] lantern path solved (host stood on a tile: {_ptHostOnTile})");
                     if (Coop.IsHost && _testMarkFile is not null)
                     {
-                        using (var f = FileAccess.Open(_testMarkFile, FileAccess.ModeFlags.Write)) f?.StoreString("twin");
-                        GD.Print("[coop-test] mark written: twin room solved");
+                        using (var f = FileAccess.Open(_testMarkFile, FileAccess.ModeFlags.Write)) f?.StoreString("trail");
+                        GD.Print("[coop-test] mark written: lantern path solved");
                         _testMarkFile = null;
                     }
                     // Hold the team until the late joiner is in (or a minute has passed).
                     _ptWaitUntil = now + 75;
                 }
             }
-            if (Coop.IsClient && !_testLateJoinClient && _ptTwinSolved && !_ptHintSent && s.Frontier < map.Plan.Rooms.Count - 1)
+            if (lamps > 0 && Coop.IsHost)
+            {
+                if (s.Frontier == lamps && _ptHostAsksInLamps < 0) _ptHostAsksInLamps = map.AsksApplied;
+                if (s.Solved(lamps) && !_ptLampsByHost && _ptHostAsksInLamps >= 0)
+                {
+                    // Solved by the host's own asks (a client's hint is an ask too, so more than one).
+                    _ptLampsByHost = map.AsksApplied - _ptHostAsksInLamps >= 2;
+                    GD.Print($"[coop-test] lamp room solved by the host ({map.AsksApplied - _ptHostAsksInLamps} asks)");
+                }
+            }
+            if (Coop.IsClient && !_testLateJoinClient && _ptPathSolved && !_ptHintSent && s.Frontier < map.Plan.Rooms.Count - 1)
             {
                 _ptHintSent = true;
                 map.RequestHint();
@@ -98,10 +127,10 @@ public sealed partial class NetSession
             // A second after the state arrived: the doors have had a frame to open.
             if (_testLateJoinClient && _ptFullAt > 0 && now - _ptFullAt >= 1.0 && !_ptLateState)
             {
-                _ptLateState = twin > 0 && s.Solved(twin);
-                _ptDoorOpen = twin > 0 && map.DoorIsOpen(twin);
+                _ptLateState = trail > 0 && s.Solved(trail);
+                _ptDoorOpen = trail > 0 && map.DoorIsOpen(trail);
                 _ptPlayersMatch = map.Plan.Players == 2;
-                GD.Print($"[coop-test] late joiner state: twin solved={_ptLateState} door={_ptDoorOpen} players={map.Plan.Players} hash={s.Hash()}");
+                GD.Print($"[coop-test] late joiner state: path solved={_ptLateState} door={_ptDoorOpen} players={map.Plan.Players} hash={s.Hash()}");
             }
             // Everyone in: let the team go on a few seconds later.
             if (_ptWaitUntil > 0 && Coop.Roster.Count >= 3 && _ptWaitUntil > now + 8) _ptWaitUntil = now + 8;
@@ -124,24 +153,14 @@ public sealed partial class NetSession
         return true;
     }
 
-    /// <summary>The test's steering: the guest to plate B, the host to plate A
-    /// once it has seen B pressed; both hold after the twin room until the
-    /// late joiner is in.</summary>
+    /// <summary>The test's steering: everyone holds still after the path is lit
+    /// until the late joiner is in.</summary>
     private Vector3? PuzzleTestSteer(Vector3 me)
     {
         if (PuzzleMap.Current is not { } map || map.State.Finished) return null;
         double now = Now;
         if (_ptWaitUntil > 0 && now < _ptWaitUntil && !_testLateJoinClient) return Vector3.Zero;
-        int twin = map.Plan.Rooms.FindIndex(r => r.Kind == RoomKind.Twin);
-        if (twin <= 0 || map.State.Solved(twin) || map.State.Frontier != twin || map.Plan.RoomAt(me) != twin) return null;
-        RoomPlan room = map.Plan.Rooms[twin];
-        // The guest's bot takes plate B on its own (the second slot); the host
-        // waits by the door until it has seen B held for a moment, then its
-        // bot takes plate A.
-        if (Coop.IsClient || _ptPlateSeen && now - _ptBSeenAt >= 1.0) return null;
-        Vector3 d = room.World(room.EntryCell) - me;
-        d.Y = 0f;
-        return d.Length() < 0.3f ? Vector3.Zero : d.Length() < 1f ? d : d.Normalized();
+        return null;
     }
 
     private string? PuzzleTestLine(string role, List<string> problems)
@@ -154,26 +173,27 @@ public sealed partial class NetSession
         if (_testLateJoinClient)
         {
             if (PuzzleFullsApplied == 0) problems.Add("no puzzle state arrived");
-            if (!_ptLateState) problems.Add("the twin room was not solved in the state it got");
-            if (!_ptDoorOpen) problems.Add("the twin room's door was shut");
+            if (!_ptLateState) problems.Add("the lantern path was not solved in the state it got");
+            if (!_ptDoorOpen) problems.Add("the lantern path's door was shut");
             if (!_ptPlayersMatch) problems.Add("the puzzle was not built for the host's player count");
-            fields = $"role=late puzzle_full={PuzzleFullsApplied} twin_solved={(_ptLateState ? 1 : 0)} door_open={(_ptDoorOpen ? 1 : 0)} players_match={(_ptPlayersMatch ? 1 : 0)}";
+            fields = $"role=late puzzle_full={PuzzleFullsApplied} path_solved={(_ptLateState ? 1 : 0)} door_open={(_ptDoorOpen ? 1 : 0)} players_match={(_ptPlayersMatch ? 1 : 0)}";
         }
         else if (role == "host")
         {
-            if (!_ptPlateSeen) problems.Add("never saw the guest press plate B");
-            if (!_ptTwinTogether) problems.Add("the twin room was not solved by two players together");
+            if (!_ptTileSeen) problems.Add("never saw the guest's steps light a tile");
+            if (!_ptPathByGuest) problems.Add("the lantern path was not solved by the guest alone");
+            if (!_ptLampsByHost) problems.Add("the lamp room was not solved by the host alone");
             if (PuzzleAsksFromClients == 0) problems.Add("no puzzle action came from a client");
             if (LateJoins == 0) problems.Add("nobody joined during the puzzle");
-            fields = $"role=host plate_seen={(_ptPlateSeen ? 1 : 0)} twin_together={(_ptTwinTogether ? 1 : 0)} client_asks={PuzzleAsksFromClients} late_joins={LateJoins}";
+            fields = $"role=host tile_seen={(_ptTileSeen ? 1 : 0)} path_by_guest={(_ptPathByGuest ? 1 : 0)} lamps_by_host={(_ptLampsByHost ? 1 : 0)} client_asks={PuzzleAsksFromClients} late_joins={LateJoins}";
         }
         else
         {
-            if (!_ptPlateEcho) problems.Add("never saw its own plate press come back from the host");
-            if (!_ptTwinSolved) problems.Add("the twin room was never solved");
+            if (!_ptTileEcho) problems.Add("never saw its own steps come back from the host");
+            if (!_ptPathSolved) problems.Add("the lantern path was never solved");
             if (!_ptHintEcho) problems.Add("its hint never came back from the host");
             if (PuzzleSlotsApplied == 0) problems.Add("no puzzle state arrived");
-            fields = $"role=client plate_echo={(_ptPlateEcho ? 1 : 0)} twin_solved={(_ptTwinSolved ? 1 : 0)} hint_echo={(_ptHintEcho ? 1 : 0)} slots={PuzzleSlotsApplied}";
+            fields = $"role=client tile_echo={(_ptTileEcho ? 1 : 0)} path_solved={(_ptPathSolved ? 1 : 0)} hint_echo={(_ptHintEcho ? 1 : 0)} slots={PuzzleSlotsApplied}";
         }
         return $"{fields} tier={_ptTier} exit={(_ptExit.Length > 0 ? _ptExit : "-")} puzzles={_main?.Stages.PuzzlesVisited ?? 0}";
     }

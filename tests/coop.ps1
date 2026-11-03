@@ -41,8 +41,8 @@
 #                  a player who joins during loop 2, holds the same maps and twist.
 #   coop-latejoin  host + guest start; a third player joins about 20 s into the
 #                  run, gets the world snapshot, the team's level, and plays.
-#   coop-puzzle    puzzle route: the guest presses a plate and the host sees it,
-#                  a twin-plate room is solved by both together, a hint asked
+#   coop-puzzle    puzzle route: the guest solves a lantern path alone (the host
+#                  sees its steps), the host solves a lamp room alone, a hint asked
 #                  by the guest reaches everyone, and a player joining mid-puzzle
 #                  gets the whole puzzle state (NetSession.Test.Puzzle.cs).
 # Swap meet (NetSession.Trade.cs, NetSession.Test.Trade.cs):
@@ -310,15 +310,17 @@ Invoke-Multi 'coop-latejoin' @(
 ) 240
 
 # 4a. Puzzle route (NetSession.Test.Puzzle.cs): host and guest open on a
-# twin-plate room; the guest stands on plate B and the host must see it pressed
-# before stepping on A, so the room is solved by the two together; the guest
-# asks for a hint through the host; then a third player joins mid-puzzle and
-# must get the whole puzzle state (twin room solved, its door open, built for
-# the host's player count). Everyone claims a prize and leaves through the
-# exit together into the rest room. --puzzle-rooms must match on every machine.
+# lantern path then a lamp room. No room needs two players: the guest lights
+# the whole path alone with its body while the host holds back (the host must
+# see the tiles light from the guest's avatar), then the host solves the lamp
+# room alone while the guest holds back; the guest asks for a hint through the
+# host; a third player joins mid-puzzle and must get the whole puzzle state
+# (path solved, its door open, built for the host's player count). Everyone
+# claims a prize and leaves through the exit together into the rest room.
+# --puzzle-rooms must match on every machine.
 $mark = Join-Path $shotDir 'coop-puzzle.mark'
 Remove-Item $mark -ErrorAction SilentlyContinue
-$pz = "--auto --invulnerable --coop-puzzle-test --puzzle-rooms=twin,levers --coop-seconds=200 --coop-down-at=999"
+$pz = "--auto --invulnerable --coop-puzzle-test --puzzle-rooms=trail,levers --coop-seconds=200 --coop-down-at=999"
 Invoke-Multi 'coop-puzzle' @(
     @{ Name = 'host'; Delay = 0; Shot = $false; Args = "--coop-host=$Port --coop-name=Host --coop-players=2 --route=puzzle --seed=3 `"--coop-mark-file=$mark`" $pz" },
     @{ Name = 'a'; Delay = 4; Shot = $false; Args = "--coop-join=127.0.0.1:$Port --coop-name=GuestA $pz" },

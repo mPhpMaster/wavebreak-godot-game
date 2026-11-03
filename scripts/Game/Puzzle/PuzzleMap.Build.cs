@@ -83,32 +83,57 @@ public sealed partial class PuzzleMap
     /// <summary>Which drawn surface (Game/Puzzle/HallSurfaces) each part of a hall wears.</summary>
     private readonly record struct Surfaces(HallSurfaces.Kind Floor, HallSurfaces.Kind Wall, HallSurfaces.Kind Low, HallSurfaces.Kind Ceiling);
 
-    private static Surfaces SurfacesFor(RoomKind kind) => kind switch
+    /// <summary>How a room's hall is dressed: its kind's style; the start room
+    /// is plain sandstone and the vault ochre and gold.</summary>
+    private static HallStyle StyleOf(RoomPlan room) => room.Kind switch
+    {
+        RoomKind.Start => HallStyle.Plain,
+        RoomKind.Reward => HallStyle.Vault,
+        _ => room.Def?.Style ?? HallStyle.Plain,
+    };
+
+    private static Surfaces SurfacesFor(HallStyle style) => style switch
     {
         // Workshop: boards underfoot, brick walls, panelled dado, a timber ceiling.
-        RoomKind.Crates => new(HallSurfaces.Kind.Planks, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Planks, HallSurfaces.Kind.Planks),
+        HallStyle.Workshop => new(HallSurfaces.Kind.Planks, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Planks, HallSurfaces.Kind.Planks),
         // Foundry: iron floor plates and sooty brick.
-        RoomKind.Levers => new(HallSurfaces.Kind.Slabs, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Ashlar, HallSurfaces.Kind.Planks),
+        HallStyle.Foundry => new(HallSurfaces.Kind.Slabs, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Ashlar, HallSurfaces.Kind.Planks),
+        // Frost: polished marble like ice, dressed stone.
+        HallStyle.Frost => new(HallSurfaces.Kind.Marble, HallSurfaces.Kind.Ashlar, HallSurfaces.Kind.Ashlar, HallSurfaces.Kind.Plaster),
+        // Ember: iron slabs and brick, a timber roof blackened by smoke.
+        HallStyle.Ember => new(HallSurfaces.Kind.Slabs, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Planks),
+        // Counting house: boards, dressed stone, panelling.
+        HallStyle.Counting => new(HallSurfaces.Kind.Planks, HallSurfaces.Kind.Ashlar, HallSurfaces.Kind.Planks, HallSurfaces.Kind.Planks),
+        // Aqueduct: wet flagstones and brick.
+        HallStyle.Aqueduct => new(HallSurfaces.Kind.Flagstone, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Ashlar, HallSurfaces.Kind.Plaster),
         // Everywhere else: flagstones, dressed stone, a brick dado, plaster above.
         _ => new(HallSurfaces.Kind.Flagstone, HallSurfaces.Kind.Ashlar, HallSurfaces.Kind.Brick, HallSurfaces.Kind.Plaster),
     };
 
-    private static Look LookFor(RoomKind kind) => kind switch
+    private static Look LookFor(HallStyle style) => style switch
     {
         // Workshop: plank floor, brick, timber.
-        RoomKind.Crates => new(new(0.56f, 0.41f, 0.27f), new(0.56f, 0.37f, 0.29f), new(0.36f, 0.24f, 0.18f), new(0.44f, 0.29f, 0.18f), new(0.24f, 0.16f, 0.11f), new(1f, 0.76f, 0.48f)),
+        HallStyle.Workshop => new(new(0.56f, 0.41f, 0.27f), new(0.56f, 0.37f, 0.29f), new(0.36f, 0.24f, 0.18f), new(0.44f, 0.29f, 0.18f), new(0.24f, 0.16f, 0.11f), new(1f, 0.76f, 0.48f)),
         // Observatory: blue-grey stone, silver trim, cool light.
-        RoomKind.Mirrors => new(new(0.52f, 0.56f, 0.63f), new(0.36f, 0.42f, 0.53f), new(0.23f, 0.27f, 0.36f), new(0.80f, 0.84f, 0.90f), new(0.11f, 0.13f, 0.21f), new(0.80f, 0.88f, 1f)),
+        HallStyle.Observatory => new(new(0.52f, 0.56f, 0.63f), new(0.36f, 0.42f, 0.53f), new(0.23f, 0.27f, 0.36f), new(0.80f, 0.84f, 0.90f), new(0.11f, 0.13f, 0.21f), new(0.80f, 0.88f, 1f)),
         // Gallery of winds: pale sea-green stone.
-        RoomKind.Wind => new(new(0.62f, 0.70f, 0.68f), new(0.40f, 0.55f, 0.56f), new(0.26f, 0.37f, 0.39f), new(0.86f, 0.89f, 0.82f), new(0.17f, 0.23f, 0.25f), new(0.88f, 0.96f, 1f)),
+        HallStyle.Gallery => new(new(0.62f, 0.70f, 0.68f), new(0.40f, 0.55f, 0.56f), new(0.26f, 0.37f, 0.39f), new(0.86f, 0.89f, 0.82f), new(0.17f, 0.23f, 0.25f), new(0.88f, 0.96f, 1f)),
         // Bell temple: slate and violet, gold trim.
-        RoomKind.Runes => new(new(0.44f, 0.42f, 0.48f), new(0.39f, 0.33f, 0.43f), new(0.24f, 0.20f, 0.27f), new(0.82f, 0.65f, 0.36f), new(0.13f, 0.10f, 0.15f), new(1f, 0.72f, 0.46f)),
+        HallStyle.Temple => new(new(0.44f, 0.42f, 0.48f), new(0.39f, 0.33f, 0.43f), new(0.24f, 0.20f, 0.27f), new(0.82f, 0.65f, 0.36f), new(0.13f, 0.10f, 0.15f), new(1f, 0.72f, 0.46f)),
         // Foundry: iron floor, sooty brick, copper.
-        RoomKind.Levers => new(new(0.44f, 0.43f, 0.42f), new(0.42f, 0.34f, 0.30f), new(0.26f, 0.22f, 0.20f), new(0.74f, 0.46f, 0.28f), new(0.15f, 0.13f, 0.12f), new(1f, 0.64f, 0.36f)),
-        // Twin hall: cream floor, green-grey walls.
-        RoomKind.Twin => new(new(0.78f, 0.74f, 0.64f), new(0.42f, 0.50f, 0.42f), new(0.28f, 0.34f, 0.28f), new(0.88f, 0.84f, 0.70f), new(0.17f, 0.20f, 0.15f), new(1f, 0.86f, 0.62f)),
+        HallStyle.Foundry => new(new(0.44f, 0.43f, 0.42f), new(0.42f, 0.34f, 0.30f), new(0.26f, 0.22f, 0.20f), new(0.74f, 0.46f, 0.28f), new(0.15f, 0.13f, 0.12f), new(1f, 0.64f, 0.36f)),
+        // Frost: ice-blue floor, pale walls, white trim, cold light.
+        HallStyle.Frost => new(new(0.72f, 0.82f, 0.88f), new(0.50f, 0.60f, 0.70f), new(0.33f, 0.41f, 0.50f), new(0.92f, 0.96f, 1f), new(0.14f, 0.18f, 0.24f), new(0.82f, 0.92f, 1f)),
+        // Aqueduct: green-grey stone, mossy trim.
+        HallStyle.Aqueduct => new(new(0.55f, 0.60f, 0.56f), new(0.34f, 0.48f, 0.46f), new(0.22f, 0.33f, 0.32f), new(0.72f, 0.80f, 0.64f), new(0.12f, 0.18f, 0.17f), new(0.84f, 1f, 0.92f)),
+        // Ember: soot and brick red, copper trim, firelight.
+        HallStyle.Ember => new(new(0.44f, 0.36f, 0.32f), new(0.46f, 0.27f, 0.21f), new(0.28f, 0.16f, 0.12f), new(0.88f, 0.56f, 0.26f), new(0.14f, 0.08f, 0.06f), new(1f, 0.62f, 0.34f)),
+        // Counting house: honey boards, brass.
+        HallStyle.Counting => new(new(0.62f, 0.49f, 0.34f), new(0.47f, 0.41f, 0.31f), new(0.31f, 0.24f, 0.16f), new(0.88f, 0.72f, 0.36f), new(0.20f, 0.15f, 0.10f), new(1f, 0.86f, 0.60f)),
+        // Garden: green stone, cream trim.
+        HallStyle.Garden => new(new(0.54f, 0.60f, 0.44f), new(0.38f, 0.49f, 0.35f), new(0.24f, 0.32f, 0.21f), new(0.86f, 0.88f, 0.68f), new(0.14f, 0.20f, 0.12f), new(0.96f, 1f, 0.82f)),
         // Vault: ochre and gold.
-        RoomKind.Reward => new(new(0.70f, 0.60f, 0.42f), new(0.52f, 0.41f, 0.26f), new(0.34f, 0.26f, 0.16f), new(0.94f, 0.77f, 0.38f), new(0.21f, 0.16f, 0.10f), new(1f, 0.86f, 0.52f)),
+        HallStyle.Vault => new(new(0.70f, 0.60f, 0.42f), new(0.52f, 0.41f, 0.26f), new(0.34f, 0.26f, 0.16f), new(0.94f, 0.77f, 0.38f), new(0.21f, 0.16f, 0.10f), new(1f, 0.86f, 0.52f)),
         // Antechamber: sandstone.
         _ => new(new(0.76f, 0.68f, 0.55f), new(0.60f, 0.53f, 0.44f), new(0.43f, 0.36f, 0.29f), new(0.87f, 0.81f, 0.67f), new(0.28f, 0.23f, 0.18f), new(1f, 0.80f, 0.52f)),
     };
@@ -160,7 +185,7 @@ public sealed partial class PuzzleMap
             _roomRoots.Add(root);
             _into = root;
             var rng = new Core.Rng(Plan.Seed ^ 0xDEC0UL ^ (ulong)(i * 7349 + 1));
-            BuildRoom(room, i, LookFor(room.Kind), rng, low);
+            BuildRoom(room, i, LookFor(StyleOf(room)), rng, low);
             _into = null;
         }
 
@@ -213,7 +238,7 @@ public sealed partial class PuzzleMap
         var batch = new Batch();
         Vector3 c = room.Centre;
         float h = RoomPlan.Half, t = RoomPlan.WallThick, outer = h + t;
-        Surfaces kinds = SurfacesFor(room.Kind);
+        Surfaces kinds = SurfacesFor(StyleOf(room));
         StandardMaterial3D floor = HallSurfaces.Material(kinds.Floor, look.Floor), wall = HallSurfaces.Material(kinds.Wall, look.Wall);
         StandardMaterial3D lowWall = HallSurfaces.Material(kinds.Low, look.Low), ceiling = HallSurfaces.Material(kinds.Ceiling, look.Ceiling);
         StandardMaterial3D trim = Detail(look.Trim, 0.25f), pilaster = HallSurfaces.Material(HallSurfaces.Kind.Ashlar, look.Wall.Darkened(0.12f));
@@ -445,8 +470,8 @@ public sealed partial class PuzzleMap
         string text = room.Kind switch
         {
             RoomKind.Start => Meta.Loc.T(Plan.Name).ToUpperInvariant(),
-            RoomKind.Reward => Meta.Loc.T(PuzzleText.Title(room.Kind)),
-            _ => Meta.Loc.F("{0}/{1}  ·  {2}", i, Plan.PuzzleRooms, Meta.Loc.T(PuzzleText.Title(room.Kind))),
+            RoomKind.Reward => Meta.Loc.T(PuzzleText.Title(room)),
+            _ => Meta.Loc.F("{0}/{1}  ·  {2}", i, Plan.PuzzleRooms, Meta.Loc.T(PuzzleText.Title(room))),
         };
         // Over the exit in the start room (the way you face on arrival), else
         // over the entrance, read from inside the room.
@@ -479,14 +504,16 @@ public sealed partial class PuzzleMap
         string grave = ArtAssets.Root + "kenney/graveyard-kit/";
         float h = RoomPlan.Half;
         // Corners: one big piece each.
-        string[] corner = room.Kind switch
+        HallStyle style = StyleOf(room);
+        string[] corner = style switch
         {
-            RoomKind.Mirrors => new[] { nature + "statue_ring.glb", nature + "statue_obelisk.glb" },
-            RoomKind.Runes => new[] { grave + "pillar-obelisk.glb", nature + "statue_obelisk.glb" },
-            RoomKind.Wind => new[] { grave + "pillar-large.glb", nature + "plant_bushLarge.glb" },
-            RoomKind.Levers => new[] { grave + "pillar-large.glb" },
-            RoomKind.Crates => new[] { "crates" },
-            RoomKind.Reward => new[] { nature + "statue_column.glb", nature + "statue_obelisk.glb" },
+            HallStyle.Observatory => new[] { nature + "statue_ring.glb", nature + "statue_obelisk.glb" },
+            HallStyle.Temple => new[] { grave + "pillar-obelisk.glb", nature + "statue_obelisk.glb" },
+            HallStyle.Gallery or HallStyle.Garden or HallStyle.Aqueduct => new[] { grave + "pillar-large.glb", nature + "plant_bushLarge.glb" },
+            HallStyle.Foundry or HallStyle.Ember => new[] { grave + "pillar-large.glb" },
+            HallStyle.Workshop or HallStyle.Counting => new[] { "crates" },
+            HallStyle.Frost => new[] { nature + "statue_obelisk.glb", grave + "pillar-obelisk.glb" },
+            HallStyle.Vault => new[] { nature + "statue_column.glb", nature + "statue_obelisk.glb" },
             _ => new[] { nature + "statue_column.glb", nature + "statue_columnDamaged.glb", nature + "statue_obelisk.glb" },
         };
         foreach (Vector2 k in new[] { new Vector2(1, 1), new Vector2(-1, 1), new Vector2(1, -1), new Vector2(-1, -1) })
@@ -494,7 +521,7 @@ public sealed partial class PuzzleMap
             Vector3 at = room.World(k * (h - 1.6f));
             string pick = corner[rng.RangeInt(0, corner.Length)];
             if (pick == "crates") CrateStack(at, rng, look);
-            else Kit(pick, pick.Contains("plant") ? 2.2f : 4.2f, at, rng.Range(0f, Mathf.Tau));
+            else KitModel(pick, pick.Contains("plant") ? 2.2f : 4.2f, at, rng.Range(0f, Mathf.Tau));
             PropCollider(at, 1.1f, 4f);
         }
         // Wall slots: between the pilasters, clear of doorways.
@@ -507,7 +534,7 @@ public sealed partial class PuzzleMap
             {
                 Vector3 at = room.Centre + dir * (h - 1.1f) + along * a;
                 float yaw = Mathf.Atan2(-dir.X, -dir.Z);
-                WallProp(room.Kind, at, dir, along, yaw, rng, look, nature, grave);
+                WallProp(style, at, dir, along, yaw, rng, look, nature, grave);
             }
             // Braziers flanking a doorway.
             if (door)
@@ -530,42 +557,51 @@ public sealed partial class PuzzleMap
         Put(fire);
     }
 
-    private void WallProp(RoomKind kind, Vector3 at, Vector3 dir, Vector3 along, float yaw, Core.Rng rng, Look look, string nature, string grave)
+    private void WallProp(HallStyle style, Vector3 at, Vector3 dir, Vector3 along, float yaw, Core.Rng rng, Look look, string nature, string grave)
     {
-        switch (kind)
+        switch (style)
         {
-            case RoomKind.Crates:
+            case HallStyle.Workshop:
                 if (rng.Chance(0.5f)) CrateStack(at, rng, look);
                 else Barrels(at, along, rng);
                 PropCollider(at, 1.1f, 2.4f);
                 break;
-            case RoomKind.Mirrors:
+            case HallStyle.Observatory:
+            case HallStyle.Frost:
                 Crystal(at, rng);
                 PropCollider(at, 0.8f, 2.6f);
                 break;
-            case RoomKind.Wind:
+            case HallStyle.Gallery:
+            case HallStyle.Garden:
+            case HallStyle.Aqueduct:
                 Banner(at, dir, look, rng);
-                Kit(nature + "plant_bush.glb", 1.1f, at - dir * 0.2f, rng.Range(0f, Mathf.Tau));
+                KitModel(nature + "plant_bush.glb", 1.1f, at - dir * 0.2f, rng.Range(0f, Mathf.Tau));
                 break;
-            case RoomKind.Runes:
-                Kit(grave + (rng.Chance(0.5f) ? "lantern-candle.glb" : "urn-round.glb"), 1.3f, at, rng.Range(0f, Mathf.Tau));
+            case HallStyle.Temple:
+                KitModel(grave + (rng.Chance(0.5f) ? "lantern-candle.glb" : "urn-round.glb"), 1.3f, at, rng.Range(0f, Mathf.Tau));
                 Banner(at, dir, look, rng);
                 PropCollider(at, 0.6f, 1.4f);
                 break;
-            case RoomKind.Levers:
+            case HallStyle.Foundry:
                 Gear(at, dir, along, rng, look);
                 PropCollider(at, 0.9f, 2.4f);
                 break;
-            case RoomKind.Twin:
-                Kit(nature + (rng.Chance(0.5f) ? "statue_column.glb" : "statue_obelisk.glb"), 3f, at, yaw);
-                PropCollider(at, 0.8f, 3f);
+            case HallStyle.Ember:
+                Brazier(at);
+                Banner(at, dir, look, rng);
+                PropCollider(at, 0.5f, 1.5f);
                 break;
-            case RoomKind.Reward:
-                Kit(ArtAssets.Root + "kenney/mini-dungeon/chest.glb", 1.1f, at, yaw);
+            case HallStyle.Counting:
+                if (rng.Chance(0.5f)) Barrels(at, along, rng);
+                else KitModel(ArtAssets.Root + "kenney/mini-dungeon/chest.glb", 1.1f, at, yaw);
+                PropCollider(at, 1.0f, 1.6f);
+                break;
+            case HallStyle.Vault:
+                KitModel(ArtAssets.Root + "kenney/mini-dungeon/chest.glb", 1.1f, at, yaw);
                 PropCollider(at, 0.8f, 1.2f);
                 break;
             default:
-                Kit(grave + "urn-round.glb", 1.2f, at, rng.Range(0f, Mathf.Tau));
+                KitModel(grave + "urn-round.glb", 1.2f, at, rng.Range(0f, Mathf.Tau));
                 Banner(at, dir, look, rng);
                 PropCollider(at, 0.6f, 1.2f);
                 break;
@@ -648,7 +684,7 @@ public sealed partial class PuzzleMap
     }
 
     /// <summary>An imported model <paramref name="height"/> metres tall; skipped quietly when missing.</summary>
-    private void Kit(string path, float height, Vector3 at, float yaw)
+    private void KitModel(string path, float height, Vector3 at, float yaw)
     {
         if (!ArtAssets.UseImported || !ResourceLoader.Exists(path) || ResourceLoader.Load(path) is not PackedScene scene) return;
         if (scene.Instantiate() is not Node3D model) return;

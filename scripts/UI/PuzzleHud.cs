@@ -140,14 +140,12 @@ public sealed partial class PuzzleHud : Control
 
         _room.Text = room.Kind switch
         {
-            RoomKind.Reward => Loc.T(PuzzleText.Title(RoomKind.Reward)),
+            RoomKind.Reward => Loc.T(PuzzleText.RewardTitle),
             _ => Loc.F("Room {0}/{1}  ·  {2}  ·  solved {3}/{1}", Mathf.Clamp(room.Index, 1, plan.PuzzleRooms), plan.PuzzleRooms,
-                       Loc.T(PuzzleText.Title(room.Kind)), st.SolvedCount),
+                       Loc.T(PuzzleText.Title(room)), st.SolvedCount),
         };
-        bool assist = st.Get(room, PuzzleState.RAssist) != 0;
-        _objective.Text = st.Finished && room.Kind != RoomKind.Reward
-            ? Loc.T(PuzzleText.Objective(RoomKind.Reward, false))
-            : Loc.T(PuzzleText.Objective(room.Kind, assist));
+        string rewardLine = plan.Gauntlet ? PuzzleText.GauntletRewardObjective : PuzzleText.RewardObjective;
+        _objective.Text = st.Finished || room.Kind == RoomKind.Reward ? Loc.T(rewardLine) : Loc.T(PuzzleText.Objective(room));
 
         _extra.Text = Extra(room, st);
         _extra.Visible = _extra.Text.Length > 0;
@@ -180,41 +178,13 @@ public sealed partial class PuzzleHud : Control
         if (f is { } focus) _prompt.Text = $"[{Keybinds.Hint("interact")}]  {(focus.Claim ? focus.Verb : Loc.T(focus.Verb))}";
     }
 
-    /// <summary>The line that changes with the room: gusts, bells, lamps, latches.</summary>
+    /// <summary>The line that changes with the room (its kind says it: gusts,
+    /// bells, lamps, tiles, pans).</summary>
     private string Extra(RoomPlan room, PuzzleState st)
     {
-        if (st.Get(room, PuzzleState.RSolved) != 0 && room.Kind is not (RoomKind.Start or RoomKind.Reward)) return Loc.T("SOLVED");
-        float t = _map.Elapsed;
-        switch (room.Kind)
-        {
-            case RoomKind.Wind:
-            {
-                float cycle = PuzzleGen.WindCycle(room, 0, t);
-                string touched = Loc.F("plates {0}/{1}", PuzzleSolver.PopCount(st.Get(room, PuzzleState.RA)), room.WindCentres.Length);
-                return cycle >= room.Calm
-                    ? Loc.F("GUST  ·  calm in {0}s", (room.Calm + room.Gust - cycle).ToString("0.0")) + "  ·  " + touched
-                    : Loc.F("CALM  ·  gust in {0}s", (room.Calm - cycle).ToString("0.0")) + "  ·  " + touched;
-            }
-            case RoomKind.Runes:
-                return st.RuneShowing(room, t, out _) ? Loc.T("Listen and watch the order...")
-                    : Loc.F("Bells struck in order: {0}/{1}", st.Get(room, PuzzleState.RA), room.Sequence.Length);
-            case RoomKind.Levers:
-            {
-                int lit = PuzzleSolver.PopCount(PuzzleSolver.Lamps(room, st.Get(room, PuzzleState.RA)));
-                return Loc.F("Lamps lit: {0}/{1}", lit, room.Lamps.Length);
-            }
-            case RoomKind.Crates:
-                return Loc.F("Plates held: {0}/{1}", PuzzleSolver.PopCount(st.Get(room, PuzzleState.RPressed)), room.Plates.Length);
-            case RoomKind.Mirrors:
-                return Loc.T("Stand by a mirror to turn it.");
-            case RoomKind.Twin:
-            {
-                string a = st.TwinHeld(room, 0, t) ? Loc.T("A held") : Loc.T("A free");
-                string b = st.TwinHeld(room, 1, t) ? Loc.T("B held") : Loc.T("B free");
-                return $"{a}  ·  {b}";
-            }
-        }
-        return "";
+        if (room.Kind != RoomKind.Puzzle || room.Def is not { } kind) return "";
+        if (st.Solved(room)) return Loc.T("SOLVED");
+        return kind.Status(_map, room);
     }
 
     /// <summary>The medal's shape: star (gold), diamond (silver), disc

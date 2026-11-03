@@ -7,18 +7,16 @@ using Wavebreak.Data;
 
 namespace Wavebreak.Game.Puzzle;
 
-/// <summary>What a player can ask a puzzle to do. Sent as an int in co-op.</summary>
-public enum PuzzleAction { None, Push, Mirror, Lever, Bell, Echo, Reset, Hint }
-
 /// <summary>
 /// A puzzle map in the scene: built by <see cref="StageDirector"/> in place
 /// of a map (like the rest room), from a <see cref="PuzzlePlan"/>, holding the
 /// <see cref="PuzzleState"/> and the puzzle clock.
 ///
 /// <b>Who decides.</b> The host (or the single player) runs the rules: each
-/// frame it reads where every player stands (plates, wind plates, twin plates,
-/// rooms entered) and applies the actions players ask for (push, turn, pull,
-/// strike, echo, reset, hint). Clients ask the host and draw whatever the state
+/// frame it reads where every player stands (rooms entered, and whatever each
+/// room's <see cref="PuzzleKind"/> reads from bodies: plates, rings, tiles)
+/// and applies the actions players ask for (push, turn, pull, strike, use,
+/// reset, hint). Clients ask the host and draw whatever the state
 /// array says; changed slots arrive as pairs (Net/NetSession.Puzzle.cs). Each
 /// machine still handles its own body: the wind pushes it, spikes hurt it, and
 /// it claims its own reward.
@@ -71,18 +69,19 @@ public sealed partial class PuzzleMap : Node3D
     private bool _interactRequested;
     private bool _hintRequested;
     private float _hintCooldown;
-    private float _pushHeld;
-    private float _pushCooldown;
     private float _spikeTick;
-    private float _gustSoundIn;
 
     /// <summary>Counters for the self-checks and the summary line.</summary>
     public int AsksSent { get; private set; }
     public int AsksApplied { get; private set; }
 
+    /// <summary>What the kinds build and draw with.</summary>
+    public PieceKit Kit { get; }
+
     public PuzzleMap(PuzzlePlan plan, string nextMapName)
     {
         Plan = plan;
+        Kit = new PieceKit(this);
         State = new PuzzleState(plan);
         NextMapName = nextMapName;
         Bounds = new StageDef
@@ -148,8 +147,7 @@ public sealed partial class PuzzleMap : Node3D
         _cameraMax = -1f;
     }
 
-    /// <summary>Long runs of pillars (the twin room's divider, rows in the
-    /// crate rooms) as blockers, so guards steer round the end of a wall of
+    /// <summary>Long runs of pillars (rows in the crate and stone rooms) as blockers, so guards steer round the end of a wall of
     /// pieces instead of pressing into it (Game/MapBlockers). Single pieces
     /// need nothing: the guards slide round them.</summary>
     private void RegisterBlockers()
@@ -282,7 +280,7 @@ public sealed partial class PuzzleMap : Node3D
             Vector3 at = corners[(i + rng.RangeInt(0, 2)) % 4] + new Vector3(rng.Range(-1f, 1f), 0.5f, rng.Range(-1f, 1f));
             if (em.SpawnAt(weak[rng.RangeInt(0, weak.Count)], at) is not null) placed++;
         }
-        GD.Print($"[puzzle] room {r} ({room.Kind}) entered: {placed} guards; rooms drawn here {RoomsShown}/{Plan.Rooms.Count}");
+        GD.Print($"[puzzle] room {r} ({room.KindId}) entered: {placed} guards; rooms drawn here {RoomsShown}/{Plan.Rooms.Count}");
     }
 
     private static List<EnemyDef>? _weak;
@@ -300,21 +298,12 @@ public sealed partial class PuzzleMap : Node3D
         return _weak = list;
     }
 
-    /// <summary>Host: apply an action, from this machine or from a client.</summary>
+    /// <summary>Host: apply an action, from this machine or from a client
+    /// (the room's kind decides what it means).</summary>
     public void Apply(PuzzleAction action, int room, int a, int b)
     {
         if (!Authority || room < 0 || room >= Plan.Rooms.Count) return;
-        switch (action)
-        {
-            case PuzzleAction.Push: State.Push(room, a, b, Elapsed); break;
-            case PuzzleAction.Mirror: State.TurnMirror(room, a, Elapsed); break;
-            case PuzzleAction.Lever: State.PullLever(room, a, Elapsed); break;
-            case PuzzleAction.Bell: State.StrikeBell(room, a, Elapsed); break;
-            case PuzzleAction.Echo: State.ShowOrder(room, Elapsed + 0.4f); break;
-            case PuzzleAction.Reset: State.ResetCrates(room); break;
-            case PuzzleAction.Hint: State.Hint(room, Elapsed); break;
-            default: return;
-        }
+        if (!State.Act(room, action, a, b, Elapsed)) return;
         AsksApplied++;
         Flush();
     }
@@ -443,74 +432,8 @@ public sealed partial class PuzzleMap : Node3D
 
         if (r < 0) return;
         RoomPlan room0 = Plan.Rooms[r];
-        if (control) StepPush(me, room0, r, dt);
-        StepWind(me, room0, dt);
+        if (room0.Def is { } def && !State.Solved(r)) def.LocalStep(this, _views[r]!, me, room0, r, dt, control);
         StepSpikes(me, room0, dt);
-    }
-
-    /// <summary>Walking into a crate along a grid line for a moment pushes it one cell.</summary>
-    private void StepPush(Player me, RoomPlan room, int r, float dt)
-    {
-        _pushCooldown = Mathf.Max(0f, _pushCooldown - dt);
-        if (room.Kind != RoomKind.Crates)
-        {
-            _pushHeld = 0f;
-            return;
-        }
-        Vector3 wish = me.MoveWish;
-        int side = -1;
-        if (wish.LengthSquared() > 0.25f)
-        {
-            if (Mathf.Abs(wish.X) > Mathf.Abs(wish.Z) * 1.4f) side = wish.X > 0 ? 0 : 2;
-            else if (Mathf.Abs(wish.Z) > Mathf.Abs(wish.X) * 1.4f) side = wish.Z > 0 ? 1 : 3;
-        }
-        int crate = -1;
-        if (side >= 0)
-        {
-            int[] crates = State.Crates(room);
-            Vector3 p = me.GlobalPosition;
-            for (int i = 0; i < crates.Length; i++)
-            {
-                Vector3 c = room.World(crates[i]);
-                Vector3 d = c - p;
-                float along = d.X * RoomPlan.Dx[side] + d.Z * RoomPlan.Dz[side];
-                float across = Mathf.Abs(d.X * RoomPlan.Dz[side] - d.Z * RoomPlan.Dx[side]);
-                if (along > 0.6f && along < 1.9f && across < 0.75f) { crate = i; break; }
-            }
-        }
-        if (crate < 0 || _pushCooldown > 0f)
-        {
-            _pushHeld = 0f;
-            return;
-        }
-        _pushHeld += dt;
-        if (_pushHeld < 0.16f) return;
-        _pushHeld = 0f;
-        _pushCooldown = 0.4f;
-        Ask(PuzzleAction.Push, r, crate, side);
-    }
-
-    /// <summary>Gusts shove this player out of the ring while they blow.</summary>
-    private void StepWind(Player me, RoomPlan room, float dt)
-    {
-        if (room.Kind != RoomKind.Wind) return;
-        Vector3 p = me.GlobalPosition;
-        for (int i = 0; i < room.WindCentres.Length; i++)
-        {
-            Vector3 d = p - room.World(room.WindCentres[i]);
-            d.Y = 0f;
-            float dist = d.Length();
-            if (dist <= room.WindInner || dist >= room.WindOuter + 0.3f || p.Y > 2.5f) continue;
-            if (!PuzzleGen.Gusting(room, i, Elapsed)) continue;
-            Vector3 outward = dist > 0.01f ? d / dist : Vector3.Right;
-            me.ApplyKnockback(outward * 52f * dt);
-            _gustSoundIn -= dt;
-            if (_gustSoundIn <= 0f)
-            {
-                _gustSoundIn = 1.0f;
-                AudioDirector.PlayPuzzle(PuzzleSound.Gust);
-            }
-        }
     }
 
     /// <summary>Raised spikes sting whoever stands on them (a tenth of max health).</summary>

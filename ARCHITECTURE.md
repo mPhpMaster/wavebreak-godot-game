@@ -144,7 +144,7 @@ Useful test flags (all after `--`):
 | `--check-restroom`, `--restroom-shot=x.png`, `--check-phases`, `--check-portal-timer`, `--portal-seconds=N`, `--no-rest-room` | rest room, run length and portal countdown (see "Rest room between maps") |
 | `--check-totem`, `--totem-shot=<prefix>` | Tide Totem self-check (`TOTEM PASS`; no `--auto`, add `--invulnerable`) and its captures (see "Tide Totems") |
 | `--check-evolutions [--check-evolutions-shot=x.png]` | weapon evolutions: one end to end through the real panel and a real chest, then every row measured against its max-level weapon, `EVOLVE PASS/FAIL` (see "Weapon evolutions") |
-| `--check-puzzles`, `--route=puzzle`, `--puzzle-rooms=twin,crates`, `--puzzle-skip`, `--puzzle-shot=x.png [--puzzle-shot-room=N --puzzle-shot-hint --puzzle-shot-door]` | puzzle route: generator, solvers, rules, doors, prizes and skip on paper and in the engine (`PUZZLE PASS`); choose the rooms; make the bot skip; captures (see "Puzzle route") |
+| `--check-puzzles`, `--check-gauntlet[=x.png]`, `--route=puzzle`, `--route=puzzles`, `--puzzle-rooms=trail,crates`, `--puzzle-skip`, `--puzzle-shot=x.png [--puzzle-shot-kind=id --puzzle-shot-room=N --puzzle-shot-hint --puzzle-shot-door]` | puzzle route and Puzzle Gauntlet: every kind and whole maps solved alone on paper and in the engine, doors, prizes and skip (`PUZZLE PASS`); choose the rooms; make the bot skip; captures (see "Puzzle route") |
 | `--check-trade`, `--swap-meet`, `--rest-exit-seconds=N` | swap meet: rules and escrow self-check (`TRADE PASS`), build the stall in single-player (captures), shorten the co-op rest room's countdown (see "Swap meet") |
 | `--coop-host=PORT` / `--coop-join=IP:PORT` with `--auto` | automated co-op session over ENet (direct IP), printing `COOP PASS/FAIL` (see "Online co-op") |
 | `--coop-expect-migration`, `--coop-no-migrate`, `--coop-late-join`, `--coop-expect-late-join`, `--coop-toast-shot=x.png`, `--coop-mark-file=P --coop-mark-at=S` | host migration and late-join checks (see "Host migration and late join") |
@@ -478,73 +478,130 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
 
 ## Puzzle route
 
-`Game/Puzzle/` (`PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`,
-`PuzzleMap*`, `PuzzleRewards`, `PuzzleCheck`), `Game/StageDirector.Puzzle.cs`,
-`Game/Autopilot.Puzzle.cs`, `Net/NetSession.Puzzle.cs`, `UI/PuzzleHud`, `UI/PuzzleMapView`,
-`Meta/ArabicText/ArabicText.UiPuzzle.cs`, `Data/ContentAudit.Puzzle.cs`.
+`Game/Puzzle/` (`PuzzleKind` and the registry, `Kinds/*` one file per room
+kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
+`PuzzleBot`, `PuzzleMap*`, `PuzzleRewards`, `PuzzleCheck`),
+`Game/StageDirector.Puzzle.cs`, `Game/StageDirector.Gauntlet.cs`,
+`Game/Autopilot.Puzzle.cs`, `Net/NetSession.Puzzle.cs`, `UI/PuzzleHud`,
+`UI/PuzzleMapView`, `UI/ResultsScreen.Puzzle.cs`, `UI/MainMenu.Gauntlet.cs`,
+`Meta/GauntletRecord.cs`, `Meta/ArabicText/ArabicText.UiPuzzle*.cs`,
+`Data/ContentAudit.Puzzle.cs`.
 
-- **Flow.** Route `puzzle` (appended last: the saved route is an index)
-  plays Classic's maps; `StageDirector` puts a puzzle map before each:
-  puzzle i -> rest -> map i -> boss portal -> rest -> puzzle i+1 ... The
+- **Flow.** Route `puzzle` (appended after the side routes: the saved route
+  is an index) plays Classic's maps; `StageDirector` puts a puzzle map before
+  each: puzzle i -> rest -> map i -> boss portal -> rest -> puzzle i+1 ... The
   index stays the action map's, so the HUD, refills, boss plan and
   `Stages.ForPhase` see the run they always did. The rest room learned which
   side of a puzzle it is on (`EnterRestRoom(afterPuzzle)`, `RestEnter` carries
   it). Endless ignores the route's puzzles: a loop is about the clock, and a
   puzzle every few minutes of an endless score attack would be filler.
+- **Puzzle Gauntlet** (route `puzzles`, appended last; PUZZLES ONLY on the
+  PLAY page under the puzzle route toggle and in the CO-OP lobby beside it,
+  `Routes.SetGauntlet`): `Routes.GauntletPuzzles` (6) puzzle maps back to back
+  and nothing else. The difficulty climbs with each (the same
+  `PuzzleGen.DifficultyFor` as the route), there are no guards and no prize
+  pedestals (`PuzzlePlan.Gauntlet`), and the vault's EXIT or the SKIP portal
+  leads straight into the next puzzle (no rest rooms). After the last, the run
+  ends (`RunState.Finish(survived: true)`) and the results screen shows the
+  medals as shape tiles (star, diamond, disc, hourglass for a skip) and the
+  best score; `Meta/GauntletRecord` keeps the best on the profile (gold 3,
+  silver 2, bronze 1 per puzzle), on every machine of a team. Its stage list
+  is six maps long only so `_index` is the puzzle's number; no action map is
+  entered. A finished gauntlet is not a won run (no quest, no leaderboard
+  row). In co-op it plays like the route's puzzles (host-authoritative state,
+  everyone in an exit to move on); a client's results include the last medal
+  from the map still standing (`StageDirector.PuzzleMedals`).
 - **The clock is held** on a puzzle map, as in the rest room: thinking must
-  not cost difficulty-curve time, and a 2-4 minute puzzle at full clock would
-  make every later map harder for the puzzle route than for Classic. The
-  puzzle has its own clock (`PuzzleMap.Elapsed`) for medals, gusts, bells,
-  latches and the SKIP portal. Guards are placed by the puzzle
-  (`EnemyManager.SpawnAt`, 2-4 cheap enemies per room on first entry, scaled
-  for the next map); the director stays off.
+  not cost difficulty-curve time. The puzzle has its own clock
+  (`PuzzleMap.Elapsed`) for medals, gusts, bells, braziers and the SKIP portal.
+  Guards are placed by the puzzle (`EnemyManager.SpawnAt`, 2-4 cheap enemies
+  per room on first entry, scaled for the next map); the director stays off.
+- **Room kinds are plug-ins.** A puzzle room is a `RoomPlan` with
+  `Kind = RoomKind.Puzzle` and `Def` = one of the registered `PuzzleKind`s
+  (found by reflection, sorted by id: `PuzzleKinds.All`); start and vault are
+  `RoomKind.Start`/`Reward`. A kind owns everything about its room: its layout
+  object (`RoomPlan.Data`), generation, starting state, host rules (bodies in
+  `HostStep`, asks in `Act`), its solution script (`Solve`, see Checks), its
+  pieces (`Build` with `PieceKit`, `Sync`, `Sounds`), interact offers, its own
+  body handling (`LocalStep`: pushes, gusts), the hint, the HUD line, the bot
+  and its minimap glyph. Ten kinds today:
+  crates (Weighing Room: push crates onto plates, stand on the last),
+  mirrors (Mirror Room: turn mirrors to bring a beam to a crystal),
+  wind (Gust Room: cross gusting rings in the calm to touch plates),
+  runes (Bell Room: strike bells in the order they rang),
+  levers (Lamp Room: levers flip several lamps each; light them all),
+  glide (Ice Hall: push a rune stone that slides until it hits something;
+  stop it on its socket), pipes (Aqueduct Room: stand on pipe tiles and turn
+  them until water runs spout to basin), braziers (Ember Hall: braziers burn
+  for a while once lit; have all of them burning at once: the burn time is
+  fitted to the shortest round, so the order is the puzzle), scales (Counting
+  Room: move numbered weights onto a balance's pans to level it against a
+  counterweight; from difficulty 2 both pans are needed), trail (Lantern Path:
+  light every tile of a patch in one unbroken path from the star tile; a
+  Hamiltonian path, searched with checkerboard and dead-end pruning).
+- **Nothing needs two players.** The twin-plate room (one player per plate)
+  is gone, and `PuzzleKind.MinPlayers` must be 1 (checked). Every rule reads
+  any player's body or ask, so a team can share the work, and a room built
+  for a team is the same room as for one player (the plan no longer depends
+  on the player count; `PuzzleEnter` still carries it, harmlessly).
+- **No repeats.** `PuzzleKinds.Sequence` is a shuffle bag per run seed:
+  every kind once before any returns, and never one of the last four rooms'
+  kinds again. Puzzle i of a run takes the rooms after puzzles 0..i-1
+  (`PuzzleGen.RoomsBefore`), so a run meets every kind before a repeat and a
+  map never holds the same kind twice.
 - **Generated, never authored.** A map is a self-avoiding walk of rooms on a
-  macro grid from the run's seed; each room gets a piece type and a layout
-  drawn per run. A room is kept only when `PuzzleSolver` solves it from its
-  start (a BFS for crates, every on/off combination for mirrors and levers,
-  timing margins for gusts and latches) and the way between its doors stays
-  open. Difficulty is the puzzle's number plus a step for Hard and Tempest:
-  more rooms, crates, pushes, mirrors, decoys, bells and levers, shorter calms
-  and latches. A fixed puzzle would be solved once and skipped forever after.
+  macro grid from the run's seed; each kind lays its room out per run and
+  keeps only layouts its own solver solves (crates: BFS over player and crate
+  cells; glide: BFS over stone cell and the player's side; mirrors, levers:
+  every on/off combination; scales: every placement; pipes: a laid channel
+  plus a flood; braziers: every order; trail: depth-first search), with the
+  way between the doors open; a draw that fails is redrawn, then a fixed
+  fallback is used. Difficulty is the puzzle's number plus a step for Hard
+  and Tempest: more rooms, and each kind's own knobs. Medal times are the sum
+  of each room's `ParSeconds`.
 - **Never block a player.** The SKIP portal opens at 150 s in the first
   unsolved room (lowest prize); hints point at the next step from the solver
-  run on the room as it stands; a crate room has a reset bell; a twin room
-  latches its plates for a lone player, or after 45 s if a partner wanders
-  off; the bot takes the skip if it is still stuck 25 s after it opened, so
-  `--auto` never hangs.
+  run on the room as it stands; rooms where a piece can get stuck (crates,
+  stone, lantern path) have a reset post; the bot takes the skip if it is
+  still stuck 25 s after it opened, so `--auto` never hangs.
 - **Rewards feed the fight.** The medal (gold: fast and no hint; silver: a
   slower time or one hint; bronze) sets the pedestals in the vault: an epic,
   rare or plain chest roll, the catalyst a held weapon evolves with, a weapon
   pick, or rerolls, plus bonus rerolls. Prizes are rolled per machine for that
   player's build; co-op shares the medal, never the prize. An unclaimed prize
   is taken for you on the way out.
-- **State is one int array** (`PuzzleState`): crates' cells, mirror and
-  lever bits, bells struck, plates held, latches, rooms solved, hints, tier.
-  The host runs the rules (plates from every avatar's position, asks from
-  clients: push, turn, pull, strike, echo, reset, hint) and sends changed
-  slots as pairs, reliably, so a press and a release never arrive swapped;
-  clients draw from the array and hear sounds from its diffs. A late joiner
-  and a survivor reconnecting to a new host get the array whole after the
-  world snapshot; a client that becomes the host already has it. The twin
-  variant depends on the player count, which every machine takes from the
-  roster at the start (the host's count wins on a rebuild).
+- **State is one int array** (`PuzzleState`): globals (finished, tier, hints,
+  hint room) and twelve slots per room: solved, entered, entered at, and the
+  ones its kind owns (`RA`-`RD`, `RX`, `RY`, `RPressed`, `RResets`, `RFails`;
+  each kind's file says what it keeps there). The host runs the rules (bodies
+  from every avatar's position, asks from clients: push, turn, pull, strike,
+  use, reset, hint) and sends changed slots as pairs, reliably, so a press
+  and a release never arrive swapped; clients draw from the array and hear
+  sounds from its diffs. A late joiner and a survivor reconnecting to a new
+  host get the array whole after the world snapshot; a client that becomes
+  the host already has it. New kinds ask with `PuzzleAction.Use` (a = piece,
+  b = argument), so they never need a new message.
 - **Not colour alone.** Plates sink, lit lamps stand tall, gust arrows rise,
   mirrors show their angle, bells carry carved symbols and their own note,
-  twin plates are lettered, medals are a star, diamond, disc or square.
+  the stone and its socket share a rune, water shows as a channel on the
+  pipes, flames shrink as braziers burn down, weights carry numbers and the
+  balance tilts, lit lantern tiles rise, medals are a star, diamond, disc or
+  square.
 - **Rooms are closed halls** (`PuzzleMap.Build.cs`). The 9 x 9 puzzle grid
-  (2 m cells, what the solver and timing checks are tuned for) is inlaid in
+  (2 m cells, what the solvers and timing checks are tuned for) is inlaid in
   the middle of a 30 m hall (`RoomPlan.Half`), so the open strip round it
   holds the props, the guards' spawn corners and the SKIP portal. Walls are
   14 m to a solid ceiling; the exit doorway has a door slab that slides up
   into the lintel when the room is solved, onto an 8 m corridor to the next
-  room's open entrance (`RoomPlan.Pitch` = 40 m). Each room is themed by its
-  piece type (colours, trim, Kenney props or primitives: crates and barrels,
-  crystals, banners, gears, statues, chests). Lights: four wall torches and a
-  chandelier per room plus one per corridor, no shadows (three per room on
-  the Low preset), and a dim steep skylight that keeps the pieces' shadows
-  (the graphics page's shadow setting applies); walls and ceiling cast none.
-  The static shell is merged into one mesh per material per room
-  (`Batch`, `SurfaceTool.AppendFrom`).
+  room's open entrance (`RoomPlan.Pitch` = 40 m). Each kind picks a
+  `HallStyle` (colours, drawn surfaces, Kenney props or primitives): workshop,
+  observatory, gallery, temple, foundry, frost, aqueduct, ember, counting
+  house, garden, plus plain for the antechamber and vault. Lights: four wall
+  torches and a chandelier per room plus one per corridor, no shadows (three
+  per room on the Low preset), and a dim steep skylight that keeps the
+  pieces' shadows (the graphics page's shadow setting applies); walls and
+  ceiling cast none. The static shell is merged into one mesh per material
+  per room (`Batch`, `SurfaceTool.AppendFrom`).
 - **Surfaces** (`HallSurfaces.cs`). Floors, walls, dado, ceiling, corridors,
   the grid inlay and the door slabs wear drawn textures: flagstone, ashlar,
   brick, timber boards, iron slabs, plaster and marble, each a tileable
@@ -560,8 +617,8 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   (`SyncVisibility`), so in co-op each machine shows rooms near its own
   player. Walls are opaque and the background is black: no other room and no
   outside is ever in view. The minimap and Tab map draw the rooms the team
-  has entered, corridors behind open doors and shut doors as bars
-  (`UI/PuzzleMapView`); there is no fog in a puzzle map.
+  has entered, corridors behind open doors, shut doors as bars and each
+  room's kind glyph (`UI/PuzzleMapView`); there is no fog in a puzzle map.
 - **Camera.** Walls, door slabs, corridors, ceiling and beams are world
   geometry (layer 1), so the camera's spring arm (sphere cast) pulls in at
   them instead of looking through; indoors the zoom is capped at 12 m
@@ -571,19 +628,110 @@ use Classic and no challenges unless `--route=<id|a,b,c>` or
   player does not yank the view into their head.
 - **Guards** spawn in the hall's corners farthest from the entrance, collide
   with the pieces (`Enemy.ExtraWorldMask` = the pieces layer while a puzzle
-  stands; they used to walk through them), and steer round long runs of
-  pillars registered as `MapBlockers`. The bot walks the grid to the doorway
-  cell, lines up with the doorway and goes straight through the corridor.
-- **Checks.** `--check-puzzles` generates 360 maps (10 seeds, 3 tiers, 6
-  puzzle numbers, 1-2 players), solves every room from scratch and plays the
-  answer through the rules, checks doors, medals and the skip, then enters two
-  puzzles in the engine: one solved room by room through the real asks and
-  the player's body on the plates (doors must open, a prize must change the
-  build, the exit leads to the rest room), one waited out to its SKIP portal.
-  `tests/coop.ps1 -Only coop-puzzle`: the guest presses a plate and the host
-  sees it, a twin room solved by both, a hint asked by the guest reaches
+  stands), and steer round long runs of pillars registered as `MapBlockers`.
+  The bot walks the grid to the doorway cell, lines up with the doorway and
+  goes straight through the corridor; in a room it follows the kind's
+  `Bot` (in co-op only the lowest slot works rooms whose pieces toggle; the
+  others hold back in the strip by the entrance).
+- **Checks.** `--check-puzzles` proves, on paper, every kind for 40 seeds at
+  every difficulty (one player, the same room twice, a hint inside the room,
+  solved by its own script driven with ONE body through the real rules:
+  `PuzzleCheck.PaperDriver`), then 180 whole maps (10 seeds, 3 tiers, 6
+  puzzle numbers): the same map twice and for any team size, the right room
+  count, no kind twice in a map, every room solved alone, medals and the
+  skip, and the shuffle bag (every kind once per bag, no room repeating the
+  one before, a run's first rooms are every kind). Then in the engine every
+  kind is entered (two maps) and solved through the real map by the same
+  scripts (`LiveDriver`: the player teleported onto plates and tiles, real
+  asks, real time); a hint must show, doors must open, a prize must change the
+  build, the exit leads to the rest room; a third map is waited out to its
+  SKIP portal. `tests/coop.ps1 -Only coop-puzzle`: the guest solves a lantern
+  path alone by its body while the host holds back and sees the tiles light,
+  the host solves a lamp room alone, a hint asked by the guest reaches
   everyone, a third player joins mid-puzzle and gets the whole state, and the
-  team leaves together.
+  team leaves together. Captures: `--puzzle-shot=x.png --puzzle-shot-kind=<id>`
+  puts that kind in room 1. `--check-gauntlet[=x.png]` with `--route=puzzles
+  --auto` lets the bot play a whole Puzzle Gauntlet and checks six medals, no
+  action map, no guards, and the results screen (`GAUNTLET PASS`).
+
+### How to add a puzzle
+
+One new file in `scripts/Game/Puzzle/Kinds/` and its Arabic lines; nothing
+else is edited. The class is found by `PuzzleKinds` (reflection), joins the
+shuffle bag, the audit, `--check-puzzles` (paper and live), `--puzzle-rooms=`
+and `--puzzle-shot-kind=`.
+
+```csharp
+namespace Wavebreak.Game.Puzzle.Kinds;
+
+/// <summary>What the room is. State: RA ... (say which slots it uses).</summary>
+public sealed class GongKind : PuzzleKind
+{
+    public sealed class Data { public Vector2[] Gongs = Array.Empty<Vector2>(); public int Answer; }
+    private sealed class View { public readonly List<Node3D> Gongs = new(); }
+
+    public override string Id => "gongs";                       // stable, lowercase
+    public override string Title => "Gong Room";                 // + Arabic for every string
+    public override string Objective => "Strike the gongs so that ...";
+    public override string Hint => "Hint: the marked gong comes next.";
+    public override IEnumerable<string> Strings => new[] { "Strike the gong" };
+    public override HallStyle Style => HallStyle.Temple;
+
+    public override void Generate(RoomPlan room, Rng rng, int d)
+    {
+        var l = new Data();
+        room.Data = l;
+        // Lay out from rng and d; keep only what your solver solves alone and
+        // what keeps PuzzleSolver.DoorsConnected; redraw, then a fixed fallback.
+        room.Spots.AddRange(l.Gongs);            // off-grid pieces: the bot walks round them
+    }
+
+    public override bool Act(PuzzleState st, RoomPlan room, int r, PuzzleAction action, int a, int b, float now)
+    {
+        if (action != PuzzleAction.Use) return false;
+        st.SetR(room, PuzzleState.RA, st.Get(room, PuzzleState.RA) ^ (1 << a));
+        if (/* solved */ false) st.MarkSolved(r, now);
+        return true;
+    }
+
+    public override async Task<string?> Solve(IPuzzleDriver d, RoomPlan room, int r)
+    {
+        // The answer from the current state, played as ONE player would.
+        await d.Ask(PuzzleAction.Use, 0);
+        return null;                              // or why it could not
+    }
+
+    public override object Build(PieceKit kit, RoomPlan room) { var v = new View(); /* kit.Put, kit.Post */ return v; }
+    public override void Sync(PieceKit kit, object view, RoomPlan room, PuzzleState st, float t, float dt, bool changed) { }
+    public override void Offer(PuzzleMap map, RoomPlan room, FocusOffer offer) { /* offer(PuzzleAction.Use, i, at, "Strike the gong") */ }
+    public override PuzzleHint? HintAt(PuzzleState st, RoomPlan room, Vector3? me, float now) => new PuzzleHint(room.Centre, "!");
+    public override Vector3 Bot(PuzzleBot bot, RoomPlan room, Vector3 me) => Vector3.Zero; // bot.Use(room, me, at, PuzzleAction.Use, i)
+}
+```
+
+Optional overrides: `InitState` (starting slots), `OnEnter`, `HostStep`
+(bodies on plates or tiles), `OnHint`, `Sounds`, `LocalStep` (this machine's
+own body: pushing, gusts), `Status` (the HUD line), `Glyph` (minimap),
+`ParSeconds` (medal time), `BotLeaderOnly`, `InBag`. Rules: `MinPlayers`
+stays 1; keep state in the room's slots (they are what co-op sends); use
+`PuzzleAction.Use` for asks; say things with shapes, not colour alone.
+
+Testing a new kind:
+
+- `--check-puzzles --invulnerable --seed=1` (prints `PUZZLE PASS`): your kind
+  is generated for 40 seeds at every difficulty and solved by your `Solve`
+  script with one body on paper, appears in generated maps, and is solved live
+  in the engine with a hint shown and its door opening.
+- `--puzzle-shot=x.png --puzzle-shot-kind=gongs [--puzzle-shot-hint]`: a
+  capture of the room (with the hint marker); read it and check it reads
+  without colour.
+- `--route=puzzle --auto --invulnerable --puzzle-rooms=gongs` (or
+  `--route=puzzles --auto --check-gauntlet`): the bot must clear it with
+  `Bot`; add `--puzzle-bot-log` to see what it does.
+- `--validate-content --lang=en` and `--lang=ar` (`CONTENT AUDIT PASS`): every
+  string has Arabic (add them to `Meta/ArabicText/`), the kind needs one player
+  and is solvable.
+- `tests/coop.ps1 -Only coop-puzzle` if it reads bodies or adds asks.
 
 ## Quest book, skin recolouring, codex tabs
 
@@ -1079,7 +1227,7 @@ responsive and cannot desync where it matters:
 | Phase flow (waves → boss → portal → next map, win, Final Swarm) | host | Reliable `Phase`, `Boss` and `BossDown` messages replay the steps. A client's `StageDirector.Tick` only guards falls. The run clock is synced twice a second |
 | Rest room (entering, leaving, the CONTINUE count, the boss portal's countdown) | host | Reliable `RestEnter` when the host takes the boss portal; leaving is the usual `Phase` message. `RestStatus` (in the portal / total / countdown) and `PortalTimer` stream at 4 and 2 Hz, unreliable. Each machine builds its own room, revives and heals its own player, and shops with its own gold |
 | Trades at the swap meet | host decides; each side moves only its own goods | The host validates both offers and runs the escrow; each machine removes and adds only its own player's gold, items and tomes (see "Swap meet") |
-| Puzzle maps (plates, crates, mirrors, levers, bells, latches, doors, medal, exits) | host decides; each player claims their own prize | Clients ask (push, turn, pull, strike, hint) and draw the host's state array, sent as changed slots (see "Puzzle route") |
+| Puzzle maps (every room kind, doors, medal, exits) | host decides; each player claims their own prize | Clients ask (push, turn, pull, strike, use, reset, hint) and draw the host's state array, sent as changed slots (see "Puzzle route") |
 | Tide Totems | host places; first to ask wakes it | `E` sends a request; the host latches every networked orb and coin to the asker and tells everyone the totem sleeps (see "Tide Totems") |
 | Shrines, merchant, microwave, pots, secrets | each player | Each player has their own set, built from the shared seed, and their own rewards. Pot drops are personal (`Pickup.Personal`) |
 
