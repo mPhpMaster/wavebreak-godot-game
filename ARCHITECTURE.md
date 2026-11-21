@@ -2169,3 +2169,13 @@ visible in the tree (burrowed), so no health bar floats over empty ground.
 **Imported model turn.** `ModelSpec.SceneRoll` joins pitch and yaw;
 `ModelSpec.SceneBasis` (yaw * roll * pitch) is used for the visual and its
 oriented bounds. The Reef Leviathan uses measured angles.
+
+## 1.7.0
+
+**Hard puzzles and boons.** Every puzzle kind was rebuilt to be harder (see
+the kind list above and `scripts/Game/Puzzle/Kinds/`). The difficulty curve is
+0, 2, 3, 4, 5, 5, puzzle maps hold three to five rooms, and par time is the
+kind's ParSeconds times (1 + d / 3). `PuzzleBoons` gives every player a boon
+for each solved room, chosen from the run seed and the room's place in the run,
+so no new message is needed. `Coop.Protocol` moved to `wavebreak-coop-18`
+because the same seed now builds different rooms than 1.6.0.

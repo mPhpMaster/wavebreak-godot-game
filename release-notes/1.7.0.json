@@ -1,0 +1,13 @@
+{
+  "Version": "1.7.0",
+  "Title": "Hard puzzles",
+  "Changes": [
+    "Every puzzle room is much harder: Ember Hall chains its braziers under a fuse, the Gust Room wants numbered plates in order between gusts, the Mirror Room has two lamps, splitters and linked mirrors, and the Aqueduct Room has several spouts, leaks and bolted pipes.",
+    "Ice Hall, Weighing Room and Lamp Room are tighter: numbered sockets and cracking ice, iron crates and ordered plates, padlocked levers and a limit on pulls.",
+    "Bell Room, Counting Room and Lantern Path have clue tablets, limited moves with a changing counterweight, fences and a stall timer.",
+    "Difficulty climbs faster, and puzzle maps have three to five rooms.",
+    "Each solved puzzle gives the whole team a boon: faster feet, an extra air jump, a higher jump, a quicker dash, more health with a heal, or armour against spikes and guards. Boons stack until the puzzle map (or the gauntlet) ends.",
+    "Puzzle signs hang straight on the wall, so Arabic letters are no longer cut.",
+    "Co-op protocol 18: all players must update together."
+  ]
+}
