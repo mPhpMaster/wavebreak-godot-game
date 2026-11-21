@@ -580,15 +580,17 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
   body handling (`LocalStep`: pushes, gusts), the hint, the HUD line, the bot
   and its minimap glyph. Ten kinds today:
   crates (Weighing Room: push crates onto plates, stand on the last),
-  mirrors (Mirror Room: turn mirrors to bring a beam to a crystal),
-  wind (Gust Room: cross gusting rings in the calm to touch plates),
+  mirrors (Mirror Room: turn mirrors, splitters and linked pairs so every
+  crystal gets its own lamp's beam),
+  wind (Gust Room: numbered plates in order, across rings of wind on their
+  own calm/gust beats),
   runes (Bell Room: strike bells in the order they rang),
   levers (Lamp Room: levers flip several lamps each; light them all),
   glide (Ice Hall: push a rune stone that slides until it hits something;
   stop it on its socket), pipes (Aqueduct Room: stand on pipe tiles and turn
-  them until water runs spout to basin), braziers (Ember Hall: braziers burn
-  for a while once lit; have all of them burning at once: the burn time is
-  fitted to the shortest round, so the order is the puzzle), scales (Counting
+  them until water from every spout fills every basin without a leak),
+  braziers (Ember Hall: "lights out" on chained braziers, matched to star
+  and cross plaques, under a fuse), scales (Counting
   Room: move numbered weights onto a balance's pans to level it against a
   counterweight; from difficulty 2 both pans are needed), trail (Lantern Path:
   light every tile of a patch in one unbroken path from the star tile; a
@@ -606,9 +608,12 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
 - **Generated, never authored.** A map is a self-avoiding walk of rooms on a
   macro grid from the run's seed; each kind lays its room out per run and
   keeps only layouts its own solver solves (crates: BFS over player and crate
-  cells; glide: BFS over stone cell and the player's side; mirrors, levers:
-  every on/off combination; scales: every placement; pipes: a laid channel
-  plus a flood; braziers: every order; trail: depth-first search), with the
+  cells; glide: BFS over stone cell and the player's side; mirrors: every
+  combination of link groups, fewest first; levers: every on/off
+  combination; scales: every placement; pipes: a laid tree of channels plus
+  a flood with leaks; braziers: every subset, fewest presses, and a
+  Held-Karp walk for the fuse; wind: an exact walk on the ring cycles;
+  trail: depth-first search), with the
   way between the doors open; a draw that fails is redrawn, then a fixed
   fallback is used. Difficulty is the puzzle's number plus a step for Hard
   and Tempest: more rooms, and each kind's own knobs. Medal times are the sum
@@ -638,7 +643,11 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
 - **Not colour alone.** Plates sink, lit lamps stand tall, gust arrows rise,
   mirrors show their angle, bells carry carved symbols and their own note,
   the stone and its socket share a rune, water shows as a channel on the
-  pipes, flames shrink as braziers burn down, weights carry numbers and the
+  pipes and a leak as a spray, bolted pipes wear an iron frame, chained
+  pieces show a bar with an arrowhead, brazier plaques are a star or a
+  cross, crystals match their lamp by shape (eight or four sides, a disc or
+  a diamond on the lamp), linked mirrors share a floor rune, Gust Room
+  plates carry their number, weights carry numbers and the
   balance tilts, lit lantern tiles rise, medals are a star, diamond, disc or
   square.
 - **Rooms are closed halls** (`PuzzleMap.Build.cs`). The 9 x 9 puzzle grid
@@ -707,6 +716,75 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
   puts that kind in room 1. `--check-gauntlet[=x.png]` with `--route=puzzles
   --auto` lets the bot play a whole Puzzle Gauntlet and checks six medals, no
   action map, no guards, and the results screen (`GAUNTLET PASS`).
+
+### Harder rooms: Ember Hall, Gust Room, Mirror Room, Aqueduct Room
+
+The first versions of these four were one-step rooms (light everything, run
+in during the calm, flip until the beam lands, turn until water flows). Each
+now has interacting rules, and every knob climbs with the difficulty d (0-5).
+All four stay solvable from any state by one player (`--check-puzzles` runs
+each `Solve` for 40 seeds at every d), and co-op is unchanged: the same
+shared slots, host rules and `PuzzleAction.Use`/`Mirror` asks.
+
+- **Ember Hall** (`BraziersKind`). Iron chains on the floor join braziers;
+  using one flips it and every brazier its chains lead to (a plain chain both
+  ways, an arrowhead one way). Plaques say how each must end: star burns,
+  cross dark. Pressing twice undoes, so the answer is a set; the solver
+  tries every subset (a 2^n table of what each set flips, fewest presses
+  first). From d2 a fuse starts at the first press; when it runs out
+  (`HostStep`) the hall returns to its start pattern, so a player can
+  experiment, then must play the planned set in one go. The fuse is fitted to
+  the shortest walk through the answer set (Held-Karp over at most ten
+  braziers, starting anywhere since the fuse starts at the first press):
+  `best * (1.75 - 0.07 d) + 3` s. Scaling: braziers 5-10, fewest presses
+  2-7, chains to one or two of the three nearest (one-way 30 % from d2, 50 %
+  from d4), crosses (one at d3, two from d4). State: RA lit bits, RB fuse
+  end, RFails fuses out. Hint and bot: the next brazier of the answer set in
+  its shortest order (from the player while the fuse burns).
+- **Gust Room** (`WindKind`). Numbered plates (3-7), stepped on in order;
+  a plate out of order resets the count to 0. Rings of wind (2-4) each hold
+  one plate on an island and run their own calm/gust cycle (calms
+  2.7-0.28 d s, gusts longer with d). From d2 a body in a ring's band while
+  it gusts resets the count (host check); from d3 a limit runs from plate 1
+  (`RB`), fitted to the slowest exact walk over every starting phase times
+  1.55 / 1.4 / 1.3 (d3 / d4 / d5) plus 2.5 s. The order is a shuffle that must
+  walk well over the shortest tour (zigzag), and each step's straight line
+  must clear other rings and plates, so a careful player is never forced
+  across a plate. `Solve` walks exactly the timed model (wait at the island
+  for a calm long enough to cross, walk, wait at the next ring's edge).
+  State: RA count, RB limit end, RPressed plates under bodies, RFails resets.
+  `BotLeaderOnly` is now true (two bots would tread on each other's plates).
+- **Mirror Room** (`MirrorsKind`). Lamps (one, two from d3: a disc lamp and a
+  diamond lamp, gold and blue beams) light crystals of their own shape
+  (eight-sided and four-sided); a crystal ignores the other beam, and either
+  stops at it. Generation lays each lamp's path (three turns), turns one of
+  its mirrors into a glass splitter for each extra crystal (light goes on
+  straight AND turns) and runs the straight branch to a crystal of its own,
+  then adds pillars and decoys off every beam, and links pairs of mirrors
+  into groups that turn together (the same floor rune and a bar between).
+  The start is the laid answer with random groups turned, so it is always
+  reachable. Crystals 1, 1, 2, 2, 3, 4; links 0, 0, 0, 1, 2, 3; fewest turns
+  2-5. Solver: group subsets in order of size (fewest first), with an
+  allocation-free tracer and a cache per state.
+- **Aqueduct Room** (`PipesKind`). Squares 5, 5, 6, 6, 7, 7; spouts 1-2,
+  basins 1-3. Solved when every basin fills and no wet pipe leaks (an arm
+  open onto a tile that does not open back, or off the square except at a
+  spout or basin). Generation lays a tree joining every terminal (a winding
+  walk between the first two, each other walks in to join it; tees at the
+  joins), so the leak-free answer exists; spare pieces get more tees with d.
+  Bolted tiles (0, 2, 3, 4, 5, 6: half on the tree, already right; half
+  beside it) never turn; chains (0, 0, 1, 2, 3, 4) make a tile also turn one
+  near it (one way, no tile in two chains), so the solver, hint and bot set
+  chained tiles first. 7 x 7 needs 49 tiles: RA-RD hold fifteen each.
+
+Medal times: `ParSeconds` is 48, 45, 42 and 55 s for these four (one value
+per kind, as `PuzzleGen` sums it; a par per difficulty would need a hook
+there).
+
+Doorway signs (`PuzzleMap.BuildSign`) are billboards: they now hang at
+least half their width out from the wall, because seen from the side a sign
+1.2 m out swung its far end into the wall and only a sliver of the room
+number showed ("4/5" read as a stray letter in Ember Hall).
 
 ### How to add a puzzle
 
