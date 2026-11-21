@@ -168,5 +168,6 @@ public static class PuzzleText
             yield return RewardName(r);
             yield return RewardBlurb(r);
         }
+        foreach (string s in PuzzleBoons.Strings()) yield return s;
     }
 }

@@ -152,6 +152,8 @@ public sealed partial class Main : Node3D
             _ = DistinctShowcase.Dps(this);          // --distinct-dps (balance table)
         else if (Puzzle.PuzzleCheck.Requested)
             _ = Puzzle.PuzzleCheck.Run(this);        // --check-puzzles (puzzle route)
+        else if (Puzzle.PuzzleBoonCheck.Requested)
+            _ = Puzzle.PuzzleBoonCheck.Run(this);    // --check-puzzle-boons[=shot.png] (a power-up per solved room)
         else if (Puzzle.GauntletCheck.Requested)
             _ = Puzzle.GauntletCheck.Run(this);      // --check-gauntlet (Puzzle Gauntlet, with --route=puzzles --auto)
         else if (Puzzle.PuzzleCheck.ShotPath is { } puzzleShot)

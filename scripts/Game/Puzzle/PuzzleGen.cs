@@ -23,9 +23,11 @@ namespace Wavebreak.Game.Puzzle;
 /// connected, redrawing and finally falling back to a fixed layout that
 /// passes the same checks.
 ///
-/// <b>Difficulty</b> is the puzzle's number in the run plus a step for Hard
-/// and up (<see cref="DifficultyFor"/>). It adds rooms, and each kind reads
-/// it for its own knobs (crates, mirrors, bells, tiles, weights...).
+/// <b>Difficulty</b> (0 to <see cref="MaxDifficulty"/>) climbs steeply with
+/// the puzzle's number in the run, plus a step for Hard and up
+/// (<see cref="DifficultyFor"/>). It adds rooms, lengthens the medal times
+/// (<see cref="ParFor"/>) and each kind reads it for its own knobs (crates,
+/// mirrors, clues, tiles, weights, timers...).
 /// </summary>
 public static class PuzzleGen
 {
@@ -42,13 +44,45 @@ public static class PuzzleGen
         }
     }
 
-    /// <summary>The puzzle's difficulty: its place in the run, plus one on
-    /// Hard and Nightmare and two from Tempest up.</summary>
-    public static int DifficultyFor(int puzzleIndex, int tierIndex)
-        => Math.Clamp(puzzleIndex + (tierIndex >= 1 ? 1 : 0) + (tierIndex >= 3 ? 1 : 0), 0, MaxDifficulty);
+    private static int? _forcedDifficulty;
+    private static bool _forcedRead;
 
-    /// <summary>Puzzle rooms in a map of this difficulty: three, then four, then five.</summary>
-    public static int RoomsFor(int difficulty) => difficulty <= 1 ? 3 : difficulty <= 3 ? 4 : 5;
+    /// <summary>--puzzle-difficulty=N: every puzzle map at difficulty N
+    /// (captures and tests of the top settings).</summary>
+    public static int? ForcedDifficulty
+    {
+        get
+        {
+            if (_forcedRead) return _forcedDifficulty;
+            _forcedRead = true;
+            foreach (string a in OS.GetCmdlineUserArgs())
+                if (a.StartsWith("--puzzle-difficulty=") && int.TryParse(a["--puzzle-difficulty=".Length..], out int d))
+                    _forcedDifficulty = Math.Clamp(d, 0, MaxDifficulty);
+            return _forcedDifficulty;
+        }
+    }
+
+    /// <summary>The puzzle's difficulty. It climbs two steps from the first
+    /// puzzle to the second and one per puzzle after that, plus one on Hard
+    /// and Nightmare and two from Tempest up: on Normal 0, 2, 3, 4, 5, 5, so
+    /// the Puzzle Gauntlet's last two maps (and everything from the third
+    /// on Tempest) play at the top setting. Only the very first puzzle of a
+    /// Normal run is the approachable d = 0.</summary>
+    public static int DifficultyFor(int puzzleIndex, int tierIndex)
+    {
+        if (ForcedDifficulty is { } forced) return forced;
+        int i = Math.Max(0, puzzleIndex);
+        return Math.Clamp(i + (i > 0 ? 1 : 0) + (tierIndex >= 1 ? 1 : 0) + (tierIndex >= 3 ? 1 : 0), 0, MaxDifficulty);
+    }
+
+    /// <summary>Puzzle rooms in a map of this difficulty: three at d = 0,
+    /// four at 1 and 2, five from 3 up.</summary>
+    public static int RoomsFor(int difficulty) => difficulty <= 0 ? 3 : difficulty <= 2 ? 4 : 5;
+
+    /// <summary>A room's par when its kind did not set one: the kind's base
+    /// par, a third longer per difficulty step (2.67 times at the top).</summary>
+    public static float ParFor(RoomPlan room, int difficulty)
+        => room.ParSeconds > 0f ? room.ParSeconds : (room.Def?.ParSeconds ?? 22f) * (1f + difficulty / 3f);
 
     private static ulong SeedFor(ulong runSeed, int puzzleIndex) => runSeed ^ 0x9A22_1E00UL ^ ((ulong)(puzzleIndex + 1) * 0x9E3779B97F4A7C15UL);
 
@@ -82,6 +116,8 @@ public static class PuzzleGen
         var plan = new PuzzlePlan
         {
             Seed = seed,
+            RunSeed = runSeed,
+            BagOffset = Math.Max(0, bagOffset),
             PuzzleIndex = puzzleIndex,
             Difficulty = Math.Clamp(difficulty, 0, MaxDifficulty),
             Players = Math.Max(1, players),
@@ -116,10 +152,16 @@ public static class PuzzleGen
             plan.Rooms.Add(room);
         }
         plan.StateLength = PuzzleState.Globals + plan.Rooms.Count * PuzzleState.PerRoom;
+        // Medals: the rooms' pars plus the walk (a corridor and a room's
+        // width each); silver allows about twice the thinking. The SKIP
+        // portal waits longer on a long map, so a team at work on a hard one
+        // is not offered the way out after a few rooms' worth of time, but
+        // never more than five minutes.
         float par = 0f;
-        foreach (RoomPlan r in plan.Rooms) if (r.Def is { } k) par += k.ParSeconds;
-        plan.GoldSeconds = par + 12f;
-        plan.SilverSeconds = par * (40f / 22f) + 20f;
+        foreach (RoomPlan r in plan.Rooms) if (r.Def is not null) par += ParFor(r, d);
+        plan.GoldSeconds = Mathf.Round(par + 10f + 5f * plan.PuzzleRooms);
+        plan.SilverSeconds = Mathf.Round(par * 1.9f + 30f + 5f * plan.PuzzleRooms);
+        plan.SkipSeconds = Mathf.Clamp(Mathf.Round(plan.GoldSeconds * 0.8f), PuzzleState.SkipSeconds, 300f);
         return plan;
     }
 

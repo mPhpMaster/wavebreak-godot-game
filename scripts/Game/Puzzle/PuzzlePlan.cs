@@ -76,6 +76,13 @@ public sealed class RoomPlan
     /// <summary>Enemies the host sends in when the team first enters.</summary>
     public int Enemies;
 
+    /// <summary>Seconds a quick, hint-free solve of this room takes, set by
+    /// the kind's <see cref="PuzzleKind.Generate"/> when it knows (it saw the
+    /// layout and the difficulty); 0 leaves it to <see cref="PuzzleGen"/>,
+    /// which scales the kind's <see cref="PuzzleKind.ParSeconds"/> with the
+    /// difficulty.</summary>
+    public float ParSeconds;
+
     /// <summary>Room centre on the floor, world space.</summary>
     public Vector3 Centre => new(MacroX * Pitch, 0f, MacroZ * Pitch);
 
@@ -166,6 +173,13 @@ public sealed class RoomPlan
 public sealed class PuzzlePlan
 {
     public ulong Seed;
+    /// <summary>The run's seed (<see cref="Seed"/> is derived from it and the
+    /// puzzle's number): the puzzle boons read it.</summary>
+    public ulong RunSeed;
+    /// <summary>Puzzle rooms the run met before this map
+    /// (<see cref="PuzzleGen.RoomsBefore"/>): where its rooms start in the
+    /// run's shuffle bag and in its line of puzzle boons.</summary>
+    public int BagOffset;
     public int PuzzleIndex;
     public int Difficulty;
     public int Players;
