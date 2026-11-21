@@ -76,13 +76,13 @@ and the Tab map show the rooms you have found:
 | Room | What to do |
 |---|---|
 | Weighing Room | Walk into crates to push them onto pressure plates; stand on the last plate yourself. A bell resets the crates |
-| Mirror Room | Turn mirrors (E) until the light beam reaches the crystal |
-| Gust Room | Plates sit inside rings of gusting wind: run in while it is calm |
+| Mirror Room | Turn mirrors (E) so every crystal is lit by the lamp of its shape (disc lamp: eight-sided crystals; diamond lamp: four-sided). Glass splitters pass light straight on and turn it too; mirrors marked with the same floor rune turn together. Harder rooms add a second lamp, up to four crystals, more decoy mirrors, splitters and links |
+| Gust Room | Step on the numbered plates in order (3 to 7); a plate out of order sends you back to 1. Some sit on islands in rings of wind, each ring on its own calm/gust beat: cross while its arrows lie flat. From the third room a gust that catches you in a ring also resets the count, and later a time limit runs from plate 1 |
 | Bell Room | Bells ring an order (each has a carved symbol and its own note); strike them in that order. The centre bell rings it again |
 | Lamp Room | Each lever flips several lamps; light them all (lit lamps stand tall) |
 | Ice Hall | Push the rune stone: on the ice it slides until something stops it. Stop it on the socket with its rune. A post resets the stone |
-| Aqueduct Room | Stand on a pipe tile and press E to turn it; line the pipes up so the water runs from the spout to the basin |
-| Ember Hall | Light braziers (E); each burns for a while, its flame shrinking. Have them all burning at once: pick the shortest round |
+| Aqueduct Room | Stand on a pipe tile and press E to turn it. Fill every basin from the spouts without a single leak (a wet pipe open to nothing sprays). Squares grow from 5 x 5 to 7 x 7 with up to two spouts and three basins; bolted tiles never turn, and a chained tile also turns the tile its chain's arrow points at |
+| Ember Hall | Using a brazier (E) lights or douses it and every brazier its floor chains lead to (an arrowhead: one way only). Make each match its plaque: a star burns, a cross stays dark. From the third room a fuse lit by your first press puts everything back as it began when it runs out: plan the set, then play it in one go |
 | Counting Room | Press a pedestal to move its numbered weight to the left pan, the right pan, or back; level the balance against its counterweight |
 | Lantern Path | Start on the star tile, then step onto tiles next to the last one lit; light every tile in one unbroken path. A post starts over |
 

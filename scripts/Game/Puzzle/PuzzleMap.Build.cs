@@ -476,7 +476,12 @@ public sealed partial class PuzzleMap
         // Over the exit in the start room (the way you face on arrival), else
         // over the entrance, read from inside the room.
         int side = room.Kind == RoomKind.Start ? room.ExitSide : room.EntrySide;
-        Vector3 at = room.Centre + new Vector3(RoomPlan.Dx[side], 0f, RoomPlan.Dz[side]) * (RoomPlan.Half - 1.2f) + Vector3.Up * (DoorHeight + 2.2f);
+        // The sign is a billboard: seen from the side it turns to face the
+        // camera, so it hangs at least half its width out from the wall, or its
+        // far end (the room number) sinks into the wall and only a sliver of a
+        // glyph shows ("4/5" read as a stray letter).
+        float halfWidth = text.Length * 48 * 0.011f * 0.3f;
+        Vector3 at = room.Centre + new Vector3(RoomPlan.Dx[side], 0f, RoomPlan.Dz[side]) * (RoomPlan.Half - Mathf.Max(1.2f, halfWidth + 0.5f)) + Vector3.Up * (DoorHeight + 2.2f);
         Put(new Label3D
         {
             Name = $"Sign{i}",
