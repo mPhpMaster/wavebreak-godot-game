@@ -75,12 +75,12 @@ and the Tab map show the rooms you have found:
 
 | Room | What to do |
 |---|---|
-| Weighing Room | Walk into crates to push them onto pressure plates; stand on the last plate yourself. A bell resets the crates |
+| Weighing Room | A tight crate-pushing puzzle among pillars. Push crates onto the numbered plates in order: only the next plate is open, and a crate on it locks for good, so it becomes a wall. Round iron plates need the riveted iron crates; later rooms add a spare crate in the way. Then stand on the star plate. A wrong push can trap a crate: the post resets them |
 | Mirror Room | Turn mirrors (E) so every crystal is lit by the lamp of its shape (disc lamp: eight-sided crystals; diamond lamp: four-sided). Glass splitters pass light straight on and turn it too; mirrors marked with the same floor rune turn together. Harder rooms add a second lamp, up to four crystals, more decoy mirrors, splitters and links |
 | Gust Room | Step on the numbered plates in order (3 to 7); a plate out of order sends you back to 1. Some sit on islands in rings of wind, each ring on its own calm/gust beat: cross while its arrows lie flat. From the third room a gust that catches you in a ring also resets the count, and later a time limit runs from plate 1 |
 | Bell Room | Bells ring an order (each has a carved symbol and its own note); strike them in that order. The centre bell rings it again |
-| Lamp Room | Each lever flips several lamps; light them all (lit lamps stand tall) |
-| Ice Hall | Push the rune stone: on the ice it slides until something stops it. Stop it on the socket with its rune. A post resets the stone |
+| Lamp Room | Each lever flips several lamps (stand at one to see which). Light exactly the lamps wearing a halo (lit lamps stand tall). Padlocked levers only move while the lamp with their rune is lit, so the order matters, and pulls are counted: run out and the board scrambles back. A post resets it |
+| Ice Hall | Push the rune stone: on the ice it slides until something stops it. Rest it on the numbered sockets in order. Arrows turn a sliding stone, cracked ice becomes a ridge once a stone has crossed it, and plain ice blocks slide too (move them to make a stop). A post resets the hall |
 | Aqueduct Room | Stand on a pipe tile and press E to turn it. Fill every basin from the spouts without a single leak (a wet pipe open to nothing sprays). Squares grow from 5 x 5 to 7 x 7 with up to two spouts and three basins; bolted tiles never turn, and a chained tile also turns the tile its chain's arrow points at |
 | Ember Hall | Using a brazier (E) lights or douses it and every brazier its floor chains lead to (an arrowhead: one way only). Make each match its plaque: a star burns, a cross stays dark. From the third room a fuse lit by your first press puts everything back as it began when it runs out: plan the set, then play it in one go |
 | Counting Room | Press a pedestal to move its numbered weight to the left pan, the right pan, or back; level the balance against its counterweight |

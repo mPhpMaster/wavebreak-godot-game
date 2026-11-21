@@ -579,16 +579,20 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
   pieces (`Build` with `PieceKit`, `Sync`, `Sounds`), interact offers, its own
   body handling (`LocalStep`: pushes, gusts), the hint, the HUD line, the bot
   and its minimap glyph. Ten kinds today:
-  crates (Weighing Room: push crates onto plates, stand on the last),
+  crates (Weighing Room: a tight sokoban; numbered plates lock their crate
+  in order, iron plates need iron crates, then stand on the star plate),
   mirrors (Mirror Room: turn mirrors, splitters and linked pairs so every
   crystal gets its own lamp's beam),
   wind (Gust Room: numbered plates in order, across rings of wind on their
   own calm/gust beats),
   runes (Bell Room: strike bells in the order they rang),
-  levers (Lamp Room: levers flip several lamps each; light them all),
-  glide (Ice Hall: push a rune stone that slides until it hits something;
-  stop it on its socket), pipes (Aqueduct Room: stand on pipe tiles and turn
-  them until water from every spout fills every basin without a leak),
+  levers (Lamp Room: levers flip several lamps each; padlocked levers move
+  only while their rune's lamp is lit; light the haloed lamps within a
+  counted number of pulls), glide (Ice Hall: push a rune stone that slides
+  until it hits something; stop it on numbered sockets in order, past
+  arrows, cracked ice that turns to ridges and sliding ice blocks), pipes
+  (Aqueduct Room: stand on pipe tiles and turn them until water from every
+  spout fills every basin without a leak),
   braziers (Ember Hall: "lights out" on chained braziers, matched to star
   and cross plaques, under a fuse), scales (Counting
   Room: move numbered weights onto a balance's pans to level it against a
@@ -607,22 +611,24 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
   map never holds the same kind twice.
 - **Generated, never authored.** A map is a self-avoiding walk of rooms on a
   macro grid from the run's seed; each kind lays its room out per run and
-  keeps only layouts its own solver solves (crates: BFS over player and crate
-  cells; glide: BFS over stone cell and the player's side; mirrors: every
-  combination of link groups, fewest first; levers: every on/off
-  combination; scales: every placement; pipes: a laid tree of channels plus
-  a flood with leaks; braziers: every subset, fewest presses, and a
-  Held-Karp walk for the fuse; wind: an exact walk on the ring cycles;
-  trail: depth-first search), with the
+  keeps only layouts its own solver solves (crates: a BFS backwards from the
+  solved room; glide: BFS over stones, broken cracks, sockets done and the
+  player's region; levers: BFS over the lamp states; mirrors: every
+  combination of link groups, fewest first; scales: every placement; pipes:
+  a laid tree of channels plus a flood with leaks; braziers: every subset,
+  fewest presses, and a Held-Karp walk for the fuse; wind: an exact walk on
+  the ring cycles; trail: depth-first search), with the
   way between the doors open; a draw that fails is redrawn, then a fixed
   fallback is used. Difficulty is the puzzle's number plus a step for Hard
   and Tempest: more rooms, and each kind's own knobs. Medal times are the sum
   of each room's `ParSeconds`.
 - **Never block a player.** The SKIP portal opens at 150 s in the first
   unsolved room (lowest prize); hints point at the next step from the solver
-  run on the room as it stands; rooms where a piece can get stuck (crates,
-  stone, lantern path) have a reset post; the bot takes the skip if it is
-  still stuck 25 s after it opened, so `--auto` never hangs.
+  run on the room as it stands; rooms where a piece can get stuck or a
+  mistake costs the room (crates, lamps, stone, lantern path) have a reset
+  post, and their hint points at it when the room as it stands is a dead
+  end; the bot takes the skip if it is still stuck 25 s after it opened, so
+  `--auto` never hangs.
 - **Rewards feed the fight.** The medal (gold: fast and no hint; silver: a
   slower time or one hint; bronze) sets the pedestals in the vault: an epic,
   rare or plain chest roll, the catalyst a held weapon evolves with, a weapon
@@ -785,6 +791,57 @@ Doorway signs (`PuzzleMap.BuildSign`) are billboards: they now hang at
 least half their width out from the wall, because seen from the side a sign
 1.2 m out swung its far end into the wall and only a sliver of the room
 number showed ("4/5" read as a stray letter in Ember Hall).
+
+### Weighing Room, Ice Hall, Lamp Room (the push and lamp rooms)
+
+Each is built to need a plan, not a try; `d` is the map's difficulty (0-5).
+
+- **Weighing Room** (`CratesKind`). Sokoban in a hall of pillars. Plates are
+  numbered; only the next one is open (later ones sit under a grate and no
+  crate enters them) and a crate pushed onto it sinks and locks for good, so
+  every placed crate becomes a wall. Round iron plates take only an iron crate
+  (riveted, banded both ways); an iron crate also fits a wooden plate, which
+  strands its iron plate. Spare crates (more crates than plates) stand in the
+  way. The star plate opens last: stand on it. d0: 2 plates, 2 crates, 6-10
+  pushes; d1: 3 plates, 9-14; d2: one iron, 11-18; d3-d4: a spare crate,
+  13-26; d5: 4 plates, two iron, 17-30; pillars 7 to 20. Generation is a
+  breadth-first search backwards from the solved room (each pull checked as a
+  legal push forwards) over (crate cells, the player's region as a
+  `GridBits` flood, the hall's strip joining the edge cells); the start is
+  one of the deepest states the door's region reaches with no crate on a
+  plate, so the room is solvable by construction. That search is kept as a
+  table (state -> next push): the hint, the bot and the script look the next
+  push up; off the table a forward search runs until it meets it (capped:
+  past the cap the hint marks the reset post). State: RA-RD crates,
+  RPressed, RResets.
+- **Ice Hall** (`GlideKind`). The rune stone slides until something stops
+  it and must rest on numbered sockets in order (the rune floats over the
+  next). Arrow tiles turn a sliding stone; a cracked tile breaks into an ice
+  ridge (stops stones, not players) once a stone has crossed or left it;
+  plain ice blocks slide by the same rules and are the stoppers to move. d0:
+  2 sockets, 1 crack, 4+ pushes; d1: an arrow, 6+; d2: 3 sockets, a block,
+  8+; d3: 10+; d4: 12+; d5: 4 sockets, 5 cracks, 3 arrows, 14+ (the upper end
+  is lo + 10). Sockets are laid on the stone's resting cells along a deep
+  run of a push search, so the order is solvable; the full search over
+  (stones, broken cracks, sockets done, player region) then measures the
+  fewest pushes the HUD shows. State: RA stone, RB/RX blocks, RD broken
+  cracks, RY sockets done, RC pushes, RResets.
+- **Lamp Room** (`LeversKind`). Levers flip their lamp and one to three
+  others; the goal is the halo pattern (from d3 some lamps must stay dark).
+  A padlocked lever (shackle, rune) moves only while the lamp carrying its
+  rune is lit, so key lamps are lit first and put out again: the answer is a
+  route through lamp states, not a set of levers. Pulls are counted: the
+  allowance is the fewest plus 4 (d0) down to 1 (d4-d5), and the last pull
+  that does not solve it scrambles the board back (RFails); the post (a grid
+  corner) resets by hand; the bot walks the grid, then straight at a
+  lever, since levers stand between cells. d0: 5 levers, 1 padlock, 3+ pulls; d5: 8 levers, 4 padlocks, 8+
+  (the late-redraw floor is 6). From d2 the padlocks must force a detour
+  (the answer with padlocks is longer than without). BFS over the lamp
+  states (2^8 at most). State: RA lamps, RB lever positions, RC pulls, RY
+  refused pulls (rattle), RFails, RResets.
+- **Medal times** are per kind (`ParSeconds`: crates 60 s, glide 55 s,
+  levers 48 s), the same at every `d`; a par that grows with `d` would need
+  the room in that hook.
 
 ### How to add a puzzle
 
