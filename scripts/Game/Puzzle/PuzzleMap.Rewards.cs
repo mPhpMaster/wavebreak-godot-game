@@ -11,6 +11,8 @@ namespace Wavebreak.Game.Puzzle;
 /// stands them in the vault, and the player claims one with interact. Leaving
 /// without claiming takes the first; a skip pays its consolation on the way
 /// out. Either way <see cref="PuzzleFinished"/> is published once.
+/// Before the vault, every solved room hands this machine's player its
+/// puzzle boon (<see cref="PuzzleBoons"/>, shown by UI/PuzzleBoonHud).
 /// </summary>
 public sealed partial class PuzzleMap
 {
@@ -23,8 +25,28 @@ public sealed partial class PuzzleMap
     public IReadOnlyList<PuzzleRewardOffer>? Offers => _offers;
     public bool Claimed => _claimed;
 
+    private UI.PuzzleBoonHud? _boonHud;
+
+    /// <summary>Puzzle boons (every machine): each solved room gives this
+    /// player its boon once (<see cref="PuzzleBoons"/>), shown by the boon HUD.</summary>
+    private void SyncBoons()
+    {
+        PuzzleBoons.Track(Plan);
+        for (int r = 1; r < Plan.Rooms.Count - 1; r++)
+            if (State.Solved(r)) PuzzleBoons.OnSolved(Plan, r);
+        if (_boonHud is null && GetNodeOrNull<CanvasLayer>("PuzzleUI") is { } layer)
+        {
+            _boonHud = new UI.PuzzleBoonHud();
+            layer.AddChild(_boonHud);
+        }
+    }
+
+    /// <summary>The boon HUD (checks).</summary>
+    public UI.PuzzleBoonHud? BoonHud => _boonHud;
+
     private void SyncRewards(float dt)
     {
+        SyncBoons();
         foreach (Node3D p in _pedestals)
             if (IsInstanceValid(p) && p.GetChildCount() > 1 && p.GetChild(1) is Node3D prize) prize.RotateY(dt * 1.2f);
         if (!State.Finished || _offers is not null) return;
@@ -143,6 +165,13 @@ public sealed partial class PuzzleMap
     /// <summary>On leaving the map (every machine): an unclaimed prize is
     /// taken for you, and a skip pays its consolation.</summary>
     public void GrantOnLeave()
+    {
+        PayOnLeave();
+        // The route's boons end with their map, the gauntlet's with its last.
+        PuzzleBoons.EndMap(Plan);
+    }
+
+    private void PayOnLeave()
     {
         if (Plan.Gauntlet)
         {

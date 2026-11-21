@@ -37,7 +37,7 @@ Saves, settings and unlocks live in `%APPDATA%\Godot\app_userdata\Wavebreak`.
 | Quests | 356 (19 secret), which unlock characters, weapons, items, skins and Pearls |
 | Meta | Pearls, the Pearl Shop, difficulty tiers, 12 global modifiers, 66 map challenges, the Toggler, leaderboard |
 | Run events | Charge, challenge, statue, greed, balance and wishing-well shrines; microwave; pots; chests; Tide Totems (1-3 per map: press E once and every XP orb and coin on the map flies to you) |
-| Puzzle route | An optional route: a short seeded puzzle map before each of Classic's maps (puzzle, rest, map, rest, puzzle...). Ten room kinds that never repeat before you have met them all (crates on pressure plates, mirror beams, gust rings, bell order, lamp levers, a sliding ice stone, water pipes, timed braziers, a balance with weights, a lantern path), every one solvable alone, a few weak guards, a SKIP portal after 2:30, and a gold/silver/bronze medal that pays a better prize for the fight ahead. **PUZZLES ONLY** plays six puzzle maps back to back with no fights (see [Puzzle route](#puzzle-route)) |
+| Puzzle route | An optional route: a short seeded puzzle map before each of Classic's maps (puzzle, rest, map, rest, puzzle...). Ten room kinds that never repeat before you have met them all (crates on pressure plates, mirror beams, gust rings, bell order from clues, lamp levers, a sliding ice stone, water pipes, timed braziers, a balance with weights and few moves, a lantern path with fences), every one solvable alone, a few weak guards, a boon for every room solved, a SKIP portal from 2:30, and a gold/silver/bronze medal that pays a better prize for the fight ahead. **PUZZLES ONLY** plays six puzzle maps back to back with no fights (see [Puzzle route](#puzzle-route)) |
 | Rest stop | Between maps: a beach island with the merchant, a campfire that heals to full, a microwave and (in co-op) the Swap Meet, where two players trade gold, items and tomes. No enemies, the clock is paused; step into the CONTINUE portal when ready. A boss portal closes after 90 s on Normal (30 s on Endless Tide) and then pulls you through |
 | Level-up | Three cards with icons (a perk card shows what the level adds and the total); reroll (R), banish (B) and skip (X), which refill a little on each new map; optional compact hand that keeps the game running, and auto-pick by a rule (Settings > Gameplay) |
 | Music | 21 procedurally composed tracks; the Boombox lets you play, pin or shuffle them |
@@ -61,8 +61,10 @@ Classic's difficulty, and before each one comes a **puzzle map**:
 puzzle, rest stop, map, rest stop, puzzle, and so on to the final boss.
 
 A puzzle map is a chain of three to five rooms drawn from the run's seed, so it
-is different every run; later puzzles and harder tiers add rooms and harder
-pieces. Each room is a closed hall (about 30 m across, 14 m to the ceiling,
+is different every run. Only the first puzzle of a Normal run is easy: the
+difficulty jumps two steps for the second and one per puzzle after that (Hard
+and Tempest start higher), adding rooms, pieces, clues, timers and tighter
+move limits, so the last maps of the Puzzle Gauntlet are real brain-teasers. Each room is a closed hall (about 30 m across, 14 m to the ceiling,
 lit by torches and dressed for its puzzle: a workshop, an observatory, a bell
 temple, a foundry...), with the puzzle laid into the middle of its floor. The
 halls are built from drawn surfaces, not flat colours: flagstone floors with
@@ -78,13 +80,13 @@ and the Tab map show the rooms you have found:
 | Weighing Room | A tight crate-pushing puzzle among pillars. Push crates onto the numbered plates in order: only the next plate is open, and a crate on it locks for good, so it becomes a wall. Round iron plates need the riveted iron crates; later rooms add a spare crate in the way. Then stand on the star plate. A wrong push can trap a crate: the post resets them |
 | Mirror Room | Turn mirrors (E) so every crystal is lit by the lamp of its shape (disc lamp: eight-sided crystals; diamond lamp: four-sided). Glass splitters pass light straight on and turn it too; mirrors marked with the same floor rune turn together. Harder rooms add a second lamp, up to four crystals, more decoy mirrors, splitters and links |
 | Gust Room | Step on the numbered plates in order (3 to 7); a plate out of order sends you back to 1. Some sit on islands in rings of wind, each ring on its own calm/gust beat: cross while its arrows lie flat. From the third room a gust that catches you in a ring also resets the count, and later a time limit runs from plate 1 |
-| Bell Room | Bells ring an order (each has a carved symbol and its own note); strike them in that order. The centre bell rings it again |
+| Bell Room | Nothing rings the order: stone tablets by the walls give clues ("Star rings before Circle", "Strike number 2 is not Square", "Cross and Diamond are not struck back to back", "Triangle stays silent"). Work out the one order they allow and strike the bells in it; a wrong bell or a silent decoy starts over. Harder rooms have six bells, up to eight weak clues, and a hum: from the second bell on, strike the next before the hum fades |
 | Lamp Room | Each lever flips several lamps (stand at one to see which). Light exactly the lamps wearing a halo (lit lamps stand tall). Padlocked levers only move while the lamp with their rune is lit, so the order matters, and pulls are counted: run out and the board scrambles back. A post resets it |
 | Ice Hall | Push the rune stone: on the ice it slides until something stops it. Rest it on the numbered sockets in order. Arrows turn a sliding stone, cracked ice becomes a ridge once a stone has crossed it, and plain ice blocks slide too (move them to make a stop). A post resets the hall |
 | Aqueduct Room | Stand on a pipe tile and press E to turn it. Fill every basin from the spouts without a single leak (a wet pipe open to nothing sprays). Squares grow from 5 x 5 to 7 x 7 with up to two spouts and three basins; bolted tiles never turn, and a chained tile also turns the tile its chain's arrow points at |
 | Ember Hall | Using a brazier (E) lights or douses it and every brazier its floor chains lead to (an arrowhead: one way only). Make each match its plaque: a star burns, a cross stays dark. From the third room a fuse lit by your first press puts everything back as it began when it runs out: plan the set, then play it in one go |
-| Counting Room | Press a pedestal to move its numbered weight to the left pan, the right pan, or back; level the balance against its counterweight |
-| Lantern Path | Start on the star tile, then step onto tiles next to the last one lit; light every tile in one unbroken path. A post starts over |
+| Counting Room | Press a pedestal to move its numbered weight to the left pan, the right pan, or back (always in that order); level the balance against its counterweight. Every press costs one of a few moves; out of moves, the weights go back. In harder rooms the counterweight changes each time the beam levels (two or three times), the pans' sums are hidden, and there are no spare moves: plan the whole chain |
+| Lantern Path | Start on the star tile, then step onto tiles next to the last one lit; light every tile in one unbroken path that never crosses itself, ending on the moon tile. Spiked fences between tiles cannot be stepped across, and in harder rooms a path that stalls for a few seconds goes dark. A post starts over |
 
 Every room can be solved by one player; in co-op anyone can work any piece.
 The old Twin Plates room, which needed a player on each of two plates at
@@ -98,8 +100,17 @@ cost of the gold medal. Solve fast with no hints for **gold** (epic chest,
 evolution catalyst or weapon pick, +2 rerolls), a little slower or with one hint
 for **silver** (rare chest, weapon pick or 3 rerolls), and anything else for
 **bronze** (chest or 2 rerolls); claim one prize in the vault and step into the
-exit. After 2:30 a **SKIP** portal opens (+1 reroll and a little gold), so
-nobody is ever stuck. In co-op the host keeps the puzzle state, everyone sees
+exit. The medal times grow with the difficulty. After 2:30 (up to 5:00 on the
+longest, hardest maps) a **SKIP** portal opens (+1 reroll and a little gold),
+so nobody is ever stuck.
+
+**Puzzle boons.** Every room you solve gives every player a boon for the
+puzzles, shown in a banner (with its icon and name, in Arabic too) and listed
+at the left of the screen: Swift Feet (+8% move speed), Spring Heels (+1 air
+jump), High Leap (+12% jump height), Quick Dash (the dash recharges faster),
+Vigor (+10 max health and a heal) or Stone Skin (+6 armour against spikes and
+guards). They stack through the puzzle map, through the whole Puzzle Gauntlet,
+and end when it does. In co-op the host keeps the puzzle state, everyone sees
 the same plates and doors, and late joiners get it all. Endless mode plays the
 route as Classic (no puzzle maps).
 
@@ -118,7 +129,8 @@ For testing: `--route=puzzle`, `--check-puzzles` (prints `PUZZLE PASS`),
 rooms, `--puzzle-skip` to make the bot take the skip portal,
 `--puzzle-shot=x.png --puzzle-shot-room=N` for captures (`--puzzle-shot-kind=id`
 puts that kind in room 1, `--puzzle-shot-door` photographs that room's door
-opening).
+opening), `--puzzle-difficulty=N` to play every puzzle map at difficulty N
+(0 to 5), and `--check-puzzle-boons[=shot.png]` (prints `PUZZLE BOONS PASS`).
 
 ## Optional underwater expedition
 

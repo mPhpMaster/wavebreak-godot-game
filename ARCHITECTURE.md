@@ -534,10 +534,11 @@ the HUD hidden for the capture) and assert that the rig faces the way it swims.
 
 `Game/Puzzle/` (`PuzzleKind` and the registry, `Kinds/*` one file per room
 kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
-`PuzzleBot`, `PuzzleMap*`, `PuzzleRewards`, `PuzzleCheck`),
+`PuzzleBot`, `PuzzleMap*`, `PuzzleRewards`, `PuzzleBoons`, `PuzzleCheck`,
+`PuzzleBoonCheck`),
 `Game/StageDirector.Puzzle.cs`, `Game/StageDirector.Gauntlet.cs`,
 `Game/Autopilot.Puzzle.cs`, `Net/NetSession.Puzzle.cs`, `UI/PuzzleHud`,
-`UI/PuzzleMapView`, `UI/ResultsScreen.Puzzle.cs`, `UI/MainMenu.Gauntlet.cs`,
+`UI/PuzzleMapView`, `UI/PuzzleBoonHud`, `UI/ResultsScreen.Puzzle.cs`, `UI/MainMenu.Gauntlet.cs`,
 `Meta/GauntletRecord.cs`, `Meta/ArabicText/ArabicText.UiPuzzle*.cs`,
 `Data/ContentAudit.Puzzle.cs`.
 
@@ -553,7 +554,8 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
   PLAY page under the puzzle route toggle and in the CO-OP lobby beside it,
   `Routes.SetGauntlet`): `Routes.GauntletPuzzles` (6) puzzle maps back to back
   and nothing else. The difficulty climbs with each (the same
-  `PuzzleGen.DifficultyFor` as the route), there are no guards and no prize
+  `PuzzleGen.DifficultyFor` as the route: 0, 2, 3, 4, 5, 5 on Normal, so
+  the last two maps play at the top setting), there are no guards and no prize
   pedestals (`PuzzlePlan.Gauntlet`), and the vault's EXIT or the SKIP portal
   leads straight into the next puzzle (no rest rooms). After the last, the run
   ends (`RunState.Finish(survived: true)`) and the results screen shows the
@@ -585,7 +587,14 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
   crystal gets its own lamp's beam),
   wind (Gust Room: numbered plates in order, across rings of wind on their
   own calm/gust beats),
-  runes (Bell Room: strike bells in the order they rang),
+  runes (Bell Room: clue tablets by the walls, "Star rings before Circle",
+  "Strike number 2 is not Square", "Cross and Diamond are not struck back
+  to back", "Triangle stays silent", leave exactly one order of the bells
+  (checked against every order); strike it, a wrong bell or a silent decoy
+  starts over; d0 four bells, d1 a decoy, d3 six bells and a 9 s hum before
+  the next strike, d5 only before / not-at / apart clues, up to eight, and
+  a 6.5 s hum; the clue set is minimal, weak kinds mixed, the draw with the
+  most clues of five kept),
   levers (Lamp Room: levers flip several lamps each; padlocked levers move
   only while their rune's lamp is lit; light the haloed lamps within a
   counted number of pulls), glide (Ice Hall: push a rune stone that slides
@@ -595,10 +604,21 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
   spout fills every basin without a leak),
   braziers (Ember Hall: "lights out" on chained braziers, matched to star
   and cross plaques, under a fuse), scales (Counting
-  Room: move numbered weights onto a balance's pans to level it against a
-  counterweight; from difficulty 2 both pans are needed), trail (Lantern Path:
-  light every tile of a patch in one unbroken path from the star tile; a
-  Hamiltonian path, searched with checkerboard and dead-end pruning).
+  Room: move numbered weights rack, left pan, right pan, rack to level a
+  balance against a counterweight, each press one of a limited number of
+  moves (the fewest that can do it plus 3 slack at d0, none at d5), out of
+  moves or the reset post puts them back; from d2 the counterweight changes
+  each time the beam levels (two levellings, three from d4), the best answer
+  needs a weight beside the counterweight, and the pans' sums leave the HUD;
+  4 weights at d0 to 8 at d5; breadth-first search over (placement,
+  levellings), at most 3^8 x 4 states, so an early level on the way counts
+  as the game counts it), trail (Lantern Path: light every tile of a patch
+  in one unbroken path from the star tile, ending on the moon tile (from d1;
+  it lights only last); spiked fences between some neighbours (from d2) cut
+  the step; from d3 a stalled path goes dark (5 s, 4 s, 3.2 s per step);
+  15 tiles at d0 to 31 (6 x 6 less five holes) at d4-5; a Hamiltonian path,
+  searched with checkerboard, dead-end and connectivity pruning; the start
+  and moon with the fewest paths in a bounded search are kept).
 - **Nothing needs two players.** The twin-plate room (one player per plate)
   is gone, and `PuzzleKind.MinPlayers` must be 1 (checked). Every rule reads
   any player's body or ask, so a team can share the work, and a room built
@@ -614,21 +634,50 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
   keeps only layouts its own solver solves (crates: a BFS backwards from the
   solved room; glide: BFS over stones, broken cracks, sockets done and the
   player's region; levers: BFS over the lamp states; mirrors: every
-  combination of link groups, fewest first; scales: every placement; pipes:
+  combination of link groups, fewest first; scales: breadth-first over
+  placement and levellings; runes: every order against the clues; pipes:
   a laid tree of channels plus a flood with leaks; braziers: every subset,
   fewest presses, and a Held-Karp walk for the fuse; wind: an exact walk on
   the ring cycles; trail: depth-first search), with the
   way between the doors open; a draw that fails is redrawn, then a fixed
-  fallback is used. Difficulty is the puzzle's number plus a step for Hard
-  and Tempest: more rooms, and each kind's own knobs. Medal times are the sum
-  of each room's `ParSeconds`.
-- **Never block a player.** The SKIP portal opens at 150 s in the first
-  unsolved room (lowest prize); hints point at the next step from the solver
+  fallback is used. Difficulty (0 to `PuzzleGen.MaxDifficulty` = 5) is
+  `DifficultyFor`: the puzzle's number, plus one from the second puzzle on,
+  plus one on Hard and Nightmare and two from Tempest (Normal 0, 2, 3, 4, 5,
+  5; Tempest 2, 4, 5...); only a Normal run's first puzzle is d0. It sets the
+  rooms (`RoomsFor`: 3 at d0, 4 at d1-2, 5 from d3) and each kind's own
+  knobs. Medal times: a room's par is `RoomPlan.ParSeconds` when its kind
+  set one in `Generate` (runes, scales and trail do, from the clues, the
+  fewest moves, the tiles), else the kind's `ParSeconds` times
+  (1 + d / 3); gold is the pars plus 10 s plus 5 s a room, silver 1.9 times
+  the pars plus 30 s plus 5 s a room. `--puzzle-difficulty=N` forces every
+  map to d = N (captures, tests).
+- **Never block a player.** The SKIP portal opens in the first unsolved
+  room (lowest prize) at 80% of the gold time, never before 150 s nor after
+  300 s (`PuzzlePlan.SkipSeconds`); hints point at the next step from the solver
   run on the room as it stands; rooms where a piece can get stuck or a
-  mistake costs the room (crates, lamps, stone, lantern path) have a reset
-  post, and their hint points at it when the room as it stands is a dead
-  end; the bot takes the skip if it is still stuck 25 s after it opened, so
-  `--auto` never hangs.
+  mistake costs the room (crates, lamps, stone, scales, lantern path) have a
+  reset post, and their hint points at it when the room as it stands is a
+  dead end; the bot takes the skip if it is
+  still stuck 25 s after it opened, so `--auto` never hangs.
+- **Puzzle boons** (`Game/Puzzle/PuzzleBoons.cs`, `UI/PuzzleBoonHud.cs`).
+  Each solved room gives every player a power-up for the puzzles: Swift
+  Feet (+8% move speed), Spring Heels (+1 air jump, `Player.ExtraAirJumps`),
+  High Leap (+12% jump height), Quick Dash (dash cooldown x0.82 and a
+  refund), Vigor (+10 max health, a 40% heal) or Stone Skin (+6 armour);
+  stat modifiers with one source object per boon, so taking them off is
+  `RemoveAllFrom`. Which boon is fixed by the run's seed and the room's
+  place in the run's line of puzzle rooms (`PuzzlePlan.RunSeed`,
+  `BagOffset`): a shuffle bag of the six per stretch, a boon at its cap
+  (Spring 2, Leap and Dash 3, Swift and Ward 4) gives Vigor. So the host's
+  solved slot (already replicated) is the only message: every machine, a
+  late joiner and a rebuilt client map name the same boon and apply it to
+  their own player once (remembered by map seed and room).
+  `PuzzleMap.Rewards.cs` calls `Track` and `OnSolved` every frame and
+  `EndMap` on leaving. A stretch is one route map (each starts clean) or the
+  whole gauntlet (ends with its last map); a new run or player starts clean.
+  The HUD shows a banner per boon (drawn icon, name, what it does; queued)
+  on the right under the minimap, and the held boons with stacks at the
+  left. `--check-puzzle-boons[=shot.png]` prints `PUZZLE BOONS PASS`.
 - **Rewards feed the fight.** The medal (gold: fast and no hint; silver: a
   slower time or one hint; bronze) sets the pedestals in the vault: an epic,
   rare or plain chest roll, the catalyst a held weapon evolves with, a weapon
@@ -647,14 +696,18 @@ kind, `PuzzleGen`, `PuzzleSolver`, `PuzzleState`, `PuzzlePlan`, `PieceKit`,
   the host already has it. New kinds ask with `PuzzleAction.Use` (a = piece,
   b = argument), so they never need a new message.
 - **Not colour alone.** Plates sink, lit lamps stand tall, gust arrows rise,
-  mirrors show their angle, bells carry carved symbols and their own note,
+  mirrors show their angle, bells carry carved symbols, their names and their
+  own note, clue tablets carry the bells' symbols and words, struck bells stay
+  lit and a humming one dims with its hum,
   the stone and its socket share a rune, water shows as a channel on the
   pipes and a leak as a spray, bolted pipes wear an iron frame, chained
   pieces show a bar with an arrowhead, brazier plaques are a star or a
   cross, crystals match their lamp by shape (eight or four sides, a disc or
   a diamond on the lamp), linked mirrors share a floor rune, Gust Room
   plates carry their number, weights carry numbers and the
-  balance tilts, lit lantern tiles rise, medals are a star, diamond, disc or
+  balance tilts and pips count the levellings, lit lantern tiles rise, the
+  last tile has a moon and a frame, fences are spiked rails, the head flame
+  shrinks as a stalled path runs out, boons have drawn icons, medals are a star, diamond, disc or
   square.
 - **Rooms are closed halls** (`PuzzleMap.Build.cs`). The 9 x 9 puzzle grid
   (2 m cells, what the solvers and timing checks are tuned for) is inlaid in
@@ -783,9 +836,8 @@ shared slots, host rules and `PuzzleAction.Use`/`Mirror` asks.
   near it (one way, no tile in two chains), so the solver, hint and bot set
   chained tiles first. 7 x 7 needs 49 tiles: RA-RD hold fifteen each.
 
-Medal times: `ParSeconds` is 48, 45, 42 and 55 s for these four (one value
-per kind, as `PuzzleGen` sums it; a par per difficulty would need a hook
-there).
+Medal times: `ParSeconds` is 48, 45, 42 and 55 s for these four; `PuzzleGen`
+scales it by (1 + d / 3), so it grows with the difficulty.
 
 Doorway signs (`PuzzleMap.BuildSign`) are billboards: they now hang at
 least half their width out from the wall, because seen from the side a sign
@@ -839,9 +891,8 @@ Each is built to need a plan, not a try; `d` is the map's difficulty (0-5).
   (the answer with padlocks is longer than without). BFS over the lamp
   states (2^8 at most). State: RA lamps, RB lever positions, RC pulls, RY
   refused pulls (rattle), RFails, RResets.
-- **Medal times** are per kind (`ParSeconds`: crates 60 s, glide 55 s,
-  levers 48 s), the same at every `d`; a par that grows with `d` would need
-  the room in that hook.
+- **Medal times** start from the kind's `ParSeconds` (crates 60 s, glide
+  55 s, levers 48 s), scaled by (1 + d / 3) in `PuzzleGen`.
 
 ### How to add a puzzle
 
@@ -901,7 +952,8 @@ public sealed class GongKind : PuzzleKind
 Optional overrides: `InitState` (starting slots), `OnEnter`, `HostStep`
 (bodies on plates or tiles), `OnHint`, `Sounds`, `LocalStep` (this machine's
 own body: pushing, gusts), `Status` (the HUD line), `Glyph` (minimap),
-`ParSeconds` (medal time), `BotLeaderOnly`, `InBag`. Rules: `MinPlayers`
+`ParSeconds` (medal time; or set `room.ParSeconds` in `Generate` from the
+layout and difficulty), `BotLeaderOnly`, `InBag`. Rules: `MinPlayers`
 stays 1; keep state in the room's slots (they are what co-op sends); use
 `PuzzleAction.Use` for asks; say things with shapes, not colour alone.
 
